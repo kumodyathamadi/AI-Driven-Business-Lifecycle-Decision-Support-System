@@ -31,7 +31,7 @@ def test_ai_intake_extraction_endpoint():
     assert res_en.status_code == 200, f"Expected 200, got {res_en.status_code}: {res_en.text}"
     data_en = res_en.json()
     
-    assert data_en["extracted_fields"]["business_category"]["value"] == "Bakery"
+    assert data_en["extracted_fields"]["business_category"]["value"] == "Bakery / Food / Grocery"
     assert data_en["extracted_fields"]["district"]["value"] == "Colombo"
     assert data_en["extracted_fields"]["available_capital_lkr"]["value"] == 500000.0
     assert data_en["extracted_fields"]["entrepreneur_experience_years"]["value"] == 5
@@ -52,7 +52,7 @@ def test_ai_intake_extraction_endpoint():
     res_si = client.post("/api/business/intake/extract", json=singlish_payload)
     assert res_si.status_code == 200
     data_si = res_si.json()
-    assert data_si["extracted_fields"]["business_category"]["value"] == "Bakery"
+    assert data_si["extracted_fields"]["business_category"]["value"] == "Bakery / Food / Grocery"
     assert data_si["extracted_fields"]["district"]["value"] == "Colombo"
     print("  Singlish AI Intake Extraction SUCCESS!")
 
@@ -61,7 +61,7 @@ def test_business_analyze_endpoint():
     print("\nTesting POST /api/business/analyze with AI Intake Traceability...")
     payload = {
         "business_stage": "New",
-        "business_category": "Bakery",
+        "business_category": "Bakery / Food / Grocery",
         "district": "Colombo",
         "province": "Western",
         "location_type": "Suburban Commercial Hub",
@@ -120,7 +120,7 @@ def test_pdf_and_docx_business_plan_generation():
     print("\nTesting POST /api/business/plan/generate-pdf and generate-docx...")
     payload = {
         "business_stage": "New Startup",
-        "business_category": "Bakery",
+        "business_category": "Bakery / Food / Grocery",
         "district": "Colombo",
         "available_capital_lkr": 750000.0,
         "monthly_budget_lkr": 120000.0,

@@ -9,11 +9,11 @@ class BusinessAnalysisRequest(BaseModel):
     Includes optional traceability fields for natural language intake & verification.
     """
     business_stage: str = Field(default="New", example="New")
-    business_category: str = Field(default="Retail", example="Bakery")
+    business_category: str = Field(default="Grocery / Mini-Mart", example="Grocery / Mini-Mart")
     district: str = Field(default="Colombo", example="Colombo")
     province: str = Field(default="Western", example="Western")
     location_type: str = Field(default="Commercial Hub", example="Suburban Commercial Hub")
-    proposed_action: str = Field(default="Start New Business", example="Establish New Bakery Branch")
+    proposed_action: str = Field(default="Establish New Business", example="Establish New Commercial Enterprise")
 
     available_capital_lkr: float = Field(default=500000.0, ge=0, example=800000.0)
     loan_amount_lkr: float = Field(default=0.0, ge=0, example=200000.0)
@@ -43,7 +43,7 @@ class IntakeExtractRequest(BaseModel):
     """
     Request payload for AI Business Intake Assistant text parsing with optional context hints.
     """
-    text: str = Field(..., min_length=5, example="I want to start a small bakery in Homagama with Rs. 500,000 capital.")
+    text: str = Field(..., min_length=5, example="I want to start a grocery store in Homagama with Rs. 500,000 capital.")
     business_stage: Optional[str] = Field(default="", example="New")
     business_goal: Optional[str] = Field(default="", example="Establish New Business")
 
@@ -54,7 +54,7 @@ class IntakeConfigRequest(BaseModel):
     """
     business_stage: str = Field(..., example="Existing")
     business_goal: Optional[str] = Field(default="Open New Branch", example="Open New Branch")
-    business_category: Optional[str] = Field(default="Bakery", example="Bakery")
+    business_category: Optional[str] = Field(default="Grocery / Mini-Mart", example="Grocery / Mini-Mart")
 
 
 class HealthCheckResponse(BaseModel):

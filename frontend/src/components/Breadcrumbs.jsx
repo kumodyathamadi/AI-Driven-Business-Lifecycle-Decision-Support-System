@@ -14,13 +14,12 @@ export default function Breadcrumbs({ activeTab, activeProfile, onNavigate }) {
       case 'options': return 'Explore Options';
       case 'scenario': return 'Scenario Explorer';
       case 'plan': return 'Business Plan';
-      case 'profile': return 'Business Profile';
       default: return 'Overview';
     }
   };
 
   const isWorkspaceTab = [
-    'overview', 'feasibility', 'insights', 'recommendations', 'options', 'scenario', 'plan', 'profile'
+    'overview', 'feasibility', 'insights', 'recommendations', 'options', 'scenario', 'plan'
   ].includes(activeTab);
 
   return (

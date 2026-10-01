@@ -3,7 +3,7 @@ import { Building, DollarSign, Users, Rocket, Sparkles, AlertCircle, Info } from
 
 const EMPTY_FORM_STATE = {
   business_stage: 'New',
-  business_category: 'Bakery',
+  business_category: 'Grocery / Mini-Mart',
   district: 'Colombo',
   province: 'Western',
   location_type: 'Suburban Commercial Hub',
@@ -28,7 +28,7 @@ const EMPTY_FORM_STATE = {
 
 const DEFAULT_SCHEMA_FALLBACKS = {
   business_stage: 'New',
-  business_category: 'Bakery',
+  business_category: 'Grocery / Mini-Mart',
   district: 'Colombo',
   province: 'Western',
   location_type: 'Suburban Commercial Hub',
@@ -249,12 +249,10 @@ export default function BusinessForm({
             <div className="form-group">
               {renderLabel('Business Category', 'business_category', true)}
               <select name="business_category" value={formData.business_category} onChange={handleChange} className="form-select">
-                <option value="Bakery">Bakery / Confectionery</option>
-                <option value="Retail">Retail Store / Grocery</option>
-                <option value="Restaurant">Restaurant / Food Services</option>
-                <option value="Garments">Apparel / Garments Manufacturing</option>
-                <option value="IT Services">Tech / IT Services</option>
-                <option value="Services">Personal / Business Services</option>
+                <option value="Grocery / Mini-Mart">Grocery / Mini-Mart</option>
+                <option value="Clothing / Garment">Clothing / Garment</option>
+                <option value="Beauty Salon">Beauty Salon</option>
+                <option value="Bakery / Food / Grocery">Bakery / Food / Grocery</option>
               </select>
             </div>
 

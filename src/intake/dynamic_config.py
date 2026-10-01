@@ -8,6 +8,13 @@ Determines field requirement states (REQUIRED, OPTIONAL, HIDDEN) based on:
 
 from typing import Dict, Any, List
 
+SUPPORTED_CATEGORIES = [
+    "Grocery / Mini-Mart",
+    "Clothing / Garment",
+    "Beauty Salon",
+    "Bakery / Food / Grocery"
+]
+
 BUSINESS_STAGES = [
     {"id": "New", "label": "New Startup (Not operating yet)", "description": "You plan to launch a new business from scratch."},
     {"id": "Existing", "label": "Existing Business (Currently operating)", "description": "You already run an active business enterprise."}
@@ -21,9 +28,7 @@ BUSINESS_GOALS = {
     ],
     "Existing": [
         {"id": "Open New Branch", "label": "Expand / Open a New Branch", "description": "Set up an additional physical location or branch."},
-        {"id": "Introduce New Product", "label": "Introduce a New Product / Service Line", "description": "Add new inventory, offerings, or service lines."},
-        {"id": "Improve Current Operations", "label": "Upgrade Equipment & Operational Efficiency", "description": "Invest in machinery, staff, and process improvements."},
-        {"id": "Increase Production Capacity", "label": "Increase Production & Customer Capacity", "description": "Scale up daily customer volume and inventory throughput."}
+        {"id": "Introduce New Product", "label": "Introduce a New Product / Service Line", "description": "Add new inventory, offerings, or service lines."}
     ]
 }
 
@@ -111,17 +116,6 @@ def get_dynamic_field_config(business_stage: str, business_goal: str = "", busin
                 "available_equipment_score", "required_equipment_score", "entrepreneur_experience_years"
             ])
             hidden_fields.update(["location_suitability_score", "location_type"])
-        elif "improve" in goal.lower() or "equipment" in goal.lower() or "efficiency" in goal.lower():
-            # Existing + Improve Operations
-            required_fields.update([
-                "monthly_budget_lkr", "available_equipment_score", "required_equipment_score", 
-                "available_staff_count", "required_staff_count"
-            ])
-            optional_fields.update([
-                "expected_price_lkr", "supplier_availability_score", "competition_level", 
-                "entrepreneur_experience_years"
-            ])
-            hidden_fields.update(["initial_inventory_cost_lkr", "location_type", "location_suitability_score"])
         else:
             # Default Existing Business
             required_fields.update([

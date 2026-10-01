@@ -13,7 +13,6 @@ import TopsisTable from './components/TopsisTable';
 import StrategyCard from './components/StrategyCard';
 import WhatIfSimulator from './components/WhatIfSimulator';
 import BusinessPlan from './components/BusinessPlan';
-import ProfileViewer from './components/ProfileViewer';
 import { analyzeBusiness, fetchAnalysisRecordById } from './services/api';
 import { Lightbulb, Sparkles } from 'lucide-react';
 
@@ -56,21 +55,10 @@ export default function App() {
     setStructuredProfile(updatedProfile);
   };
 
-  const handleExportJson = () => {
-    if (!structuredProfile) return;
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(structuredProfile, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `sme360_ai_profile_${Date.now()}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-  };
-
   return (
     <div className="app-container">
       {/* Top Navbar Header */}
-      <Navbar currentProfile={structuredProfile} onExportJson={handleExportJson} />
+      <Navbar currentProfile={structuredProfile} />
 
       {/* Main SaaS Layout with Sidebar + Workspace */}
       <div className="main-layout">
@@ -189,11 +177,6 @@ export default function App() {
           {/* Business Plan */}
           {activeTab === 'plan' && structuredProfile && (
             <BusinessPlan profile={structuredProfile} />
-          )}
-
-          {/* Business Profile */}
-          {activeTab === 'profile' && structuredProfile && (
-            <ProfileViewer profile={structuredProfile} onExportJson={handleExportJson} />
           )}
 
         </main>

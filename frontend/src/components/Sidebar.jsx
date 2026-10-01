@@ -9,8 +9,7 @@ import {
   Sparkles, 
   Layers, 
   Sliders, 
-  FileText, 
-  UserCheck 
+  FileText 
 } from 'lucide-react';
 import Logo from './Logo';
 
@@ -31,7 +30,6 @@ export default function Sidebar({ activeTab, setActiveTab, activeProfile }) {
     { id: 'options', label: 'Explore Options', icon: Layers, enabled: hasProfile },
     { id: 'scenario', label: 'Scenario Explorer', icon: Sliders, enabled: hasProfile },
     { id: 'plan', label: 'Business Plan', icon: FileText, enabled: hasProfile },
-    { id: 'profile', label: 'Business Profile', icon: UserCheck, enabled: hasProfile },
   ];
 
   return (

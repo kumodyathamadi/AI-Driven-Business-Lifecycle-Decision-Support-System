@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { checkHealth } from '../services/api';
-import { Download } from 'lucide-react';
 import Logo from './Logo';
 
-export default function Navbar({ currentProfile, onExportJson }) {
+export default function Navbar({ currentProfile }) {
   const [apiStatus, setApiStatus] = useState({ online: false, loading: true });
 
   useEffect(() => {
@@ -42,13 +41,6 @@ export default function Navbar({ currentProfile, onExportJson }) {
             {apiStatus.loading ? 'Checking API...' : apiStatus.online ? 'Backend Connected' : 'API Offline (Start Backend Server)'}
           </span>
         </div>
-
-        {currentProfile && (
-          <button onClick={onExportJson} className="btn btn-primary">
-            <Download size={16} />
-            Export JSON Profile
-          </button>
-        )}
       </div>
     </header>
   );

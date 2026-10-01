@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 
 from backend.schemas import IntakeExtractRequest, IntakeConfigRequest
 from src.intake.extractor import extract_business_info
-from src.intake.dynamic_config import get_dynamic_field_config, BUSINESS_STAGES, BUSINESS_GOALS
+from src.intake.dynamic_config import get_dynamic_field_config, BUSINESS_STAGES, BUSINESS_GOALS, SUPPORTED_CATEGORIES
 
 router = APIRouter(prefix="/api/business/intake", tags=["AI Business Intake"])
 
@@ -16,11 +16,12 @@ router = APIRouter(prefix="/api/business/intake", tags=["AI Business Intake"])
 @router.get("/stages-and-goals", response_model=Dict[str, Any], status_code=status.HTTP_200_OK)
 def get_business_stages_and_goals():
     """
-    Returns available Business Stages and Context-Specific Business Goals.
+    Returns available Business Stages, Context-Specific Business Goals, and 4 Supported Categories.
     """
     return {
         "stages": BUSINESS_STAGES,
-        "goals": BUSINESS_GOALS
+        "goals": BUSINESS_GOALS,
+        "categories": SUPPORTED_CATEGORIES
     }
 
 

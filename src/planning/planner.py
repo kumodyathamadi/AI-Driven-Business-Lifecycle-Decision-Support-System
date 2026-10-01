@@ -18,7 +18,7 @@ class PersonalizedPlanGenerator:
         counterfactual: Dict[str, Any]
     ) -> Dict[str, Any]:
 
-        category = cleaned_input.get("business_category", "SME Business")
+        category = cleaned_input.get("business_category", "Grocery / Mini-Mart")
         stage = cleaned_input.get("business_stage", "New")
         district = cleaned_input.get("district", "Colombo")
         capital = cleaned_input.get("available_capital_lkr", 500000.0)

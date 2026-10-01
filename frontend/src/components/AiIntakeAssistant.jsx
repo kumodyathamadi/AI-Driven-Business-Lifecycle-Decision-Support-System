@@ -28,12 +28,10 @@ export default function AiIntakeAssistant({ onCompleteIntake, onSwitchToManual }
   const [aiFilledKeys, setAiFilledKeys] = useState(new Set());
   const [aiNotice, setAiNotice] = useState(null);
 
-  // Goals Matrix for Existing Business
+  // Goals Matrix for Existing Business (2 Supported Growth Options)
   const EXISTING_STAGE_GOAL_OPTIONS = [
     { id: "Open New Branch", label: "Expand / Open a New Branch", desc: "Set up an additional physical location or branch." },
-    { id: "Introduce New Product", label: "Introduce a New Product / Service Line", desc: "Add new inventory, offerings, or service lines." },
-    { id: "Improve Current Operations", label: "Upgrade Equipment & Operational Efficiency", desc: "Invest in machinery, staff, and process improvements." },
-    { id: "Increase Production Capacity", label: "Increase Production & Customer Capacity", desc: "Scale up daily customer volume and inventory throughput." }
+    { id: "Introduce New Product", label: "Introduce a New Product / Service Line", desc: "Add new inventory, offerings, or service lines." }
   ];
 
   // Handle Text Extraction -> Direct Form Prefill

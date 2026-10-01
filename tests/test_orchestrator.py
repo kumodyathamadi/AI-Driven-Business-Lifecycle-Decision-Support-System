@@ -16,7 +16,7 @@ def test_new_unseen_business():
 
     raw_new_business = {
         "business_stage": "New",
-        "business_category": "Bakery",
+        "business_category": "Bakery / Food / Grocery",
         "district": "Colombo",
         "province": "Western",
         "location_type": "Suburban Commercial Hub (Homagama)",
@@ -68,17 +68,7 @@ def test_new_unseen_business():
     print("Summary:", plan["executive_overview"]["business_summary"])
     print("Action Roadmap (Phase 1):", plan["action_roadmap"]["phase_1_immediate_0_to_3_months"])
 
-    print("\n--- 6. STRUCTURED PROFILE JSON METADATA ---")
-    print("Schema Version:", profile_result["metadata"]["schema_version"])
-    print("Generated At:", profile_result["metadata"]["generated_at"])
-
-    # Output full profile to a file for artifact verification
-    output_path = os.path.join("models", "feasibility_model", "test_new_business_profile_output.json")
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(profile_result, f, indent=2)
-
-    print(f"\nFull structured profile successfully written to {output_path}")
-    print("=" * 80)
+    print("\n" + "=" * 80)
     print("END-TO-END ORCHESTRATOR TEST COMPLETED SUCCESSFULLY!")
 
 

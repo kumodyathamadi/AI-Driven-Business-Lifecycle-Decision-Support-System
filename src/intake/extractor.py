@@ -72,25 +72,20 @@ def extract_business_info(user_text: str, specified_stage: str = "", specified_g
             detected_goal = "Open New Branch"
         elif "product" in lower_text or "item" in lower_text or "offering" in lower_text:
             detected_goal = "Introduce New Product"
-        elif "improve" in lower_text or "equipment" in lower_text or "upgrade" in lower_text:
-            detected_goal = "Improve Current Operations"
         else:
             detected_goal = "Establish New Business" if detected_stage == "New" else "Open New Branch"
 
-    # 2. Category Detection
-    detected_category = "Bakery"
-    if any(w in lower_text for w in ["bakery", "confectionery", "pastry", "cake", "bread", "buns", "baking"]):
-        detected_category = "Bakery"
-    elif any(w in lower_text for w in ["retail", "grocery", "supermarket", "store", "kadayak", "shop"]):
-        detected_category = "Retail"
-    elif any(w in lower_text for w in ["restaurant", "food", "eatery", "cafe", "dining", "hotel", "kema"]):
-        detected_category = "Restaurant"
-    elif any(w in lower_text for w in ["garment", "apparel", "clothing", "textile", "sewing", "tailor", "andum"]):
-        detected_category = "Garments"
-    elif any(w in lower_text for w in ["it", "tech", "software", "web", "digital", "computer"]):
-        detected_category = "IT Services"
-    elif any(w in lower_text for w in ["salon", "service", "repair", "laundry", "clean", "personal"]):
-        detected_category = "Services"
+    # 2. Category Detection (Strictly Restricted to 4 SME Business Categories)
+    if any(w in lower_text for w in ["salon", "saloon", "beauty", "hair", "parlour", "facial", "spa", "makeup", "cosmetics"]):
+        detected_category = "Beauty Salon"
+    elif any(w in lower_text for w in ["garment", "garments", "clothing", "apparel", "textile", "sewing", "tailor", "tailoring", "fashion", "dress", "andum"]):
+        detected_category = "Clothing / Garment"
+    elif any(w in lower_text for w in ["bakery", "confectionery", "pastry", "cake", "bread", "buns", "baking", "bake", "patisserie"]):
+        detected_category = "Bakery / Food / Grocery"
+    elif any(w in lower_text for w in ["grocery", "mini-mart", "minimart", "mart", "supermarket", "retail", "store", "provisions", "kade", "kadayak", "shop"]):
+        detected_category = "Grocery / Mini-Mart"
+    else:
+        detected_category = "Grocery / Mini-Mart"
 
     # 3. Retrieve Context-Aware Field Config (Required, Optional, Hidden)
     dynamic_cfg = get_dynamic_field_config(detected_stage, detected_goal, detected_category)
