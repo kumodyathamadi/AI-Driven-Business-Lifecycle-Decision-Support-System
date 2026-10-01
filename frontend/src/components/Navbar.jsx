@@ -45,21 +45,50 @@ export default function Navbar({ currentProfile }) {
       </Link>
 
       <div className="navbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-        <div className="status-indicator">
+        <div className="status-indicator" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <span className={`status-dot ${apiStatus.online ? 'online' : 'offline'}`}></span>
           <span style={{ color: apiStatus.online ? '#4ade80' : '#fca5a5', fontSize: '0.78rem' }}>
-            {apiStatus.loading ? 'Checking API...' : apiStatus.online ? 'Backend Connected' : 'API Offline'}
+            {apiStatus.loading ? 'Checking API...' : apiStatus.online ? 'Backend Connected' : 'Disconnected, retrying...'}
           </span>
+          {!apiStatus.online && !apiStatus.loading && (
+            <button
+              onClick={async () => {
+                setApiStatus(prev => ({ ...prev, loading: true }));
+                const data = await checkHealth();
+                setApiStatus({
+                  online: data.status === 'healthy',
+                  modelLoaded: data.model_loaded,
+                  loading: false,
+                });
+              }}
+              style={{
+                background: 'rgba(239, 68, 68, 0.2)',
+                border: '1px solid rgba(239, 68, 68, 0.4)',
+                color: '#fca5a5',
+                borderRadius: '4px',
+                padding: '0.1rem 0.4rem',
+                fontSize: '0.7rem',
+                cursor: 'pointer'
+              }}
+              title="Retry connecting to backend"
+            >
+              Retry
+            </button>
+          )}
         </div>
 
         {isAuthenticated && user && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderLeft: '1px solid var(--border-color)', paddingLeft: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: '#cbd5e1' }}>
+            <Link 
+              to="/settings"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: '#cbd5e1', textDecoration: 'none' }}
+              title="Open Settings and Profile"
+            >
               <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.2)', border: '1px solid rgba(59, 130, 246, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#60a5fa' }}>
                 <User size={15} />
               </div>
               <span style={{ fontWeight: 600 }}>{user.full_name || user.email.split('@')[0]}</span>
-            </div>
+            </Link>
 
             <button
               onClick={handleLogout}

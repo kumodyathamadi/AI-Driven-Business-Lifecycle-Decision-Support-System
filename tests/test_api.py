@@ -137,6 +137,16 @@ def test_business_analyze_endpoint():
     assert get_rest.status_code == 200
     print("  Soft delete and restore SUCCESS!")
 
+    print("\nTesting GET /api/business/audit-logs...")
+    audit_res = client.get("/api/business/audit-logs")
+    assert audit_res.status_code == 200
+    logs = audit_res.json()
+    assert isinstance(logs, list)
+    assert len(logs) >= 1
+    assert "action" in logs[0]
+    print(f"  GET /api/business/audit-logs returned {len(logs)} audit trail entries!")
+
+
 
 def test_pdf_and_docx_business_plan_generation():
     print("\nTesting POST /api/business/plan/generate-pdf and generate-docx...")

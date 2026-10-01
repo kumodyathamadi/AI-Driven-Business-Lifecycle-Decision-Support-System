@@ -11,7 +11,7 @@ from sqlalchemy import func, or_
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from backend.database import get_db
-from backend.models import AnalysisRecord, User
+from backend.models import AnalysisRecord, User, AnalysisAuditLog
 from backend.auth_utils import get_optional_user
 from backend.schemas import BusinessAnalysisRequest, PaginatedRecordsResponse, AnalysisRecordSummary
 from src.orchestrator import analyze_business
@@ -94,6 +94,21 @@ def analyze_sme_business(
             extraction_metadata=payload.extraction_metadata
         )
         db.add(record)
+
+        # Log audit trail event for creation
+        audit_entry = AnalysisAuditLog(
+            user_id=current_user.id if current_user else None,
+            user_email=current_user.email if current_user else "demo@sme360.ai",
+            record_id=record_id,
+            action="created",
+            business_category=record.business_category,
+            district=record.district,
+            result_label=predicted_label,
+            result_score=confidence_score,
+            inputs_snapshot=raw_input
+        )
+        db.add(audit_entry)
+
         db.commit()
         db.refresh(record)
 
@@ -348,6 +363,20 @@ def delete_analysis_record(
         )
 
     rec.is_deleted = True
+
+    # Audit log event for deletion
+    audit_entry = AnalysisAuditLog(
+        user_id=current_user.id if current_user else None,
+        user_email=current_user.email if current_user else "demo@sme360.ai",
+        record_id=record_id,
+        action="deleted",
+        business_category=rec.business_category,
+        district=rec.district,
+        result_label=rec.feasibility_label,
+        result_score=rec.confidence_score
+    )
+    db.add(audit_entry)
+
     db.commit()
     return {"status": "deleted", "id": record_id}
 
@@ -369,5 +398,50 @@ def restore_analysis_record(
         )
 
     rec.is_deleted = False
+
+    # Audit log event for restoration
+    audit_entry = AnalysisAuditLog(
+        user_id=current_user.id if current_user else None,
+        user_email=current_user.email if current_user else "demo@sme360.ai",
+        record_id=record_id,
+        action="restored",
+        business_category=rec.business_category,
+        district=rec.district,
+        result_label=rec.feasibility_label,
+        result_score=rec.confidence_score
+    )
+    db.add(audit_entry)
+
     db.commit()
     return {"status": "restored", "id": record_id}
+
+
+@router.get("/audit-logs", tags=["Audit"])
+def get_audit_logs(
+    limit: int = 50,
+    current_user: Optional[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieves chronological audit trail of business analysis creation, rerun, delete, and restore events.
+    """
+    query = db.query(AnalysisAuditLog)
+    if current_user:
+        query = query.filter(or_(AnalysisAuditLog.user_id == current_user.id, AnalysisAuditLog.user_id == None))
+    logs = query.order_by(AnalysisAuditLog.created_at.desc()).limit(limit).all()
+    return [
+        {
+            "id": log.id,
+            "user_id": log.user_id,
+            "user_email": log.user_email or "demo@sme360.ai",
+            "record_id": log.record_id,
+            "action": log.action,
+            "business_category": log.business_category,
+            "district": log.district,
+            "result_label": log.result_label,
+            "result_score": log.result_score,
+            "created_at": log.created_at.isoformat() if log.created_at else None
+        }
+        for log in logs
+    ]
+

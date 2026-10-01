@@ -223,3 +223,17 @@ export const restoreAnalysisRecord = async (recordId) => {
   const response = await apiClient.post(`/business/record/${recordId}/restore`);
   return response.data;
 };
+
+/**
+ * Retrieves chronological audit trail logs
+ */
+export const fetchAuditLogs = async (limit = 50) => {
+  try {
+    const response = await apiClient.get('/business/audit-logs', { params: { limit } });
+    return response.data;
+  } catch (error) {
+    console.error('Fetch Audit Logs Error:', error);
+    return [];
+  }
+};
+

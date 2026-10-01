@@ -137,3 +137,25 @@ All notable changes to the SME360 AI Feasibility Decision Support System are doc
   - One-click "Share Link" copying direct URL to clipboard.
   - Native "Print View" formatting for clean print / PDF generation.
 
+## [Phase 7: System-Level Polish & Accessibility] - 2026-10-01
+
+### Added
+- **Multilingual Support (i18n)**:
+  - English (`en`), Sinhala (`si` - සිංහල), and Tamil (`ta` - தமிழ்) translations in `src/utils/i18n.js`.
+  - `LanguageProvider` with persistent state across browser reloads via `localStorage`.
+- **System Settings & Profile Dashboard (`/settings`, `/profile`, `/help`)**:
+  - Language selection switcher with instant interface updates.
+  - User identity, operator role, and LKR currency configuration.
+  - "How Scoring Works" educational guide breaking down the 5-stage ML, SHAP, and TOPSIS pipeline.
+  - Prominent Decision Support Legal & Research Disclaimer banner.
+- **Audit Trail & Regulatory Event Logging**:
+  - Database entity `AnalysisAuditLog` tracking all analysis creation, deletion, and restoration events with actor email, timestamp, inputs snapshot, and outcome score.
+  - REST API endpoint `GET /api/business/audit-logs` with user isolation.
+  - Interactive Audit Trail table in Settings with real-time refresh.
+- **Enhanced Connection Health & Resiliency**:
+  - Navbar indicator displaying "Disconnected, retrying..." with red/amber indicator and an immediate "Retry Now" action button.
+- **Accessibility & UX Polish**:
+  - High-contrast `:focus-visible` focus rings for keyboard navigation.
+  - Responsive layout ensuring stacked views on mobile/tablet viewports.
+
+

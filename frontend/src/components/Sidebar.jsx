@@ -10,7 +10,8 @@ import {
   Sparkles, 
   Layers, 
   Sliders, 
-  FileText 
+  FileText,
+  Settings
 } from 'lucide-react';
 import Logo from './Logo';
 
@@ -26,6 +27,7 @@ export default function Sidebar({ activeProfile, activeBusinessId }) {
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/businesses', label: 'My Businesses', icon: Building2 },
     { to: '/analysis/new', label: 'New Analysis', icon: PlusCircle },
+    { to: '/settings', label: 'Settings & Profile', icon: Settings },
   ];
 
   const workspaceNavItems = [

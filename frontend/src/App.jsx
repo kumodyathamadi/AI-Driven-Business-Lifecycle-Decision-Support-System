@@ -17,8 +17,10 @@ import BusinessPlan from './components/BusinessPlan';
 import LoginPage from './components/LoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import NotFoundPage from './components/NotFoundPage';
+import SettingsPage from './components/SettingsPage';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './components/common/Toast';
+import { LanguageProvider } from './context/LanguageContext';
 
 function AppLayout({ activeProfile }) {
   return (
@@ -44,42 +46,49 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <ToastProvider>
-          <Routes>
-            {/* Public Auth Route */}
-            <Route path="/login" element={<LoginPage />} />
+        <LanguageProvider>
+          <ToastProvider>
+            <Routes>
+              {/* Public Auth Route */}
+              <Route path="/login" element={<LoginPage />} />
 
-            {/* Protected SaaS Application Routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route element={<AppLayout activeProfile={activeProfile} />}>
-                <Route index element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard" element={<Dashboard activeProfile={activeProfile} />} />
-                <Route path="/businesses" element={<MyBusinesses />} />
-                <Route 
-                  path="/analysis/new" 
-                  element={<NewAnalysisPage onAnalysisComplete={(p) => setActiveProfile(p)} />} 
-                />
+              {/* Protected SaaS Application Routes */}
+              <Route element={<ProtectedRoute />}>
+                <Route element={<AppLayout activeProfile={activeProfile} />}>
+                  <Route index element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/dashboard" element={<Dashboard activeProfile={activeProfile} />} />
+                  <Route path="/businesses" element={<MyBusinesses />} />
+                  <Route 
+                    path="/analysis/new" 
+                    element={<NewAnalysisPage onAnalysisComplete={(p) => setActiveProfile(p)} />} 
+                  />
 
-                {/* Workspace Routes under /businesses/:id */}
-                <Route 
-                  path="/businesses/:id" 
-                  element={<WorkspaceLayout onProfileLoaded={(p) => setActiveProfile(p)} />}
-                >
-                  <Route index element={<BusinessOverview />} />
-                  <Route path="feasibility" element={<FeasibilityCard />} />
-                  <Route path="insights" element={<ShapExplanation />} />
-                  <Route path="recommendations" element={<RecommendationsView />} />
-                  <Route path="options" element={<TopsisTable />} />
-                  <Route path="scenarios" element={<WhatIfSimulator />} />
-                  <Route path="plan" element={<BusinessPlan />} />
+                  {/* Settings & Profile Route */}
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/profile" element={<Navigate to="/settings" replace />} />
+                  <Route path="/help" element={<SettingsPage />} />
+
+                  {/* Workspace Routes under /businesses/:id */}
+                  <Route 
+                    path="/businesses/:id" 
+                    element={<WorkspaceLayout onProfileLoaded={(p) => setActiveProfile(p)} />}
+                  >
+                    <Route index element={<BusinessOverview />} />
+                    <Route path="feasibility" element={<FeasibilityCard />} />
+                    <Route path="insights" element={<ShapExplanation />} />
+                    <Route path="recommendations" element={<RecommendationsView />} />
+                    <Route path="options" element={<TopsisTable />} />
+                    <Route path="scenarios" element={<WhatIfSimulator />} />
+                    <Route path="plan" element={<BusinessPlan />} />
+                  </Route>
+
+                  {/* 404 Catch-All Page */}
+                  <Route path="*" element={<NotFoundPage />} />
                 </Route>
-
-                {/* 404 Catch-All Page */}
-                <Route path="*" element={<NotFoundPage />} />
               </Route>
-            </Route>
-          </Routes>
-        </ToastProvider>
+            </Routes>
+          </ToastProvider>
+        </LanguageProvider>
       </AuthProvider>
     </BrowserRouter>
   );

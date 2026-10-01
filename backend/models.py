@@ -78,3 +78,24 @@ class AnalysisRecord(Base):
     is_deleted = Column(Boolean, default=False, nullable=True, index=True)
 
     business_profile = relationship("BusinessProfile", back_populates="analysis_records")
+
+
+class AnalysisAuditLog(Base):
+    """
+    Audit log tracking analysis lifecycle events: created, edited, rerun, deleted, restored.
+    Stores timestamp, actor, inputs snapshot, and outcome for regulatory & research traceability.
+    """
+    __tablename__ = "analysis_audit_logs"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    user_id = Column(String, nullable=True, index=True)
+    user_email = Column(String, nullable=True)
+    record_id = Column(String, nullable=True, index=True)
+    action = Column(String, nullable=False, index=True)  # 'created', 'rerun', 'edited', 'deleted', 'restored'
+    business_category = Column(String, nullable=True)
+    district = Column(String, nullable=True)
+    result_label = Column(String, nullable=True)
+    result_score = Column(Float, nullable=True)
+    inputs_snapshot = Column(PortableJSON, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+
