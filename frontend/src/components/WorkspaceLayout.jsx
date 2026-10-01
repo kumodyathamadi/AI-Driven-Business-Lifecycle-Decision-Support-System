@@ -1,11 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { fetchAnalysisRecordById, fetchAnalysisRecords } from '../services/api';
-import { FeasibilityBadge, StageBadge } from './common/Badge';
 import { Skeleton } from './common/Skeleton';
 import BusinessNotFound from './BusinessNotFound';
 import { formatCurrency, formatCustomersPerDay, formatText } from '../utils/formatters';
-import { Briefcase, ArrowLeft, RefreshCw, Layers, Building2 } from 'lucide-react';
+import StatusBadge from './overview/StatusBadge';
+import WorkspaceTabBar from './workspace/WorkspaceTabBar';
+import {
+  Building2,
+  FileText,
+  Share2,
+  Download,
+  Check,
+  ChevronDown
+} from 'lucide-react';
 
 export default function WorkspaceLayout({ onProfileLoaded }) {
   const { id } = useParams();
@@ -17,6 +25,10 @@ export default function WorkspaceLayout({ onProfileLoaded }) {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [showSwitcherDropdown, setShowSwitcherDropdown] = useState(false);
+
+  const dropdownRef = useRef(null);
 
   const loadRecord = async (recordId) => {
     setLoading(true);
@@ -58,174 +70,229 @@ export default function WorkspaceLayout({ onProfileLoaded }) {
     loadBusinesses();
   }, []);
 
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowSwitcherDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleShare = () => {
+    try {
+      navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2200);
+    } catch (e) {
+      console.warn('Clipboard write failed:', e);
+    }
+  };
+
   if (loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-        <div className="glass-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          <Skeleton width="30%" height="20px" />
-          <Skeleton width="60%" height="28px" />
-          <Skeleton width="40%" height="16px" />
+      <div className="workspace-container-max">
+        <div className="glass-card" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <Skeleton width="25%" height="18px" />
+          <Skeleton width="55%" height="32px" />
+          <Skeleton width="35%" height="16px" />
         </div>
         <div className="glass-card" style={{ padding: '2rem' }}>
-          <Skeleton width="100%" height="200px" />
+          <Skeleton width="100%" height="280px" />
         </div>
       </div>
     );
   }
 
   if (notFound || !profile) {
-    return <BusinessNotFound message={errorMessage} />;
+    return (
+      <div className="workspace-container-max">
+        <BusinessNotFound message={errorMessage} onRetry={() => loadRecord(id)} />
+      </div>
+    );
   }
 
   const bizInput = profile.business_input || {};
   const feasAnalysis = profile.feasibility_analysis || {};
-  const bizTitle = `${formatText(bizInput.business_category, 'SME Enterprise')} · ${formatText(bizInput.district, 'Sri Lanka')}`;
+  const explainability = profile.explainability || {};
+  const posDrivers = explainability.positive_drivers || [];
+  const metricsCount = posDrivers.length > 0 ? posDrivers.length : 6;
 
-  const currentTab = location.pathname.split('/').pop();
+  const stage = String(bizInput.business_stage || 'new_startup').toLowerCase();
+  const stageLabel = stage.includes('new') || stage.includes('start') ? 'New Startup' : 'Existing Business';
+
+  const categoryName = formatText(bizInput.business_category, 'SME Enterprise');
+  const districtName = formatText(bizInput.district, 'Sri Lanka');
+  const bizTitle = `${categoryName} · ${districtName}`;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      
-      {/* Workspace Header Strip */}
-      <div 
-        className="glass-card"
-        style={{
-          padding: '1.25rem 1.5rem',
-          border: '1px solid rgba(59, 130, 246, 0.25)',
-          background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9))'
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-              <Link to="/businesses" style={{ color: '#94a3b8', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', textDecoration: 'none' }}>
-                <ArrowLeft size={13} /> All Businesses
-              </Link>
-              <span style={{ color: '#475569' }}>•</span>
-              <StageBadge stage={bizInput.business_stage} />
-            </div>
+    <div className="workspace-container-max">
 
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.3px' }}>
+      {/* Sticky Workspace Topbar Header */}
+      <header className="template-workspace-topbar sticky-header" aria-label="Business workspace topbar">
+        <div className="template-workspace-topbar-header">
+          <div className="template-title-area">
+            <h1 className="template-main-title">
               {bizTitle}
-            </h2>
+            </h1>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.35rem', fontSize: '0.8rem', color: '#94a3b8', flexWrap: 'wrap' }}>
-              <span>Capital: <strong style={{ color: '#cbd5e1' }}>{formatCurrency(bizInput.available_capital_lkr)}</strong></span>
-              <span>Expected: <strong style={{ color: '#cbd5e1' }}>{formatCustomersPerDay(bizInput.expected_customers_per_day)}</strong></span>
-              <span>District: <strong style={{ color: '#cbd5e1' }}>{formatText(bizInput.district)}</strong></span>
-              <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                ID: <code>{id.substring(0, 8)}</code>
+            <div className="template-tags-row">
+              <span className="template-badge-pill badge-pill-emerald">
+                {stageLabel}
               </span>
+              <span className="template-badge-pill badge-pill-slate">
+                {districtName} District
+              </span>
+
+              {/* Distinct "Switch Analysis" Dropdown Control */}
+              {availableBusinesses.length > 1 && (
+                <div ref={dropdownRef} style={{ position: 'relative', display: 'inline-block' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowSwitcherDropdown(!showSwitcherDropdown)}
+                    className="btn-template-plan"
+                    style={{
+                      padding: '0.2rem 0.65rem',
+                      background: 'rgba(30, 41, 59, 0.7)',
+                      borderColor: 'rgba(255, 255, 255, 0.15)',
+                      fontSize: '0.72rem',
+                      color: '#cbd5e1',
+                      borderRadius: '9999px',
+                      boxShadow: 'none'
+                    }}
+                    aria-expanded={showSwitcherDropdown}
+                    aria-haspopup="true"
+                    aria-label="Switch to another analyzed business"
+                  >
+                    <Building2 size={12} style={{ color: '#818cf8' }} aria-hidden="true" />
+                    <span>Switch Analysis</span>
+                    <ChevronDown size={11} style={{ opacity: 0.7 }} aria-hidden="true" />
+                  </button>
+
+                  {showSwitcherDropdown && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '115%',
+                        left: 0,
+                        zIndex: 50,
+                        background: '#0d131f',
+                        border: '1px solid rgba(255, 255, 255, 0.16)',
+                        borderRadius: '10px',
+                        boxShadow: '0 16px 36px rgba(0, 0, 0, 0.85)',
+                        minWidth: '280px',
+                        maxWidth: '380px',
+                        padding: '0.5rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.25rem'
+                      }}
+                      role="menu"
+                    >
+                      <div style={{ padding: '0.35rem 0.65rem', fontSize: '0.7rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Analyzed Businesses ({availableBusinesses.length})
+                      </div>
+                      <div style={{ maxHeight: '240px', overflowY: 'auto' }} className="no-scrollbar">
+                        {availableBusinesses.map((b) => {
+                          const isCurrent = b.id === id;
+                          const bTitle = `${formatText(b.business_category)} · ${formatText(b.district)}`;
+                          const bLabel = b.predicted_label || b.feasibility_label || 'Evaluated';
+
+                          return (
+                            <button
+                              key={b.id}
+                              type="button"
+                              onClick={() => {
+                                setShowSwitcherDropdown(false);
+                                if (!isCurrent) {
+                                  const subPath = location.pathname.replace(`/businesses/${id}`, '');
+                                  navigate(`/businesses/${b.id}${subPath}`);
+                                }
+                              }}
+                              style={{
+                                width: '100%',
+                                textAlign: 'left',
+                                padding: '0.5rem 0.65rem',
+                                borderRadius: '6px',
+                                background: isCurrent ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+                                border: isCurrent ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid transparent',
+                                color: isCurrent ? '#ffffff' : '#cbd5e1',
+                                fontSize: '0.76rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                              }}
+                              role="menuitem"
+                            >
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+                                <strong style={{ color: isCurrent ? '#a5b4fc' : '#f8fafc' }}>{bTitle}</strong>
+                                <span style={{ fontSize: '0.68rem', color: '#64748b' }}>{bLabel}</span>
+                              </div>
+                              {isCurrent && <span style={{ fontSize: '0.68rem', color: '#818cf8', fontWeight: 700 }}>Active</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            {/* Quick Business Switcher Dropdown */}
-            {availableBusinesses.length > 1 && (
-              <div 
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '0.4rem', 
-                  background: 'rgba(15, 23, 42, 0.85)', 
-                  border: '1px solid rgba(59, 130, 246, 0.3)', 
-                  borderRadius: '8px', 
-                  padding: '0.4rem 0.65rem' 
-                }}
-              >
-                <Building2 size={14} style={{ color: '#60a5fa' }} />
-                <select
-                  value={id}
-                  onChange={(e) => {
-                    const nextId = e.target.value;
-                    if (nextId && nextId !== id) {
-                      const subPath = location.pathname.replace(`/businesses/${id}`, '');
-                      navigate(`/businesses/${nextId}${subPath}`);
-                    }
-                  }}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#e2e8f0',
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
-                    outline: 'none',
-                    cursor: 'pointer',
-                    maxWidth: '190px'
-                  }}
-                  title="Switch active business analysis"
-                >
-                  <option value={id} style={{ background: '#0f172a' }}>
-                    {bizTitle} (Current)
-                  </option>
-                  {availableBusinesses.filter(b => b.id !== id).map(b => (
-                    <option key={b.id} value={b.id} style={{ background: '#0f172a' }}>
-                      {formatText(b.business_category)} · {formatText(b.district)} ({b.predicted_label || b.feasibility_label})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <FeasibilityBadge 
-              label={feasAnalysis.predicted_label} 
-              score={feasAnalysis.probability_score}
-              showScore={true}
+          <div className="template-top-actions">
+            {/* Feasibility Status Badge */}
+            <StatusBadge
+              label={feasAnalysis.predicted_label}
+              score={feasAnalysis.confidence_score || feasAnalysis.probability_score}
               size="md"
             />
+
+            {/* View Business Plan Button */}
+            <Link
+              to={`/businesses/${id}/plan`}
+              className="btn-template-plan"
+              aria-label="View generated Business Plan document"
+            >
+              <FileText size={15} aria-hidden="true" />
+              <span>View Business Plan</span>
+            </Link>
+
+            {/* Share / Copy Link Button */}
+            <button
+              type="button"
+              onClick={handleShare}
+              className="btn-template-icon-square"
+              title={copied ? 'Link copied!' : 'Copy business link'}
+              aria-label={copied ? 'Link copied to clipboard' : 'Share and copy workspace link'}
+            >
+              {copied ? <Check size={15} style={{ color: '#34d399' }} /> : <Share2 size={15} />}
+            </button>
+
+            {/* Print / Export Button */}
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="btn-template-icon-square"
+              title="Print / Export Page"
+              aria-label="Print or export current analysis page as PDF"
+            >
+              <Download size={15} />
+            </button>
           </div>
         </div>
 
-        {/* Workspace In-Page Sub-Navigation Tabs */}
-        <div 
-          style={{ 
-            display: 'flex', 
-            gap: '0.5rem', 
-            marginTop: '1.25rem', 
-            borderTop: '1px solid rgba(255, 255, 255, 0.08)', 
-            paddingTop: '0.75rem',
-            overflowX: 'auto'
-          }}
-        >
-          {[
-            { path: `/businesses/${id}`, label: 'Overview', match: `/businesses/${id}` },
-            { path: `/businesses/${id}/feasibility`, label: 'Feasibility Assessment', match: 'feasibility' },
-            { path: `/businesses/${id}/insights`, label: 'Key Insights', match: 'insights' },
-            { path: `/businesses/${id}/recommendations`, label: 'Recommendations', match: 'recommendations' },
-            { path: `/businesses/${id}/options`, label: 'Explore Options', match: 'options' },
-            { path: `/businesses/${id}/scenarios`, label: 'Scenario Explorer', match: 'scenarios' },
-            { path: `/businesses/${id}/plan`, label: 'Business Plan', match: 'plan' },
-          ].map((tab) => {
-            const isActive = tab.match === `/businesses/${id}` 
-              ? location.pathname === `/businesses/${id}`
-              : location.pathname.includes(tab.match);
-
-            return (
-              <Link
-                key={tab.path}
-                to={tab.path}
-                style={{
-                  padding: '0.4rem 0.85rem',
-                  fontSize: '0.8rem',
-                  fontWeight: isActive ? 700 : 500,
-                  color: isActive ? '#60a5fa' : '#94a3b8',
-                  background: isActive ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-                  border: `1px solid ${isActive ? 'rgba(59, 130, 246, 0.3)' : 'transparent'}`,
-                  borderRadius: '6px',
-                  textDecoration: 'none',
-                  whiteSpace: 'nowrap',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                {tab.label}
-              </Link>
-            );
-          })}
-        </div>
-      </div>
+        {/* Accessible Workspace Tab Navigation */}
+        <WorkspaceTabBar businessId={id} metricsCount={metricsCount} />
+      </header>
 
       {/* Render Child Workspace Module Page */}
-      <Outlet context={{ profile, setProfile, reloadRecord: () => loadRecord(id) }} />
+      <main id="workspace-content">
+        <Outlet context={{ profile, setProfile, reloadRecord: () => loadRecord(id) }} />
+      </main>
 
     </div>
   );

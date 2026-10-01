@@ -28,7 +28,7 @@ def create_db_engine(db_url: str):
     Creates SQLAlchemy engine with driver-specific arguments.
     """
     is_sqlite = db_url.startswith("sqlite")
-    connect_args = {"check_same_thread": False, "timeout": 30} if is_sqlite else {}
+    connect_args = {"check_same_thread": False} if is_sqlite else {}
     
     return create_engine(
         db_url,

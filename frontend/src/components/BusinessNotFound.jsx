@@ -1,8 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Building2, ArrowLeft } from 'lucide-react';
+import { Building2, ArrowLeft, RefreshCw } from 'lucide-react';
 
-export default function BusinessNotFound({ message = "Business analysis record was not found or you do not have permission to view it." }) {
+export default function BusinessNotFound({
+  message = "Business analysis record was not found or you do not have permission to view it.",
+  onRetry
+}) {
   return (
     <div 
       className="glass-card"
@@ -17,6 +20,7 @@ export default function BusinessNotFound({ message = "Business analysis record w
         justifyContent: 'center',
         background: 'rgba(15, 23, 42, 0.7)'
       }}
+      role="alert"
     >
       <div 
         style={{ 
@@ -31,6 +35,7 @@ export default function BusinessNotFound({ message = "Business analysis record w
           color: '#f87171', 
           marginBottom: '1.25rem' 
         }}
+        aria-hidden="true"
       >
         <Building2 size={30} />
       </div>
@@ -42,15 +47,31 @@ export default function BusinessNotFound({ message = "Business analysis record w
         {message}
       </p>
 
-      <div style={{ display: 'flex', gap: '0.75rem' }}>
-        <Link to="/businesses" className="btn btn-secondary">
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="btn"
+            style={{
+              background: 'rgba(99, 102, 241, 0.2)',
+              border: '1px solid rgba(99, 102, 241, 0.4)',
+              color: '#a5b4fc',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem'
+            }}
+          >
+            <RefreshCw size={15} />
+            <span>Retry Loading</span>
+          </button>
+        )}
+        <Link to="/dashboard" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
           <ArrowLeft size={16} />
-          <span>My Businesses</span>
-        </Link>
-        <Link to="/analysis/new" className="btn btn-primary">
-          <span>Start New Analysis</span>
+          <span>Return to Dashboard</span>
         </Link>
       </div>
     </div>
   );
 }
+

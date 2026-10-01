@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { 
   Sliders, 
   RefreshCw, 
@@ -20,6 +20,7 @@ import { formatCurrency, formatCustomersPerDay } from '../utils/formatters';
 
 export default function WhatIfSimulator({ scenarioData: propScenario, currentInput: propInput, onScenarioSuccess }) {
   const ctx = useOutletContext();
+  const [searchParams] = useSearchParams();
   const profile = ctx?.profile;
   const scenarioData = propScenario || profile?.scenario_analysis;
   const currentInput = propInput || profile?.business_input;
@@ -32,8 +33,12 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
   const baselineScore = baselineFeasibility.confidence_score || baselineFeasibility.probability_score || 0.5;
   const baselineLabel = baselineFeasibility.predicted_label || 'Conditionally Feasible';
 
+  const paramCapital = searchParams.get('capital');
+  const parsedCapital = paramCapital ? parseFloat(paramCapital) : null;
+  const initialCapital = parsedCapital && !isNaN(parsedCapital) ? parsedCapital : baselineCapital;
+
   // Interactive Scenario State
-  const [customCapital, setCustomCapital] = useState(baselineCapital);
+  const [customCapital, setCustomCapital] = useState(initialCapital);
   const [customBudget, setCustomBudget] = useState(baselineBudget);
   const [customCustomers, setCustomCustomers] = useState(baselineCustomers);
   const [customPrice, setCustomPrice] = useState(baselinePrice);

@@ -36,59 +36,59 @@ export default function Navbar({ currentProfile }) {
         <div className="brand-title-group">
           <h1>
             SME360 AI
-            <span className="tag-component">Feasibility & Growth Engine</span>
+            <span className="tag-component">AI Business Plan Generator</span>
           </h1>
           <div className="brand-subtitle">
-            AI-Driven SME Business Lifecycle Decision Support System
+            From idea to investor-ready plan in minutes
           </div>
         </div>
       </Link>
 
       <div className="navbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-        <div className="status-indicator" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <span className={`status-dot ${apiStatus.online ? 'online' : 'offline'}`}></span>
-          <span style={{ color: apiStatus.online ? '#4ade80' : '#fca5a5', fontSize: '0.78rem' }}>
-            {apiStatus.loading ? 'Checking API...' : apiStatus.online ? 'Backend Connected' : 'Disconnected, retrying...'}
-          </span>
-          {!apiStatus.online && !apiStatus.loading && (
-            <button
-              onClick={async () => {
-                setApiStatus(prev => ({ ...prev, loading: true }));
-                const data = await checkHealth();
-                setApiStatus({
-                  online: data.status === 'healthy',
-                  modelLoaded: data.model_loaded,
-                  loading: false,
-                });
-              }}
-              style={{
-                background: 'rgba(239, 68, 68, 0.2)',
-                border: '1px solid rgba(239, 68, 68, 0.4)',
-                color: '#fca5a5',
-                borderRadius: '4px',
-                padding: '0.1rem 0.4rem',
-                fontSize: '0.7rem',
-                cursor: 'pointer'
-              }}
-              title="Retry connecting to backend"
-            >
-              Retry
-            </button>
-          )}
-        </div>
+        {(!apiStatus.online || apiStatus.loading) && (
+          <div className="status-indicator" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span className={`status-dot ${apiStatus.online ? 'online' : 'offline'}`} />
+            <span style={{ color: apiStatus.online ? '#4ade80' : '#fca5a5', fontSize: '0.78rem' }}>
+              {apiStatus.loading ? 'Checking API...' : 'Disconnected, retrying...'}
+            </span>
+            {!apiStatus.online && !apiStatus.loading && (
+              <button
+                onClick={async () => {
+                  setApiStatus(prev => ({ ...prev, loading: true }));
+                  const data = await checkHealth();
+                  setApiStatus({
+                    online: data.status === 'healthy',
+                    modelLoaded: data.model_loaded,
+                    loading: false,
+                  });
+                }}
+                style={{
+                  background: 'rgba(239, 68, 68, 0.2)',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  color: '#fca5a5',
+                  borderRadius: '4px',
+                  padding: '0.1rem 0.4rem',
+                  fontSize: '0.7rem',
+                  cursor: 'pointer'
+                }}
+                title="Retry connecting to backend"
+              >
+                Retry
+              </button>
+            )}
+          </div>
+        )}
 
         {user && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderLeft: '1px solid var(--border-color)', paddingLeft: '1rem' }}>
-            <Link 
-              to="/settings"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: '#cbd5e1', textDecoration: 'none' }}
-              title="Open Settings and Profile"
+            <div 
+              style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.8rem', color: '#cbd5e1' }}
             >
               <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.2)', border: '1px solid rgba(59, 130, 246, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#60a5fa' }}>
                 <User size={15} />
               </div>
               <span style={{ fontWeight: 600 }}>{user.full_name || 'SME Decision Maker'}</span>
-            </Link>
+            </div>
           </div>
         )}
       </div>

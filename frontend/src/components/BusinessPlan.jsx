@@ -171,15 +171,19 @@ export default function BusinessPlan({ profile: propProfile }) {
       <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', background: '#0f172a', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
         
         {/* Document Header Bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Logo variant="compact" height={36} />
             <div>
               <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#ffffff' }}>
                 {profile.business_input?.business_category || 'SME'} Business Plan
               </h3>
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                Stage: {profile.business_input?.business_stage || 'Startup'} | Location: {profile.business_input?.district} District
+              <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <span>Stage: <strong style={{ color: '#cbd5e1' }}>{profile.business_input?.business_stage || 'Startup'}</strong></span>
+                {profile.business_input?.business_model && (
+                  <span>• Model: <strong style={{ color: '#cbd5e1' }}>{profile.business_input.business_model}</strong></span>
+                )}
+                <span>• Location: <strong style={{ color: '#cbd5e1' }}>{profile.business_input?.address ? `${profile.business_input.address}, ` : ''}{profile.business_input?.district || 'Sri Lanka'}</strong></span>
               </div>
             </div>
           </div>
@@ -201,6 +205,12 @@ export default function BusinessPlan({ profile: propProfile }) {
             <p style={{ fontSize: '0.85rem', color: '#e2e8f0', lineHeight: '1.6' }}>
               {executive_overview.business_summary}
             </p>
+            {profile.business_input?.additional_description && (
+              <div style={{ marginTop: '0.75rem', padding: '0.65rem 0.85rem', background: 'rgba(15, 23, 42, 0.6)', borderRadius: '6px', borderLeft: '3px solid #60a5fa' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.2rem' }}>Detailed Objective:</div>
+                <p style={{ fontSize: '0.82rem', color: '#cbd5e1', margin: 0 }}>{profile.business_input.additional_description}</p>
+              </div>
+            )}
           </div>
 
           {/* Section 2: Operational & Resource Plan */}
@@ -227,6 +237,18 @@ export default function BusinessPlan({ profile: propProfile }) {
             <p style={{ fontSize: '0.85rem', color: '#cbd5e1', marginTop: '0.35rem' }}>
               • Target Daily Customers: <strong style={{ color: '#ffffff' }}>{marketing_plan.target_daily_customers}</strong>
             </p>
+            {profile.business_input?.marketing_details && (
+              <div style={{ marginTop: '0.75rem', padding: '0.65rem 0.85rem', background: 'rgba(15, 23, 42, 0.6)', borderRadius: '6px', borderLeft: '3px solid #c084fc' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#c084fc', marginBottom: '0.2rem' }}>Marketing & Customer Strategy:</div>
+                <p style={{ fontSize: '0.82rem', color: '#cbd5e1', margin: 0 }}>{profile.business_input.marketing_details}</p>
+              </div>
+            )}
+            {profile.business_input?.competitor_information && (
+              <div style={{ marginTop: '0.5rem', padding: '0.65rem 0.85rem', background: 'rgba(15, 23, 42, 0.6)', borderRadius: '6px', borderLeft: '3px solid #fbbf24' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fbbf24', marginBottom: '0.2rem' }}>Competitor Information:</div>
+                <p style={{ fontSize: '0.82rem', color: '#cbd5e1', margin: 0 }}>{profile.business_input.competitor_information}</p>
+              </div>
+            )}
           </div>
 
           {/* Section 4: Financial Planning */}
@@ -238,6 +260,12 @@ export default function BusinessPlan({ profile: propProfile }) {
             <p style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: '1.5' }}>
               {financial_plan.counterfactual_guidance}
             </p>
+            {profile.business_input?.financial_overview && (
+              <div style={{ marginTop: '0.75rem', padding: '0.65rem 0.85rem', background: 'rgba(15, 23, 42, 0.6)', borderRadius: '6px', borderLeft: '3px solid #4ade80' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4ade80', marginBottom: '0.2rem' }}>Financial Overview & Capital Allocation:</div>
+                <p style={{ fontSize: '0.82rem', color: '#cbd5e1', margin: 0 }}>{profile.business_input.financial_overview}</p>
+              </div>
+            )}
           </div>
 
           {/* Section 5: Time-Phased Action Roadmap */}

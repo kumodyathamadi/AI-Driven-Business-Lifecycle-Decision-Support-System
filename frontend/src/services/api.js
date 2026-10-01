@@ -91,7 +91,18 @@ export const analyzeBusiness = async (businessInput) => {
     return response.data;
   } catch (error) {
     console.error('API Business Analysis Error:', error);
-    const errorMessage = error.response?.data?.detail || error.message || 'Analysis failed';
+    let errorMessage = 'Analysis failed';
+    if (typeof error.response?.data?.detail === 'string') {
+      errorMessage = error.response.data.detail;
+    } else if (Array.isArray(error.response?.data?.detail)) {
+      errorMessage = error.response.data.detail
+        .map(d => `${d.loc?.slice(-1)[0] || 'Field'}: ${d.msg}`)
+        .join(', ');
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
     throw new Error(errorMessage);
   }
 };

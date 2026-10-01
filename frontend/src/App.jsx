@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import Navbar from './components/Navbar';
-import Sidebar from './components/Sidebar';
 import Breadcrumbs from './components/Breadcrumbs';
 import Dashboard from './components/Dashboard';
-import MyBusinesses from './components/MyBusinesses';
-import NewAnalysisPage from './components/NewAnalysisPage';
 import WorkspaceLayout from './components/WorkspaceLayout';
 import BusinessOverview from './components/BusinessOverview';
 import FeasibilityCard from './components/FeasibilityCard';
@@ -16,24 +13,21 @@ import WhatIfSimulator from './components/WhatIfSimulator';
 import BusinessPlan from './components/BusinessPlan';
 import ProtectedRoute from './components/ProtectedRoute';
 import NotFoundPage from './components/NotFoundPage';
-import SettingsPage from './components/SettingsPage';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './components/common/Toast';
 import { LanguageProvider } from './context/LanguageContext';
-
 function AppLayout({ activeProfile }) {
   return (
     <div className="app-container">
       <Navbar currentProfile={activeProfile} />
       <div className="main-layout">
-        <Sidebar activeProfile={activeProfile} />
         <main className="content-viewport">
           <Breadcrumbs activeProfile={activeProfile} />
           <Outlet />
         </main>
       </div>
-      <footer style={{ borderTop: '1px solid var(--border-color)', padding: '1rem 2rem', textAlign: 'center', fontSize: '0.75rem', color: '#64748b', background: 'rgba(9, 13, 22, 0.95)' }}>
-        <strong style={{ color: '#94a3b8' }}>SME360 AI</strong> - Smarter Decisions • Stronger SMEs | AI-Driven SME Business Lifecycle Decision Support System
+      <footer style={{ borderTop: '1px solid var(--border-color)', padding: '1rem 2rem', textAlign: 'center', fontSize: '0.8rem', color: '#64748b', background: 'rgba(9, 13, 22, 0.95)' }}>
+        <strong style={{ color: '#94a3b8' }}>SME360 AI</strong> — Professional AI Business Plan Generator
       </footer>
     </div>
   );
@@ -55,17 +49,22 @@ export default function App() {
               <Route element={<ProtectedRoute />}>
                 <Route element={<AppLayout activeProfile={activeProfile} />}>
                   <Route index element={<Navigate to="/dashboard" replace />} />
-                  <Route path="/dashboard" element={<Dashboard activeProfile={activeProfile} />} />
-                  <Route path="/businesses" element={<MyBusinesses />} />
                   <Route 
-                    path="/analysis/new" 
-                    element={<NewAnalysisPage onAnalysisComplete={(p) => setActiveProfile(p)} />} 
+                    path="/dashboard" 
+                    element={
+                      <Dashboard 
+                        activeProfile={activeProfile} 
+                        onAnalysisComplete={(p) => setActiveProfile(p)} 
+                      />
+                    } 
                   />
 
-                  {/* Settings & Profile Route */}
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="/profile" element={<Navigate to="/settings" replace />} />
-                  <Route path="/help" element={<SettingsPage />} />
+                  {/* Redirect removed routes directly to /dashboard */}
+                  <Route path="/businesses" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/analysis/new" element={<Navigate to="/dashboard?action=new" replace />} />
+                  <Route path="/settings" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/profile" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/help" element={<Navigate to="/dashboard" replace />} />
 
                   {/* Workspace Routes under /businesses/:id */}
                   <Route 

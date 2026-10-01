@@ -15,8 +15,6 @@ export default function Breadcrumbs({ activeProfile }) {
   if (path.startsWith('/dashboard')) {
     crumbs.push({ label: 'Dashboard', to: '/dashboard' });
   } else if (path.startsWith('/businesses')) {
-    crumbs.push({ label: 'My Businesses', to: '/businesses', icon: Building2 });
-
     const parts = path.split('/').filter(Boolean); // ['businesses', ':id', 'feasibility'?]
     if (parts.length >= 2) {
       const bizId = parts[1];
@@ -41,10 +39,6 @@ export default function Breadcrumbs({ activeProfile }) {
         crumbs.push({ label: 'Overview', to: `/businesses/${bizId}` });
       }
     }
-  } else if (path.startsWith('/analysis/new')) {
-    crumbs.push({ label: 'New Business Analysis', to: '/analysis/new' });
-  } else if (path.startsWith('/profile') || path.startsWith('/settings')) {
-    crumbs.push({ label: 'Profile & Settings', to: '/profile' });
   }
 
   return (

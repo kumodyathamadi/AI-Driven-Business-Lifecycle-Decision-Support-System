@@ -12,10 +12,10 @@
  */
 export function formatCurrency(value, fallback = 'Not provided') {
   if (value === null || value === undefined || value === '') return fallback;
-  
+
   // If string, strip any non-digit chars except decimal point
   let num = typeof value === 'number' ? value : Number(String(value).replace(/[^0-9.-]+/g, ''));
-  
+
   if (isNaN(num)) return fallback;
   return `LKR ${num.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 }
@@ -79,3 +79,64 @@ export function formatText(text, fallback = 'Not provided') {
   const str = String(text).trim();
   return str.length > 0 ? str : fallback;
 }
+
+/**
+ * Formats a number to abbreviated string (e.g. 188000 -> 188k, 3500000 -> 3.5M).
+ * @param {number|string|null|undefined} value
+ * @returns {string}
+ */
+export function formatShortNumber(value) {
+  if (value === null || value === undefined || value === '') return '0';
+  let num = typeof value === 'number' ? value : Number(String(value).replace(/[^0-9.-]+/g, ''));
+  if (isNaN(num)) return '0';
+  if (Math.abs(num) >= 1_000_000) {
+    const val = (num / 1_000_000).toFixed(1).replace(/\.0$/, '');
+    return `${val}M`;
+  }
+  if (Math.abs(num) >= 1_000) {
+    const val = Math.round(num / 1_000);
+    return `${val}k`;
+  }
+  return num.toString();
+}
+
+/**
+ * Standardizes confidence percentage format across all components (e.g. 0.63 -> "63%").
+ * @param {number|string|null|undefined} score
+ * @returns {string}
+ */
+export function formatConfidence(score) {
+  if (score === null || score === undefined || score === '') return '63%';
+  let num = typeof score === 'number' ? score : Number(String(score).replace(/[^0-9.-]+/g, ''));
+  if (isNaN(num)) return '63%';
+  if (num <= 1 && num > 0) num = num * 100;
+  return `${Math.round(num)}%`;
+}
+
+/**
+ * Cleans up double periods or trailing punctuation glitches (e.g., "Colombo.." -> "Colombo.").
+ * @param {string} text
+ * @returns {string}
+ */
+export function cleanDoublePunctuation(text = '') {
+  if (!text) return '';
+  return String(text)
+    .replace(/\.{2,}/g, '.')
+    .replace(/\s+\./g, '.')
+    .trim();
+}
+
+/**
+ * Formats full assessment date and time with LK Time.
+ * @param {string|Date|null|undefined} dateVal
+ * @returns {string}
+ */
+export function formatFullDateTime(dateVal) {
+  const d = dateVal ? new Date(dateVal) : new Date();
+  if (isNaN(d.getTime())) {
+    const fallback = new Date();
+    return `${fallback.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}, ${fallback.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} LK Time`;
+  }
+  return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}, ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} LK Time`;
+}
+
