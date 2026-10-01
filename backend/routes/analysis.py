@@ -114,20 +114,24 @@ def list_analysis_records(
     page_size: Optional[int] = Query(None, ge=1, le=100),
     stage: Optional[str] = Query(None, description="Filter by business stage ('all', 'new_startup', 'existing')"),
     category: Optional[str] = Query(None, description="Filter by business category"),
+    district: Optional[str] = Query(None, description="Filter by Sri Lankan district"),
+    result: Optional[str] = Query(None, description="Filter by feasibility result ('Feasible', 'Conditionally Feasible', 'Infeasible')"),
     search: Optional[str] = Query(None, description="Search term across category, district, and result"),
-    sort: Optional[str] = Query("newest", description="Sort order: 'newest', 'highest_score', 'oldest'"),
+    sort: Optional[str] = Query("newest", description="Sort order: 'newest', 'highest_score', 'lowest_score', 'oldest'"),
     current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
     """
     Lists paginated SME business analysis runs with total counts and numeric attributes.
     Eliminates NaN values by extracting capital and customer counts safely.
-    Filters by authenticated user if logged in.
+    Filters by authenticated user if logged in, and excludes soft-deleted records.
     """
     eff_limit = page_size if page_size is not None else limit
     offset = (page - 1) * eff_limit
 
-    query = db.query(AnalysisRecord)
+    query = db.query(AnalysisRecord).filter(
+        or_(AnalysisRecord.is_deleted == False, AnalysisRecord.is_deleted == None)
+    )
 
     # User isolation: If user is authenticated, show their records (or records without owner)
     if current_user:
@@ -144,6 +148,14 @@ def list_analysis_records(
     # Filter by category
     if category and category.strip().lower() != "all":
         query = query.filter(AnalysisRecord.business_category == category.strip())
+
+    # Filter by district
+    if district and district.strip().lower() != "all":
+        query = query.filter(func.lower(AnalysisRecord.district) == district.strip().lower())
+
+    # Filter by feasibility result
+    if result and result.strip().lower() != "all":
+        query = query.filter(func.lower(AnalysisRecord.feasibility_label) == result.strip().lower())
 
     # Search filter
     if search and search.strip():
@@ -163,6 +175,8 @@ def list_analysis_records(
     # Sort
     if sort == "highest_score":
         query = query.order_by(AnalysisRecord.confidence_score.desc(), AnalysisRecord.created_at.desc())
+    elif sort == "lowest_score":
+        query = query.order_by(AnalysisRecord.confidence_score.asc(), AnalysisRecord.created_at.desc())
     elif sort == "oldest":
         query = query.order_by(AnalysisRecord.created_at.asc())
     else:
@@ -186,8 +200,11 @@ def get_dashboard_summary(
 ):
     """
     Returns real aggregate metrics for Dashboard KPIs for authenticated user.
+    Excludes soft-deleted records.
     """
-    base_query = db.query(AnalysisRecord)
+    base_query = db.query(AnalysisRecord).filter(
+        or_(AnalysisRecord.is_deleted == False, AnalysisRecord.is_deleted == None)
+    )
     if current_user:
         base_query = base_query.filter(or_(AnalysisRecord.user_id == current_user.id, AnalysisRecord.user_id == None))
 
@@ -203,6 +220,8 @@ def get_dashboard_summary(
     # Top category
     top_cat_row = db.query(
         AnalysisRecord.business_category, func.count(AnalysisRecord.id).label("cnt")
+    ).filter(
+        or_(AnalysisRecord.is_deleted == False, AnalysisRecord.is_deleted == None)
     )
     if current_user:
         top_cat_row = top_cat_row.filter(or_(AnalysisRecord.user_id == current_user.id, AnalysisRecord.user_id == None))
@@ -256,7 +275,7 @@ def get_analysis_record(
     Enforces user authorization if record is owned by a different user.
     """
     rec = db.query(AnalysisRecord).filter(AnalysisRecord.id == record_id).first()
-    if not rec:
+    if not rec or rec.is_deleted:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Analysis record with ID '{record_id}' not found."
@@ -270,3 +289,51 @@ def get_analysis_record(
         )
 
     return rec.structured_profile
+
+
+@router.delete("/record/{record_id}", response_model=Dict[str, Any])
+def delete_analysis_record(
+    record_id: str,
+    current_user: Optional[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Soft-deletes an Analysis Record.
+    """
+    rec = db.query(AnalysisRecord).filter(AnalysisRecord.id == record_id).first()
+    if not rec:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Analysis record with ID '{record_id}' not found."
+        )
+
+    if current_user and rec.user_id and rec.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not authorized to delete this business analysis."
+        )
+
+    rec.is_deleted = True
+    db.commit()
+    return {"status": "deleted", "id": record_id}
+
+
+@router.post("/record/{record_id}/restore", response_model=Dict[str, Any])
+def restore_analysis_record(
+    record_id: str,
+    current_user: Optional[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Restores a soft-deleted Analysis Record.
+    """
+    rec = db.query(AnalysisRecord).filter(AnalysisRecord.id == record_id).first()
+    if not rec:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Analysis record with ID '{record_id}' not found."
+        )
+
+    rec.is_deleted = False
+    db.commit()
+    return {"status": "restored", "id": record_id}

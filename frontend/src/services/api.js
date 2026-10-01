@@ -207,3 +207,19 @@ export const getCurrentUser = async () => {
   const response = await apiClient.get('/auth/me');
   return response.data;
 };
+
+/**
+ * Soft deletes an analysis record
+ */
+export const deleteAnalysisRecord = async (recordId) => {
+  const response = await apiClient.delete(`/business/record/${recordId}`);
+  return response.data;
+};
+
+/**
+ * Restores a soft-deleted analysis record
+ */
+export const restoreAnalysisRecord = async (recordId) => {
+  const response = await apiClient.post(`/business/record/${recordId}/restore`);
+  return response.data;
+};

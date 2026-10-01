@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, Float, DateTime, JSON, ForeignKey, Text
+from sqlalchemy import Column, String, Float, DateTime, JSON, ForeignKey, Text, Boolean
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -75,5 +75,6 @@ class AnalysisRecord(Base):
     structured_profile = Column(PortableJSON, nullable=False)
     
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    is_deleted = Column(Boolean, default=False, nullable=True, index=True)
 
     business_profile = relationship("BusinessProfile", back_populates="analysis_records")

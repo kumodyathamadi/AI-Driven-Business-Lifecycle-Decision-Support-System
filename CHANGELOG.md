@@ -78,3 +78,24 @@ All notable changes to the SME360 AI Feasibility Decision Support System are doc
 - **Progressive Execution State**:
   - Loading screen communicating market benchmark matching, Random Forest scoring, SHAP explainability, and TOPSIS strategy generation.
   - Preserved "Fill Form Manually" as a secondary direct-entry route.
+
+## [Phase 4: My Businesses Upgrades] - 2026-10-01
+
+### Added
+- **Record Display Standardization**:
+  - Titles displayed uniformly as `Category · District` (e.g. `Bakery / Food / Grocery · Homagama`), with record ID styled as small secondary text.
+  - Feasibility badge and numeric confidence score on every card and table row.
+- **Server-Side Pagination, Sorting, and Multi-Filter Controls**:
+  - Pagination with configurable rows per page (10, 20, 50).
+  - Sorting by `newest`, `highest_score`, `lowest_score`, and `oldest`.
+  - Multi-dimensional filters: Business Stage (`new_startup`, `existing`), Sector (4 categories), District (25 Sri Lankan districts), and Feasibility Result (`Feasible`, `Conditionally Feasible`, `Infeasible`).
+  - Real-time keyword search.
+- **Card & Data Table View Toggle**:
+  - Dual responsive presentation modes: visual grid cards with quick KPI metrics and compact tabular format with direct action buttons.
+- **Near-Duplicate Run Detection**:
+  - Intelligent clustering of runs sharing identical category and district.
+  - Banner notification with one-click filter to review or compare duplicate runs.
+- **Soft Delete with Confirmation & Undo Toast**:
+  - Modal confirmation dialog preventing accidental deletions.
+  - RESTful soft delete (`DELETE /api/business/record/{id}`) with instant undo toast notification (`POST /api/business/record/{id}/restore`).
+  - Excludes soft-deleted records from lists and dashboard aggregate calculations.

@@ -61,7 +61,8 @@ if active_db_url.startswith("sqlite"):
         "ALTER TABLE analysis_records ADD COLUMN original_business_description TEXT",
         "ALTER TABLE analysis_records ADD COLUMN extraction_metadata TEXT",
         "ALTER TABLE users ADD COLUMN password_hash VARCHAR",
-        "ALTER TABLE analysis_records ADD COLUMN user_id VARCHAR"
+        "ALTER TABLE analysis_records ADD COLUMN user_id VARCHAR",
+        "ALTER TABLE analysis_records ADD COLUMN is_deleted BOOLEAN DEFAULT 0"
     ]:
         try:
             with engine.connect() as conn:

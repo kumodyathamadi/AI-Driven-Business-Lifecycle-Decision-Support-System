@@ -118,6 +118,25 @@ def test_business_analyze_endpoint():
     assert fetched_profile["metadata"]["record_id"] == record_id
     print(f"  GET /api/business/record/{record_id} fetched successfully!")
 
+    print(f"\nTesting DELETE and restore for record {record_id}...")
+    del_res = client.delete(f"/api/business/record/{record_id}")
+    assert del_res.status_code == 200
+    assert del_res.json()["status"] == "deleted"
+
+    # Confirm it is marked deleted and inaccessible by GET
+    get_del = client.get(f"/api/business/record/{record_id}")
+    assert get_del.status_code == 404
+
+    # Restore the record
+    rest_res = client.post(f"/api/business/record/{record_id}/restore")
+    assert rest_res.status_code == 200
+    assert rest_res.json()["status"] == "restored"
+
+    # Verify it is accessible again
+    get_rest = client.get(f"/api/business/record/{record_id}")
+    assert get_rest.status_code == 200
+    print("  Soft delete and restore SUCCESS!")
+
 
 def test_pdf_and_docx_business_plan_generation():
     print("\nTesting POST /api/business/plan/generate-pdf and generate-docx...")
