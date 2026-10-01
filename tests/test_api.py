@@ -104,9 +104,12 @@ def test_business_analyze_endpoint():
     print("\nTesting GET /api/business/records...")
     rec_res = client.get("/api/business/records")
     assert rec_res.status_code == 200
-    records = rec_res.json()
-    assert len(records) >= 1
-    print(f"  GET /api/business/records returned {len(records)} record(s)")
+    records_data = rec_res.json()
+    assert records_data["total_count"] >= 1
+    assert len(records_data["items"]) >= 1
+    assert "available_capital_lkr" in records_data["items"][0]
+    assert records_data["items"][0]["available_capital_lkr"] is not None
+    print(f"  GET /api/business/records returned {len(records_data['items'])} record(s), total={records_data['total_count']}")
 
     print(f"\nTesting GET /api/business/record/{record_id}...")
     single_res = client.get(f"/api/business/record/{record_id}")

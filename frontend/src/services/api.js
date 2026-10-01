@@ -88,15 +88,29 @@ export const analyzeBusiness = async (businessInput) => {
 };
 
 /**
- * Retrieves recent analysis runs from Database
+ * Retrieves paginated SME business analysis runs with total counts and numeric attributes
  */
-export const fetchAnalysisRecords = async (limit = 10) => {
+export const fetchAnalysisRecords = async (params = 10) => {
   try {
-    const response = await apiClient.get(`/business/records?limit=${limit}`);
+    const queryParams = typeof params === 'number' ? { limit: params } : params;
+    const response = await apiClient.get('/business/records', { params: queryParams });
     return response.data;
   } catch (error) {
     console.error('Fetch Records Error:', error);
-    return [];
+    return { total_count: 0, items: [], page: 1, page_size: 10 };
+  }
+};
+
+/**
+ * Retrieves Dashboard aggregate summary metrics (total analyses, feasible rate, avg capital, etc.)
+ */
+export const fetchDashboardSummary = async () => {
+  try {
+    const response = await apiClient.get('/business/summary');
+    return response.data;
+  } catch (error) {
+    console.error('Fetch Dashboard Summary Error:', error);
+    return null;
   }
 };
 

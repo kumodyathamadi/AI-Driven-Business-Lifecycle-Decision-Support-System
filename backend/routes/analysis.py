@@ -1,19 +1,56 @@
 import sys
 import os
 import uuid
-from typing import Dict, Any, List
-from fastapi import APIRouter, Depends, HTTPException, status
+import json
+from typing import Dict, Any, List, Optional
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func, or_
 
 # Ensure root path is accessible for src module imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from backend.database import get_db
 from backend.models import AnalysisRecord
-from backend.schemas import BusinessAnalysisRequest
+from backend.schemas import BusinessAnalysisRequest, PaginatedRecordsResponse, AnalysisRecordSummary
 from src.orchestrator import analyze_business
 
 router = APIRouter(prefix="/api/business", tags=["Business Analysis"])
+
+
+def serialize_analysis_record(rec: AnalysisRecord) -> Dict[str, Any]:
+    """
+    Serializes an AnalysisRecord database entity into a clean summary dict.
+    Extracts capital and customer counts safely from input_profile to eliminate NaN values.
+    """
+    in_prof = rec.input_profile or {}
+    if isinstance(in_prof, str):
+        try:
+            in_prof = json.loads(in_prof)
+        except Exception:
+            in_prof = {}
+
+    capital = float(in_prof.get("available_capital_lkr", 0.0))
+    customers = int(in_prof.get("expected_customers_per_day", 0))
+
+    stage = rec.business_stage
+    stage_label = "New Startup" if stage == "new_startup" or "new" in str(stage).lower() else "Existing Business"
+
+    return {
+        "id": rec.id,
+        "business_stage": stage,
+        "stage_label": stage_label,
+        "business_category": rec.business_category,
+        "district": rec.district,
+        "feasibility_label": rec.feasibility_label,
+        "predicted_label": rec.feasibility_label,
+        "confidence_score": round(rec.confidence_score, 4),
+        "confidence_percent": f"{(rec.confidence_score * 100):.1f}%",
+        "available_capital_lkr": capital,
+        "expected_customers_per_day": customers,
+        "original_business_description": rec.original_business_description,
+        "created_at": rec.created_at.isoformat() if rec.created_at else None
+    }
 
 
 @router.post("/analyze", response_model=Dict[str, Any], status_code=status.HTTP_200_OK)
@@ -24,7 +61,7 @@ def analyze_sme_business(
     """
     Executes Component 1 End-to-End Business Analysis Pipeline:
     Preprocessing -> Prediction -> SHAP -> Strategy Generation -> TOPSIS -> What-If -> Plan -> Structured Profile.
-    Persists original user description and extraction metadata for research traceability in PostgreSQL.
+    Persists original user description and extraction metadata for research traceability in database.
     """
     try:
         raw_input = payload.model_dump()
@@ -37,15 +74,18 @@ def analyze_sme_business(
         record_id = str(uuid.uuid4())
         structured_profile["metadata"]["record_id"] = record_id
 
-        # Save record to Database with traceability attributes
+        # Save record to Database with canonical business_stage
+        canonical_stage = structured_profile.get("business_input", {}).get("business_stage", payload.business_stage)
+        canonical_category = structured_profile.get("business_input", {}).get("business_category", payload.business_category)
+
         record = AnalysisRecord(
             id=record_id,
-            business_stage=payload.business_stage,
-            business_category=payload.business_category,
+            business_stage=canonical_stage,
+            business_category=canonical_category,
             district=payload.district,
             feasibility_label=predicted_label,
             confidence_score=confidence_score,
-            input_profile=raw_input,
+            input_profile=structured_profile.get("business_input", raw_input),
             structured_profile=structured_profile,
             original_business_description=payload.original_business_description,
             extraction_metadata=payload.extraction_metadata
@@ -64,28 +104,126 @@ def analyze_sme_business(
         )
 
 
-@router.get("/records", response_model=List[Dict[str, Any]])
+@router.get("/records", response_model=PaginatedRecordsResponse)
 def list_analysis_records(
-    limit: int = 10,
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(10, ge=1, le=100, description="Records per page"),
+    page_size: Optional[int] = Query(None, ge=1, le=100),
+    stage: Optional[str] = Query(None, description="Filter by business stage ('all', 'new_startup', 'existing')"),
+    category: Optional[str] = Query(None, description="Filter by business category"),
+    search: Optional[str] = Query(None, description="Search term across category, district, and result"),
+    sort: Optional[str] = Query("newest", description="Sort order: 'newest', 'highest_score', 'oldest'"),
     db: Session = Depends(get_db)
 ):
     """
-    Lists recent SME business analysis runs stored in the database.
+    Lists paginated SME business analysis runs with total counts and numeric attributes.
+    Eliminates NaN values by extracting capital and customer counts safely.
     """
-    records = db.query(AnalysisRecord).order_by(AnalysisRecord.created_at.desc()).limit(limit).all()
-    return [
-        {
-            "id": rec.id,
-            "business_stage": rec.business_stage,
-            "business_category": rec.business_category,
-            "district": rec.district,
-            "feasibility_label": rec.feasibility_label,
-            "confidence_score": rec.confidence_score,
-            "original_business_description": rec.original_business_description,
-            "created_at": rec.created_at.isoformat() if rec.created_at else None
-        }
-        for rec in records
-    ]
+    eff_limit = page_size if page_size is not None else limit
+    offset = (page - 1) * eff_limit
+
+    query = db.query(AnalysisRecord)
+
+    # Filter by stage
+    if stage and stage.strip().lower() != "all":
+        s = stage.strip().lower()
+        if "new" in s:
+            query = query.filter(AnalysisRecord.business_stage == "new_startup")
+        elif "exist" in s:
+            query = query.filter(AnalysisRecord.business_stage == "existing")
+
+    # Filter by category
+    if category and category.strip().lower() != "all":
+        query = query.filter(AnalysisRecord.business_category == category.strip())
+
+    # Search filter
+    if search and search.strip():
+        term = f"%{search.strip().lower()}%"
+        query = query.filter(
+            or_(
+                func.lower(AnalysisRecord.business_category).like(term),
+                func.lower(AnalysisRecord.district).like(term),
+                func.lower(AnalysisRecord.feasibility_label).like(term),
+                func.lower(AnalysisRecord.original_business_description).like(term)
+            )
+        )
+
+    # Total count from database
+    total_count = query.count()
+
+    # Sort
+    if sort == "highest_score":
+        query = query.order_by(AnalysisRecord.confidence_score.desc(), AnalysisRecord.created_at.desc())
+    elif sort == "oldest":
+        query = query.order_by(AnalysisRecord.created_at.asc())
+    else:
+        query = query.order_by(AnalysisRecord.created_at.desc())
+
+    records = query.offset(offset).limit(eff_limit).all()
+    items = [serialize_analysis_record(rec) for rec in records]
+
+    return {
+        "total_count": total_count,
+        "page": page,
+        "page_size": eff_limit,
+        "items": items
+    }
+
+
+@router.get("/summary", response_model=Dict[str, Any])
+def get_dashboard_summary(db: Session = Depends(get_db)):
+    """
+    Returns real aggregate metrics for Dashboard KPIs.
+    """
+    total_count = db.query(func.count(AnalysisRecord.id)).scalar() or 0
+    
+    # Counts by feasibility outcome
+    feasible_count = db.query(func.count(AnalysisRecord.id)).filter(AnalysisRecord.feasibility_label == "Feasible").scalar() or 0
+    cond_feasible_count = db.query(func.count(AnalysisRecord.id)).filter(AnalysisRecord.feasibility_label == "Conditionally Feasible").scalar() or 0
+    infeasible_count = db.query(func.count(AnalysisRecord.id)).filter(AnalysisRecord.feasibility_label == "Infeasible").scalar() or 0
+
+    feasible_rate = round((feasible_count / total_count * 100), 1) if total_count > 0 else 0.0
+
+    # Top category
+    top_cat_row = db.query(
+        AnalysisRecord.business_category, func.count(AnalysisRecord.id).label("cnt")
+    ).group_by(AnalysisRecord.business_category).order_by(func.count(AnalysisRecord.id).desc()).first()
+    top_sector = top_cat_row[0] if top_cat_row else "Not provided"
+
+    # Average capital
+    records = db.query(AnalysisRecord.input_profile).all()
+    cap_sum = 0.0
+    cap_count = 0
+    for r in records:
+        in_prof = r[0] or {}
+        if isinstance(in_prof, str):
+            try:
+                in_prof = json.loads(in_prof)
+            except Exception:
+                in_prof = {}
+        c = in_prof.get("available_capital_lkr")
+        if c is not None:
+            try:
+                cap_sum += float(c)
+                cap_count += 1
+            except (ValueError, TypeError):
+                pass
+    avg_capital = round(cap_sum / cap_count, 2) if cap_count > 0 else 0.0
+
+    # Latest record for 'Continue where you left off'
+    latest = db.query(AnalysisRecord).order_by(AnalysisRecord.created_at.desc()).first()
+    latest_record = serialize_analysis_record(latest) if latest else None
+
+    return {
+        "total_analyses": total_count,
+        "feasible_count": feasible_count,
+        "conditionally_feasible_count": cond_feasible_count,
+        "infeasible_count": infeasible_count,
+        "feasible_rate": feasible_rate,
+        "average_capital_lkr": avg_capital,
+        "top_sector": top_sector,
+        "latest_record": latest_record
+    }
 
 
 @router.get("/record/{record_id}", response_model=Dict[str, Any])
