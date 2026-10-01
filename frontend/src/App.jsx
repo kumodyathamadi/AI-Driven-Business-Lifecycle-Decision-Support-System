@@ -14,7 +14,6 @@ import RecommendationsView from './components/RecommendationsView';
 import TopsisTable from './components/TopsisTable';
 import WhatIfSimulator from './components/WhatIfSimulator';
 import BusinessPlan from './components/BusinessPlan';
-import LoginPage from './components/LoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import NotFoundPage from './components/NotFoundPage';
 import SettingsPage from './components/SettingsPage';
@@ -49,10 +48,10 @@ export default function App() {
         <LanguageProvider>
           <ToastProvider>
             <Routes>
-              {/* Public Auth Route */}
-              <Route path="/login" element={<LoginPage />} />
+              {/* Redirect /login directly to /dashboard (Login/Register form removed) */}
+              <Route path="/login" element={<Navigate to="/dashboard" replace />} />
 
-              {/* Protected SaaS Application Routes */}
+              {/* SaaS Application Routes */}
               <Route element={<ProtectedRoute />}>
                 <Route element={<AppLayout activeProfile={activeProfile} />}>
                   <Route index element={<Navigate to="/dashboard" replace />} />
