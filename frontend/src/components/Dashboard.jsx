@@ -5,15 +5,35 @@ import {
   ArrowRight, 
   Clock, 
   Sparkles,
-  TrendingUp
+  TrendingUp,
+  PieChart as PieIcon,
+  BarChart3
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { 
+  ResponsiveContainer, 
+  PieChart, 
+  Pie, 
+  Cell, 
+  Tooltip as RechartsTooltip, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid 
+} from 'recharts';
 import { fetchAnalysisRecords, fetchDashboardSummary } from '../services/api';
 import { FeasibilityBadge, StageBadge } from './common/Badge';
 import { KPICard } from './common/KPICard';
-import { TableSkeleton } from './common/Skeleton';
+import { TableSkeleton, CardSkeleton } from './common/Skeleton';
 import { EmptyState } from './common/EmptyState';
 import { formatCurrency, formatCustomersPerDay, formatDate, formatText } from '../utils/formatters';
+
+const OUTCOME_COLORS = {
+  'Feasible': '#22c55e',
+  'Conditional': '#eab308',
+  'Infeasible': '#ef4444'
+};
 
 export default function Dashboard({ activeProfile, onStartNew, onViewMyBusinesses, onSelectRecord }) {
   const navigate = useNavigate();
@@ -24,7 +44,7 @@ export default function Dashboard({ activeProfile, onStartNew, onViewMyBusinesse
   const [recentRecords, setRecentRecords] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [summaryMetrics, setSummaryMetrics] = useState(null);
-  const [loadingRecords, setLoadingRecords] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
@@ -47,11 +67,16 @@ export default function Dashboard({ activeProfile, onStartNew, onViewMyBusinesse
       } catch (err) {
         console.error('Failed to load dashboard data:', err);
       } finally {
-        setLoadingRecords(false);
+        setLoading(false);
       }
     }
     loadData();
   }, []);
+
+  const latestRecord = summaryMetrics?.latest_record || (recentRecords.length > 0 ? recentRecords[0] : null);
+
+  const pieData = summaryMetrics?.feasibility_distribution?.filter(d => d.value > 0) || [];
+  const timelineData = summaryMetrics?.timeline_data || [];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -74,7 +99,7 @@ export default function Dashboard({ activeProfile, onStartNew, onViewMyBusinesse
               Welcome to SME360 AI
             </h2>
             <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginTop: '0.4rem' }}>
-              Sri Lanka SME Business Lifecycle Decision Support & Feasibility Assessment System
+              Sri Lankan SME Business Feasibility Prediction, SHAP Explainability & Business Plan Recommendation
             </p>
           </div>
 
@@ -91,25 +116,25 @@ export default function Dashboard({ activeProfile, onStartNew, onViewMyBusinesse
         </div>
       </div>
 
-      {/* KPI Cards (Summary from backend) */}
+      {/* 4 KPI Cards */}
       {summaryMetrics && (
         <div className="grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
           <KPICard 
             title="Total Analyses" 
             value={summaryMetrics.total_analyses ?? totalCount} 
-            subtitle="Saved in database"
+            subtitle="Recorded evaluations"
             icon={Building2}
             color="#60a5fa"
           />
           <KPICard 
             title="Feasible Rate" 
             value={`${Math.round(summaryMetrics.feasible_rate_pct || 0)}%`} 
-            subtitle={`${summaryMetrics.feasible_count || 0} viable profiles`}
+            subtitle={`${summaryMetrics.feasible_count || 0} viable projects`}
             icon={Sparkles}
             color="#4ade80"
           />
           <KPICard 
-            title="Avg Capital" 
+            title="Average Capital" 
             value={formatCurrency(summaryMetrics.avg_capital_lkr)} 
             subtitle="SME project budget"
             icon={TrendingUp}
@@ -118,52 +143,167 @@ export default function Dashboard({ activeProfile, onStartNew, onViewMyBusinesse
           <KPICard 
             title="Top Sector" 
             value={formatText(summaryMetrics.top_sector, 'Bakery / Food')} 
-            subtitle="Most frequent evaluation"
+            subtitle="Most evaluated industry"
             icon={Building2}
             color="#fde047"
           />
         </div>
       )}
 
-      {/* Active Business Snapshot (If an analysis is currently loaded in active workspace) */}
-      {activeProfile && (
-        <div className="glass-card" style={{ border: '1px solid rgba(34, 197, 94, 0.3)', background: 'rgba(6, 78, 59, 0.15)' }}>
+      {/* "Continue Where You Left Off" Latest Analysis Card */}
+      {latestRecord && (
+        <div className="glass-card" style={{ border: '1px solid rgba(59, 130, 246, 0.35)', background: 'linear-gradient(135deg, rgba(30, 58, 138, 0.25), rgba(15, 23, 42, 0.7))' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
-              <span style={{ fontSize: '0.75rem', color: '#4ade80', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                Continue Where You Left Off
-              </span>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff', marginTop: '0.25rem' }}>
-                {formatText(activeProfile.business_input?.business_category, 'SME Enterprise')} · {formatText(activeProfile.business_input?.district)}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                <span style={{ fontSize: '0.72rem', color: '#60a5fa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  Continue Where You Left Off
+                </span>
+                <span style={{ color: '#475569' }}>•</span>
+                <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                  {formatDate(latestRecord.created_at)}
+                </span>
+              </div>
+
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff' }}>
+                {formatText(latestRecord.business_category, 'SME Enterprise')} · {formatText(latestRecord.district, 'Sri Lanka')}
               </h3>
-              <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.25rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                <span>Stage: <strong>{formatText(activeProfile.business_input?.business_stage)}</strong></span>
-                <span>Capital: <strong>{formatCurrency(activeProfile.business_input?.available_capital_lkr)}</strong></span>
-                <span>Expected: <strong>{formatCustomersPerDay(activeProfile.business_input?.expected_customers_per_day)}</strong></span>
+
+              <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.35rem', display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
+                <span>Stage: <strong style={{ color: '#cbd5e1' }}>{latestRecord.stage_label || latestRecord.business_stage}</strong></span>
+                <span>Capital: <strong style={{ color: '#4ade80' }}>{formatCurrency(latestRecord.available_capital_lkr)}</strong></span>
+                <span>Expected: <strong style={{ color: '#cbd5e1' }}>{formatCustomersPerDay(latestRecord.expected_customers_per_day)}</strong></span>
               </div>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <FeasibilityBadge 
-                label={activeProfile.feasibility_analysis?.predicted_label} 
-                score={activeProfile.feasibility_analysis?.probability_score}
+                label={latestRecord.predicted_label || latestRecord.feasibility_label} 
+                score={latestRecord.probability_score || latestRecord.confidence_score}
                 showScore={true}
                 size="md"
               />
               <button 
-                onClick={() => handleSelectRecord(activeProfile.metadata?.record_id, 'overview')} 
+                onClick={() => handleSelectRecord(latestRecord.id, 'overview')} 
                 className="btn btn-secondary"
-                style={{ fontSize: '0.8rem', padding: '0.5rem 1rem' }}
+                style={{ fontSize: '0.82rem', padding: '0.55rem 1rem' }}
               >
                 <span>Open Workspace</span>
-                <ArrowRight size={16} />
+                <ArrowRight size={15} />
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Recent Business Analyses Section */}
+      {/* Visual Analytics Charts Section */}
+      {summaryMetrics && (totalCount > 0) && (
+        <div className="grid-2" style={{ gap: '1.25rem' }}>
+          
+          {/* Chart 1: Feasibility Split Donut */}
+          <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <PieIcon size={16} style={{ color: '#60a5fa' }} />
+                  Feasibility Outcome Distribution
+                </h3>
+                <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.15rem' }}>
+                  Outcome breakdown across evaluated SME profiles.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ height: '220px', width: '100%', position: 'relative' }}>
+              {pieData.length === 0 ? (
+                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '0.85rem' }}>
+                  No outcome distribution data yet
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={80}
+                      paddingAngle={4}
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={OUTCOME_COLORS[entry.name] || '#3b82f6'} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip 
+                      contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.95)', border: '1px solid #334155', borderRadius: '8px', fontSize: '0.8rem' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+            {/* Legend */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '1.25rem', fontSize: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#22c55e' }}></span>
+                <span>Feasible ({summaryMetrics.feasible_count || 0})</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#eab308' }}></span>
+                <span>Conditional ({summaryMetrics.conditionally_feasible_count || 0})</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444' }}></span>
+                <span>Infeasible ({summaryMetrics.infeasible_count || 0})</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Chart 2: Analyses Activity Timeline */}
+          <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <BarChart3 size={16} style={{ color: '#c084fc' }} />
+                  Analyses Activity & Timeline
+                </h3>
+                <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.15rem' }}>
+                  Volume of feasibility runs evaluated over time.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ height: '220px', width: '100%' }}>
+              {timelineData.length === 0 ? (
+                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '0.85rem' }}>
+                  No timeline data available
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={timelineData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.06)" />
+                    <XAxis dataKey="date" stroke="#64748b" fontSize={11} />
+                    <YAxis stroke="#64748b" fontSize={11} allowDecimals={false} />
+                    <RechartsTooltip 
+                      contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.95)', border: '1px solid #334155', borderRadius: '8px', fontSize: '0.8rem' }}
+                    />
+                    <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Analyses" />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+            <div style={{ textAlign: 'center', fontSize: '0.75rem', color: '#94a3b8' }}>
+              Total of <strong>{totalCount}</strong> business profiles evaluated
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* Recent Business Analyses Table Section */}
       <div className="glass-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
           <div>
@@ -183,8 +323,8 @@ export default function Dashboard({ activeProfile, onStartNew, onViewMyBusinesse
           )}
         </div>
 
-        {loadingRecords ? (
-          <TableSkeleton rows={4} cols={6} />
+        {loading ? (
+          <TableSkeleton rows={4} cols={7} />
         ) : recentRecords.length === 0 ? (
           <EmptyState 
             icon={Building2}
@@ -201,7 +341,7 @@ export default function Dashboard({ activeProfile, onStartNew, onViewMyBusinesse
                   <th>Category</th>
                   <th>Stage</th>
                   <th>District</th>
-                  <th>Feasibility Result</th>
+                  <th>Feasibility Result & Score</th>
                   <th>Capital</th>
                   <th>Customers</th>
                   <th>Analyzed Date</th>
@@ -221,8 +361,8 @@ export default function Dashboard({ activeProfile, onStartNew, onViewMyBusinesse
                     <td>
                       <FeasibilityBadge 
                         label={rec.predicted_label || rec.feasibility_label} 
-                        score={rec.probability_score}
-                        showScore={rec.probability_score !== undefined}
+                        score={rec.probability_score || rec.confidence_score}
+                        showScore={true}
                       />
                     </td>
                     <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>

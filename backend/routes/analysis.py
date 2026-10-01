@@ -252,15 +252,49 @@ def get_dashboard_summary(
     latest = base_query.order_by(AnalysisRecord.created_at.desc()).first()
     latest_record = serialize_analysis_record(latest) if latest else None
 
+    # Feasibility distribution for donut/pie chart
+    feasibility_distribution = [
+        {"name": "Feasible", "value": feasible_count, "color": "#22c55e"},
+        {"name": "Conditional", "value": cond_feasible_count, "color": "#eab308"},
+        {"name": "Infeasible", "value": infeasible_count, "color": "#ef4444"}
+    ]
+
+    # Sector distribution for bar chart
+    sector_counts = db.query(
+        AnalysisRecord.business_category, func.count(AnalysisRecord.id).label("count")
+    ).filter(
+        or_(AnalysisRecord.is_deleted == False, AnalysisRecord.is_deleted == None)
+    )
+    if current_user:
+        sector_counts = sector_counts.filter(or_(AnalysisRecord.user_id == current_user.id, AnalysisRecord.user_id == None))
+    sector_data = [
+        {"category": row[0], "count": row[1]} 
+        for row in sector_counts.group_by(AnalysisRecord.business_category).all()
+    ]
+
+    # Recent activity timeline (by date)
+    recent_runs = base_query.order_by(AnalysisRecord.created_at.asc()).limit(30).all()
+    date_map = {}
+    for r in recent_runs:
+        if r.created_at:
+            d_str = r.created_at.strftime("%b %d")
+            date_map[d_str] = date_map.get(d_str, 0) + 1
+    timeline_data = [{"date": k, "count": v} for k, v in date_map.items()]
+
     return {
         "total_analyses": total_count,
         "feasible_count": feasible_count,
         "conditionally_feasible_count": cond_feasible_count,
         "infeasible_count": infeasible_count,
         "feasible_rate": feasible_rate,
+        "feasible_rate_pct": feasible_rate,
         "average_capital_lkr": avg_capital,
+        "avg_capital_lkr": avg_capital,
         "top_sector": top_sector,
-        "latest_record": latest_record
+        "latest_record": latest_record,
+        "feasibility_distribution": feasibility_distribution,
+        "sector_distribution": sector_data,
+        "timeline_data": timeline_data
     }
 
 

@@ -99,3 +99,22 @@ All notable changes to the SME360 AI Feasibility Decision Support System are doc
   - Modal confirmation dialog preventing accidental deletions.
   - RESTful soft delete (`DELETE /api/business/record/{id}`) with instant undo toast notification (`POST /api/business/record/{id}/restore`).
   - Excludes soft-deleted records from lists and dashboard aggregate calculations.
+
+## [Phase 5: Dashboard Upgrades] - 2026-10-01
+
+### Added
+- **4 Real-Time Executive KPI Cards**:
+  - Total Analyses (SQL count of non-deleted records).
+  - Feasible Rate (percentage of viable evaluated projects).
+  - Average Capital (properly formatted in `LKR`, e.g. `LKR 1,840,000`).
+  - Top Sector (most frequently analyzed SME industry).
+- **Interactive Recharts Visualizations**:
+  - Feasibility Outcome Distribution: Custom Recharts Donut chart displaying Feasible, Conditionally Feasible, and Infeasible breakdown with tooltips and legend.
+  - Analyses Activity Timeline: Recharts Bar chart showing temporal volume of evaluations.
+- **"Continue Where You Left Off" Hero Card**:
+  - Highlights the most recent SME analysis with key metrics (capital, customer volume, date, feasibility badge with score) and a direct "Open Workspace" action button.
+- **Enhanced Recent Analyses Table**:
+  - Displays numeric confidence score beside feasibility status badge.
+  - Formats capital in `LKR`, customers in `/day`, and dates in human-readable format.
+  - Direct deep links into `/businesses/:id`.
+  - Empty state with onboarding call-to-action for new users with zero analyses.
