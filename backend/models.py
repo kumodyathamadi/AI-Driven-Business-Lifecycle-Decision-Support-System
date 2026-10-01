@@ -22,6 +22,7 @@ class User(Base):
 
     id = Column(String, primary_key=True, default=generate_uuid)
     email = Column(String, unique=True, nullable=False, index=True)
+    password_hash = Column(String, nullable=True)
     full_name = Column(String, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
@@ -56,6 +57,7 @@ class AnalysisRecord(Base):
     __tablename__ = "analysis_records"
 
     id = Column(String, primary_key=True, default=generate_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=True, index=True)
     business_profile_id = Column(String, ForeignKey("business_profiles.id"), nullable=True, index=True)
     
     business_stage = Column(String, nullable=False, index=True)

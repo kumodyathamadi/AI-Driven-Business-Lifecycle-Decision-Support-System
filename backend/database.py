@@ -8,13 +8,18 @@ load_dotenv()
 
 # Default SQLite path for fallback
 SQLITE_DB_PATH = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "data", "component_1.db")
+    os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "data",
+        "component_1.db"
+    )
 )
-os.makedirs(os.path.dirname(SQLITE_DB_PATH), exist_ok=True)
+
 DEFAULT_SQLITE_URL = f"sqlite:///{SQLITE_DB_PATH}"
 
 # Retrieve DATABASE_URL from environment or fallback
-DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_SQLITE_URL)
+DATABASE_URL = DEFAULT_SQLITE_URL
 SQLITE_FALLBACK_URL = os.getenv("SQLITE_FALLBACK_URL", DEFAULT_SQLITE_URL)
 
 
@@ -54,7 +59,9 @@ if active_db_url.startswith("sqlite"):
     for col_def in [
         "ALTER TABLE analysis_records ADD COLUMN business_profile_id VARCHAR",
         "ALTER TABLE analysis_records ADD COLUMN original_business_description TEXT",
-        "ALTER TABLE analysis_records ADD COLUMN extraction_metadata TEXT"
+        "ALTER TABLE analysis_records ADD COLUMN extraction_metadata TEXT",
+        "ALTER TABLE users ADD COLUMN password_hash VARCHAR",
+        "ALTER TABLE analysis_records ADD COLUMN user_id VARCHAR"
     ]:
         try:
             with engine.connect() as conn:

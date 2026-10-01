@@ -11,7 +11,8 @@ from sqlalchemy import func, or_
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from backend.database import get_db
-from backend.models import AnalysisRecord
+from backend.models import AnalysisRecord, User
+from backend.auth_utils import get_optional_user
 from backend.schemas import BusinessAnalysisRequest, PaginatedRecordsResponse, AnalysisRecordSummary
 from src.orchestrator import analyze_business
 
@@ -56,6 +57,7 @@ def serialize_analysis_record(rec: AnalysisRecord) -> Dict[str, Any]:
 @router.post("/analyze", response_model=Dict[str, Any], status_code=status.HTTP_200_OK)
 def analyze_sme_business(
     payload: BusinessAnalysisRequest,
+    current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -80,6 +82,7 @@ def analyze_sme_business(
 
         record = AnalysisRecord(
             id=record_id,
+            user_id=current_user.id if current_user else None,
             business_stage=canonical_stage,
             business_category=canonical_category,
             district=payload.district,
@@ -113,16 +116,22 @@ def list_analysis_records(
     category: Optional[str] = Query(None, description="Filter by business category"),
     search: Optional[str] = Query(None, description="Search term across category, district, and result"),
     sort: Optional[str] = Query("newest", description="Sort order: 'newest', 'highest_score', 'oldest'"),
+    current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
     """
     Lists paginated SME business analysis runs with total counts and numeric attributes.
     Eliminates NaN values by extracting capital and customer counts safely.
+    Filters by authenticated user if logged in.
     """
     eff_limit = page_size if page_size is not None else limit
     offset = (page - 1) * eff_limit
 
     query = db.query(AnalysisRecord)
+
+    # User isolation: If user is authenticated, show their records (or records without owner)
+    if current_user:
+        query = query.filter(or_(AnalysisRecord.user_id == current_user.id, AnalysisRecord.user_id == None))
 
     # Filter by stage
     if stage and stage.strip().lower() != "all":
@@ -171,30 +180,40 @@ def list_analysis_records(
 
 
 @router.get("/summary", response_model=Dict[str, Any])
-def get_dashboard_summary(db: Session = Depends(get_db)):
+def get_dashboard_summary(
+    current_user: Optional[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db)
+):
     """
-    Returns real aggregate metrics for Dashboard KPIs.
+    Returns real aggregate metrics for Dashboard KPIs for authenticated user.
     """
-    total_count = db.query(func.count(AnalysisRecord.id)).scalar() or 0
+    base_query = db.query(AnalysisRecord)
+    if current_user:
+        base_query = base_query.filter(or_(AnalysisRecord.user_id == current_user.id, AnalysisRecord.user_id == None))
+
+    total_count = base_query.count()
     
     # Counts by feasibility outcome
-    feasible_count = db.query(func.count(AnalysisRecord.id)).filter(AnalysisRecord.feasibility_label == "Feasible").scalar() or 0
-    cond_feasible_count = db.query(func.count(AnalysisRecord.id)).filter(AnalysisRecord.feasibility_label == "Conditionally Feasible").scalar() or 0
-    infeasible_count = db.query(func.count(AnalysisRecord.id)).filter(AnalysisRecord.feasibility_label == "Infeasible").scalar() or 0
+    feasible_count = base_query.filter(AnalysisRecord.feasibility_label == "Feasible").count()
+    cond_feasible_count = base_query.filter(AnalysisRecord.feasibility_label == "Conditionally Feasible").count()
+    infeasible_count = base_query.filter(AnalysisRecord.feasibility_label == "Infeasible").count()
 
     feasible_rate = round((feasible_count / total_count * 100), 1) if total_count > 0 else 0.0
 
     # Top category
     top_cat_row = db.query(
         AnalysisRecord.business_category, func.count(AnalysisRecord.id).label("cnt")
-    ).group_by(AnalysisRecord.business_category).order_by(func.count(AnalysisRecord.id).desc()).first()
+    )
+    if current_user:
+        top_cat_row = top_cat_row.filter(or_(AnalysisRecord.user_id == current_user.id, AnalysisRecord.user_id == None))
+    top_cat_row = top_cat_row.group_by(AnalysisRecord.business_category).order_by(func.count(AnalysisRecord.id).desc()).first()
     top_sector = top_cat_row[0] if top_cat_row else "Not provided"
 
     # Average capital
-    records = db.query(AnalysisRecord.input_profile).all()
+    cap_records = base_query.with_entities(AnalysisRecord.input_profile).all()
     cap_sum = 0.0
     cap_count = 0
-    for r in records:
+    for r in cap_records:
         in_prof = r[0] or {}
         if isinstance(in_prof, str):
             try:
@@ -211,7 +230,7 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
     avg_capital = round(cap_sum / cap_count, 2) if cap_count > 0 else 0.0
 
     # Latest record for 'Continue where you left off'
-    latest = db.query(AnalysisRecord).order_by(AnalysisRecord.created_at.desc()).first()
+    latest = base_query.order_by(AnalysisRecord.created_at.desc()).first()
     latest_record = serialize_analysis_record(latest) if latest else None
 
     return {
@@ -229,10 +248,12 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
 @router.get("/record/{record_id}", response_model=Dict[str, Any])
 def get_analysis_record(
     record_id: str,
+    current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
     """
     Retrieves a full structured profile JSON by Analysis Record ID.
+    Enforces user authorization if record is owned by a different user.
     """
     rec = db.query(AnalysisRecord).filter(AnalysisRecord.id == record_id).first()
     if not rec:
@@ -240,4 +261,12 @@ def get_analysis_record(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Analysis record with ID '{record_id}' not found."
         )
+
+    # Check ownership if record has an assigned user
+    if current_user and rec.user_id and rec.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not authorized to view this business analysis."
+        )
+
     return rec.structured_profile

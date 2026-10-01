@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { Award, Layers, BarChart2, Cpu, ChevronDown, ChevronUp } from 'lucide-react';
 import StrategyCard from './StrategyCard';
 
-export default function TopsisTable({ topsisRanking }) {
+export default function TopsisTable({ topsisRanking: propRanking }) {
+  const ctx = useOutletContext();
+  const topsisRanking = propRanking || ctx?.profile?.strategic_recommendations?.topsis_ranking;
   const [showTechnical, setShowTechnical] = useState(false);
 
   if (!topsisRanking) return null;

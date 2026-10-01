@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { 
   FileText, 
   Calendar, 
@@ -14,7 +15,9 @@ import {
 import { downloadBusinessPlanPdf, downloadBusinessPlanDocx } from '../services/api';
 import Logo from './Logo';
 
-export default function BusinessPlan({ profile }) {
+export default function BusinessPlan({ profile: propProfile }) {
+  const ctx = useOutletContext();
+  const profile = propProfile || ctx?.profile;
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadingDocx, setDownloadingDocx] = useState(false);
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import { 
   Briefcase, 
   MapPin, 
@@ -8,31 +9,35 @@ import {
   Award, 
   TrendingUp, 
   ArrowRight, 
-  CheckCircle2, 
-  AlertTriangle, 
-  XCircle, 
   Lightbulb, 
   Sliders, 
   FileText 
 } from 'lucide-react';
+import { FeasibilityBadge, StageBadge } from './common/Badge';
+import { formatCurrency, formatCustomersPerDay, formatNumber, formatText } from '../utils/formatters';
 
-export default function BusinessOverview({ profile, onNavigate }) {
+export default function BusinessOverview({ profile: propProfile, onNavigate }) {
+  const outletCtx = useOutletContext();
+  const navigate = useNavigate();
+  const { id } = useParams();
+
+  const profile = propProfile || outletCtx?.profile;
   if (!profile) return null;
 
   const { business_input = {}, feasibility_analysis = {}, personalized_business_plan = {} } = profile;
-  const { predicted_label, confidence_score } = feasibility_analysis;
+  const { predicted_label, confidence_score, probability_score } = feasibility_analysis;
 
-  const getBadgeClass = (label) => {
-    if (label === 'Feasible') return 'badge-feasible';
-    if (label === 'Conditionally Feasible') return 'badge-conditionally';
-    return 'badge-infeasible';
+  const handleNav = (tab) => {
+    if (onNavigate) {
+      onNavigate(tab);
+    } else if (id) {
+      if (tab === 'overview') navigate(`/businesses/${id}`);
+      else if (tab === 'scenario') navigate(`/businesses/${id}/scenarios`);
+      else navigate(`/businesses/${id}/${tab}`);
+    }
   };
 
-  const getBadgeIcon = (label) => {
-    if (label === 'Feasible') return <CheckCircle2 size={18} style={{ color: '#4ade80' }} />;
-    if (label === 'Conditionally Feasible') return <AlertTriangle size={18} style={{ color: '#fde047' }} />;
-    return <XCircle size={18} style={{ color: '#fca5a5' }} />;
-  };
+  const bizTitle = `${formatText(business_input.business_category, 'SME Business')} · ${formatText(business_input.district, 'Sri Lanka')}`;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -49,30 +54,30 @@ export default function BusinessOverview({ profile, onNavigate }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#60a5fa', background: 'rgba(59, 130, 246, 0.15)', padding: '0.2rem 0.6rem', borderRadius: '4px' }}>
-                {business_input.business_stage || 'Startup'} Stage
-              </span>
+              <StageBadge stage={business_input.business_stage} />
               <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                <MapPin size={14} /> {business_input.district || 'Colombo'} District
+                <MapPin size={14} /> {formatText(business_input.district)} District
               </span>
             </div>
 
             <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#ffffff' }}>
-              {business_input.business_category || 'SME Business'}
+              {bizTitle}
             </h2>
             
             <p style={{ fontSize: '0.85rem', color: '#cbd5e1', marginTop: '0.5rem', maxWidth: '750px', lineHeight: '1.5' }}>
-              {personalized_business_plan.executive_overview?.business_summary || 'Business profile overview and feasibility evaluation.'}
+              {formatText(personalized_business_plan.executive_overview?.business_summary, 'Comprehensive SME business profile overview and feasibility evaluation.')}
             </p>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
-            <div className={getBadgeClass(predicted_label)} style={{ fontSize: '0.9rem', padding: '0.4rem 1rem' }}>
-              {getBadgeIcon(predicted_label)}
-              <span>{predicted_label}</span>
-            </div>
+            <FeasibilityBadge 
+              label={predicted_label} 
+              score={probability_score || confidence_score}
+              showScore={true}
+              size="md"
+            />
             <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-              Model Confidence: <strong style={{ color: '#ffffff' }}>{(confidence_score * 100).toFixed(1)}%</strong>
+              Confidence: <strong style={{ color: '#ffffff' }}>{confidence_score ? `${(confidence_score * 100).toFixed(1)}%` : 'Not provided'}</strong>
             </div>
           </div>
         </div>
@@ -81,72 +86,72 @@ export default function BusinessOverview({ profile, onNavigate }) {
       {/* KPI Cards Grid */}
       <div className="grid-3">
         <div className="glass-card">
-          <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, uppercase: 'uppercase', letterSpacing: '0.5px' }}>Financial Capital</div>
+          <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Financial Capital</div>
           <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#4ade80', marginTop: '0.25rem' }}>
-            LKR {Number(business_input.available_capital_lkr || 0).toLocaleString()}
+            {formatCurrency(business_input.available_capital_lkr)}
           </div>
           <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>
-            Monthly Budget: LKR {Number(business_input.monthly_budget_lkr || 0).toLocaleString()}
+            Monthly Budget: {formatCurrency(business_input.monthly_budget_lkr)}
           </div>
         </div>
 
         <div className="glass-card">
-          <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, uppercase: 'uppercase', letterSpacing: '0.5px' }}>Target Customer Demand</div>
+          <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Target Customer Demand</div>
           <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#60a5fa', marginTop: '0.25rem' }}>
-            {business_input.expected_customers_per_day || 0} / Day
+            {formatCustomersPerDay(business_input.expected_customers_per_day)}
           </div>
           <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>
-            Expected Price: LKR {business_input.expected_price_lkr || 0}
+            Expected Unit Price: {formatCurrency(business_input.expected_price_lkr)}
           </div>
         </div>
 
         <div className="glass-card">
-          <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, uppercase: 'uppercase', letterSpacing: '0.5px' }}>Operational Readiness</div>
+          <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Entrepreneur Experience</div>
           <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#c084fc', marginTop: '0.25rem' }}>
-            {business_input.entrepreneur_experience_years || 0} Years Exp.
+            {business_input.entrepreneur_experience_years !== undefined ? `${business_input.entrepreneur_experience_years} Years` : 'Not provided'}
           </div>
           <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>
-            Staff Count: {business_input.available_staff_count || 1} Person(s)
+            Location Type: {formatText(business_input.location_type)}
           </div>
         </div>
       </div>
 
-      {/* Quick Navigation Cards into Analysis Modules */}
-      <div>
+      {/* Quick Navigation Cards */}
+      <div style={{ marginTop: '0.5rem' }}>
         <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', marginBottom: '1rem' }}>
-          Explore Business Decision Modules
+          Explore Analysis & Research Modules
         </h3>
 
         <div className="grid-2">
           <div 
             className="glass-card" 
             style={{ cursor: 'pointer', transition: 'transform 0.2s, border-color 0.2s' }}
-            onClick={() => onNavigate('feasibility')}
+            onClick={() => handleNav('feasibility')}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.15)', display: 'flex', alignItems: 'center', justifyCenter: 'center', color: '#60a5fa' }}>
-                <Award size={20} />
+              <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#60a5fa' }}>
+                <TrendingUp size={20} />
               </div>
               <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff' }}>1. Feasibility Assessment</h4>
             </div>
             <p style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: '1.5' }}>
-              Detailed Random Forest feasibility classification and probability score distribution.
+              Detailed viability scoring breakdown, probability distribution across viability classes.
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: '#60a5fa', fontWeight: 600, marginTop: '0.75rem' }}>
-              <span>View Feasibility Assessment</span> <ArrowRight size={14} />
+              <span>View Assessment</span> <ArrowRight size={14} />
             </div>
           </div>
 
           <div 
             className="glass-card" 
             style={{ cursor: 'pointer', transition: 'transform 0.2s, border-color 0.2s' }}
-            onClick={() => onNavigate('insights')}
+            onClick={() => handleNav('insights')}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(34, 197, 94, 0.15)', display: 'flex', alignItems: 'center', justifyCenter: 'center', color: '#4ade80' }}>
-                <TrendingUp size={20} />
+              <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(34, 197, 94, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4ade80' }}>
+                <Award size={20} />
               </div>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff' }}>2. Key Insights & Drivers</h4>
+              <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff' }}>2. Key Explainability Drivers (SHAP)</h4>
             </div>
             <p style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: '1.5' }}>
               Discover the top positive supporting factors and risk hurdles influencing your prediction.
@@ -159,10 +164,10 @@ export default function BusinessOverview({ profile, onNavigate }) {
           <div 
             className="glass-card" 
             style={{ cursor: 'pointer', transition: 'transform 0.2s, border-color 0.2s' }}
-            onClick={() => onNavigate('recommendations')}
+            onClick={() => handleNav('recommendations')}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(168, 85, 247, 0.15)', display: 'flex', alignItems: 'center', justifyCenter: 'center', color: '#c084fc' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(168, 85, 247, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c084fc' }}>
                 <Lightbulb size={20} />
               </div>
               <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff' }}>3. Strategic Recommendations</h4>
@@ -178,10 +183,10 @@ export default function BusinessOverview({ profile, onNavigate }) {
           <div 
             className="glass-card" 
             style={{ cursor: 'pointer', transition: 'transform 0.2s, border-color 0.2s' }}
-            onClick={() => onNavigate('scenario')}
+            onClick={() => handleNav('scenario')}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(234, 179, 8, 0.15)', display: 'flex', alignItems: 'center', justifyCenter: 'center', color: '#fde047' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(234, 179, 8, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fde047' }}>
                 <Sliders size={20} />
               </div>
               <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff' }}>4. Scenario Explorer</h4>

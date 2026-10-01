@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { TrendingUp, AlertOctagon, HelpCircle, ChevronDown, ChevronUp, Cpu } from 'lucide-react';
 
-export default function ShapExplanation({ shapData }) {
+export default function ShapExplanation({ shapData: propData }) {
+  const ctx = useOutletContext();
+  const shapData = propData || ctx?.profile?.explainability;
   const [showTechnical, setShowTechnical] = useState(false);
 
   if (!shapData) return null;

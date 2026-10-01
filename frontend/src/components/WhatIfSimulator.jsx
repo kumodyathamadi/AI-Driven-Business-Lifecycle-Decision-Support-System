@@ -1,8 +1,14 @@
 import React, { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { Sliders, RefreshCw, ArrowRight, ShieldAlert, Sparkles } from 'lucide-react';
 import { analyzeBusiness } from '../services/api';
 
-export default function WhatIfSimulator({ scenarioData, currentInput, onScenarioSuccess }) {
+export default function WhatIfSimulator({ scenarioData: propScenario, currentInput: propInput, onScenarioSuccess }) {
+  const ctx = useOutletContext();
+  const profile = ctx?.profile;
+  const scenarioData = propScenario || profile?.scenario_analysis;
+  const currentInput = propInput || profile?.business_input;
+
   if (!scenarioData) return null;
 
   const { what_if_simulations = [], counterfactual_boundary = {} } = scenarioData;

@@ -1,8 +1,13 @@
 import React from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { CheckCircle2, AlertTriangle, XCircle, Award } from 'lucide-react';
 import ProbabilityChart from './ProbabilityChart';
 
-export default function FeasibilityCard({ feasibilityData, executiveSummary }) {
+export default function FeasibilityCard({ feasibilityData: propFeas, executiveSummary: propSummary }) {
+  const ctx = useOutletContext();
+  const feasibilityData = propFeas || ctx?.profile?.feasibility_analysis;
+  const executiveSummary = propSummary || ctx?.profile?.personalized_business_plan?.executive_overview?.business_summary;
+
   if (!feasibilityData) return null;
 
   const { predicted_label, confidence_score, probabilities } = feasibilityData;

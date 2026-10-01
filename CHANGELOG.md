@@ -29,3 +29,34 @@ All notable changes to the SME360 AI Feasibility Decision Support System are doc
   - `frontend/src/components/common/Toast.jsx`
 - Migration script: `scripts/migrate_canonical_stages.py`
 - Test suite: `tests/test_data_correctness.py`
+
+## [Phase 2: Routing and Authentication] - 2026-10-01
+
+### Added
+- **Full URL-Based Routing (`react-router-dom`)**:
+  - `/login`: Dedicated authentication view supporting Sign In, Account Registration, and instant demo auto-fill (`demo@sme360.ai` / `password123`).
+  - `/dashboard`: Primary system overview with real metrics and activity tables.
+  - `/businesses`: Paginated list of analyzed SME profiles.
+  - `/analysis/new`: Intake view supporting natural-language AI prefill and manual forms.
+  - `/businesses/:id`: Unified Business Workspace overview.
+  - `/businesses/:id/feasibility`: Class probability distribution and outcome cards.
+  - `/businesses/:id/insights`: Explainability drivers (positive & negative SHAP factors).
+  - `/businesses/:id/recommendations`: Strategic actionable recommendations.
+  - `/businesses/:id/options`: TOPSIS multi-criteria decision comparison table.
+  - `/businesses/:id/scenarios`: Interactive What-If parameter simulators.
+  - `/businesses/:id/plan`: Export-ready business plan with PDF and DOCX generators.
+  - `*`: Custom 404 "Page Not Found" screen.
+- **Route Protection & History Navigation**:
+  - `<ProtectedRoute>` guarding all operational routes and redirecting unauthorized visitors to `/login` while preserving `location.state.from`.
+  - Supports browser back/forward and direct refresh with deep state persistence.
+- **Workspace Layout & Navigation**:
+  - `WorkspaceLayout`: Fetches business record once by `:id` and distributes via React Router context (`useOutletContext()`).
+  - `BusinessNotFound`: Friendly 404/403 page displayed when accessing unknown or unauthorized business IDs.
+  - `Sidebar`: Uses `NavLink` with active route highlighting, disabling workspace items until a business is selected.
+  - `Breadcrumbs`: Dynamically parses URL hierarchy with interactive links.
+- **Backend Authentication & User Isolation**:
+  - `backend/auth_utils.py`: Secure PBKDF2 password hashing with cryptographically secure salt; HMAC-SHA256 JWT tokens.
+  - `backend/routes/auth.py`: Registration, login, and `/api/auth/me` endpoints.
+  - Automatically seeds demo user `demo@sme360.ai` and associates existing database records.
+  - Records and dashboard summaries are filtered by authenticated `user_id`.
+  - Automated test suite: `tests/test_auth.py`.

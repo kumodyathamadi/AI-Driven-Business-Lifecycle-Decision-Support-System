@@ -1,59 +1,97 @@
 import React from 'react';
-import { ChevronRight, Home, Building2 } from 'lucide-react';
+import { useLocation, Link } from 'react-router-dom';
+import { ChevronRight, Home, Building2, Briefcase } from 'lucide-react';
+import { formatText } from '../utils/formatters';
 
-export default function Breadcrumbs({ activeTab, activeProfile, onNavigate }) {
-  const getTabLabel = (tab) => {
-    switch (tab) {
-      case 'dashboard': return 'Dashboard';
-      case 'my_businesses': return 'My Businesses';
-      case 'new_analysis': return 'New Analysis';
-      case 'overview': return 'Business Overview';
-      case 'feasibility': return 'Feasibility Assessment';
-      case 'insights': return 'Key Insights';
-      case 'recommendations': return 'Recommendations';
-      case 'options': return 'Explore Options';
-      case 'scenario': return 'Scenario Explorer';
-      case 'plan': return 'Business Plan';
-      default: return 'Overview';
+export default function Breadcrumbs({ activeProfile }) {
+  const location = useLocation();
+  const path = location.pathname;
+
+  // Root crumb
+  const crumbs = [
+    { label: 'SME360 AI', to: '/dashboard', icon: Home }
+  ];
+
+  if (path.startsWith('/dashboard')) {
+    crumbs.push({ label: 'Dashboard', to: '/dashboard' });
+  } else if (path.startsWith('/businesses')) {
+    crumbs.push({ label: 'My Businesses', to: '/businesses', icon: Building2 });
+
+    const parts = path.split('/').filter(Boolean); // ['businesses', ':id', 'feasibility'?]
+    if (parts.length >= 2) {
+      const bizId = parts[1];
+      const bizName = activeProfile?.business_input?.business_category 
+        ? `${activeProfile.business_input.business_category} · ${activeProfile.business_input.district || 'Colombo'}`
+        : 'Business Workspace';
+
+      crumbs.push({ label: bizName, to: `/businesses/${bizId}` });
+
+      if (parts.length >= 3) {
+        const sub = parts[2];
+        const labels = {
+          feasibility: 'Feasibility Assessment',
+          insights: 'Key Insights',
+          recommendations: 'Recommendations',
+          options: 'Explore Options',
+          scenarios: 'Scenario Explorer',
+          plan: 'Business Plan'
+        };
+        crumbs.push({ label: labels[sub] || sub, to: path });
+      } else {
+        crumbs.push({ label: 'Overview', to: `/businesses/${bizId}` });
+      }
     }
-  };
-
-  const isWorkspaceTab = [
-    'overview', 'feasibility', 'insights', 'recommendations', 'options', 'scenario', 'plan'
-  ].includes(activeTab);
+  } else if (path.startsWith('/analysis/new')) {
+    crumbs.push({ label: 'New Business Analysis', to: '/analysis/new' });
+  } else if (path.startsWith('/profile') || path.startsWith('/settings')) {
+    crumbs.push({ label: 'Profile & Settings', to: '/profile' });
+  }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '1.25rem', userSelect: 'none' }}>
-      <button 
-        onClick={() => onNavigate('dashboard')}
-        style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-      >
-        <Home size={14} />
-        <span>SME360 AI</span>
-      </button>
+    <nav 
+      aria-label="Breadcrumb"
+      style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '0.45rem', 
+        fontSize: '0.8rem', 
+        color: '#94a3b8', 
+        marginBottom: '1.25rem', 
+        userSelect: 'none',
+        flexWrap: 'wrap'
+      }}
+    >
+      {crumbs.map((crumb, idx) => {
+        const isLast = idx === crumbs.length - 1;
+        const Icon = crumb.icon;
 
-      {isWorkspaceTab && activeProfile && (
-        <>
-          <ChevronRight size={14} style={{ color: '#64748b' }} />
-          <button 
-            onClick={() => onNavigate('my_businesses')}
-            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-          >
-            <Building2 size={14} />
-            <span>My Businesses</span>
-          </button>
-          
-          <ChevronRight size={14} style={{ color: '#64748b' }} />
-          <span style={{ color: '#cbd5e1', fontWeight: 600 }}>
-            {activeProfile.business_input?.business_category || 'Active Business'}
-          </span>
-        </>
-      )}
-
-      <ChevronRight size={14} style={{ color: '#64748b' }} />
-      <span style={{ color: '#60a5fa', fontWeight: 600 }}>
-        {getTabLabel(activeTab)}
-      </span>
-    </div>
+        return (
+          <React.Fragment key={crumb.to + idx}>
+            {idx > 0 && <ChevronRight size={13} style={{ color: '#475569' }} />}
+            {isLast ? (
+              <span style={{ color: '#60a5fa', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                {Icon && <Icon size={14} />}
+                <span>{crumb.label}</span>
+              </span>
+            ) : (
+              <Link
+                to={crumb.to}
+                style={{ 
+                  color: '#94a3b8', 
+                  textDecoration: 'none', 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '0.35rem',
+                  transition: 'color 0.15s ease'
+                }}
+              >
+                {Icon && <Icon size={14} />}
+                <span>{crumb.label}</span>
+              </Link>
+            )}
+          </React.Fragment>
+        );
+      })}
+    </nav>
   );
 }

@@ -10,6 +10,15 @@ const apiClient = axios.create({
   timeout: 45000,
 });
 
+// Attach Bearer token from localStorage automatically
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('sme360_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+}, (error) => Promise.reject(error));
+
 /**
  * Checks API server health and model status
  */
@@ -173,4 +182,28 @@ export const downloadBusinessPlanDocx = async (profile) => {
     console.error('DOCX Business Plan Generation Error:', error);
     throw error;
   }
+};
+
+/**
+ * Logs in user with email and password
+ */
+export const loginUser = async (email, password) => {
+  const response = await apiClient.post('/auth/login', { email, password });
+  return response.data;
+};
+
+/**
+ * Registers new user
+ */
+export const registerUser = async (email, password, full_name) => {
+  const response = await apiClient.post('/auth/register', { email, password, full_name });
+  return response.data;
+};
+
+/**
+ * Fetches authenticated user info
+ */
+export const getCurrentUser = async () => {
+  const response = await apiClient.get('/auth/me');
+  return response.data;
 };

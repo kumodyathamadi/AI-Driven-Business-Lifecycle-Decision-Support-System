@@ -10,11 +10,20 @@ from backend.database import engine, Base
 from backend.routes.analysis import router as analysis_router
 from backend.routes.intake import router as intake_router
 from backend.routes.business_plan import router as plan_router
+from backend.routes.auth import router as auth_router, ensure_demo_user
+from backend.database import SessionLocal
 from backend.schemas import HealthCheckResponse
 from src.prediction.predictor import DEFAULT_MODEL_DIR
 
 # Create database tables if they do not exist
 Base.metadata.create_all(bind=engine)
+
+# Ensure demo user exists and existing records are associated
+try:
+    with SessionLocal() as db_session:
+        ensure_demo_user(db_session)
+except Exception as e:
+    print(f"[Notice] Failed to seed demo user: {e}")
 
 app = FastAPI(
     title="SME360 AI Decision Support API",
@@ -32,6 +41,7 @@ app.add_middleware(
 )
 
 # Register routes
+app.include_router(auth_router)
 app.include_router(analysis_router)
 app.include_router(intake_router)
 app.include_router(plan_router)

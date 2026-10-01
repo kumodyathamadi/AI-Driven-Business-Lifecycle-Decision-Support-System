@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { fetchAnalysisRecords } from '../services/api';
 import { FeasibilityBadge, StageBadge } from './common/Badge';
 import { CardSkeleton } from './common/Skeleton';
@@ -19,6 +20,10 @@ import { EmptyState } from './common/EmptyState';
 import { formatCurrency, formatCustomersPerDay, formatDate, formatText } from '../utils/formatters';
 
 export default function MyBusinesses({ onSelectRecord, onStartNew }) {
+  const navigate = useNavigate();
+  const handleStartNew = onStartNew || (() => navigate('/analysis/new'));
+  const handleSelectRecord = onSelectRecord || ((id) => navigate(`/businesses/${id}`));
+
   const [records, setRecords] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -73,7 +78,7 @@ export default function MyBusinesses({ onSelectRecord, onStartNew }) {
           </p>
         </div>
 
-        <button onClick={onStartNew} className="btn btn-primary" style={{ padding: '0.65rem 1.25rem', fontSize: '0.85rem' }}>
+        <button onClick={handleStartNew} className="btn btn-primary" style={{ padding: '0.65rem 1.25rem', fontSize: '0.85rem' }}>
           <PlusCircle size={16} />
           New Business Analysis
         </button>
@@ -145,7 +150,7 @@ export default function MyBusinesses({ onSelectRecord, onStartNew }) {
             : "No saved business analyses yet. Create your first evaluation to start building your SME portfolio."
           }
           actionLabel="Start New Analysis"
-          onAction={onStartNew}
+          onAction={handleStartNew}
         />
       ) : (
         <>
@@ -165,7 +170,7 @@ export default function MyBusinesses({ onSelectRecord, onStartNew }) {
                     transition: 'transform 0.2s, border-color 0.2s',
                     cursor: 'pointer'
                   }}
-                  onClick={() => onSelectRecord(rec.id, 'overview')}
+                  onClick={() => handleSelectRecord(rec.id, 'overview')}
                 >
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
@@ -211,7 +216,7 @@ export default function MyBusinesses({ onSelectRecord, onStartNew }) {
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        onSelectRecord(rec.id, 'overview');
+                        handleSelectRecord(rec.id, 'overview');
                       }}
                       className="btn btn-secondary"
                       style={{ fontSize: '0.75rem', padding: '0.35rem 0.85rem' }}

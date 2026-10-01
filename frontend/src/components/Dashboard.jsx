@@ -7,6 +7,7 @@ import {
   Sparkles,
   TrendingUp
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { fetchAnalysisRecords, fetchDashboardSummary } from '../services/api';
 import { FeasibilityBadge, StageBadge } from './common/Badge';
 import { KPICard } from './common/KPICard';
@@ -15,6 +16,11 @@ import { EmptyState } from './common/EmptyState';
 import { formatCurrency, formatCustomersPerDay, formatDate, formatText } from '../utils/formatters';
 
 export default function Dashboard({ activeProfile, onStartNew, onViewMyBusinesses, onSelectRecord }) {
+  const navigate = useNavigate();
+  const handleStartNew = onStartNew || (() => navigate('/analysis/new'));
+  const handleViewMyBusinesses = onViewMyBusinesses || (() => navigate('/businesses'));
+  const handleSelectRecord = onSelectRecord || ((id) => navigate(`/businesses/${id}`));
+
   const [recentRecords, setRecentRecords] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [summaryMetrics, setSummaryMetrics] = useState(null);
@@ -74,7 +80,7 @@ export default function Dashboard({ activeProfile, onStartNew, onViewMyBusinesse
 
           <div>
             <button 
-              onClick={onStartNew}
+              onClick={handleStartNew}
               className="btn btn-primary"
               style={{ padding: '0.85rem 1.6rem', fontSize: '0.9rem', boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)' }}
             >
@@ -145,7 +151,7 @@ export default function Dashboard({ activeProfile, onStartNew, onViewMyBusinesse
                 size="md"
               />
               <button 
-                onClick={() => onSelectRecord(activeProfile.metadata?.record_id, 'overview')} 
+                onClick={() => handleSelectRecord(activeProfile.metadata?.record_id, 'overview')} 
                 className="btn btn-secondary"
                 style={{ fontSize: '0.8rem', padding: '0.5rem 1rem' }}
               >
@@ -171,7 +177,7 @@ export default function Dashboard({ activeProfile, onStartNew, onViewMyBusinesse
           </div>
 
           {totalCount > 0 && (
-            <button onClick={onViewMyBusinesses} className="btn btn-secondary" style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}>
+            <button onClick={handleViewMyBusinesses} className="btn btn-secondary" style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}>
               View All ({totalCount})
             </button>
           )}
@@ -185,7 +191,7 @@ export default function Dashboard({ activeProfile, onStartNew, onViewMyBusinesse
             title="No Business Analyses Yet"
             description="Start your first SME business feasibility evaluation with our AI Assistant to see recommendations and predictions."
             actionLabel="Start First Analysis"
-            onAction={onStartNew}
+            onAction={handleStartNew}
           />
         ) : (
           <div style={{ overflowX: 'auto' }}>
@@ -230,7 +236,7 @@ export default function Dashboard({ activeProfile, onStartNew, onViewMyBusinesse
                     </td>
                     <td>
                       <button 
-                        onClick={() => onSelectRecord(rec.id, 'overview')} 
+                        onClick={() => handleSelectRecord(rec.id, 'overview')} 
                         className="btn btn-secondary"
                         style={{ fontSize: '0.7rem', padding: '0.25rem 0.6rem' }}
                       >
