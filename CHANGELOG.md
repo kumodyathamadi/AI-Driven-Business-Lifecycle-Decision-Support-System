@@ -60,3 +60,21 @@ All notable changes to the SME360 AI Feasibility Decision Support System are doc
   - Automatically seeds demo user `demo@sme360.ai` and associates existing database records.
   - Records and dashboard summaries are filtered by authenticated `user_id`.
   - Automated test suite: `tests/test_auth.py`.
+
+## [Phase 3: New Analysis Intake] - 2026-10-01
+
+### Added
+- **3-Step Analysis Flow (`Describe -> Review -> Analyze`)**:
+  - Implemented interactive step indicator guiding the user through context selection, field verification, and model execution.
+- **Example Prompt Chips**:
+  - Pre-curated prompts for all 4 SME categories (Bakery, Clothing, Mini-Mart, Beauty Salon) plus Existing Business expansion scenarios.
+  - Clicking any chip automatically pre-fills the description, sets stage, and configures expansion goals.
+- **Extracted Field Review & Confidence Highlighting**:
+  - Step 2 reveals extracted attributes (sector, district, capital, experience, unit price, expected customers) as editable inputs.
+  - Highlights low-confidence extractions with amber warnings (`⚠️ Needs verification`) before committing to prediction.
+- **Sri Lankan Geographic & Numeric Validations**:
+  - All 25 official Sri Lankan administrative districts selectable in dropdowns.
+  - Strict validations on positive numeric capital and daily customer throughput with friendly error alerts.
+- **Progressive Execution State**:
+  - Loading screen communicating market benchmark matching, Random Forest scoring, SHAP explainability, and TOPSIS strategy generation.
+  - Preserved "Fill Form Manually" as a secondary direct-entry route.

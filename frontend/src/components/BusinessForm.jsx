@@ -262,6 +262,28 @@ export default function BusinessForm({
                 <option value="Colombo">Colombo District</option>
                 <option value="Gampaha">Gampaha District</option>
                 <option value="Kalutara">Kalutara District</option>
+                <option value="Kandy">Kandy District</option>
+                <option value="Matale">Matale District</option>
+                <option value="Nuwara Eliya">Nuwara Eliya District</option>
+                <option value="Galle">Galle District</option>
+                <option value="Matara">Matara District</option>
+                <option value="Hambantota">Hambantota District</option>
+                <option value="Jaffna">Jaffna District</option>
+                <option value="Kilinochchi">Kilinochchi District</option>
+                <option value="Mannar">Mannar District</option>
+                <option value="Vavuniya">Vavuniya District</option>
+                <option value="Mullaitivu">Mullaitivu District</option>
+                <option value="Batticaloa">Batticaloa District</option>
+                <option value="Ampara">Ampara District</option>
+                <option value="Trincomalee">Trincomalee District</option>
+                <option value="Kurunegala">Kurunegala District</option>
+                <option value="Puttalam">Puttalam District</option>
+                <option value="Anuradhapura">Anuradhapura District</option>
+                <option value="Polonnaruwa">Polonnaruwa District</option>
+                <option value="Badulla">Badulla District</option>
+                <option value="Monaragala">Monaragala District</option>
+                <option value="Ratnapura">Ratnapura District</option>
+                <option value="Kegalle">Kegalle District</option>
               </select>
             </div>
 
