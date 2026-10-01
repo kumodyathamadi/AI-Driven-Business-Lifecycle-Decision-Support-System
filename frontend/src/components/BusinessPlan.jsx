@@ -10,16 +10,24 @@ import {
   FileCheck, 
   Printer, 
   Sparkles,
-  Loader2
+  Loader2,
+  Share2,
+  Check,
+  ExternalLink
 } from 'lucide-react';
 import { downloadBusinessPlanPdf, downloadBusinessPlanDocx } from '../services/api';
 import Logo from './Logo';
+import { useToast } from './common/Toast';
 
 export default function BusinessPlan({ profile: propProfile }) {
   const ctx = useOutletContext();
   const profile = propProfile || ctx?.profile;
+  const { showToast } = useToast();
+  
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadingDocx, setDownloadingDocx] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [presentationMode, setPresentationMode] = useState(false);
 
   if (!profile) return null;
 
@@ -36,8 +44,9 @@ export default function BusinessPlan({ profile: propProfile }) {
     setDownloadingPdf(true);
     try {
       await downloadBusinessPlanPdf(profile);
+      showToast('PDF plan generated and downloaded successfully!', 'success');
     } catch (err) {
-      alert(`PDF generation failed: ${err.message}`);
+      showToast(`PDF generation failed: ${err.message}`, 'error');
     } finally {
       setDownloadingPdf(false);
     }
@@ -47,11 +56,25 @@ export default function BusinessPlan({ profile: propProfile }) {
     setDownloadingDocx(true);
     try {
       await downloadBusinessPlanDocx(profile);
+      showToast('Word document exported successfully!', 'success');
     } catch (err) {
-      alert(`Word document generation failed: ${err.message}`);
+      showToast(`Word document generation failed: ${err.message}`, 'error');
     } finally {
       setDownloadingDocx(false);
     }
+  };
+
+  const handleShareLink = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.href);
+      setCopiedLink(true);
+      showToast('Shareable business plan link copied to clipboard!', 'success');
+      setTimeout(() => setCopiedLink(false), 3000);
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   return (
@@ -81,23 +104,23 @@ export default function BusinessPlan({ profile: propProfile }) {
             </p>
           </div>
 
-          {/* Download Action Buttons */}
-          <div style={{ display: 'flex', gap: '0.85rem', flexWrap: 'wrap' }}>
+          {/* Action Buttons: PDF, DOCX, Share, Print */}
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
             <button 
               onClick={handleDownloadPdf}
               disabled={downloadingPdf}
               className="btn btn-primary"
-              style={{ padding: '0.85rem 1.4rem', fontSize: '0.9rem', boxShadow: '0 4px 14px rgba(59, 130, 246, 0.3)' }}
+              style={{ padding: '0.75rem 1.25rem', fontSize: '0.85rem', boxShadow: '0 4px 14px rgba(59, 130, 246, 0.3)' }}
             >
               {downloadingPdf ? (
                 <>
-                  <Loader2 size={18} className="animate-spin" />
+                  <Loader2 size={16} className="animate-spin" />
                   <span>Generating PDF...</span>
                 </>
               ) : (
                 <>
-                  <Download size={18} />
-                  <span>Download PDF Plan</span>
+                  <Download size={16} />
+                  <span>Download PDF</span>
                 </>
               )}
             </button>
@@ -106,19 +129,39 @@ export default function BusinessPlan({ profile: propProfile }) {
               onClick={handleDownloadDocx}
               disabled={downloadingDocx}
               className="btn btn-secondary"
-              style={{ padding: '0.85rem 1.4rem', fontSize: '0.9rem', background: 'rgba(30, 41, 59, 0.9)', border: '1px solid rgba(255, 255, 255, 0.15)' }}
+              style={{ padding: '0.75rem 1.25rem', fontSize: '0.85rem', background: 'rgba(30, 41, 59, 0.9)', border: '1px solid rgba(255, 255, 255, 0.15)' }}
             >
               {downloadingDocx ? (
                 <>
-                  <Loader2 size={18} className="animate-spin" />
+                  <Loader2 size={16} className="animate-spin" />
                   <span>Preparing Word...</span>
                 </>
               ) : (
                 <>
-                  <FileText size={18} style={{ color: '#60a5fa' }} />
-                  <span>Download Word (.docx)</span>
+                  <FileText size={16} style={{ color: '#60a5fa' }} />
+                  <span>Download Word</span>
                 </>
               )}
+            </button>
+
+            <button 
+              onClick={handleShareLink}
+              className="btn btn-secondary"
+              style={{ padding: '0.75rem 1rem', fontSize: '0.85rem' }}
+              title="Copy shareable direct link to this business plan"
+            >
+              {copiedLink ? <Check size={16} style={{ color: '#4ade80' }} /> : <Share2 size={16} />}
+              <span>{copiedLink ? 'Copied Link' : 'Share Link'}</span>
+            </button>
+
+            <button 
+              onClick={handlePrint}
+              className="btn btn-secondary"
+              style={{ padding: '0.75rem 1rem', fontSize: '0.85rem' }}
+              title="Print business plan"
+            >
+              <Printer size={16} />
+              <span>Print View</span>
             </button>
           </div>
         </div>

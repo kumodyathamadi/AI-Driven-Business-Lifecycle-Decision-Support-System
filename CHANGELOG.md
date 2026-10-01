@@ -118,3 +118,22 @@ All notable changes to the SME360 AI Feasibility Decision Support System are doc
   - Formats capital in `LKR`, customers in `/day`, and dates in human-readable format.
   - Direct deep links into `/businesses/:id`.
   - Empty state with onboarding call-to-action for new users with zero analyses.
+
+## [Phase 6: Business Workspace] - 2026-10-01
+
+### Added
+- **Unified Workspace Layout & Context Sharing**:
+  - `WorkspaceLayout.jsx` fetches business record once by `:id` and shares with all module tabs via React Router context (`useOutletContext()`).
+  - Added Business Switcher dropdown in the workspace header strip allowing instant switching across evaluated SME records while maintaining active tab.
+- **Feasibility Explainability Integration**:
+  - `FeasibilityCard.jsx` embedded factor contribution breakdown explaining *why* the score was predicted, highlighting top positive supporting factors (+) and top negative risk hurdles (-).
+  - Direct deep link to technical attribution in Key Insights (`/businesses/:id/insights`).
+- **Live Debounced Scenario Explorer**:
+  - Interactive What-If simulator in `WhatIfSimulator.jsx` with real-time sliders for Capital, Customers/Day, Expected Price, and Monthly Budget.
+  - Live auto-scoring mode with 600ms debounce connecting directly to trained ML model.
+  - Side-by-side Baseline vs. Modified Scenario comparison card with delta score percentage (+/- %), visual impact indicators, and quick "Reset Baseline" action.
+- **Business Plan Sharing & Exports**:
+  - Direct download triggers for PDF and DOCX business plans with instant toast feedback.
+  - One-click "Share Link" copying direct URL to clipboard.
+  - Native "Print View" formatting for clean print / PDF generation.
+

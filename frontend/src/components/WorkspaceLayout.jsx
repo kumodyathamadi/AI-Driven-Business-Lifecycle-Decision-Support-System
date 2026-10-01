@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
-import { fetchAnalysisRecordById } from '../services/api';
+import { fetchAnalysisRecordById, fetchAnalysisRecords } from '../services/api';
 import { FeasibilityBadge, StageBadge } from './common/Badge';
 import { Skeleton } from './common/Skeleton';
 import BusinessNotFound from './BusinessNotFound';
 import { formatCurrency, formatCustomersPerDay, formatText } from '../utils/formatters';
-import { Briefcase, ArrowLeft, RefreshCw, Layers } from 'lucide-react';
+import { Briefcase, ArrowLeft, RefreshCw, Layers, Building2 } from 'lucide-react';
 
 export default function WorkspaceLayout({ onProfileLoaded }) {
   const { id } = useParams();
@@ -13,6 +13,7 @@ export default function WorkspaceLayout({ onProfileLoaded }) {
   const location = useLocation();
 
   const [profile, setProfile] = useState(null);
+  const [availableBusinesses, setAvailableBusinesses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -41,6 +42,21 @@ export default function WorkspaceLayout({ onProfileLoaded }) {
       loadRecord(id);
     }
   }, [id]);
+
+  useEffect(() => {
+    async function loadBusinesses() {
+      try {
+        const res = await fetchAnalysisRecords({ limit: 50 });
+        if (res) {
+          const list = Array.isArray(res) ? res : (res.items || []);
+          setAvailableBusinesses(list);
+        }
+      } catch (e) {
+        console.error('Failed to load business list for switcher:', e);
+      }
+    }
+    loadBusinesses();
+  }, []);
 
   if (loading) {
     return (
@@ -103,7 +119,54 @@ export default function WorkspaceLayout({ onProfileLoaded }) {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {/* Quick Business Switcher Dropdown */}
+            {availableBusinesses.length > 1 && (
+              <div 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.4rem', 
+                  background: 'rgba(15, 23, 42, 0.85)', 
+                  border: '1px solid rgba(59, 130, 246, 0.3)', 
+                  borderRadius: '8px', 
+                  padding: '0.4rem 0.65rem' 
+                }}
+              >
+                <Building2 size={14} style={{ color: '#60a5fa' }} />
+                <select
+                  value={id}
+                  onChange={(e) => {
+                    const nextId = e.target.value;
+                    if (nextId && nextId !== id) {
+                      const subPath = location.pathname.replace(`/businesses/${id}`, '');
+                      navigate(`/businesses/${nextId}${subPath}`);
+                    }
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#e2e8f0',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    outline: 'none',
+                    cursor: 'pointer',
+                    maxWidth: '190px'
+                  }}
+                  title="Switch active business analysis"
+                >
+                  <option value={id} style={{ background: '#0f172a' }}>
+                    {bizTitle} (Current)
+                  </option>
+                  {availableBusinesses.filter(b => b.id !== id).map(b => (
+                    <option key={b.id} value={b.id} style={{ background: '#0f172a' }}>
+                      {formatText(b.business_category)} · {formatText(b.district)} ({b.predicted_label || b.feasibility_label})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <FeasibilityBadge 
               label={feasAnalysis.predicted_label} 
               score={feasAnalysis.probability_score}
