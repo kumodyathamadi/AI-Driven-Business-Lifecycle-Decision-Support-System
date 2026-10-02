@@ -68,6 +68,8 @@ export function normalizeFeatureKey(featureStr = '') {
   if (lower.includes('supplier')) return 'supplier_availability_score';
   if (lower.includes('stage') || lower.includes('startup') || lower.includes('existing')) return 'business_stage';
   if (lower.includes('competition')) return 'competition_level';
+  if (lower.includes('category') || lower.includes('sector')) return 'business_category';
+  if (lower.includes('action') || lower.includes('proposed')) return 'proposed_action';
 
   return lower.replace(/[^a-z0-9_]/g, '_');
 }
@@ -139,6 +141,23 @@ export const STRENGTH_DEFINITIONS = {
     title: 'Defensible Market Differentiation',
     getDesc: () =>
       'Unique service positioning and value propositions allow effective capture of local market share.'
+  },
+  loan_amount_lkr: {
+    title: 'Prudent Leverage & Debt Capacity',
+    getDesc: () =>
+      'Balanced debt-to-equity ratio ensures monthly debt-service commitments remain manageable during early ramp-up.'
+  },
+  business_category: {
+    title: 'Sector Growth & Demand Alignment',
+    getDesc: ({ category }) =>
+      `Strong commercial growth velocity in the ${category} sector supports resilient transaction volume.`
+  },
+  proposed_action: {
+    title: 'Focused Operational Rollout Plan',
+    getDesc: ({ isNewStartup }) =>
+      isNewStartup
+        ? 'Well-scoped greenfield launch milestones minimize capital waste and accelerate time-to-first-revenue.'
+        : 'Targeted expansion strategy builds efficiently on existing operational strengths and customer relationships.'
   }
 };
 
@@ -206,6 +225,21 @@ export const RISK_DEFINITIONS = {
       isNewStartup
         ? 'New brand presence requires upfront marketing investment to build consumer trust and awareness.'
         : 'Mature local markets require continuous differentiation to defend existing market share against new entrants.'
+  },
+  available_equipment_score: {
+    title: 'Tooling & Fixture Setup Overhead',
+    getDesc: () =>
+      'Initial requirements for specialized operational tooling necessitate dedicated upfront procurement or leasing allocation.'
+  },
+  business_category: {
+    title: 'Sector Cyclicality & Seasonality',
+    getDesc: ({ category }) =>
+      `Operating in the ${category} sector requires active working capital management to buffer against seasonal demand variations.`
+  },
+  proposed_action: {
+    title: 'Operational Rollout Execution Risk',
+    getDesc: () =>
+      'Launch milestones require structured timeline oversight to avoid vendor delivery delays and inventory holding bottlenecks.'
   }
 };
 

@@ -105,12 +105,12 @@ export function formatShortNumber(value) {
  * @param {number|string|null|undefined} score
  * @returns {string}
  */
-export function formatConfidence(score) {
+export function formatConfidence(score, decimals = 1) {
   if (score === null || score === undefined || score === '') return '63%';
   let num = typeof score === 'number' ? score : Number(String(score).replace(/[^0-9.-]+/g, ''));
   if (isNaN(num)) return '63%';
   if (num <= 1 && num > 0) num = num * 100;
-  return `${Math.round(num)}%`;
+  return Number.isInteger(num) ? `${num}%` : `${num.toFixed(decimals)}%`;
 }
 
 /**

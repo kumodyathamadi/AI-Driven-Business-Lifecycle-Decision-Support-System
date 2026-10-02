@@ -15,6 +15,7 @@ class SMEStrategyGenerator:
         shap_explanation: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
 
+        business_name = cleaned_input.get("business_name")
         stage = cleaned_input.get("business_stage", "New")
         category = cleaned_input.get("business_category", "Retail")
         capital = cleaned_input.get("available_capital_lkr", 500000.0)
@@ -22,6 +23,8 @@ class SMEStrategyGenerator:
         customers = cleaned_input.get("expected_customers_per_day", 30)
         competition = cleaned_input.get("competition_level", "Moderate")
         prediction = feasibility_result.get("prediction", "Conditionally Feasible")
+
+        display_name = business_name if business_name else category
 
         # Extract top negative drivers as constraint focus points
         negative_drivers = shap_explanation.get("top_negative_drivers", [])
@@ -34,10 +37,10 @@ class SMEStrategyGenerator:
         s1_budget = round(budget * 0.75, 2)
         strategies.append({
             "strategy_id": "STRAT_01",
-            "strategy_name": f"Lean Bootstrapped Launch ({category})",
+            "strategy_name": f"Lean Bootstrapped Launch ({display_name})",
             "strategic_focus": "Risk Mitigation & Capital Preservation",
             "operational_approach": (
-                f"Optimize initial setup for {category} by operating lean. Focus on essential equipment "
+                f"Optimize initial setup for {display_name} by operating lean. Focus on essential equipment "
                 f"and low-cost marketing to mitigate constraint around {top_hurdle}."
             ),
             "estimated_capital_required_lkr": s1_capital,
@@ -59,10 +62,10 @@ class SMEStrategyGenerator:
         s2_budget = round(budget * 1.25, 2)
         strategies.append({
             "strategy_id": "STRAT_02",
-            "strategy_name": f"Market Expansion & Customer Acquisition ({category})",
+            "strategy_name": f"Market Expansion & Customer Acquisition ({display_name})",
             "strategic_focus": "Demand Generation & High Volume",
             "operational_approach": (
-                f"Invest heavily in targeted local promotions and location visibility to overcome {competition} "
+                f"Invest heavily in targeted local promotions and location visibility for {display_name} to overcome {competition} "
                 f"competition level and capture high market demand."
             ),
             "estimated_capital_required_lkr": s2_capital,

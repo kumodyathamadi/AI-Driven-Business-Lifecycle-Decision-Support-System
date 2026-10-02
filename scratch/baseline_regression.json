@@ -1,0 +1,62 @@
+[
+  {
+    "id": "fc90eed7-0254-44ac-a4cf-3265a63614bc",
+    "label": "Conditionally Feasible",
+    "confidence": 0.605,
+    "probabilities": {
+      "Conditionally Feasible": 0.605,
+      "Feasible": 0.36,
+      "Infeasible": 0.035
+    },
+    "top_driver": "Available Capital (LKR)",
+    "top_strategy": "Lean Bootstrapped Launch (Clothing / Garment)"
+  },
+  {
+    "id": "1f5ebd1f-015f-46d8-8d41-7102fc6b8213",
+    "label": "Feasible",
+    "confidence": 0.565,
+    "probabilities": {
+      "Conditionally Feasible": 0.375,
+      "Feasible": 0.565,
+      "Infeasible": 0.06
+    },
+    "top_driver": "Available Capital (LKR)",
+    "top_strategy": "Lean Bootstrapped Launch (Bakery / Food / Grocery)"
+  },
+  {
+    "id": "bb2dabd1-c1b6-4e4a-97e6-33de405ff9f4",
+    "label": "Feasible",
+    "confidence": 0.575,
+    "probabilities": {
+      "Conditionally Feasible": 0.365,
+      "Feasible": 0.575,
+      "Infeasible": 0.06
+    },
+    "top_driver": "Business Stage New",
+    "top_strategy": "Lean Bootstrapped Launch (Beauty Salon)"
+  },
+  {
+    "id": "7430d87e-bb7e-4820-8c5e-ec23ffa6a333",
+    "label": "Feasible",
+    "confidence": 0.565,
+    "probabilities": {
+      "Conditionally Feasible": 0.375,
+      "Feasible": 0.565,
+      "Infeasible": 0.06
+    },
+    "top_driver": "Available Capital (LKR)",
+    "top_strategy": "Lean Bootstrapped Launch (Bakery / Food / Grocery)"
+  },
+  {
+    "id": "83a11ef2-e14c-4739-a05b-0fd2649b0a16",
+    "label": "Feasible",
+    "confidence": 0.565,
+    "probabilities": {
+      "Conditionally Feasible": 0.375,
+      "Feasible": 0.565,
+      "Infeasible": 0.06
+    },
+    "top_driver": "Available Capital (LKR)",
+    "top_strategy": "Lean Bootstrapped Launch (Bakery / Food / Grocery)"
+  }
+]

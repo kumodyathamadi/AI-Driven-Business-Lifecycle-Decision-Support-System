@@ -59,6 +59,7 @@ class AnalysisRecord(Base):
     id = Column(String, primary_key=True, default=generate_uuid)
     user_id = Column(String, ForeignKey("users.id"), nullable=True, index=True)
     business_profile_id = Column(String, ForeignKey("business_profiles.id"), nullable=True, index=True)
+    business_name = Column(String, nullable=True, index=True)
     
     business_stage = Column(String, nullable=False, index=True)
     business_category = Column(String, nullable=False, index=True)
@@ -92,6 +93,7 @@ class AnalysisAuditLog(Base):
     user_email = Column(String, nullable=True)
     record_id = Column(String, nullable=True, index=True)
     action = Column(String, nullable=False, index=True)  # 'created', 'rerun', 'edited', 'deleted', 'restored'
+    business_name = Column(String, nullable=True)
     business_category = Column(String, nullable=True)
     district = Column(String, nullable=True)
     result_label = Column(String, nullable=True)

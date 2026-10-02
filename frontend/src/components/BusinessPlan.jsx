@@ -96,11 +96,13 @@ export default function BusinessPlan({ profile: propProfile }) {
             </div>
 
             <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#ffffff' }}>
-              Your Business Plan is Ready
+              {profile.business_input?.business_name 
+                ? `${profile.business_input.business_name} Business Plan is Ready`
+                : 'Your Business Plan is Ready'}
             </h2>
 
             <p style={{ color: '#cbd5e1', fontSize: '0.875rem', marginTop: '0.35rem', maxWidth: '650px', lineHeight: '1.5' }}>
-              Download your complete, colorful professional business plan tailored to your operational inputs, feasibility analysis, SHAP drivers, and TOPSIS strategy rankings.
+              Download your complete, colorful professional business plan tailored to {profile.business_input?.business_name ? `${profile.business_input.business_name}'s` : 'your'} operational inputs, feasibility analysis, SHAP drivers, and TOPSIS strategy rankings.
             </p>
           </div>
 
@@ -176,9 +178,14 @@ export default function BusinessPlan({ profile: propProfile }) {
             <Logo variant="compact" height={36} />
             <div>
               <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#ffffff' }}>
-                {profile.business_input?.business_category || 'SME'} Business Plan
+                {profile.business_input?.business_name 
+                  ? `${profile.business_input.business_name} — Strategic Business Plan` 
+                  : `${profile.business_input?.business_category || 'SME'} Business Plan`}
               </h3>
               <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                {profile.business_input?.business_name && (
+                  <span>Sector: <strong style={{ color: '#cbd5e1' }}>{profile.business_input.business_category}</strong> • </span>
+                )}
                 <span>Stage: <strong style={{ color: '#cbd5e1' }}>{profile.business_input?.business_stage || 'Startup'}</strong></span>
                 {profile.business_input?.business_model && (
                   <span>• Model: <strong style={{ color: '#cbd5e1' }}>{profile.business_input.business_model}</strong></span>

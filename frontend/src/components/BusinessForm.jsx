@@ -14,7 +14,8 @@ import {
   ChevronDown, 
   Loader2, 
   FileText,
-  Check
+  Check,
+  Lock
 } from 'lucide-react';
 
 const SRI_LANKA_DISTRICTS = [
@@ -26,6 +27,7 @@ const SRI_LANKA_DISTRICTS = [
 ];
 
 const EMPTY_FORM_STATE = {
+  business_name: '',
   business_stage: '',
   business_category: '',
   business_model: '',
@@ -53,6 +55,55 @@ const EMPTY_FORM_STATE = {
   supplier_availability_score: '',
 };
 
+const isFieldMissing = (val) => {
+  if (val === undefined || val === null) return true;
+  if (typeof val === 'string' && val.trim() === '') return true;
+  if (typeof val === 'number' && isNaN(val)) return true;
+  return false;
+};
+
+const REQUIRED_SECTION_1_KEYS = [
+  'business_category',
+  'business_model',
+  'district',
+  'location_type'
+];
+
+const REQUIRED_SECTION_2_KEYS = [
+  'available_capital_lkr',
+  'monthly_budget_lkr',
+  'expected_price_lkr',
+  'expected_customers_per_day',
+  'competition_level',
+  'customer_demand_score',
+  'entrepreneur_experience_years',
+  'available_staff_count',
+  'location_suitability_score',
+  'available_equipment_score',
+  'required_equipment_score',
+  'supplier_availability_score'
+];
+
+const FIELD_HUMAN_LABELS = {
+  business_stage: 'Business Stage',
+  business_category: 'Business Category',
+  business_model: 'Business Model',
+  district: 'District',
+  location_type: 'Location Type',
+  available_capital_lkr: 'Available Capital (LKR)',
+  monthly_budget_lkr: 'Monthly Operating Budget (LKR)',
+  expected_price_lkr: 'Expected Price / Unit (LKR)',
+  expected_customers_per_day: 'Expected Customers / Day',
+  competition_level: 'Market Competition Level',
+  customer_demand_score: 'Customer Demand Score',
+  entrepreneur_experience_years: 'Entrepreneur Experience (Years)',
+  available_staff_count: 'Available Staff Count',
+  location_suitability_score: 'Location Suitability Score',
+  available_equipment_score: 'Available Equipment Readiness',
+  required_equipment_score: 'Required Equipment Need',
+  supplier_availability_score: 'Supplier Availability'
+};
+
 const parseOptionalNumber = (val) => {
   if (val === '' || val === null || val === undefined) return null;
   const num = Number(val);
@@ -75,17 +126,22 @@ export default function BusinessForm({
   onBack,
   onClose,
   onFormChange,
-  stageBadge
+  stageBadge,
+  isStageLocked = false
 }) {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState(() => {
-    if (!initialValues) return EMPTY_FORM_STATE;
     const merged = { ...EMPTY_FORM_STATE };
-    Object.keys(EMPTY_FORM_STATE).forEach((k) => {
-      if (initialValues[k] !== undefined && initialValues[k] !== null && initialValues[k] !== '') {
-        merged[k] = initialValues[k];
-      }
-    });
+    if (initialValues) {
+      Object.keys(EMPTY_FORM_STATE).forEach((k) => {
+        if (initialValues[k] !== undefined && initialValues[k] !== null && initialValues[k] !== '') {
+          merged[k] = initialValues[k];
+        }
+      });
+    }
+    if (isStageLocked && !merged.business_stage) {
+      merged.business_stage = 'New';
+    }
     return merged;
   });
 
@@ -139,10 +195,13 @@ export default function BusinessForm({
             merged[k] = initialValues[k];
           }
         });
+        if (isStageLocked && !merged.business_stage) {
+          merged.business_stage = 'New';
+        }
         return merged;
       });
     }
-  }, [initialValues]);
+  }, [initialValues, isStageLocked]);
 
   // Focus management & Escape key listener - RUNS ONLY ON MOUNT
   useEffect(() => {
@@ -221,26 +280,58 @@ export default function BusinessForm({
 
   // Validation checks
   const getFieldError = (key) => {
-    if (key === 'business_category' && !formData.business_category) {
-      return 'Please select a Business Category.';
+    const val = formData[key];
+    const isMissing = isFieldMissing(val);
+
+    if (isMissing) {
+      const label = FIELD_HUMAN_LABELS[key];
+      if (label) {
+        return `Please provide ${label}.`;
+      }
+      return null;
     }
-    if (key === 'business_model' && !formData.business_model) {
-      return 'Please select a Business Model.';
+
+    // Range checks when values are provided
+    if (key === 'available_capital_lkr' && Number(val) < 0) {
+      return 'Available Capital cannot be negative.';
     }
-    if (key === 'available_capital_lkr' && (formData.available_capital_lkr === '' || formData.available_capital_lkr === null || formData.available_capital_lkr === undefined)) {
-      return 'Please enter your Available Capital (LKR).';
+    if (key === 'monthly_budget_lkr' && Number(val) < 0) {
+      return 'Monthly Operating Budget cannot be negative.';
     }
+    if (key === 'expected_price_lkr' && Number(val) <= 0) {
+      return 'Expected Price / Unit must be greater than 0.';
+    }
+    if (key === 'expected_customers_per_day' && Number(val) < 0) {
+      return 'Expected Customers / Day cannot be negative.';
+    }
+    if (key === 'customer_demand_score' && (Number(val) < 1 || Number(val) > 100)) {
+      return 'Customer Demand Score must be between 1 and 100.';
+    }
+    if (key === 'entrepreneur_experience_years' && Number(val) < 0) {
+      return 'Entrepreneur Experience cannot be negative.';
+    }
+    if (key === 'available_staff_count' && Number(val) < 0) {
+      return 'Available Staff Count cannot be negative.';
+    }
+
     return null;
   };
 
   // Step 1 Navigation with validation
   const handleNextStep1 = () => {
-    const catError = getFieldError('business_category');
-    const modelError = getFieldError('business_model');
+    const missingSection1 = REQUIRED_SECTION_1_KEYS.filter((k) => !!getFieldError(k));
 
-    if (catError || modelError) {
-      setTouched((prev) => ({ ...prev, business_category: true, business_model: true }));
-      setValidationError(catError || modelError);
+    if (missingSection1.length > 0) {
+      const touchedUpdates = {};
+      missingSection1.forEach((k) => { touchedUpdates[k] = true; });
+      setTouched((prev) => ({ ...prev, ...touchedUpdates }));
+
+      if (missingSection1.length === 1) {
+        setValidationError(getFieldError(missingSection1[0]));
+      } else {
+        const labels = missingSection1.map((k) => FIELD_HUMAN_LABELS[k] || k).join(', ');
+        setValidationError(`Please complete all required fields in Section 1: ${labels}.`);
+      }
       return;
     }
 
@@ -253,11 +344,19 @@ export default function BusinessForm({
 
   // Step 2 Navigation with validation
   const handleNextStep2 = () => {
-    const capitalError = getFieldError('available_capital_lkr');
+    const missingSection2 = REQUIRED_SECTION_2_KEYS.filter((k) => !!getFieldError(k));
 
-    if (capitalError) {
-      setTouched((prev) => ({ ...prev, available_capital_lkr: true }));
-      setValidationError(capitalError);
+    if (missingSection2.length > 0) {
+      const touchedUpdates = {};
+      missingSection2.forEach((k) => { touchedUpdates[k] = true; });
+      setTouched((prev) => ({ ...prev, ...touchedUpdates }));
+
+      if (missingSection2.length === 1) {
+        setValidationError(getFieldError(missingSection2[0]));
+      } else {
+        const labels = missingSection2.map((k) => FIELD_HUMAN_LABELS[k] || k).join(', ');
+        setValidationError(`Please complete all required fields in Section 2: ${labels}.`);
+      }
       return;
     }
 
@@ -280,27 +379,32 @@ export default function BusinessForm({
     if (e && e.preventDefault) e.preventDefault();
     setSubmitted(true);
 
-    const catError = getFieldError('business_category');
-    const modelError = getFieldError('business_model');
-    const capitalError = getFieldError('available_capital_lkr');
-
-    if (catError || modelError) {
+    const missingSection1 = REQUIRED_SECTION_1_KEYS.filter((k) => !!getFieldError(k));
+    if (missingSection1.length > 0) {
       setCurrentStep(1);
-      setTouched((prev) => ({ ...prev, business_category: true, business_model: true }));
-      setValidationError(catError || modelError);
+      const touchedUpdates = {};
+      missingSection1.forEach((k) => { touchedUpdates[k] = true; });
+      setTouched((prev) => ({ ...prev, ...touchedUpdates }));
+      const labels = missingSection1.map((k) => FIELD_HUMAN_LABELS[k] || k).join(', ');
+      setValidationError(`Please complete required fields in Section 1: ${labels}.`);
       return;
     }
 
-    if (capitalError) {
+    const missingSection2 = REQUIRED_SECTION_2_KEYS.filter((k) => !!getFieldError(k));
+    if (missingSection2.length > 0) {
       setCurrentStep(2);
-      setTouched((prev) => ({ ...prev, available_capital_lkr: true }));
-      setValidationError(capitalError);
+      const touchedUpdates = {};
+      missingSection2.forEach((k) => { touchedUpdates[k] = true; });
+      setTouched((prev) => ({ ...prev, ...touchedUpdates }));
+      const labels = missingSection2.map((k) => FIELD_HUMAN_LABELS[k] || k).join(', ');
+      setValidationError(`Please complete required fields in Section 2: ${labels}.`);
       return;
     }
 
     setValidationError('');
 
     const finalPayload = {
+      business_name: parseOptionalString(formData.business_name),
       business_stage: parseOptionalString(formData.business_stage) || 'New',
       business_category: parseOptionalString(formData.business_category),
       business_model: parseOptionalString(formData.business_model),
@@ -312,25 +416,28 @@ export default function BusinessForm({
       marketing_details: parseOptionalString(formData.marketing_details),
       competitor_information: parseOptionalString(formData.competitor_information),
       financial_overview: parseOptionalString(formData.financial_overview),
-      available_capital_lkr: parseOptionalNumber(formData.available_capital_lkr),
-      loan_amount_lkr: parseOptionalNumber(formData.loan_amount_lkr),
-      monthly_budget_lkr: parseOptionalNumber(formData.monthly_budget_lkr),
-      initial_inventory_cost_lkr: parseOptionalNumber(formData.initial_inventory_cost_lkr),
-      expected_price_lkr: parseOptionalNumber(formData.expected_price_lkr),
-      expected_customers_per_day: parseOptionalNumber(formData.expected_customers_per_day),
+      
+      available_capital_lkr: Number(formData.available_capital_lkr),
+      loan_amount_lkr: isFieldMissing(formData.loan_amount_lkr) ? 0.0 : Number(formData.loan_amount_lkr),
+      monthly_budget_lkr: Number(formData.monthly_budget_lkr),
+      initial_inventory_cost_lkr: isFieldMissing(formData.initial_inventory_cost_lkr) ? 0.0 : Number(formData.initial_inventory_cost_lkr),
+      expected_price_lkr: Number(formData.expected_price_lkr),
+      
+      expected_customers_per_day: Math.round(Number(formData.expected_customers_per_day)),
       competition_level: parseOptionalString(formData.competition_level) || 'Moderate',
-      customer_demand_score: parseOptionalNumber(formData.customer_demand_score),
-      entrepreneur_experience_years: parseOptionalNumber(formData.entrepreneur_experience_years),
-      available_staff_count: parseOptionalNumber(formData.available_staff_count),
-      location_suitability_score: parseOptionalNumber(formData.location_suitability_score),
-      available_equipment_score: parseOptionalNumber(formData.available_equipment_score),
-      required_equipment_score: parseOptionalNumber(formData.required_equipment_score),
-      supplier_availability_score: parseOptionalNumber(formData.supplier_availability_score),
+      customer_demand_score: Math.round(Number(formData.customer_demand_score)),
+      entrepreneur_experience_years: Math.round(Number(formData.entrepreneur_experience_years)),
+      available_staff_count: Math.round(Number(formData.available_staff_count)),
+      
+      location_suitability_score: Math.round(Number(formData.location_suitability_score)),
+      available_equipment_score: Math.round(Number(formData.available_equipment_score)),
+      required_equipment_score: Math.round(Number(formData.required_equipment_score)),
+      supplier_availability_score: Math.round(Number(formData.supplier_availability_score)),
     };
 
-    // Remove any null or undefined keys so backend Pydantic schema validation executes cleanly without 422 errors
-    Object.keys(finalPayload).forEach((k) => {
-      if (finalPayload[k] === null || finalPayload[k] === undefined) {
+    // Clean optional narrative fields only, NEVER delete required business inputs
+    ['business_name', 'address', 'business_model', 'additional_description', 'marketing_details', 'competitor_information', 'financial_overview'].forEach((k) => {
+      if (!finalPayload[k]) {
         delete finalPayload[k];
       }
     });
@@ -351,6 +458,9 @@ export default function BusinessForm({
     isRequired = false,
     isSelect = false,
     isTextarea = false,
+    isLocked = false,
+    lockedBadge = null,
+    helperText = null,
     children,
     charCounter = null,
   }) => {
@@ -360,13 +470,19 @@ export default function BusinessForm({
 
     return (
       <div style={{ width: '100%' }}>
-        <div className={`floating-field-container ${isTextarea ? 'is-textarea-field' : ''} ${showError ? 'has-error' : ''}`}>
+        <div className={`floating-field-container ${isTextarea ? 'is-textarea-field' : ''} ${showError ? 'has-error' : ''} ${isLocked ? 'is-locked-field' : ''}`}>
           <div className="floating-field-top">
             <label htmlFor={name} className="floating-field-label">
               <span>{label}</span>
               {isRequired && <span className="req-asterisk">*</span>}
             </label>
-            {filledWithAi && (
+            {isLocked && (
+              <span className="floating-field-locked-badge">
+                <Lock size={10} />
+                <span>{lockedBadge || 'Selected in Step 1'}</span>
+              </span>
+            )}
+            {filledWithAi && !isLocked && (
               <span style={{ 
                 fontSize: '0.68rem', 
                 color: '#7e22ce', 
@@ -385,14 +501,25 @@ export default function BusinessForm({
           </div>
 
           {isSelect ? (
-            <div className="floating-select-wrapper">
+            <div className={`floating-select-wrapper ${isLocked ? 'is-locked-select-wrapper' : ''}`}>
               {children}
-              <ChevronDown size={16} className="floating-select-chevron" />
+              {isLocked ? (
+                <Lock size={15} className="floating-select-chevron floating-select-locked-icon" />
+              ) : (
+                <ChevronDown size={16} className="floating-select-chevron" />
+              )}
             </div>
           ) : (
             children
           )}
         </div>
+
+        {helperText && !showError && (
+          <div className="floating-field-helper-hint">
+            <Info size={11} style={{ flexShrink: 0 }} />
+            <span>{helperText}</span>
+          </div>
+        )}
 
         {showError && (
           <div className="floating-field-error-text">
@@ -623,21 +750,51 @@ export default function BusinessForm({
                 </div>
 
                 {renderFloatingField({
+                  label: 'Business / Company Name',
+                  name: 'business_name',
+                  helperText: 'Enter the planned or registered trading name for your business.',
+                  children: (
+                    <input 
+                      id="business_name"
+                      name="business_name"
+                      type="text" 
+                      value={formData.business_name} 
+                      onChange={handleChange}
+                      onBlur={() => handleBlur('business_name')}
+                      placeholder="e.g. Waasana Grocery Shop"
+                      className="floating-field-input"
+                      maxLength={80}
+                    />
+                  )
+                })}
+
+                {renderFloatingField({
                   label: 'Business Stage',
                   name: 'business_stage',
+                  isRequired: true,
                   isSelect: true,
+                  isLocked: isStageLocked,
+                  lockedBadge: 'Selected in Step 1',
+                  helperText: isStageLocked ? 'Locked to New Startup from your Step 1 choice. Click "Back to Type" above to change.' : null,
                   children: (
                     <select 
                       id="business_stage"
                       name="business_stage" 
-                      value={formData.business_stage} 
+                      value={formData.business_stage || (isStageLocked ? 'New' : '')} 
                       onChange={handleChange}
                       onBlur={() => handleBlur('business_stage')}
+                      disabled={isStageLocked}
                       className="floating-field-select"
+                      style={isStageLocked ? { cursor: 'not-allowed', color: '#f8fafc', fontWeight: 600 } : undefined}
+                      aria-disabled={isStageLocked}
                     >
-                      <option value="">Select Business Stage</option>
                       <option value="New">New Startup</option>
-                      <option value="Existing">Existing Business Expansion</option>
+                      {!isStageLocked && (
+                        <>
+                          <option value="">Select Business Stage</option>
+                          <option value="Existing">Existing Business Expansion</option>
+                        </>
+                      )}
                     </select>
                   )
                 })}
@@ -695,6 +852,7 @@ export default function BusinessForm({
                 {renderFloatingField({
                   label: 'District',
                   name: 'district',
+                  isRequired: true,
                   isSelect: true,
                   children: (
                     <select 
@@ -733,6 +891,7 @@ export default function BusinessForm({
                 {renderFloatingField({
                   label: 'Location Type',
                   name: 'location_type',
+                  isRequired: true,
                   isSelect: true,
                   children: (
                     <select 
@@ -829,6 +988,7 @@ export default function BusinessForm({
                 {renderFloatingField({
                   label: 'Requested Loan Amount (LKR)',
                   name: 'loan_amount_lkr',
+                  helperText: 'Optional. Leave blank or enter 0 if you are not requesting a bank loan.',
                   children: (
                     <input 
                       id="loan_amount_lkr"
@@ -848,6 +1008,7 @@ export default function BusinessForm({
                 {renderFloatingField({
                   label: 'Monthly Operating Budget (LKR)',
                   name: 'monthly_budget_lkr',
+                  isRequired: true,
                   children: (
                     <input 
                       id="monthly_budget_lkr"
@@ -867,6 +1028,7 @@ export default function BusinessForm({
                 {renderFloatingField({
                   label: 'Initial Inventory Cost (LKR)',
                   name: 'initial_inventory_cost_lkr',
+                  helperText: 'Optional. Leave blank or enter 0 if no initial inventory stock is required.',
                   children: (
                     <input 
                       id="initial_inventory_cost_lkr"
@@ -886,6 +1048,7 @@ export default function BusinessForm({
                 {renderFloatingField({
                   label: 'Expected Price / Unit (LKR)',
                   name: 'expected_price_lkr',
+                  isRequired: true,
                   children: (
                     <input 
                       id="expected_price_lkr"
@@ -914,6 +1077,7 @@ export default function BusinessForm({
                 {renderFloatingField({
                   label: 'Expected Customers / Day',
                   name: 'expected_customers_per_day',
+                  isRequired: true,
                   children: (
                     <input 
                       id="expected_customers_per_day"
@@ -932,6 +1096,7 @@ export default function BusinessForm({
                 {renderFloatingField({
                   label: 'Competition Level',
                   name: 'competition_level',
+                  isRequired: true,
                   isSelect: true,
                   children: (
                     <select 
@@ -953,6 +1118,7 @@ export default function BusinessForm({
                 {renderFloatingField({
                   label: 'Customer Demand Score (1-100)',
                   name: 'customer_demand_score',
+                  isRequired: true,
                   children: (
                     <input 
                       id="customer_demand_score"
@@ -972,6 +1138,8 @@ export default function BusinessForm({
                 {renderFloatingField({
                   label: 'Entrepreneur Experience (Years)',
                   name: 'entrepreneur_experience_years',
+                  isRequired: true,
+                  helperText: 'Enter 0 if this is your first startup enterprise.',
                   children: (
                     <input 
                       id="entrepreneur_experience_years"
@@ -990,6 +1158,8 @@ export default function BusinessForm({
                 {renderFloatingField({
                   label: 'Available Staff Count',
                   name: 'available_staff_count',
+                  isRequired: true,
+                  helperText: 'Enter 0 if you are operating as a solo entrepreneur.',
                   children: (
                     <input 
                       id="available_staff_count"
@@ -1018,6 +1188,7 @@ export default function BusinessForm({
                   {renderFloatingField({
                     label: 'Location Suitability (1-5)',
                     name: 'location_suitability_score',
+                    isRequired: true,
                     isSelect: true,
                     children: (
                       <select 
@@ -1041,6 +1212,7 @@ export default function BusinessForm({
                   {renderFloatingField({
                     label: 'Available Equipment (1-5)',
                     name: 'available_equipment_score',
+                    isRequired: true,
                     isSelect: true,
                     children: (
                       <select 
@@ -1064,6 +1236,7 @@ export default function BusinessForm({
                   {renderFloatingField({
                     label: 'Required Equipment (1-5)',
                     name: 'required_equipment_score',
+                    isRequired: true,
                     isSelect: true,
                     children: (
                       <select 
@@ -1087,6 +1260,7 @@ export default function BusinessForm({
                   {renderFloatingField({
                     label: 'Supplier Availability (1-5)',
                     name: 'supplier_availability_score',
+                    isRequired: true,
                     isSelect: true,
                     children: (
                       <select 

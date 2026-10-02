@@ -58,11 +58,13 @@ except Exception as err:
 if active_db_url.startswith("sqlite"):
     for col_def in [
         "ALTER TABLE analysis_records ADD COLUMN business_profile_id VARCHAR",
+        "ALTER TABLE analysis_records ADD COLUMN business_name VARCHAR",
         "ALTER TABLE analysis_records ADD COLUMN original_business_description TEXT",
         "ALTER TABLE analysis_records ADD COLUMN extraction_metadata TEXT",
         "ALTER TABLE users ADD COLUMN password_hash VARCHAR",
         "ALTER TABLE analysis_records ADD COLUMN user_id VARCHAR",
-        "ALTER TABLE analysis_records ADD COLUMN is_deleted BOOLEAN DEFAULT 0"
+        "ALTER TABLE analysis_records ADD COLUMN is_deleted BOOLEAN DEFAULT 0",
+        "ALTER TABLE analysis_audit_logs ADD COLUMN business_name VARCHAR"
     ]:
         try:
             with engine.connect() as conn:

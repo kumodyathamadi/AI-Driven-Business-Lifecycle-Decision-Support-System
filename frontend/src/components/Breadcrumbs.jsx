@@ -18,7 +18,10 @@ export default function Breadcrumbs({ activeProfile }) {
     const parts = path.split('/').filter(Boolean); // ['businesses', ':id', 'feasibility'?]
     if (parts.length >= 2) {
       const bizId = parts[1];
-      const bizName = activeProfile?.business_input?.business_category 
+      const bName = activeProfile?.business_input?.business_name || activeProfile?.business_name;
+      const bizName = bName
+        ? bName
+        : activeProfile?.business_input?.business_category 
         ? `${activeProfile.business_input.business_category} · ${activeProfile.business_input.district || 'Colombo'}`
         : 'Business Workspace';
 

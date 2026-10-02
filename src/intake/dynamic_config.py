@@ -34,6 +34,7 @@ BUSINESS_GOALS = {
 
 # Base schema field definitions
 ALL_FIELD_DEFINITIONS = {
+    "business_name": {"label": "Business / Company Name", "type": "text"},
     "business_stage": {"label": "Business Stage", "type": "select"},
     "business_category": {"label": "Business Category", "type": "select"},
     "district": {"label": "District", "type": "select"},

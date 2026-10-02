@@ -15,6 +15,7 @@ from backend.models import AnalysisRecord, User, AnalysisAuditLog
 from backend.auth_utils import get_optional_user
 from backend.schemas import BusinessAnalysisRequest, PaginatedRecordsResponse, AnalysisRecordSummary
 from src.orchestrator import analyze_business
+from src.preprocessing.preprocessor import InputValidationError
 
 router = APIRouter(prefix="/api/business", tags=["Business Analysis"])
 
@@ -34,11 +35,13 @@ def serialize_analysis_record(rec: AnalysisRecord) -> Dict[str, Any]:
     capital = float(in_prof.get("available_capital_lkr", 0.0))
     customers = int(in_prof.get("expected_customers_per_day", 0))
 
+    b_name = getattr(rec, "business_name", None) or in_prof.get("business_name")
     stage = rec.business_stage
     stage_label = "New Startup" if stage == "new_startup" or "new" in str(stage).lower() else "Existing Business"
 
     return {
         "id": rec.id,
+        "business_name": b_name,
         "business_stage": stage,
         "stage_label": stage_label,
         "business_category": rec.business_category,
@@ -79,10 +82,16 @@ def analyze_sme_business(
         # Save record to Database with canonical business_stage
         canonical_stage = structured_profile.get("business_input", {}).get("business_stage", payload.business_stage)
         canonical_category = structured_profile.get("business_input", {}).get("business_category", payload.business_category)
+        b_name = payload.business_name or raw_input.get("business_name") or structured_profile.get("business_input", {}).get("business_name")
+        if b_name:
+            structured_profile["business_name"] = b_name
+            if "business_input" in structured_profile and isinstance(structured_profile["business_input"], dict):
+                structured_profile["business_input"]["business_name"] = b_name
 
         record = AnalysisRecord(
             id=record_id,
             user_id=current_user.id if current_user else None,
+            business_name=b_name,
             business_stage=canonical_stage,
             business_category=canonical_category,
             district=payload.district,
@@ -101,6 +110,7 @@ def analyze_sme_business(
             user_email=current_user.email if current_user else "demo@sme360.ai",
             record_id=record_id,
             action="created",
+            business_name=b_name,
             business_category=record.business_category,
             district=record.district,
             result_label=predicted_label,
@@ -114,6 +124,12 @@ def analyze_sme_business(
 
         return structured_profile
 
+    except (InputValidationError, ValueError) as ve:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve)
+        )
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -177,6 +193,7 @@ def list_analysis_records(
         term = f"%{search.strip().lower()}%"
         query = query.filter(
             or_(
+                func.lower(AnalysisRecord.business_name).like(term),
                 func.lower(AnalysisRecord.business_category).like(term),
                 func.lower(AnalysisRecord.district).like(term),
                 func.lower(AnalysisRecord.feasibility_label).like(term),
@@ -337,7 +354,14 @@ def get_analysis_record(
             detail="You are not authorized to view this business analysis."
         )
 
-    return rec.structured_profile
+    profile = dict(rec.structured_profile) if isinstance(rec.structured_profile, dict) else {}
+    biz_name = rec.business_name or profile.get("business_name") or profile.get("business_input", {}).get("business_name")
+    if biz_name:
+        profile["business_name"] = biz_name
+        if "business_input" in profile and isinstance(profile["business_input"], dict):
+            profile["business_input"]["business_name"] = biz_name
+
+    return profile
 
 
 @router.delete("/record/{record_id}", response_model=Dict[str, Any])

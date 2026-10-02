@@ -11,6 +11,7 @@ export default function TopsisTable({ topsisRanking: propRanking }) {
   if (!topsisRanking) return null;
 
   const { ranked_strategies = [], top_recommended_strategy, top_topsis_score, evaluation_criteria = [] } = topsisRanking;
+  const businessName = ctx?.profile?.business_name || ctx?.profile?.business_input?.business_name || ctx?.businessName;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -19,10 +20,10 @@ export default function TopsisTable({ topsisRanking: propRanking }) {
       <div>
         <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Layers size={22} style={{ color: '#60a5fa' }} />
-          Explore & Compare Business Options
+          Explore & Compare Business Options {businessName ? `for ${businessName}` : ''}
         </h3>
         <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginTop: '0.25rem', lineHeight: '1.5' }}>
-          Compare strategic business directions evaluated against multi-objective criteria including financial capital, operating budget, market demand, and execution feasibility.
+          Compare strategic business directions for {businessName || 'your enterprise'} evaluated against multi-objective criteria including financial capital, operating budget, market demand, and execution feasibility.
         </p>
       </div>
 

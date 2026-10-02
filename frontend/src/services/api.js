@@ -156,7 +156,7 @@ export const downloadBusinessPlanPdf = async (profile) => {
       responseType: 'blob',
     });
     const blob = new Blob([response.data], { type: 'application/pdf' });
-    const bizName = profile.business_input?.business_name || profile.business_input?.business_category || 'Business';
+    const bizName = profile.business_input?.business_name || profile.business_name || profile.business_input?.business_category || 'Business';
     const cleanName = bizName.replace(/[^a-zA-Z0-9_\-]/g, '_');
     const link = document.createElement('a');
     link.href = window.URL.createObjectURL(blob);
@@ -181,7 +181,7 @@ export const downloadBusinessPlanDocx = async (profile) => {
     const blob = new Blob([response.data], { 
       type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
     });
-    const bizName = profile.business_input?.business_name || profile.business_input?.business_category || 'Business';
+    const bizName = profile.business_input?.business_name || profile.business_name || profile.business_input?.business_category || 'Business';
     const cleanName = bizName.replace(/[^a-zA-Z0-9_\-]/g, '_');
     const link = document.createElement('a');
     link.href = window.URL.createObjectURL(blob);

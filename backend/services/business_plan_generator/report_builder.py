@@ -21,7 +21,7 @@ class BusinessPlanReportBuilder:
         category = business_input.get("business_category", "SME Enterprise")
         stage = business_input.get("business_stage", "Startup")
         district = business_input.get("district", "Colombo")
-        raw_name = business_input.get("business_name") or f"{district} {category}"
+        raw_name = business_input.get("business_name") or profile.get("business_name") or f"{district} {category}"
         business_name = raw_name.strip()
 
         # Date

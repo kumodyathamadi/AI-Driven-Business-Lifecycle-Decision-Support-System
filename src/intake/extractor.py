@@ -115,6 +115,31 @@ def extract_business_info(user_text: str, specified_stage: str = "", specified_g
     extracted_fields["business_category"]["status"] = "extracted"
     extracted_fields["business_category"]["confidence"] = 0.95
 
+    # Business / Enterprise Name extraction
+    name_patterns = [
+        r'(?:named|called|name is|named as|brand name is|brand is)\s+["\']?([A-Za-z0-9\s&\'\.\-]+?(?:Shop|Store|Mart|Bakery|Salon|Saloon|Garments|Enterprise|Enterprises|Creations|Foods|Boutique|Trading|Center|Centre)?)["\']?(?:\s+(?:in|at|with|for|,|\.|$))',
+        r'["\']([A-Za-z0-9\s&\'\.\-]{3,40}\b(?:Shop|Store|Mart|Bakery|Salon|Saloon|Garments|Enterprise|Enterprises|Creations|Foods|Boutique)?)["\']'
+    ]
+    extracted_biz_name = None
+    for pattern in name_patterns:
+        m = re.search(pattern, text, re.IGNORECASE)
+        if m:
+            candidate = m.group(1).strip()
+            if 3 <= len(candidate) <= 50 and candidate.lower() not in ["a new", "an existing", "the business"]:
+                extracted_biz_name = candidate
+                break
+
+    if extracted_biz_name and "business_name" in extracted_fields:
+        extracted_fields["business_name"] = {
+            "value": extracted_biz_name,
+            "status": "extracted",
+            "requirement_state": "optional",
+            "confidence": 0.92,
+            "label": "Business / Company Name",
+            "type": "text",
+            "note": f"Extracted business name: '{extracted_biz_name}'"
+        }
+
     # District & Location Type
     colombo_locs = ["homagama", "maharagama", "nugegoda", "kattuwa", "dehiwala", "ratmalana", "moratuwa", "kesbewa", "piliyandala", "avissawella", "hanwella", "battaramulla", "kottawa", "kotte", "kollupitiya", "bambalapitiya", "pettah", "borella", "colombo"]
     gampaha_locs = ["gampaha", "negombo", "kelaniya", "ja-ela", "wattala", "kiribathgoda", "kadawatha", "minuwangoda"]
@@ -154,7 +179,7 @@ def extract_business_info(user_text: str, specified_stage: str = "", specified_g
     cap_patterns = [
         r'(?:capital|investment|salli|have|available|budget of|rs\.?|lkr)?\s*([\d,\.]+\s*(?:k|lakh|lakhs|laks|million|mn)?)\s*(?:capital|available|investment|salli)',
         r'(?:capital|investment)\s*(?:is|of|=|:)?\s*(?:rs\.?|lkr)?\s*([\d,\.]+\s*(?:k|lakh|lakhs|laks|million|mn)?)',
-        r'have\s*(?:around|about|approx)?\s*(?:rs\.?|lkr)?\s*([\d,\.]+\s*(?:k|lakh|lakhs|laks|million|mn)?)'
+        r'(?:have|with|starting with|investing)\s*(?:around|about|approx)?\s*(?:rs\.?|lkr)?\s*([\d,\.]+\s*(?:k|lakh|lakhs|laks|million|mn)?)'
     ]
     
     cap_val, cap_note = None, None

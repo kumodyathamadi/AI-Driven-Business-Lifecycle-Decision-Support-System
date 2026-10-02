@@ -43,6 +43,7 @@ const SUPPORTED_CATEGORIES = [
 ];
 
 const EMPTY_FORM_STATE = {
+  business_name: '',
   business_stage: '',
   business_category: '',
   business_model: '',
@@ -79,6 +80,7 @@ export default function AiIntakeAssistant({ onCompleteIntake, onSwitchToManual, 
   // Context selection
   const [selectedStage, setSelectedStage] = useState(initialStage || 'New');
   const [selectedGoal, setSelectedGoal] = useState(initialGoal || 'Establish New Business');
+  const [stageSelectedByUser, setStageSelectedByUser] = useState(Boolean(initialStage));
   const [inputText, setInputText] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -89,6 +91,7 @@ export default function AiIntakeAssistant({ onCompleteIntake, onSwitchToManual, 
 
   const handleSelectStartup = () => {
     setSelectedStage('New');
+    setStageSelectedByUser(true);
     setSelectedGoal('Establish New Business');
     setPrefilledFormData((prev) => ({
       ...EMPTY_FORM_STATE,
@@ -102,6 +105,7 @@ export default function AiIntakeAssistant({ onCompleteIntake, onSwitchToManual, 
 
   const handleSelectExpansion = () => {
     setSelectedStage('Existing');
+    setStageSelectedByUser(true);
     setIntakeStep('expansion_select');
     setErrorMsg('');
   };
@@ -134,9 +138,11 @@ export default function AiIntakeAssistant({ onCompleteIntake, onSwitchToManual, 
         setIntakeStep('expansion_select');
       } else {
         setIntakeStep('type_select');
+        setStageSelectedByUser(false);
       }
     } else if (intakeStep === 'expansion_select') {
       setIntakeStep('type_select');
+      setStageSelectedByUser(false);
     }
   }, [intakeStep, selectedStage]);
 
@@ -157,6 +163,7 @@ export default function AiIntakeAssistant({ onCompleteIntake, onSwitchToManual, 
       );
 
       const prefilled = {
+        business_name: '',
         business_stage: selectedStage || '',
         proposed_action: selectedStage === 'Existing'
           ? (selectedGoal === 'Open New Branch' ? 'Expand / Open a New Branch' : 'Introduce a New Product / Service Line')
@@ -219,6 +226,7 @@ export default function AiIntakeAssistant({ onCompleteIntake, onSwitchToManual, 
     } catch (err) {
       console.warn("AI extraction fallback to full form:", err);
       setPrefilledFormData({
+        business_name: '',
         business_stage: selectedStage || '',
         proposed_action: selectedStage === 'Existing'
           ? (selectedGoal === 'Open New Branch' ? 'Expand / Open a New Branch' : 'Introduce a New Product / Service Line')
@@ -872,6 +880,7 @@ export default function AiIntakeAssistant({ onCompleteIntake, onSwitchToManual, 
           onBack={handleBack}
           onClose={handleBack}
           onFormChange={handleFormChange}
+          isStageLocked={selectedStage === 'New' && (stageSelectedByUser || prefilledFormData?.business_stage === 'New')}
           stageBadge={
             selectedStage === 'New' ? (
               <span 

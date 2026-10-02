@@ -123,9 +123,10 @@ export default function WorkspaceLayout({ onProfileLoaded }) {
   const stage = String(bizInput.business_stage || 'new_startup').toLowerCase();
   const stageLabel = stage.includes('new') || stage.includes('start') ? 'New Startup' : 'Existing Business';
 
+  const businessName = bizInput.business_name || profile.business_name || '';
   const categoryName = formatText(bizInput.business_category, 'SME Enterprise');
   const districtName = formatText(bizInput.district, 'Sri Lanka');
-  const bizTitle = `${categoryName} · ${districtName}`;
+  const bizTitle = businessName ? `${businessName} · ${districtName}` : `${categoryName} · ${districtName}`;
 
   return (
     <div className="workspace-container-max">
@@ -139,6 +140,11 @@ export default function WorkspaceLayout({ onProfileLoaded }) {
             </h1>
 
             <div className="template-tags-row">
+              {businessName && (
+                <span className="template-badge-pill badge-pill-indigo" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#a5b4fc', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
+                  {categoryName}
+                </span>
+              )}
               <span className="template-badge-pill badge-pill-emerald">
                 {stageLabel}
               </span>
@@ -197,7 +203,10 @@ export default function WorkspaceLayout({ onProfileLoaded }) {
                       <div style={{ maxHeight: '240px', overflowY: 'auto' }} className="no-scrollbar">
                         {availableBusinesses.map((b) => {
                           const isCurrent = b.id === id;
-                          const bTitle = `${formatText(b.business_category)} · ${formatText(b.district)}`;
+                          const bName = b.business_name || (b.input_profile && b.input_profile.business_name);
+                          const bTitle = bName 
+                            ? `${bName} (${formatText(b.business_category)})`
+                            : `${formatText(b.business_category)} · ${formatText(b.district)}`;
                           const bLabel = b.predicted_label || b.feasibility_label || 'Evaluated';
 
                           return (

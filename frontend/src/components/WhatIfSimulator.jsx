@@ -130,7 +130,7 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
           Scenario Explorer & Live What-If Simulator
         </h3>
         <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginTop: '0.25rem' }}>
-          Adjust financial capital, unit pricing, and customer demand with live interactive sliders. Evaluate real-time ML re-scoring against your baseline project.
+          Adjust financial capital, unit pricing, and customer demand with live interactive sliders. Evaluate real-time ML re-scoring against {currentInput?.business_name ? currentInput.business_name : 'your baseline project'}.
         </p>
       </div>
 
@@ -139,7 +139,7 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
         className="glass-card" 
         style={{ 
           border: '1px solid rgba(59, 130, 246, 0.4)', 
-          background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.95))',
+          background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.95))', 
           padding: '1.5rem'
         }}
       >
@@ -149,7 +149,7 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
               Real-Time Model Comparison
             </span>
             <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', marginTop: '0.15rem' }}>
-              Baseline vs. Modified Scenario
+              {currentInput?.business_name ? `${currentInput.business_name}: Baseline vs. Modified` : 'Baseline vs. Modified Scenario'}
             </h4>
           </div>
 

@@ -56,6 +56,70 @@ DEFAULT_VALUES = {
     "supplier_availability_score": 4
 }
 
+class InputValidationError(ValueError):
+    """
+    Raised when required user business inputs are missing or invalid.
+    Prevents silent fallback to invented default values.
+    """
+    def __init__(self, message: str, missing_fields: list = None):
+        super().__init__(message)
+        self.missing_fields = missing_fields or []
+
+
+def is_missing_value(val: Any) -> bool:
+    """
+    Determines whether a business input field is missing (None, empty string, or NaN).
+    NOTE: 0, 0.0, and False are explicitly VALID values and NOT considered missing.
+    """
+    if val is None:
+        return True
+    if isinstance(val, str):
+        s = val.strip().lower()
+        return s in ("", "nan", "none", "null")
+    if isinstance(val, (int, float)):
+        import math
+        return math.isnan(val) or math.isinf(val)
+    return False
+
+
+# User-provided business fields where user input is strictly mandatory before ML feasibility analysis
+USER_REQUIRED_FIELDS = {
+    # Categorical Core
+    "business_stage": "Business Stage",
+    "business_category": "Business Category",
+    "district": "District",
+    "location_type": "Location Type",
+    # Financial Core
+    "available_capital_lkr": "Available Capital (LKR)",
+    "monthly_budget_lkr": "Monthly Operating Budget (LKR)",
+    "expected_price_lkr": "Expected Price / Unit (LKR)",
+    # Market & Operational Core
+    "expected_customers_per_day": "Expected Customers / Day",
+    "competition_level": "Market Competition Level",
+    "customer_demand_score": "Customer Demand Score",
+    "entrepreneur_experience_years": "Entrepreneur Experience (Years)",
+    "available_staff_count": "Available Staff Count",
+    # Operational Readiness Scores (1-5)
+    "location_suitability_score": "Location Suitability Score",
+    "available_equipment_score": "Available Equipment Score",
+    "required_equipment_score": "Required Equipment Score",
+    "supplier_availability_score": "Supplier Availability Score",
+}
+
+# Standard Sri Lankan District to Province geographic mapping
+DISTRICT_TO_PROVINCE = {
+    "Colombo": "Western", "Gampaha": "Western", "Kalutara": "Western",
+    "Kandy": "Central", "Matale": "Central", "Nuwara Eliya": "Central",
+    "Galle": "Southern", "Matara": "Southern", "Hambantota": "Southern",
+    "Jaffna": "Northern", "Kilinochchi": "Northern", "Mannar": "Northern",
+    "Vavuniya": "Northern", "Mullaitivu": "Northern",
+    "Batticaloa": "Eastern", "Ampara": "Eastern", "Trincomalee": "Eastern",
+    "Kurunegala": "North Western", "Puttalam": "North Western",
+    "Anuradhapura": "North Central", "Polonnaruwa": "North Central",
+    "Badulla": "Uva", "Monaragala": "Uva",
+    "Ratnapura": "Sabaragamuwa", "Kegalle": "Sabaragamuwa"
+}
+
 # The 4 strictly supported SME business categories
 SUPPORTED_CATEGORIES = [
     "Grocery / Mini-Mart",
@@ -150,64 +214,112 @@ def parse_clean_number(val: Any, default: float = 0.0) -> float:
 
 def validate_and_format_input(raw_input: Dict[str, Any]) -> Tuple[pd.DataFrame, Dict[str, Any]]:
     """
-    Validates a raw SME business input dictionary, enforces defaults for missing fields,
-    casts numeric types, normalizes categories and proposed actions,
-    and returns both a 1-row Pandas DataFrame ready for the preprocessing pipeline
+    Validates a raw SME business input dictionary against mandatory research requirements.
+    Rejects incomplete inputs by raising InputValidationError when any required business input is missing.
+    Prevents silent fallback to invented default values.
+    
+    Returns both a 1-row Pandas DataFrame ready for the preprocessing pipeline
     and a cleaned input dictionary.
     """
+    # 1. Strict Validation: Check for presence of all required user-provided business fields
+    missing_fields = []
+    missing_labels = []
+    for field_key, label in USER_REQUIRED_FIELDS.items():
+        val = raw_input.get(field_key)
+        if is_missing_value(val):
+            missing_fields.append(field_key)
+            missing_labels.append(label)
+
+    if missing_fields:
+        fields_str = ", ".join(missing_labels)
+        raise InputValidationError(
+            f"Please complete all required business fields before running feasibility analysis: {fields_str}.",
+            missing_fields=missing_fields
+        )
+
     cleaned_input = {}
 
-    # Validate Categorical Fields
-    for field in REQUIRED_CATEGORICAL_FIELDS:
-        val = raw_input.get(field)
-        if val is None or str(val).strip() == "":
-            cleaned_input[field] = DEFAULT_VALUES[field]
-        else:
-            cleaned_input[field] = str(val).strip()
+    # 2. Extract & Format Categorical Fields
+    cleaned_input["business_stage"] = str(raw_input.get("business_stage")).strip()
+    cleaned_input["business_category"] = str(raw_input.get("business_category")).strip()
+    cleaned_input["district"] = str(raw_input.get("district")).strip()
+    cleaned_input["location_type"] = str(raw_input.get("location_type")).strip()
+    cleaned_input["competition_level"] = str(raw_input.get("competition_level")).strip()
 
-    # Validate Numerical Fields with robust cleaning
-    for field in REQUIRED_NUMERICAL_FIELDS:
-        val = raw_input.get(field)
-        default_val = DEFAULT_VALUES[field]
-        cleaned_input[field] = parse_clean_number(val, default_val)
-        if cleaned_input[field] < 0:
-            cleaned_input[field] = 0.0
+    # System-derived or provided province
+    raw_province = raw_input.get("province")
+    if not is_missing_value(raw_province):
+        cleaned_input["province"] = str(raw_province).strip()
+    else:
+        cleaned_input["province"] = DISTRICT_TO_PROVINCE.get(cleaned_input["district"], "Western")
 
-    # Convert integer fields cleanly
-    int_fields = [
-        "expected_customers_per_day", "customer_demand_score",
-        "expected_operating_days_per_month", "entrepreneur_experience_years",
-        "location_suitability_score", "available_staff_count",
-        "required_staff_count", "available_equipment_score",
-        "required_equipment_score", "supplier_availability_score"
-    ]
-    for field in int_fields:
-        cleaned_input[field] = int(round(cleaned_input[field]))
+    # 3. Extract & Format Required Numerical Fields (with range enforcement)
+    cleaned_input["available_capital_lkr"] = max(0.0, parse_clean_number(raw_input["available_capital_lkr"], 0.0))
+    cleaned_input["monthly_budget_lkr"] = max(0.0, parse_clean_number(raw_input["monthly_budget_lkr"], 0.0))
+    cleaned_input["expected_price_lkr"] = max(1.0, parse_clean_number(raw_input["expected_price_lkr"], 1.0))
+    cleaned_input["expected_customers_per_day"] = max(0, int(round(parse_clean_number(raw_input["expected_customers_per_day"], 0.0))))
+    cleaned_input["customer_demand_score"] = min(100, max(1, int(round(parse_clean_number(raw_input["customer_demand_score"], 50.0)))))
+    cleaned_input["entrepreneur_experience_years"] = max(0, int(round(parse_clean_number(raw_input["entrepreneur_experience_years"], 0.0))))
+    cleaned_input["available_staff_count"] = max(0, int(round(parse_clean_number(raw_input["available_staff_count"], 0.0))))
 
-    # Normalize business stage
+    cleaned_input["location_suitability_score"] = min(5, max(1, int(round(parse_clean_number(raw_input["location_suitability_score"], 3.0)))))
+    cleaned_input["available_equipment_score"] = min(5, max(1, int(round(parse_clean_number(raw_input["available_equipment_score"], 3.0)))))
+    cleaned_input["required_equipment_score"] = min(5, max(1, int(round(parse_clean_number(raw_input["required_equipment_score"], 3.0)))))
+    cleaned_input["supplier_availability_score"] = min(5, max(1, int(round(parse_clean_number(raw_input["supplier_availability_score"], 3.0)))))
+
+    # 4. Conditional Numerical Fields (0.0 if not requested / not applicable)
+    raw_loan = raw_input.get("loan_amount_lkr")
+    cleaned_input["loan_amount_lkr"] = 0.0 if is_missing_value(raw_loan) else max(0.0, parse_clean_number(raw_loan, 0.0))
+
+    raw_inv = raw_input.get("initial_inventory_cost_lkr")
+    cleaned_input["initial_inventory_cost_lkr"] = 0.0 if is_missing_value(raw_inv) else max(0.0, parse_clean_number(raw_inv, 0.0))
+
+    # 5. System-Derived Operational Fields
+    raw_op_days = raw_input.get("expected_operating_days_per_month")
+    cleaned_input["expected_operating_days_per_month"] = 26 if is_missing_value(raw_op_days) else min(31, max(1, int(round(parse_clean_number(raw_op_days, 26.0)))))
+
+    raw_req_staff = raw_input.get("required_staff_count")
+    if is_missing_value(raw_req_staff):
+        cleaned_input["required_staff_count"] = cleaned_input["available_staff_count"]
+    else:
+        cleaned_input["required_staff_count"] = max(0, int(round(parse_clean_number(raw_req_staff, float(cleaned_input["available_staff_count"])))))
+
+    # 6. Normalize Business Stage & Category to canonical tokens
     canonical_stage, display_stage, model_stage = normalize_business_stage(cleaned_input["business_stage"])
     cleaned_input["business_stage"] = canonical_stage
     cleaned_input["stage_label"] = display_stage
 
-    # Normalize business category to standard 4 categories
     display_category, model_category = normalize_business_category(cleaned_input["business_category"])
     cleaned_input["business_category"] = display_category
 
     # Normalize proposed action for ML model OneHotEncoder
-    model_action = normalize_proposed_action(cleaned_input.get("proposed_action", ""), model_stage)
+    model_action = normalize_proposed_action(raw_input.get("proposed_action", ""), model_stage)
+    cleaned_input["proposed_action"] = raw_input.get("proposed_action") or f"{model_action.capitalize()} {display_category}"
 
-    # Prepare DataFrame row with exact categorical tokens expected by preprocessor.joblib OneHotEncoder
+    # 7. Preserve optional business name and narrative metadata in cleaned_input
+    if "business_name" in raw_input and raw_input["business_name"]:
+        cleaned_input["business_name"] = str(raw_input["business_name"]).strip()
+    if "address" in raw_input and raw_input["address"]:
+        cleaned_input["address"] = str(raw_input["address"]).strip()
+    if "business_model" in raw_input and raw_input["business_model"]:
+        cleaned_input["business_model"] = str(raw_input["business_model"]).strip()
+    if "additional_description" in raw_input and raw_input["additional_description"]:
+        cleaned_input["additional_description"] = str(raw_input["additional_description"]).strip()
+
+    # 8. Prepare DataFrame row with exact categorical tokens expected by preprocessor.joblib OneHotEncoder
     model_input = cleaned_input.copy()
     model_input["business_stage"] = model_stage
     model_input["business_category"] = model_category
     model_input["proposed_action"] = model_action
-    # Drop stage_label from model input DataFrame as model was not trained on it
-    if "stage_label" in model_input:
-        del model_input["stage_label"]
+
+    # Drop non-model features from model input DataFrame as model was not trained on them
+    for extra_key in ["stage_label", "business_name", "address", "business_model", "additional_description"]:
+        if extra_key in model_input:
+            del model_input[extra_key]
 
     df = pd.DataFrame([model_input])
 
-    # Ensure correct column ordering matching raw dataset feature set
+    # Ensure correct column ordering matching raw dataset feature set (15 numerical, 7 categorical)
     ordered_columns = REQUIRED_NUMERICAL_FIELDS + REQUIRED_CATEGORICAL_FIELDS
     df = df[ordered_columns]
 

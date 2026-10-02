@@ -18,12 +18,20 @@ class PersonalizedPlanGenerator:
         counterfactual: Dict[str, Any]
     ) -> Dict[str, Any]:
 
+        business_name = cleaned_input.get("business_name")
         category = cleaned_input.get("business_category", "Grocery / Mini-Mart")
         stage = cleaned_input.get("business_stage", "New")
         district = cleaned_input.get("district", "Colombo")
         capital = cleaned_input.get("available_capital_lkr", 500000.0)
         budget = cleaned_input.get("monthly_budget_lkr", 100000.0)
         prediction = feasibility_result.get("prediction", "Conditionally Feasible")
+
+        display_name = business_name if business_name else f"Your {category}"
+        summary_intro = (
+            f"Evaluation for {business_name} ({stage} {category}) located in {district}, Sri Lanka."
+            if business_name else
+            f"Evaluation for a {stage} {category} located in {district}, Sri Lanka."
+        )
 
         top_strategy_name = topsis_result.get("top_recommended_strategy", "Lean Bootstrapped Launch")
         top_positive = [d["feature"] for d in shap_explanation.get("top_positive_drivers", [])[:3]]
@@ -32,8 +40,9 @@ class PersonalizedPlanGenerator:
         # Section 1: Executive Business Overview
         section_1 = {
             "title": "1. Executive Business Overview",
+            "business_name": business_name,
             "business_summary": (
-                f"Evaluation for a {stage} {category} located in {district}, Sri Lanka. "
+                f"{summary_intro} "
                 f"The AI feasibility decision support system predicts an outcome of '{prediction}' "
                 f"with {feasibility_result.get('confidence_score', 0.88):.1%} model confidence."
             ),
@@ -51,7 +60,7 @@ class PersonalizedPlanGenerator:
                 f"{'Staff capacity is balanced.' if cleaned_input.get('available_staff_count', 2) >= cleaned_input.get('required_staff_count', 2) else 'Additional hiring required before launch.'}"
             ),
             "equipment_readiness": f"Equipment Score: {cleaned_input.get('available_equipment_score', 3)}/5 vs Required: {cleaned_input.get('required_equipment_score', 3)}/5.",
-            "supplier_logistics": f"Supplier Availability Score: {cleaned_input.get('supplier_availability_score', 4)}/5 (Colombo SME Supply Network)."
+            "supplier_logistics": f"Supplier Availability Score: {cleaned_input.get('supplier_availability_score', 4)}/5 ({district} SME Supply Network)."
         }
 
         # Section 3: Marketing & Customer Demand Strategy
@@ -61,8 +70,8 @@ class PersonalizedPlanGenerator:
             "target_daily_customers": cleaned_input.get("expected_customers_per_day", 30),
             "pricing_structure": f"LKR {cleaned_input.get('expected_price_lkr', 500):,.2f} per unit / service",
             "promotional_tactics": [
-                f"Local targeted signage and community engagement in {district}.",
-                "Digital social media presence targeting Colombo suburban consumers.",
+                f"Local targeted signage and community engagement for {display_name} in {district}.",
+                f"Digital social media presence targeting local consumers in {district}.",
                 "Introductory pricing and bundled customer loyalty promotions."
             ]
         }
@@ -81,10 +90,10 @@ class PersonalizedPlanGenerator:
         section_5 = {
             "title": "5. Time-Phased Action Roadmap",
             "phase_1_immediate_0_to_3_months": [
-                "Register business name and obtain local municipal authority permits.",
+                f"Register '{business_name}' and obtain local municipal authority permits." if business_name else "Register business name and obtain local municipal authority permits.",
                 f"Implement core operational strategy: {top_strategy_name}.",
                 "Procure initial inventory and establish supplier agreement terms.",
-                "Launch targeted local social media campaign."
+                f"Launch targeted local campaign for {display_name}."
             ],
             "phase_2_growth_3_to_12_months": [
                 "Track monthly cash flow against LKR {:,.2f} operating budget.".format(budget),

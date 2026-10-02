@@ -23,6 +23,8 @@ export default function ShapExplanation({ shapData: propData }) {
       .replace(/\b(\w)/g, (c) => c.toUpperCase());
   };
 
+  const businessName = ctx?.profile?.business_name || ctx?.profile?.business_input?.business_name || ctx?.businessName;
+
   return (
     <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       
@@ -30,10 +32,10 @@ export default function ShapExplanation({ shapData: propData }) {
       <div>
         <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <HelpCircle size={22} style={{ color: '#60a5fa' }} />
-          Key Insights — What Is Influencing Your Business Feasibility?
+          Key Insights — What Is Influencing {businessName ? `${businessName}'s` : 'Your'} Business Feasibility?
         </h3>
         <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginTop: '0.25rem', lineHeight: '1.5' }}>
-          Our AI model analyzes your operational, financial, and market inputs to identify the primary drivers strengthening your feasibility outcome as well as key risk hurdles requiring strategic attention.
+          Our AI model analyzes {businessName ? `${businessName}'s` : 'your'} operational, financial, and market inputs to identify the primary drivers strengthening feasibility as well as key risk hurdles requiring strategic attention.
         </p>
       </div>
 

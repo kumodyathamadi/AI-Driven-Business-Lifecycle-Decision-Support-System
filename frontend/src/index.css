@@ -884,6 +884,52 @@ body {
   color: #f87171;
 }
 
+.floating-field-container.is-locked-field {
+  background: rgba(15, 23, 42, 0.65);
+  border-color: rgba(56, 189, 248, 0.25);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.floating-field-container.is-locked-field:hover {
+  border-color: rgba(56, 189, 248, 0.38);
+}
+
+.floating-field-container.is-locked-field:focus-within {
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
+}
+
+.floating-field-locked-badge {
+  font-size: 0.68rem;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  letter-spacing: 0.1px;
+}
+
+.floating-field-helper-hint {
+  font-size: 0.73rem;
+  color: #94a3b8;
+  margin-top: -0.45rem;
+  margin-bottom: 0.75rem;
+  padding-left: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  line-height: 1.35;
+}
+
+.floating-select-locked-icon {
+  color: #38bdf8 !important;
+  opacity: 0.85;
+}
+
 .floating-field-top {
   display: flex;
   justify-content: space-between;
@@ -948,6 +994,13 @@ body {
   cursor: pointer;
   line-height: 1.4;
   padding-right: 1.6rem;
+}
+
+.floating-field-select:disabled,
+.floating-field-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.95;
+  color: #f8fafc;
 }
 
 .floating-field-select option {
@@ -2161,4 +2214,731 @@ body {
     padding: 1.15rem;
   }
 }
+
+/* ========================================================
+   PROGRESSIVE DISCLOSURE OVERVIEW DESIGN SYSTEM
+   ======================================================== */
+
+/* 1. Verdict Banner Root */
+.verdict-banner-root {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(13, 20, 36, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  position: relative;
+}
+
+.verdict-banner-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.verdict-gauge-wrapper {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.verdict-gauge-svg {
+  transform: rotate(-90deg);
+}
+
+.verdict-gauge-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.verdict-gauge-percent {
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.verdict-headline-container {
+  flex: 1;
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.verdict-eyebrow-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.verdict-eyebrow-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.verdict-eyebrow-meta {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.verdict-single-headline {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  max-width: 65ch;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.verdict-info-trigger-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.verdict-info-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px 4px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.verdict-info-btn:hover,
+.verdict-info-btn:focus-visible {
+  color: #818cf8;
+  outline: 2px solid #6366f1;
+}
+
+.verdict-popover-box {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 60;
+  background: #0d131f;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 1rem;
+  width: 320px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.75);
+  animation: fadeIn 0.15s ease-out;
+}
+
+.verdict-popover-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: #f8fafc;
+  margin-bottom: 0.4rem;
+}
+
+.verdict-popover-text {
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+  margin: 0 0 0.5rem 0;
+}
+
+.verdict-popover-footer {
+  font-size: 0.72rem;
+  color: #64748b;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 0.4rem;
+}
+
+.btn-verdict-checklist {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.btn-verdict-checklist:hover,
+.btn-verdict-checklist:focus-visible {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: rgba(99, 102, 241, 0.35);
+  color: #ffffff;
+  outline: 2px solid #6366f1;
+}
+
+/* 2. Streamlined KPI Cards */
+.kpi-card-clean {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1.15rem 1.35rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 110px;
+  position: relative;
+  transition: border-color 0.2s ease, transform 0.18s ease;
+}
+
+.kpi-card-clean:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.kpi-card-interactive {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.kpi-card-interactive:hover {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.06);
+  transform: translateY(-2px);
+}
+
+.kpi-card-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kpi-card-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 0.01em;
+}
+
+.kpi-info-icon-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+.kpi-info-icon-btn:hover {
+  opacity: 1;
+}
+
+.kpi-arrow-icon-wrap {
+  color: #10b981;
+  display: flex;
+  align-items: center;
+}
+
+.kpi-card-value {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #f8fafc;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.kpi-card-value.highlight-emerald {
+  color: #34d399;
+}
+
+.kpi-card-unit {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.kpi-card-helper {
+  font-size: 0.76rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kpi-card-helper.positive {
+  color: #34d399;
+  font-weight: 600;
+}
+
+.kpi-hover-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: #0d131f;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 0.75rem 0.85rem;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.8);
+  font-size: 0.75rem;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.kpi-popover-title {
+  font-weight: 700;
+  color: #f8fafc;
+  font-size: 0.75rem;
+  margin-bottom: 0.4rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 0.3rem;
+}
+
+.kpi-popover-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.2rem 0;
+  color: #cbd5e1;
+}
+
+.kpi-popover-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.kpi-popover-legend::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.kpi-popover-legend.dot-teal::before { background: #14b8a6; }
+.kpi-popover-legend.dot-blue::before { background: #3b82f6; }
+.kpi-popover-legend.dot-purple::before { background: #8b5cf6; }
+.kpi-popover-legend.dot-slate::before { background: #64748b; }
+
+/* 3. Compact Insight Card & Rows */
+.insight-card-compact {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1.15rem 1.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.insight-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.insight-card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.insight-card-heading {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0;
+}
+
+.btn-view-all-insights {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #818cf8;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.btn-view-all-insights:hover,
+.btn-view-all-insights:focus-visible {
+  color: #a5b4fc;
+  outline: 2px solid #6366f1;
+}
+
+.insight-rows-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.insight-row-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  gap: 0.75rem;
+  position: relative;
+}
+
+.insight-row-left {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.insight-row-icon-box {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.insight-row-icon-box.positive {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.insight-row-icon-box.negative {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+.insight-row-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.insight-row-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.insight-impact-chip {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.12rem 0.45rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.insight-impact-chip.positive.high {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.insight-impact-chip.positive.medium {
+  background: rgba(16, 185, 129, 0.12);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.insight-impact-chip.positive.low {
+  background: rgba(148, 163, 184, 0.1);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.insight-impact-chip.negative.high {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.insight-impact-chip.negative.medium {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.insight-impact-chip.negative.low {
+  background: rgba(148, 163, 184, 0.1);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.insight-popover-trigger-wrap {
+  position: relative;
+}
+
+.btn-why-compact {
+  background: transparent;
+  border: none;
+  color: #60a5fa;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  padding: 0.1rem 0.2rem;
+}
+
+.btn-why-compact:hover,
+.btn-why-compact:focus-visible {
+  color: #93c5fd;
+  outline: 2px solid #6366f1;
+}
+
+.insight-row-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  background: #0d131f;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  padding: 0.85rem;
+  width: 300px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.85);
+  font-size: 0.76rem;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.insight-popover-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.45rem;
+  color: #f8fafc;
+}
+
+.insight-popover-close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.insight-popover-desc {
+  font-size: 0.76rem;
+  color: #cbd5e1;
+  line-height: 1.45;
+  margin: 0 0 0.5rem 0;
+}
+
+.insight-popover-meta {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+  margin-bottom: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.insight-meta-field {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.insight-popover-footer {
+  font-size: 0.68rem;
+  color: #64748b;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 0.35rem;
+}
+
+/* 4. Streamlined Strategy Card */
+.strategy-card-clean {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1.25rem 1.45rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.strategy-card-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.strategy-rank-score-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.strategy-rank-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: rgba(99, 102, 241, 0.18);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  padding: 0.18rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.strategy-topsis-score-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.strategy-score-val {
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.strategy-topsis-help-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.strategy-topsis-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 60;
+  background: #0d131f;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  padding: 0.75rem;
+  width: 280px;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.85);
+  font-size: 0.74rem;
+  color: #cbd5e1;
+  line-height: 1.45;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.btn-compare-all-clean {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #818cf8;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.btn-compare-all-clean:hover,
+.btn-compare-all-clean:focus-visible {
+  color: #a5b4fc;
+  outline: 2px solid #6366f1;
+}
+
+.strategy-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.strategy-clean-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0;
+}
+
+.strategy-clean-summary {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 65ch;
+}
+
+.strategy-chips-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.strategy-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.75rem;
+  color: #e2e8f0;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .verdict-banner-inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .verdict-action-area {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+  }
+  .insight-row-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.45rem;
+  }
+  .insight-row-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
 
