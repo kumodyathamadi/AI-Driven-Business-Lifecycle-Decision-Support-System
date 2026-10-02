@@ -248,3 +248,15 @@ export const fetchAuditLogs = async (limit = 50) => {
   }
 };
 
+/**
+ * Adopts a strategic recommendation (HITL Decision Override),
+ * recalculating the business plan and action roadmap around the chosen strategy.
+ */
+export const adoptStrategy = async (recordId, strategyId) => {
+  const response = await apiClient.patch(`/business/record/${recordId}/strategy`, {
+    strategy_id: strategyId
+  });
+  return response.data;
+};
+
+

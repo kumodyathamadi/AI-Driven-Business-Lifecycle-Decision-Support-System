@@ -182,3 +182,7 @@ class HealthCheckResponse(BaseModel):
     component: str
     version: str
     model_loaded: bool
+
+
+class AdoptStrategyPayload(BaseModel):
+    strategy_id: str = Field(..., description="ID or name of strategy to adopt (e.g. STRAT_02)")

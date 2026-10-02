@@ -22,7 +22,7 @@ import { useToast } from './common/Toast';
 export default function BusinessPlan({ profile: propProfile }) {
   const ctx = useOutletContext();
   const profile = propProfile || ctx?.profile;
-  const { showToast } = useToast();
+  const toast = useToast();
   
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadingDocx, setDownloadingDocx] = useState(false);
@@ -44,9 +44,11 @@ export default function BusinessPlan({ profile: propProfile }) {
     setDownloadingPdf(true);
     try {
       await downloadBusinessPlanPdf(profile);
-      showToast('PDF plan generated and downloaded successfully!', 'success');
+      if (toast?.success) toast.success('PDF plan generated and downloaded successfully!');
+      else if (toast?.showToast) toast.showToast('PDF plan generated and downloaded successfully!', 'success');
     } catch (err) {
-      showToast(`PDF generation failed: ${err.message}`, 'error');
+      if (toast?.error) toast.error(`PDF generation failed: ${err.message}`);
+      else if (toast?.showToast) toast.showToast(`PDF generation failed: ${err.message}`, 'error');
     } finally {
       setDownloadingPdf(false);
     }
@@ -56,9 +58,11 @@ export default function BusinessPlan({ profile: propProfile }) {
     setDownloadingDocx(true);
     try {
       await downloadBusinessPlanDocx(profile);
-      showToast('Word document exported successfully!', 'success');
+      if (toast?.success) toast.success('Word document exported successfully!');
+      else if (toast?.showToast) toast.showToast('Word document exported successfully!', 'success');
     } catch (err) {
-      showToast(`Word document generation failed: ${err.message}`, 'error');
+      if (toast?.error) toast.error(`Word document generation failed: ${err.message}`);
+      else if (toast?.showToast) toast.showToast(`Word document generation failed: ${err.message}`, 'error');
     } finally {
       setDownloadingDocx(false);
     }
@@ -68,7 +72,8 @@ export default function BusinessPlan({ profile: propProfile }) {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(window.location.href);
       setCopiedLink(true);
-      showToast('Shareable business plan link copied to clipboard!', 'success');
+      if (toast?.success) toast.success('Shareable business plan link copied to clipboard!');
+      else if (toast?.showToast) toast.showToast('Shareable business plan link copied to clipboard!', 'success');
       setTimeout(() => setCopiedLink(false), 3000);
     }
   };
@@ -212,6 +217,29 @@ export default function BusinessPlan({ profile: propProfile }) {
             <p style={{ fontSize: '0.85rem', color: '#e2e8f0', lineHeight: '1.6' }}>
               {executive_overview.business_summary}
             </p>
+
+            <div style={{ marginTop: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Core Operational Strategy:</span>
+              <span style={{ 
+                fontSize: '0.78rem', 
+                fontWeight: 700, 
+                color: executive_overview.is_user_selected ? '#34d399' : '#60a5fa',
+                background: executive_overview.is_user_selected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                border: `1px solid ${executive_overview.is_user_selected ? 'rgba(16, 185, 129, 0.4)' : 'rgba(59, 130, 246, 0.4)'}`,
+                padding: '0.2rem 0.65rem',
+                borderRadius: '20px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem'
+              }}>
+                <Sparkles size={12} />
+                <span>{executive_overview.recommended_primary_strategy || 'Lean Bootstrapped Launch'}</span>
+                {executive_overview.is_user_selected && (
+                  <span style={{ fontSize: '0.68rem', opacity: 0.85 }}>(Adopted by Entrepreneur)</span>
+                )}
+              </span>
+            </div>
+
             {profile.business_input?.additional_description && (
               <div style={{ marginTop: '0.75rem', padding: '0.65rem 0.85rem', background: 'rgba(15, 23, 42, 0.6)', borderRadius: '6px', borderLeft: '3px solid #60a5fa' }}>
                 <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.2rem' }}>Detailed Objective:</div>
@@ -264,6 +292,28 @@ export default function BusinessPlan({ profile: propProfile }) {
               <DollarSign size={16} />
               4. Financial Planning
             </h4>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginTop: '0.75rem', marginBottom: '0.75rem' }}>
+              <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase' }}>Target Capital Required</span>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff', marginTop: '0.15rem' }}>
+                  LKR {Number(financial_plan.available_capital_lkr || 0).toLocaleString()}
+                </div>
+              </div>
+              <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase' }}>Monthly Operating Budget</span>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff', marginTop: '0.15rem' }}>
+                  LKR {Number(financial_plan.monthly_operating_budget_lkr || 0).toLocaleString()}
+                </div>
+              </div>
+              <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase' }}>Capital Runway</span>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#4ade80', marginTop: '0.15rem' }}>
+                  {financial_plan.capital_runway_months || '0'} Months
+                </div>
+              </div>
+            </div>
+
             <p style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: '1.5' }}>
               {financial_plan.counterfactual_guidance}
             </p>
@@ -288,7 +338,7 @@ export default function BusinessPlan({ profile: propProfile }) {
                 Phase 1: Immediate Launch (0 – 3 Months)
               </span>
               <ul style={{ fontSize: '0.825rem', color: '#cbd5e1', paddingLeft: '1.25rem', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                {action_roadmap.phase_1_immediate_0_to_3_months?.map((item, idx) => (
+                {(action_roadmap.phase_1_immediate_0_to_3_months || action_roadmap.phase_1 || [])?.map((item, idx) => (
                   <li key={idx}>{item}</li>
                 ))}
               </ul>
@@ -297,10 +347,10 @@ export default function BusinessPlan({ profile: propProfile }) {
             {/* Phase 2: 3-12 Months */}
             <div style={{ marginBottom: '1rem' }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ffffff', background: 'rgba(59, 130, 246, 0.2)', padding: '0.25rem 0.65rem', borderRadius: '4px' }}>
-                Phase 2: Operational Stabilization (3 – 12 Months)
+                Phase 2: Operational Stabilization & Growth (3 – 12 Months)
               </span>
               <ul style={{ fontSize: '0.825rem', color: '#cbd5e1', paddingLeft: '1.25rem', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                {action_roadmap.phase_2_stabilization_3_to_12_months?.map((item, idx) => (
+                {(action_roadmap.phase_2_growth_3_to_12_months || action_roadmap.phase_2_stabilization_3_to_12_months || action_roadmap.phase_2_medium_term_3_to_12_months || action_roadmap.phase_2 || [])?.map((item, idx) => (
                   <li key={idx}>{item}</li>
                 ))}
               </ul>
@@ -309,10 +359,10 @@ export default function BusinessPlan({ profile: propProfile }) {
             {/* Phase 3: 1 Year+ */}
             <div>
               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ffffff', background: 'rgba(168, 85, 247, 0.2)', padding: '0.25rem 0.65rem', borderRadius: '4px' }}>
-                Phase 3: Business Expansion (1 Year+)
+                Phase 3: Business Scale & Expansion (1 Year+)
               </span>
               <ul style={{ fontSize: '0.825rem', color: '#cbd5e1', paddingLeft: '1.25rem', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                {action_roadmap.phase_3_growth_1_year_plus?.map((item, idx) => (
+                {(action_roadmap.phase_3_scale_1_year_plus || action_roadmap.phase_3_growth_1_year_plus || action_roadmap.phase_3_long_term_1_year_plus || action_roadmap.phase_3 || [])?.map((item, idx) => (
                   <li key={idx}>{item}</li>
                 ))}
               </ul>

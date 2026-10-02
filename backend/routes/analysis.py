@@ -13,9 +13,11 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 from backend.database import get_db
 from backend.models import AnalysisRecord, User, AnalysisAuditLog
 from backend.auth_utils import get_optional_user
-from backend.schemas import BusinessAnalysisRequest, PaginatedRecordsResponse, AnalysisRecordSummary
+from backend.schemas import BusinessAnalysisRequest, PaginatedRecordsResponse, AnalysisRecordSummary, AdoptStrategyPayload
+from sqlalchemy.orm.attributes import flag_modified
 from src.orchestrator import analyze_business
 from src.preprocessing.preprocessor import InputValidationError
+from src.planning.planner import PersonalizedPlanGenerator
 
 router = APIRouter(prefix="/api/business", tags=["Business Analysis"])
 
@@ -438,6 +440,92 @@ def restore_analysis_record(
 
     db.commit()
     return {"status": "restored", "id": record_id}
+
+
+@router.patch("/record/{record_id}/strategy", response_model=Dict[str, Any])
+def adopt_strategic_recommendation(
+    record_id: str,
+    payload: AdoptStrategyPayload,
+    current_user: Optional[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Adopts a chosen strategic recommendation (HITL Decision Override).
+    Dynamically recalculates the personalized business plan and action roadmap around the selected strategy,
+    updating the structured profile in the database.
+    """
+    rec = db.query(AnalysisRecord).filter(AnalysisRecord.id == record_id).first()
+    if not rec or rec.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Analysis record with ID '{record_id}' not found."
+        )
+
+    prof = rec.structured_profile
+    if isinstance(prof, str):
+        try:
+            prof = json.loads(prof)
+        except Exception:
+            prof = {}
+
+    strat_recs = prof.get("strategic_recommendations", {})
+    topsis = strat_recs.get("topsis_ranking", {})
+    ranked = topsis.get("ranked_strategies", []) or strat_recs.get("candidate_strategies", [])
+
+    # Find the target strategy
+    chosen = next((s for s in ranked if s.get("strategy_id") == payload.strategy_id or s.get("strategy_name") == payload.strategy_id), None)
+    if not chosen:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Strategy '{payload.strategy_id}' not found among evaluated candidate strategies."
+        )
+
+    # Re-run plan generator with selected strategy
+    planner = PersonalizedPlanGenerator()
+    new_plan = planner.generate_plan(
+        cleaned_input=prof.get("business_input", rec.input_profile or {}),
+        feasibility_result=prof.get("feasibility_analysis", {}),
+        shap_explanation=prof.get("explainability", {}),
+        topsis_result=topsis,
+        what_if_result=prof.get("scenario_analysis", {}).get("what_if_simulations", []),
+        counterfactual=prof.get("scenario_analysis", {}).get("counterfactual_boundary", {}),
+        selected_strategy_id=chosen.get("strategy_id")
+    )
+
+    # Save to profile
+    prof["personalized_business_plan"] = new_plan
+    if "strategic_recommendations" not in prof:
+        prof["strategic_recommendations"] = {}
+    prof["strategic_recommendations"]["selected_strategy_id"] = chosen.get("strategy_id")
+    prof["strategic_recommendations"]["selected_strategy_name"] = chosen.get("strategy_name")
+
+    rec.structured_profile = prof
+    flag_modified(rec, "structured_profile")
+
+    # Add audit log
+    audit_entry = AnalysisAuditLog(
+        user_id=current_user.id if current_user else None,
+        user_email=current_user.email if current_user else "demo@sme360.ai",
+        record_id=record_id,
+        action="strategy_adopted",
+        business_category=rec.business_category,
+        district=rec.district,
+        result_label=chosen.get("strategy_name"),
+        result_score=chosen.get("topsis_score", 0.0)
+    )
+    db.add(audit_entry)
+
+    db.commit()
+    db.refresh(rec)
+
+    return {
+        "status": "success",
+        "record_id": record_id,
+        "selected_strategy_id": chosen.get("strategy_id"),
+        "selected_strategy_name": chosen.get("strategy_name"),
+        "personalized_business_plan": new_plan,
+        "structured_profile": prof
+    }
 
 
 @router.get("/audit-logs", tags=["Audit"])

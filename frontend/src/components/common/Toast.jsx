@@ -111,15 +111,20 @@ export function useToast() {
     return {
       addToast: () => {},
       removeToast: () => {},
+      showToast: () => {},
       success: () => {},
       error: () => {},
       info: () => {}
     };
   }
+  const showToast = (message, type = 'info', duration, action) => {
+    return context.addToast({ message, type, duration, action });
+  };
   return {
     ...context,
-    success: (msg, duration, action) => context.addToast({ message: msg, type: 'success', duration, action }),
-    error: (msg, duration, action) => context.addToast({ message: msg, type: 'error', duration, action }),
-    info: (msg, duration, action) => context.addToast({ message: msg, type: 'info', duration, action }),
+    showToast,
+    success: (msg, duration, action) => showToast(msg, 'success', duration, action),
+    error: (msg, duration, action) => showToast(msg, 'error', duration, action),
+    info: (msg, duration, action) => showToast(msg, 'info', duration, action),
   };
 }

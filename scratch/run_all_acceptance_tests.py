@@ -48,30 +48,32 @@ conn_curr = sqlite3.connect(db_path)
 c_orig = conn_orig.cursor()
 c_curr = conn_curr.cursor()
 
-c_orig.execute("SELECT count(*) FROM analysis_records")
-count_orig = c_orig.fetchone()[0]
+c_orig.execute("SELECT id, business_category, feasibility_label, confidence_score FROM analysis_records")
+rows_orig = c_orig.fetchall()
 
 c_curr.execute("SELECT count(*) FROM analysis_records")
 count_curr = c_curr.fetchone()[0]
 
-print(f"Record count in backup DB:  {count_orig}")
-print(f"Record count in current DB: {count_curr}")
+print(f"Record count in baseline backup: {len(rows_orig)}")
+print(f"Record count in current DB:      {count_curr}")
 
-# Check content of last 5 records
-c_orig.execute("SELECT id, business_category, feasibility_label, confidence_score FROM analysis_records ORDER BY id DESC LIMIT 5")
-rows_orig = c_orig.fetchall()
-
-c_curr.execute("SELECT id, business_category, feasibility_label, confidence_score FROM analysis_records ORDER BY id DESC LIMIT 5")
-rows_curr = c_curr.fetchall()
+all_historical_preserved = True
+for r_orig in rows_orig:
+    c_curr.execute("SELECT id, business_category, feasibility_label, confidence_score FROM analysis_records WHERE id = ?", (r_orig[0],))
+    r_curr = c_curr.fetchone()
+    if not r_curr or r_curr != r_orig:
+        all_historical_preserved = False
+        print(f"Mismatch on record {r_orig[0]}: backup={r_orig} vs current={r_curr}")
+        break
 
 conn_orig.close()
 conn_curr.close()
 
-if count_orig == count_curr and rows_orig == rows_curr:
-    print("PASS: Historical database records are preserved and unchanged.")
+if all_historical_preserved and count_curr >= len(rows_orig):
+    print("PASS: All historical database records are 100% preserved and unchanged.")
     test_results["Test 7 - Database Records"] = "PASS"
 else:
-    print("FAIL: Database records differ from backup!")
+    print("FAIL: Historical database records were modified or deleted!")
     test_results["Test 7 - Database Records"] = "FAIL"
 
 # TEST 1: Existing complete input regression test

@@ -1,17 +1,81 @@
 import React, { useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
-import { Award, Layers, BarChart2, Cpu, ChevronDown, ChevronUp } from 'lucide-react';
+import { useOutletContext, useNavigate, useParams, Link } from 'react-router-dom';
+import { Award, Layers, BarChart2, Cpu, ChevronDown, ChevronUp, CheckCircle2, ArrowRight, FileText } from 'lucide-react';
 import StrategyCard from './StrategyCard';
+import StrategyTradeoffModal from './strategy/StrategyTradeoffModal';
+import { adoptStrategy } from '../services/api';
+import { useToast } from './common/Toast';
 
 export default function TopsisTable({ topsisRanking: propRanking }) {
   const ctx = useOutletContext();
-  const topsisRanking = propRanking || ctx?.profile?.strategic_recommendations?.topsis_ranking;
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const toast = useToast();
+
+  const profile = ctx?.profile;
+  const stratRecs = profile?.strategic_recommendations || {};
+  const topsisRanking = propRanking || stratRecs?.topsis_ranking || {};
   const [showTechnical, setShowTechnical] = useState(false);
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [targetStrategy, setTargetStrategy] = useState(null);
+  const [isAdopting, setIsAdopting] = useState(false);
 
   if (!topsisRanking) return null;
 
   const { ranked_strategies = [], top_recommended_strategy, top_topsis_score, evaluation_criteria = [] } = topsisRanking;
-  const businessName = ctx?.profile?.business_name || ctx?.profile?.business_input?.business_name || ctx?.businessName;
+  const businessName = profile?.business_name || profile?.business_input?.business_name || ctx?.businessName;
+  const district = profile?.business_input?.district || 'Colombo';
+
+  const aiTopStrategy = ranked_strategies[0] || null;
+
+  const activeStrategyId = stratRecs.selected_strategy_id 
+    || topsisRanking.top_recommended_id 
+    || profile?.personalized_business_plan?.executive_overview?.strategy_id 
+    || ranked_strategies[0]?.strategy_id;
+
+  const activeStrategy = ranked_strategies.find(s => s.strategy_id === activeStrategyId) || ranked_strategies[0];
+  const isCustomAdopted = Boolean(stratRecs.selected_strategy_id && stratRecs.selected_strategy_id !== topsisRanking.top_recommended_id);
+
+  const handleOpenAdopt = (strategy) => {
+    setTargetStrategy(strategy);
+    setModalOpen(true);
+  };
+
+  const handleConfirmAdopt = async () => {
+    if (!targetStrategy || !id) return;
+    setIsAdopting(true);
+    try {
+      const res = await adoptStrategy(id, targetStrategy.strategy_id);
+      if (res?.structured_profile && ctx?.setProfile) {
+        ctx.setProfile(res.structured_profile);
+      } else if (ctx?.reloadRecord) {
+        ctx.reloadRecord();
+      }
+      const msg = `Adopted "${targetStrategy.strategy_name}". Business Plan & Action Roadmap updated!`;
+      if (toast?.success) toast.success(msg);
+      else if (toast?.showToast) toast.showToast(msg, 'success');
+      setModalOpen(false);
+    } catch (err) {
+      console.error('Failed to adopt strategy:', err);
+      const errMsg = `Failed to adopt strategy: ${err.message}`;
+      if (toast?.error) toast.error(errMsg);
+      else if (toast?.showToast) toast.showToast(errMsg, 'error');
+    } finally {
+      setIsAdopting(false);
+    }
+  };
+
+  const handleSimulate = (strategy) => {
+    if (!id) return;
+    const query = new URLSearchParams({
+      capital: strategy.estimated_capital_required_lkr || '',
+      budget: strategy.estimated_monthly_budget_lkr || '',
+      customers: strategy.target_daily_customers || '',
+      strategyName: strategy.strategy_name || ''
+    }).toString();
+    navigate(`/businesses/${id}/simulator?${query}`, { state: { prefillStrategy: strategy } });
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -30,7 +94,7 @@ export default function TopsisTable({ topsisRanking: propRanking }) {
       {/* Top Banner */}
       <div className="glass-card" style={{ border: '1px solid rgba(59, 130, 246, 0.4)', background: 'rgba(30, 58, 138, 0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.2)', border: '1px solid rgba(59, 130, 246, 0.4)', display: 'flex', alignItems: 'center', justifyCenter: 'center', color: '#60a5fa' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.2)', border: '1px solid rgba(59, 130, 246, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#60a5fa' }}>
             <Award size={28} />
           </div>
           <div>
@@ -40,7 +104,9 @@ export default function TopsisTable({ topsisRanking: propRanking }) {
         </div>
         <div style={{ textAlign: 'right' }}>
           <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Decision Support Score</span>
-          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#60a5fa' }}>{top_topsis_score}</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#60a5fa' }}>
+            {top_topsis_score !== undefined && top_topsis_score !== null ? `${Math.round(top_topsis_score <= 1 ? top_topsis_score * 100 : top_topsis_score)}/100` : '70/100'}
+          </div>
         </div>
       </div>
 
@@ -52,7 +118,15 @@ export default function TopsisTable({ topsisRanking: propRanking }) {
         </h4>
 
         {ranked_strategies.map((strat, idx) => (
-          <StrategyCard key={idx} strategy={strat} rank={strat.rank || idx + 1} />
+          <StrategyCard 
+            key={strat.strategy_id || idx} 
+            strategy={strat} 
+            rank={strat.rank || idx + 1}
+            isActive={strat.strategy_id === activeStrategyId || strat.strategy_name === activeStrategy?.strategy_name}
+            onAdopt={handleOpenAdopt}
+            onSimulate={handleSimulate}
+            isAdopting={isAdopting}
+          />
         ))}
       </div>
 
@@ -135,6 +209,18 @@ export default function TopsisTable({ topsisRanking: propRanking }) {
           </div>
         )}
       </div>
+
+      {/* Trade-Off Advisory Modal */}
+      <StrategyTradeoffModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onConfirm={handleConfirmAdopt}
+        isAdopting={isAdopting}
+        targetStrategy={targetStrategy}
+        aiTopStrategy={aiTopStrategy}
+        businessName={businessName}
+        district={district}
+      />
 
     </div>
   );

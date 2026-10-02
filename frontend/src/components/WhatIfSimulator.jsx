@@ -34,13 +34,23 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
   const baselineLabel = baselineFeasibility.predicted_label || 'Conditionally Feasible';
 
   const paramCapital = searchParams.get('capital');
+  const paramBudget = searchParams.get('budget');
+  const paramCustomers = searchParams.get('customers');
+  const paramStrategyName = searchParams.get('strategyName') || searchParams.get('strategy');
+
   const parsedCapital = paramCapital ? parseFloat(paramCapital) : null;
   const initialCapital = parsedCapital && !isNaN(parsedCapital) ? parsedCapital : baselineCapital;
 
+  const parsedBudget = paramBudget ? parseFloat(paramBudget) : null;
+  const initialBudget = parsedBudget && !isNaN(parsedBudget) ? parsedBudget : baselineBudget;
+
+  const parsedCustomers = paramCustomers ? parseInt(paramCustomers, 10) : null;
+  const initialCustomers = parsedCustomers && !isNaN(parsedCustomers) ? parsedCustomers : baselineCustomers;
+
   // Interactive Scenario State
   const [customCapital, setCustomCapital] = useState(initialCapital);
-  const [customBudget, setCustomBudget] = useState(baselineBudget);
-  const [customCustomers, setCustomCustomers] = useState(baselineCustomers);
+  const [customBudget, setCustomBudget] = useState(initialBudget);
+  const [customCustomers, setCustomCustomers] = useState(initialCustomers);
   const [customPrice, setCustomPrice] = useState(baselinePrice);
   
   const [liveScoring, setLiveScoring] = useState(true);
@@ -133,6 +143,39 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
           Adjust financial capital, unit pricing, and customer demand with live interactive sliders. Evaluate real-time ML re-scoring against {currentInput?.business_name ? currentInput.business_name : 'your baseline project'}.
         </p>
       </div>
+
+      {/* Strategy Simulation Banner */}
+      {paramStrategyName && (
+        <div 
+          className="glass-card"
+          style={{
+            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(30, 41, 59, 0.75))',
+            border: '1px solid rgba(99, 102, 241, 0.5)',
+            borderRadius: '10px',
+            padding: '0.85rem 1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '0.75rem'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <Sparkles size={20} style={{ color: '#c084fc' }} />
+            <div>
+              <span style={{ fontSize: '0.7rem', color: '#a5b4fc', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>
+                Simulating Evaluated Strategy
+              </span>
+              <h4 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+                {paramStrategyName}
+              </h4>
+            </div>
+          </div>
+          <span style={{ fontSize: '0.76rem', color: '#cbd5e1' }}>
+            Sliders pre-filled from strategic recommendation. Move sliders below to test sensitivity.
+          </span>
+        </div>
+      )}
 
       {/* Side-by-Side Change Versus Baseline Comparison Card */}
       <div 

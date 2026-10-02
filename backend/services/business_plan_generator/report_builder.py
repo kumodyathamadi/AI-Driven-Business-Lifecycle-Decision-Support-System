@@ -141,17 +141,17 @@ class BusinessPlanReportBuilder:
             },
             "scenarios": what_if_simulations,
             "action_roadmap": {
-                "phase_1": action_roadmap.get("phase_1_immediate_0_to_3_months", [
+                "phase_1": action_roadmap.get("phase_1_immediate_0_to_3_months") or action_roadmap.get("phase_1", [
                     "Verify initial working capital buffer and set up accounting controls.",
                     "Finalize equipment acquisition and supplier agreements.",
                     "Initiate targeted local marketing campaign in district."
                 ]),
-                "phase_2": action_roadmap.get("phase_2_stabilization_3_to_12_months", [
+                "phase_2": action_roadmap.get("phase_2_growth_3_to_12_months") or action_roadmap.get("phase_2_stabilization_3_to_12_months") or action_roadmap.get("phase_2", [
                     "Optimize operational throughput to hit daily customer target.",
                     "Monitor monthly cash flow against operating budget limits.",
                     "Conduct quarterly competitor price benchmark."
                 ]),
-                "phase_3": action_roadmap.get("phase_3_growth_1_year_plus", [
+                "phase_3": action_roadmap.get("phase_3_scale_1_year_plus") or action_roadmap.get("phase_3_growth_1_year_plus") or action_roadmap.get("phase_3", [
                     "Evaluate secondary product lines or additional staffing requirements.",
                     "Explore digital sales channels or secondary district expansion."
                 ])
