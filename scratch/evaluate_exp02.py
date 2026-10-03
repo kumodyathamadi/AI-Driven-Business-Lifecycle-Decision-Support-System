@@ -290,6 +290,7 @@ if os.path.exists(NOTEBOOK_PATH):
         "explainer = shap.TreeExplainer(rf_model)\n",
         "shap_values = explainer(X_test_dense)\n",
         "print('SHAP values computed for N =', len(X_test_dense))\n",
+        "global_df = pd.read_csv('../reports/research_evaluation/experiment_02_shap_validation/shap_global_importance.csv')\n",
         "top_global = global_df.head(5)[['rank', 'feature_name', 'mean_abs_shap']]\n",
         "print('\\nTop 5 Global Influential Features:')\n",
         "print(top_global.to_string(index=False))"
