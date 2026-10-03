@@ -46,15 +46,11 @@ export default function WorkspaceTabBar({ businessId, metricsCount = 6 }) {
     },
     {
       path: `/businesses/${businessId}/recommendations`,
-      label: 'Recommendations',
-      match: 'recommendations',
-      icon: Award
-    },
-    {
-      path: `/businesses/${businessId}/options`,
-      label: 'Explore Options',
-      match: 'options',
-      icon: Compass
+      label: 'Recommendations & Options',
+      match: ['recommendations', 'options'],
+      icon: Award,
+      badge: 'TOPSIS',
+      badgeClass: 'tab-pill-blue'
     },
     {
       path: `/businesses/${businessId}/scenarios`,
@@ -160,6 +156,8 @@ export default function WorkspaceTabBar({ businessId, metricsCount = 6 }) {
             tab.match === `/businesses/${businessId}`
               ? location.pathname === `/businesses/${businessId}` ||
                 location.pathname === `/businesses/${businessId}/`
+              : Array.isArray(tab.match)
+              ? tab.match.some((m) => location.pathname.includes(m))
               : location.pathname.includes(tab.match);
 
           const IconComponent = tab.icon;

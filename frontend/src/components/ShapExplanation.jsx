@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { TrendingUp, AlertOctagon, HelpCircle, ChevronDown, ChevronUp, Cpu } from 'lucide-react';
+import { resolveDriverValue } from '../utils/formatters';
 
 export default function ShapExplanation({ shapData: propData }) {
   const ctx = useOutletContext();
@@ -24,6 +25,7 @@ export default function ShapExplanation({ shapData: propData }) {
   };
 
   const businessName = ctx?.profile?.business_name || ctx?.profile?.business_input?.business_name || ctx?.businessName;
+  const businessInput = ctx?.profile?.business_input || ctx?.profile?.input_profile || {};
 
   return (
     <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -58,7 +60,7 @@ export default function ShapExplanation({ shapData: propData }) {
                   </span>
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.35rem' }}>
-                  Recorded Value: <strong style={{ color: '#cbd5e1' }}>{driver.feature_value ?? 'N/A'}</strong>
+                  Recorded Value: <strong style={{ color: '#cbd5e1' }}>{resolveDriverValue(driver, businessInput)}</strong>
                 </div>
               </div>
             ))}
@@ -82,7 +84,7 @@ export default function ShapExplanation({ shapData: propData }) {
                   </span>
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.35rem' }}>
-                  Recorded Value: <strong style={{ color: '#cbd5e1' }}>{driver.feature_value ?? 'N/A'}</strong>
+                  Recorded Value: <strong style={{ color: '#cbd5e1' }}>{resolveDriverValue(driver, businessInput)}</strong>
                 </div>
               </div>
             ))}

@@ -27,6 +27,7 @@ export default function VerdictBanner({
   const isConditional = norm.includes('conditional') || norm.includes('marginal');
 
   const rawConf = (Number(confidenceScore) <= 1 ? Number(confidenceScore) * 100 : Number(confidenceScore)) || 63;
+  const confPercent = Math.round(rawConf);
   const confDisplay = formatConfidence(confidenceScore);
 
   // Circular gauge SVG calculations

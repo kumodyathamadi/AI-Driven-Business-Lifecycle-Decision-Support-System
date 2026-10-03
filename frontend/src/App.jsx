@@ -75,7 +75,7 @@ export default function App() {
                     <Route path="feasibility" element={<FeasibilityCard />} />
                     <Route path="insights" element={<ShapExplanation />} />
                     <Route path="recommendations" element={<RecommendationsView />} />
-                    <Route path="options" element={<TopsisTable />} />
+                    <Route path="options" element={<Navigate to="../recommendations" replace />} />
                     <Route path="scenarios" element={<WhatIfSimulator />} />
                     <Route path="plan" element={<BusinessPlan />} />
                   </Route>

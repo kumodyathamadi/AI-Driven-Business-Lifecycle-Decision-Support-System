@@ -2,6 +2,7 @@ import React from 'react';
 import { useOutletContext, useNavigate, useParams, Link } from 'react-router-dom';
 import { CheckCircle2, AlertTriangle, XCircle, Award, TrendingUp, AlertOctagon, HelpCircle, ArrowRight } from 'lucide-react';
 import ProbabilityChart from './ProbabilityChart';
+import { resolveDriverValue } from '../utils/formatters';
 
 export default function FeasibilityCard({ feasibilityData: propFeas, executiveSummary: propSummary }) {
   const ctx = useOutletContext();
@@ -13,6 +14,7 @@ export default function FeasibilityCard({ feasibilityData: propFeas, executiveSu
   const explainability = ctx?.profile?.explainability || {};
   const positiveDrivers = explainability.positive_drivers || [];
   const negativeDrivers = explainability.negative_drivers || [];
+  const businessInput = ctx?.profile?.business_input || ctx?.profile?.input_profile || {};
 
   if (!feasibilityData) return null;
 
@@ -116,7 +118,7 @@ export default function FeasibilityCard({ feasibilityData: propFeas, executiveSu
                       </span>
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.25rem' }}>
-                      Value: <strong style={{ color: '#cbd5e1' }}>{driver.feature_value ?? 'N/A'}</strong>
+                      Value: <strong style={{ color: '#cbd5e1' }}>{resolveDriverValue(driver, businessInput)}</strong>
                     </div>
                   </div>
                 ))}
@@ -139,7 +141,7 @@ export default function FeasibilityCard({ feasibilityData: propFeas, executiveSu
                       </span>
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.25rem' }}>
-                      Value: <strong style={{ color: '#cbd5e1' }}>{driver.feature_value ?? 'N/A'}</strong>
+                      Value: <strong style={{ color: '#cbd5e1' }}>{resolveDriverValue(driver, businessInput)}</strong>
                     </div>
                   </div>
                 ))}

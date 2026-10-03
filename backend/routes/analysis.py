@@ -18,6 +18,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from src.orchestrator import analyze_business
 from src.preprocessing.preprocessor import InputValidationError
 from src.planning.planner import PersonalizedPlanGenerator
+from src.explainability.explainer import format_feature_value_from_row
 
 router = APIRouter(prefix="/api/business", tags=["Business Analysis"])
 
@@ -362,6 +363,23 @@ def get_analysis_record(
         profile["business_name"] = biz_name
         if "business_input" in profile and isinstance(profile["business_input"], dict):
             profile["business_input"]["business_name"] = biz_name
+
+    # Ensure explainability drivers have human-readable feature_value
+    inp_row = profile.get("business_input") or rec.input_profile or {}
+    if isinstance(inp_row, str):
+        try:
+            inp_row = json.loads(inp_row)
+        except Exception:
+            inp_row = {}
+    if "explainability" in profile and isinstance(profile["explainability"], dict):
+        for driver_key in ("positive_drivers", "negative_drivers"):
+            drivers = profile["explainability"].get(driver_key, [])
+            if isinstance(drivers, list):
+                for d in drivers:
+                    if isinstance(d, dict) and (not d.get("feature_value") or d.get("feature_value") == "N/A"):
+                        d["feature_value"] = format_feature_value_from_row(
+                            d.get("feature", ""), d.get("raw_feature", ""), inp_row
+                        )
 
     return profile
 

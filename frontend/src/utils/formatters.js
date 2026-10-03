@@ -140,3 +140,99 @@ export function formatFullDateTime(dateVal) {
   return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}, ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} LK Time`;
 }
 
+const FEATURE_KEYWORD_MAP = {
+  'available capital': 'available_capital_lkr',
+  'loan amount': 'loan_amount_lkr',
+  'monthly operating budget': 'monthly_budget_lkr',
+  'monthly budget': 'monthly_budget_lkr',
+  'initial inventory cost': 'initial_inventory_cost_lkr',
+  'expected product price': 'expected_price_lkr',
+  'expected price': 'expected_price_lkr',
+  'expected daily customers': 'expected_customers_per_day',
+  'expected customers': 'expected_customers_per_day',
+  'customer demand score': 'customer_demand_score',
+  'customer demand': 'customer_demand_score',
+  'operating days': 'expected_operating_days_per_month',
+  'entrepreneur experience': 'entrepreneur_experience_years',
+  'location suitability': 'location_suitability_score',
+  'available staff': 'available_staff_count',
+  'required staff': 'required_staff_count',
+  'available equipment': 'available_equipment_score',
+  'required equipment': 'required_equipment_score',
+  'supplier availability': 'supplier_availability_score',
+  'business stage': 'business_stage',
+  'business category': 'business_category',
+  'district': 'district',
+  'province': 'province',
+  'location type': 'location_type',
+  'proposed action': 'proposed_action',
+  'competition level': 'competition_level'
+};
+
+/**
+ * Resolves human-readable feature value for SHAP explanation drivers.
+ * Uses recorded driver.feature_value if present, otherwise maps to businessInput.
+ * @param {object} driver
+ * @param {object} businessInput
+ * @returns {string}
+ */
+export function resolveDriverValue(driver, businessInput = {}) {
+  if (driver?.feature_value && driver.feature_value !== 'N/A' && driver.feature_value !== 'null') {
+    return driver.feature_value;
+  }
+  if (!businessInput || typeof businessInput !== 'object') return 'N/A';
+
+  const rawKey = String(driver?.raw_feature || '').replace(/^num__|^cat__/, '');
+  const featStr = String(driver?.feature || '').toLowerCase();
+
+  // 1. Direct match by raw key if available
+  let matchedKey = null;
+  if (rawKey && businessInput[rawKey] !== undefined) {
+    matchedKey = rawKey;
+  } else {
+    // 2. Keyword substring matching
+    for (const [prefix, key] of Object.entries(FEATURE_KEYWORD_MAP)) {
+      if (featStr.includes(prefix) || rawKey.startsWith(key)) {
+        if (businessInput[key] !== undefined && businessInput[key] !== null) {
+          matchedKey = key;
+          break;
+        }
+      }
+    }
+  }
+
+  if (matchedKey && businessInput[matchedKey] !== undefined && businessInput[matchedKey] !== null) {
+    const val = businessInput[matchedKey];
+    if (['available_capital_lkr', 'loan_amount_lkr', 'monthly_budget_lkr', 'initial_inventory_cost_lkr', 'expected_price_lkr'].includes(matchedKey)) {
+      const num = Number(val);
+      if (isNaN(num)) return String(val);
+      return `LKR ${num.toLocaleString('en-US', { maximumFractionDigits: matchedKey === 'expected_price_lkr' ? 2 : 0 })}`;
+    }
+    if (matchedKey === 'expected_customers_per_day') {
+      return `${Number(val).toLocaleString('en-US')} / day`;
+    }
+    if (matchedKey === 'customer_demand_score') {
+      return `${val} / 100`;
+    }
+    if (matchedKey === 'entrepreneur_experience_years') {
+      return `${val} ${Number(val) === 1 ? 'Year' : 'Years'}`;
+    }
+    if (['location_suitability_score', 'available_equipment_score', 'required_equipment_score', 'supplier_availability_score'].includes(matchedKey)) {
+      return `${val} / 5`;
+    }
+    if (matchedKey === 'expected_operating_days_per_month') {
+      return `${val} Days / Mo`;
+    }
+    if (['available_staff_count', 'required_staff_count'].includes(matchedKey)) {
+      return `${val} Staff`;
+    }
+    if (matchedKey === 'business_stage') {
+      const s = String(val).toLowerCase();
+      return (s.includes('new') || s.includes('start')) ? 'New Startup' : 'Existing Business';
+    }
+    return String(val);
+  }
+
+  return 'N/A';
+}
+

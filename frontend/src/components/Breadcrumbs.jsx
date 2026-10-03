@@ -32,8 +32,8 @@ export default function Breadcrumbs({ activeProfile }) {
         const labels = {
           feasibility: 'Feasibility Assessment',
           insights: 'Key Insights',
-          recommendations: 'Recommendations',
-          options: 'Explore Options',
+          recommendations: 'Recommendations & Options',
+          options: 'Recommendations & Options',
           scenarios: 'Scenario Explorer',
           plan: 'Business Plan'
         };
