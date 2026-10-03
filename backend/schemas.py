@@ -34,37 +34,37 @@ class BusinessAnalysisRequest(BaseModel):
     Pydantic Input Request Validation Schema matching Component 1 features.
     Enforces strict presence of mandatory business inputs without silent defaults.
     """
-    business_name: Optional[str] = Field(default=None, example="Waasana Grocery Shop")
-    business_stage: str = Field(..., example="new_startup")
-    business_category: str = Field(..., example="Grocery / Mini-Mart")
-    district: str = Field(..., example="Colombo")
-    location_type: str = Field(..., example="Suburban Commercial Hub")
+    business_name: Optional[str] = Field(default=None, examples=["Waasana Grocery Shop"])
+    business_stage: str = Field(..., examples=["new_startup"])
+    business_category: str = Field(..., examples=["Grocery / Mini-Mart"])
+    district: str = Field(..., examples=["Colombo"])
+    location_type: str = Field(..., examples=["Suburban Commercial Hub"])
     
     # Financial Inputs (Required user input)
-    available_capital_lkr: float = Field(..., ge=0, example=800000.0)
-    monthly_budget_lkr: float = Field(..., ge=0, example=150000.0)
-    expected_price_lkr: float = Field(..., gt=0, example=350.0)
+    available_capital_lkr: float = Field(..., ge=0, examples=[800000.0])
+    monthly_budget_lkr: float = Field(..., ge=0, examples=[150000.0])
+    expected_price_lkr: float = Field(..., gt=0, examples=[350.0])
     
     # Market & Operations Inputs (Required user input)
-    expected_customers_per_day: int = Field(..., ge=0, example=45)
-    competition_level: str = Field(..., example="Moderate")
-    customer_demand_score: int = Field(..., ge=1, le=100, example=75)
-    entrepreneur_experience_years: int = Field(..., ge=0, example=4)
-    available_staff_count: int = Field(..., ge=0, example=3)
+    expected_customers_per_day: int = Field(..., ge=0, examples=[45])
+    competition_level: str = Field(..., examples=["Moderate"])
+    customer_demand_score: int = Field(..., ge=1, le=100, examples=[75])
+    entrepreneur_experience_years: int = Field(..., ge=0, examples=[4])
+    available_staff_count: int = Field(..., ge=0, examples=[3])
     
     # Operational Readiness Scores 1-5 (Required user input)
-    location_suitability_score: int = Field(..., ge=1, le=5, example=4)
-    available_equipment_score: int = Field(..., ge=1, le=5, example=4)
-    required_equipment_score: int = Field(..., ge=1, le=5, example=4)
-    supplier_availability_score: int = Field(..., ge=1, le=5, example=5)
+    location_suitability_score: int = Field(..., ge=1, le=5, examples=[4])
+    available_equipment_score: int = Field(..., ge=1, le=5, examples=[4])
+    required_equipment_score: int = Field(..., ge=1, le=5, examples=[4])
+    supplier_availability_score: int = Field(..., ge=1, le=5, examples=[5])
 
     # Conditional / Optional / System-Derived Fields
-    loan_amount_lkr: Optional[float] = Field(default=0.0, ge=0, example=200000.0)
-    initial_inventory_cost_lkr: Optional[float] = Field(default=0.0, ge=0, example=180000.0)
-    required_staff_count: Optional[int] = Field(default=None, ge=0, example=3)
-    expected_operating_days_per_month: Optional[int] = Field(default=26, ge=1, le=31, example=26)
-    province: Optional[str] = Field(default=None, example="Western")
-    proposed_action: Optional[str] = Field(default=None, example="Establish New Commercial Enterprise")
+    loan_amount_lkr: Optional[float] = Field(default=0.0, ge=0, examples=[200000.0])
+    initial_inventory_cost_lkr: Optional[float] = Field(default=0.0, ge=0, examples=[180000.0])
+    required_staff_count: Optional[int] = Field(default=None, ge=0, examples=[3])
+    expected_operating_days_per_month: Optional[int] = Field(default=26, ge=1, le=31, examples=[26])
+    province: Optional[str] = Field(default=None, examples=["Western"])
+    proposed_action: Optional[str] = Field(default=None, examples=["Establish New Commercial Enterprise"])
 
     # Research Traceability Extensions
     original_business_description: Optional[str] = Field(default=None, description="Original natural language text entered by user")
@@ -139,18 +139,18 @@ class IntakeExtractRequest(BaseModel):
     """
     Request payload for AI Business Intake Assistant text parsing with optional context hints.
     """
-    text: str = Field(..., min_length=5, example="I want to start a grocery store in Homagama with Rs. 500,000 capital.")
-    business_stage: Optional[str] = Field(default="", example="new_startup")
-    business_goal: Optional[str] = Field(default="", example="Establish New Business")
+    text: str = Field(..., min_length=5, examples=["I want to start a grocery store in Homagama with Rs. 500,000 capital."])
+    business_stage: Optional[str] = Field(default="", examples=["new_startup"])
+    business_goal: Optional[str] = Field(default="", examples=["Establish New Business"])
 
 
 class IntakeConfigRequest(BaseModel):
     """
     Request payload for retrieving context-dependent field requirements.
     """
-    business_stage: str = Field(..., example="existing")
-    business_goal: Optional[str] = Field(default="Open New Branch", example="Open New Branch")
-    business_category: Optional[str] = Field(default="Grocery / Mini-Mart", example="Grocery / Mini-Mart")
+    business_stage: str = Field(..., examples=["existing"])
+    business_goal: Optional[str] = Field(default="Open New Branch", examples=["Open New Branch"])
+    business_category: Optional[str] = Field(default="Grocery / Mini-Mart", examples=["Grocery / Mini-Mart"])
 
 
 class AnalysisRecordSummary(BaseModel):
