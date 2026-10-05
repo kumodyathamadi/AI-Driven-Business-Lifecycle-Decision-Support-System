@@ -275,13 +275,25 @@ class BusinessPlanDocxGenerator:
         # =========================================================================
         # 6. STRATEGY PRIORITIES
         # =========================================================================
-        add_heading_1("5. Strategy Priorities & Options Comparison")
         strat_prio = report_data.get("strategy_priorities", {})
-        
+        active_strat = strat_prio.get("selected_strategy_name") or strat_prio.get("top_recommended_strategy", "Controlled Growth")
+        ai_top = strat_prio.get("ai_top_strategy", "Hybrid Digital & Local Delivery Model")
+        ai_score = strat_prio.get("ai_top_score", "0.8417")
+        is_user_sel = strat_prio.get("is_user_selected", False)
+
         p_top = doc.add_paragraph()
-        r_top = p_top.add_run(f"Top Recommended Direction: {strat_prio.get('top_recommended_strategy')} (Decision Score: {strat_prio.get('top_topsis_score')})")
-        r_top.font.bold = True
-        r_top.font.color.rgb = COLOR_ACCENT
+        if is_user_sel:
+            r_top = p_top.add_run(f"Operational Plan Strategy (Adopted by Entrepreneur): {active_strat}\n")
+            r_top.font.bold = True
+            r_top.font.color.rgb = RGBColor(5, 150, 105)
+            r_sub = p_top.add_run(f"*Note: Founder chose this operational pathway. AI MCDM Benchmark (#1): {ai_top} (Score: {ai_score}). Plan milestones and budget are tailored to {active_strat}.")
+            r_sub.font.italic = True
+            r_sub.font.size = Pt(8.5)
+            r_sub.font.color.rgb = RGBColor(100, 116, 139)
+        else:
+            r_top = p_top.add_run(f"Top Recommended Direction: {active_strat} (Decision Score: {ai_score})")
+            r_top.font.bold = True
+            r_top.font.color.rgb = COLOR_ACCENT
 
         ranked_strats = strat_prio.get("ranked_strategies", [])
         s_tbl = doc.add_table(rows=len(ranked_strats) + 1, cols=4)

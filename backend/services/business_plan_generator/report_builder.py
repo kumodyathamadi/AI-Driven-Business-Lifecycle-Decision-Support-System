@@ -66,12 +66,28 @@ class BusinessPlanReportBuilder:
         # Strategies & TOPSIS Ranking
         candidate_strategies = strategic_recommendations.get("candidate_strategies", [])
         topsis_ranking = strategic_recommendations.get("topsis_ranking", {})
-        top_strategy = topsis_ranking.get("top_recommended_strategy", "Controlled Operational Growth")
-        top_topsis_score = topsis_ranking.get("top_topsis_score", "0.7850")
+        ai_top_strategy = topsis_ranking.get("top_recommended_strategy", "Controlled Operational Growth")
+        ai_top_score = topsis_ranking.get("top_topsis_score", "0.7850")
         evaluation_criteria = topsis_ranking.get("evaluation_criteria", [])
+
+        # Check if user adopted an alternative strategy (HITL Decision Override)
+        selected_strategy_id = strategic_recommendations.get("selected_strategy_id") or executive_overview.get("strategy_id")
+        selected_strategy_name = strategic_recommendations.get("selected_strategy_name") or executive_overview.get("recommended_primary_strategy")
+        is_user_selected = bool(
+            executive_overview.get("is_user_selected") or
+            (selected_strategy_id and selected_strategy_id != topsis_ranking.get("top_recommended_id"))
+        )
+
+        active_strategy_name = selected_strategy_name if is_user_selected else ai_top_strategy
+        active_strategy_id = selected_strategy_id if is_user_selected else topsis_ranking.get("top_recommended_id", "STRAT_01")
 
         # Scenario Simulations
         what_if_simulations = scenario_analysis.get("what_if_simulations", [])
+
+        # Effective financial figures (use strategy-calibrated figures if present in financial_plan)
+        effective_capital = float(financial_plan.get("available_capital_lkr", capital))
+        effective_budget = float(financial_plan.get("monthly_operating_budget_lkr", monthly_budget))
+        capital_runway = financial_plan.get("capital_runway_months", round(effective_capital / max(effective_budget, 1.0), 1))
 
         # Build Normalized Report Dictionary
         report_data = {
@@ -97,6 +113,8 @@ class BusinessPlanReportBuilder:
                 "confidence_percent": f"{(confidence_score * 100):.1f}%",
                 "probabilities": probabilities,
                 "stage_focus": "New Startup Launch Preparation" if stage == "New Startup" else "Existing Business Growth & Expansion",
+                "active_strategy": active_strategy_name,
+                "is_user_selected": is_user_selected,
             },
             "business_overview": {
                 "category": category,
@@ -110,11 +128,12 @@ class BusinessPlanReportBuilder:
                 "has_suppliers": business_input.get("has_supplier_contacts", False),
             },
             "financial_overview": {
-                "available_capital_lkr": capital,
-                "monthly_budget_lkr": monthly_budget,
+                "available_capital_lkr": effective_capital,
+                "monthly_budget_lkr": effective_budget,
                 "expected_price_lkr": expected_price,
                 "estimated_monthly_revenue_lkr": customers_per_day * expected_price * 26, # 26 operating days/month
                 "loan_required": loan_required,
+                "capital_runway_months": capital_runway,
                 "guidance_summary": financial_plan.get("counterfactual_guidance", "Maintain a 6-month capital buffer for working capital stability."),
             },
             "market_analysis": {
@@ -134,8 +153,13 @@ class BusinessPlanReportBuilder:
             },
             "strategies": candidate_strategies,
             "strategy_priorities": {
-                "top_recommended_strategy": top_strategy,
-                "top_topsis_score": top_topsis_score,
+                "top_recommended_strategy": active_strategy_name,
+                "top_topsis_score": ai_top_score,
+                "ai_top_strategy": ai_top_strategy,
+                "ai_top_score": ai_top_score,
+                "is_user_selected": is_user_selected,
+                "selected_strategy_id": active_strategy_id,
+                "selected_strategy_name": active_strategy_name,
                 "ranked_strategies": topsis_ranking.get("ranked_strategies", candidate_strategies),
                 "evaluation_criteria": evaluation_criteria,
             },

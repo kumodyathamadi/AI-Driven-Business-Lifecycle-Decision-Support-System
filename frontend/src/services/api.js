@@ -290,4 +290,15 @@ export const adoptStrategy = async (recordId, strategyId) => {
   return response.data;
 };
 
+/**
+ * Commits a What-If scenario to the official business record,
+ * updating baseline parameters, re-executing ML feasibility & TOPSIS,
+ * and regenerating the personalized business plan.
+ */
+export const applyScenarioToBusiness = async (recordId, scenarioParameters) => {
+  const response = await apiClient.post(`/business/record/${recordId}/apply-scenario`, scenarioParameters);
+  return response.data;
+};
+
+
 

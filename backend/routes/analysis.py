@@ -652,6 +652,93 @@ def adopt_strategic_recommendation(
     }
 
 
+@router.post("/record/{record_id}/apply-scenario", response_model=Dict[str, Any])
+def apply_scenario_to_business(
+    record_id: str,
+    payload: Dict[str, Any],
+    current_user: Optional[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Applies a confirmed What-If simulation scenario to an official business record.
+    Updates the business inputs, re-executes the complete research pipeline 
+    (Random Forest Feasibility, SHAP Attribution, Contextual Strategies, TOPSIS Ranking, and Personalized Business Plan),
+    and records an audit trail event.
+    """
+    rec = db.query(AnalysisRecord).filter(AnalysisRecord.id == record_id).first()
+    if not rec or rec.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Analysis record with ID '{record_id}' not found."
+        )
+
+    # Ownership check
+    if current_user and rec.user_id and rec.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not authorized to modify this business analysis."
+        )
+
+    try:
+        # Retrieve existing input profile
+        existing_input = dict(rec.input_profile) if isinstance(rec.input_profile, dict) else {}
+        if not existing_input and rec.structured_profile:
+            existing_input = rec.structured_profile.get("business_input", {})
+
+        # Merge modified scenario parameters
+        updated_input = {**existing_input}
+        for key in ["available_capital_lkr", "monthly_budget_lkr", "expected_customers_per_day", "expected_price_lkr", "loan_amount_lkr"]:
+            if key in payload and payload[key] is not None:
+                updated_input[key] = payload[key]
+
+        # Re-run complete pipeline with updated inputs
+        new_structured_profile = analyze_business(updated_input)
+        new_structured_profile["metadata"]["record_id"] = record_id
+
+        feasibility_data = new_structured_profile.get("feasibility_analysis", {})
+        new_label = feasibility_data.get("predicted_label", rec.feasibility_label)
+        new_conf = feasibility_data.get("confidence_score", rec.confidence_score)
+
+        # Update database record
+        rec.feasibility_label = new_label
+        rec.confidence_score = new_conf
+        rec.input_profile = updated_input
+        rec.structured_profile = new_structured_profile
+        flag_modified(rec, "input_profile")
+        flag_modified(rec, "structured_profile")
+
+        # Record audit trail event
+        audit_entry = AnalysisAuditLog(
+            user_id=current_user.id if current_user else None,
+            user_email=current_user.email if current_user else "demo@sme360.ai",
+            record_id=record_id,
+            action="scenario_applied",
+            business_name=rec.business_name,
+            business_category=rec.business_category,
+            district=rec.district,
+            result_label=new_label,
+            result_score=new_conf,
+            inputs_snapshot=updated_input
+        )
+        db.add(audit_entry)
+
+        db.commit()
+        db.refresh(rec)
+
+        return {
+            "status": "success",
+            "message": "Scenario successfully applied to business record and business plan updated.",
+            "record_id": record_id,
+            "structured_profile": new_structured_profile
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to apply scenario: {str(e)}"
+        )
+
+
 @router.get("/audit-logs", tags=["Audit"])
 def get_audit_logs(
     limit: int = 50,

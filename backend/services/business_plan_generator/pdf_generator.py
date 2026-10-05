@@ -346,9 +346,16 @@ class BusinessPlanPDFGenerator:
         story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=10))
 
         strat_prio = report_data.get("strategy_priorities", {})
-        top_strat = strat_prio.get("top_recommended_strategy", "Controlled Growth")
+        active_strat = strat_prio.get("selected_strategy_name") or strat_prio.get("top_recommended_strategy", "Controlled Growth")
+        ai_top = strat_prio.get("ai_top_strategy", "Hybrid Digital & Local Delivery Model")
+        ai_score = strat_prio.get("ai_top_score", "0.8417")
+        is_user_sel = strat_prio.get("is_user_selected", False)
 
-        story.append(Paragraph(f"<b>Top Recommended Direction:</b> <font color='#2563eb'><b>{top_strat}</b></font> (Decision Support Score: {strat_prio.get('top_topsis_score')})", body_style))
+        if is_user_sel:
+            story.append(Paragraph(f"<b>Operational Plan Strategy (Adopted by Entrepreneur):</b> <font color='#059669'><b>{active_strat}</b></font>", body_style))
+            story.append(Paragraph(f"<font color='#64748b' size='8'><i>*Note: Founder customized this operational plan based on evaluated strategic options. AI MCDM Benchmark (#1): {ai_top} (Score: {ai_score}). All milestones, financial targets, and operational plans are tailored to {active_strat}.</i></font>", body_style))
+        else:
+            story.append(Paragraph(f"<b>AI Recommended Direction:</b> <font color='#2563eb'><b>{active_strat}</b></font> (Decision Support Score: {ai_score})", body_style))
         story.append(Spacer(1, 8))
 
         ranked_strats = strat_prio.get("ranked_strategies", [])

@@ -5,6 +5,7 @@ export default function StrategyCard({
   strategy, 
   rank, 
   isActive = false, 
+  isCustomAdopted = false,
   onAdopt, 
   onSimulate, 
   isAdopting = false 
@@ -164,9 +165,9 @@ export default function StrategyCard({
           {onAdopt && (
             isActive ? (
               <span style={{
-                background: 'rgba(16, 185, 129, 0.15)',
-                border: '1px solid rgba(16, 185, 129, 0.4)',
-                color: '#34d399',
+                background: isCustomAdopted ? 'rgba(16, 185, 129, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+                border: isCustomAdopted ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid rgba(59, 130, 246, 0.5)',
+                color: isCustomAdopted ? '#34d399' : '#93c5fd',
                 padding: '0.4rem 0.85rem',
                 borderRadius: '6px',
                 fontSize: '0.74rem',
@@ -176,7 +177,7 @@ export default function StrategyCard({
                 gap: '0.35rem'
               }}>
                 <CheckCircle2 size={13} />
-                <span>Primary Plan Strategy</span>
+                <span>{isCustomAdopted ? 'Active Plan Strategy (Adopted)' : 'AI Recommended Default'}</span>
               </span>
             ) : (
               <button
@@ -184,8 +185,10 @@ export default function StrategyCard({
                 onClick={() => onAdopt(strategy)}
                 disabled={isAdopting}
                 style={{
-                  background: 'linear-gradient(135deg, #2563eb, #3b82f6)',
-                  border: 'none',
+                  background: isTopRanked 
+                    ? 'linear-gradient(135deg, #1e3a8a, #2563eb)' 
+                    : 'linear-gradient(135deg, #2563eb, #3b82f6)',
+                  border: isTopRanked ? '1px solid rgba(59, 130, 246, 0.6)' : 'none',
                   color: '#ffffff',
                   padding: '0.4rem 0.95rem',
                   borderRadius: '6px',
@@ -199,7 +202,7 @@ export default function StrategyCard({
                   transition: 'all 0.2s'
                 }}
               >
-                <span>Adopt This Strategy</span>
+                <span>{isTopRanked ? 'Revert to AI Default (#1)' : 'Adopt This Strategy'}</span>
                 <ArrowRight size={13} />
               </button>
             )

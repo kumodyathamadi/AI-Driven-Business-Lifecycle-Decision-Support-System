@@ -32,6 +32,7 @@ export default function RecommendationsView({ profile: propProfile }) {
   const [targetStrategy, setTargetStrategy] = useState(null);
   const [isAdopting, setIsAdopting] = useState(false);
   const [showTechnical, setShowTechnical] = useState(false);
+  const [justAdopted, setJustAdopted] = useState(null);
 
   if (!profile) return null;
 
@@ -51,8 +52,10 @@ export default function RecommendationsView({ profile: propProfile }) {
   const businessName = profile?.business_name || profile?.business_input?.business_name || ctx?.businessName;
   const district = profile?.business_input?.district || 'Colombo';
 
-  // TOPSIS Score
-  const rawScore = topsisRanking.top_topsis_score ?? activeStrategy?.topsis_score ?? 0.70;
+  // TOPSIS Score: display the active strategy's own score when custom-adopted, or AI #1 score
+  const rawScore = isCustomAdopted
+    ? (activeStrategy?.topsis_score ?? topsisRanking.top_topsis_score ?? 0.70)
+    : (topsisRanking.top_topsis_score ?? activeStrategy?.topsis_score ?? 0.70);
   const formattedScore = Math.round(rawScore <= 1 ? rawScore * 100 : rawScore);
 
   // Decision Criteria
@@ -81,6 +84,7 @@ export default function RecommendationsView({ profile: propProfile }) {
       } else if (ctx?.reloadRecord) {
         ctx.reloadRecord();
       }
+      setJustAdopted(targetStrategy.strategy_name);
       const msg = `Adopted "${targetStrategy.strategy_name}". Business Plan & Action Roadmap updated!`;
       if (toast?.success) toast.success(msg);
       else if (toast?.showToast) toast.showToast(msg, 'success');
@@ -119,6 +123,60 @@ export default function RecommendationsView({ profile: propProfile }) {
           Contextual strategic directions evaluated via Multi-Criteria TOPSIS decision analysis to optimize feasibility, profitability, and operational scale.
         </p>
       </div>
+
+      {/* Just Adopted Success Notification Banner */}
+      {justAdopted && (
+        <div 
+          style={{
+            background: 'linear-gradient(135deg, rgba(6, 78, 59, 0.6), rgba(15, 23, 42, 0.9))',
+            border: '1.5px solid rgba(16, 185, 129, 0.7)',
+            borderRadius: '12px',
+            padding: '1rem 1.25rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1rem',
+            boxShadow: '0 4px 20px rgba(16, 185, 129, 0.25)',
+            animation: 'fadeIn 0.3s ease'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#34d399' }}>
+              <CheckCircle2 size={20} />
+            </div>
+            <div>
+              <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#ffffff' }}>
+                Business Plan Successfully Regenerated!
+              </div>
+              <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '0.15rem' }}>
+                The operational plan, financial runway, and 3-phase action roadmap are now calibrated specifically for <strong style={{ color: '#34d399' }}>{justAdopted}</strong>.
+              </div>
+            </div>
+          </div>
+
+          <Link
+            to={`/businesses/${id}/plan`}
+            style={{
+              background: 'linear-gradient(135deg, #059669, #10b981)',
+              color: '#ffffff',
+              padding: '0.55rem 1.15rem',
+              borderRadius: '8px',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              boxShadow: '0 2px 10px rgba(16, 185, 129, 0.4)'
+            }}
+          >
+            <FileText size={15} />
+            <span>Inspect Updated Plan</span>
+            <ArrowRight size={14} />
+          </Link>
+        </div>
+      )}
 
       {/* Active Strategic Pathway Banner */}
       {activeStrategy && (
@@ -235,6 +293,7 @@ export default function RecommendationsView({ profile: propProfile }) {
                 strategy={strat} 
                 rank={strat.rank || idx + 1}
                 isActive={strat.strategy_id === activeStrategyId || strat.strategy_name === activeStrategy?.strategy_name}
+                isCustomAdopted={isCustomAdopted}
                 onAdopt={handleOpenAdopt}
                 onSimulate={handleSimulate}
                 isAdopting={isAdopting}

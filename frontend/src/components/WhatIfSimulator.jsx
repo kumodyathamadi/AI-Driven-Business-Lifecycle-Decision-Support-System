@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useOutletContext, useSearchParams, useParams } from 'react-router-dom';
+import { useOutletContext, useSearchParams, useParams, Link } from 'react-router-dom';
 import { 
   Sliders, 
   RefreshCw, 
@@ -12,11 +12,14 @@ import {
   Minus,
   CheckCircle2,
   AlertTriangle,
-  XCircle
+  XCircle,
+  FileText,
+  Check
 } from 'lucide-react';
-import { simulateBusinessScenario } from '../services/api';
+import { simulateBusinessScenario, applyScenarioToBusiness } from '../services/api';
 import { FeasibilityBadge } from './common/Badge';
 import { formatCurrency, formatCustomersPerDay } from '../utils/formatters';
+import { useToast } from './common/Toast';
 
 export default function WhatIfSimulator({ scenarioData: propScenario, currentInput: propInput, onScenarioSuccess }) {
   const ctx = useOutletContext();
@@ -58,6 +61,55 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
   const [simulating, setSimulating] = useState(false);
   const [activeCustomResult, setActiveCustomResult] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
+  
+  const toast = useToast();
+  const [isApplying, setIsApplying] = useState(false);
+  const [applySuccess, setApplySuccess] = useState(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  const isDifferentFromBaseline = 
+    customCapital !== baselineCapital ||
+    customBudget !== baselineBudget ||
+    customCustomers !== baselineCustomers ||
+    customPrice !== baselinePrice;
+
+  const handleApplyScenario = async () => {
+    if (!id) return;
+    setIsApplying(true);
+    setErrorMsg(null);
+    try {
+      const scenarioParams = {
+        available_capital_lkr: parseFloat(customCapital),
+        monthly_budget_lkr: parseFloat(customBudget),
+        expected_customers_per_day: parseInt(customCustomers, 10),
+        expected_price_lkr: parseFloat(customPrice),
+      };
+      const res = await applyScenarioToBusiness(id, scenarioParams);
+      if (res?.structured_profile && ctx?.setProfile) {
+        ctx.setProfile(res.structured_profile);
+      } else if (ctx?.reloadRecord) {
+        ctx.reloadRecord();
+      }
+      setApplySuccess({
+        capital: customCapital,
+        budget: customBudget,
+        customers: customCustomers,
+        price: customPrice
+      });
+      const msg = "Scenario successfully applied! Your Business Plan and financial runway have been regenerated.";
+      if (toast?.success) toast.success(msg);
+      else if (toast?.showToast) toast.showToast(msg, 'success');
+      setShowConfirmModal(false);
+    } catch (err) {
+      console.error('Failed to apply scenario:', err);
+      const errMsg = `Failed to apply scenario: ${err.message}`;
+      setErrorMsg(errMsg);
+      if (toast?.error) toast.error(errMsg);
+      else if (toast?.showToast) toast.showToast(errMsg, 'error');
+    } finally {
+      setIsApplying(false);
+    }
+  };
 
   const debounceTimer = useRef(null);
 
@@ -150,6 +202,60 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
           Adjust financial capital, unit pricing, and customer demand with live interactive sliders. Evaluate real-time ML re-scoring against {currentInput?.business_name ? currentInput.business_name : 'your baseline project'}.
         </p>
       </div>
+
+      {/* Apply Success Banner */}
+      {applySuccess && (
+        <div 
+          style={{
+            background: 'linear-gradient(135deg, rgba(6, 78, 59, 0.65), rgba(15, 23, 42, 0.95))',
+            border: '1.5px solid rgba(16, 185, 129, 0.7)',
+            borderRadius: '12px',
+            padding: '1rem 1.25rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1rem',
+            boxShadow: '0 4px 20px rgba(16, 185, 129, 0.25)',
+            animation: 'fadeIn 0.3s ease'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#34d399' }}>
+              <CheckCircle2 size={22} />
+            </div>
+            <div>
+              <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#ffffff' }}>
+                Scenario Applied & Business Plan Regenerated!
+              </div>
+              <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '0.2rem' }}>
+                Your baseline Available Capital is now updated to <strong style={{ color: '#34d399' }}>{formatCurrency(applySuccess.capital)}</strong>. Your 5-section Business Plan and financial runway have been re-synthesized.
+              </div>
+            </div>
+          </div>
+
+          <Link
+            to={`/businesses/${id}/plan`}
+            style={{
+              background: 'linear-gradient(135deg, #059669, #10b981)',
+              color: '#ffffff',
+              padding: '0.55rem 1.2rem',
+              borderRadius: '8px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              boxShadow: '0 2px 10px rgba(16, 185, 129, 0.4)'
+            }}
+          >
+            <FileText size={16} />
+            <span>View Updated Business Plan</span>
+            <ArrowRight size={14} />
+          </Link>
+        </div>
+      )}
 
       {/* Strategy Simulation Banner */}
       {paramStrategyName && (
@@ -488,19 +594,70 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
 
         {/* Action & Manual Trigger Bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.85rem', borderTop: '1px solid var(--border-color)', flexWrap: 'wrap', gap: '0.75rem' }}>
-          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-            * Evaluates updated inputs through trained Random Forest ML pipeline in real-time.
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+              * Evaluates updated inputs through trained Random Forest ML pipeline in real-time.
+            </span>
+            {isDifferentFromBaseline && (
+              <button
+                onClick={handleResetToBaseline}
+                type="button"
+                className="btn btn-secondary"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.4rem 0.8rem',
+                  fontSize: '0.78rem',
+                  background: 'rgba(100, 116, 139, 0.2)',
+                  border: '1px solid rgba(148, 163, 184, 0.3)',
+                  color: '#cbd5e1',
+                  borderRadius: '6px'
+                }}
+              >
+                <RotateCcw size={13} />
+                <span>Reset Sliders</span>
+              </button>
+            )}
+          </div>
           
-          <button
-            onClick={() => runScenarioSimulation(customCapital, customBudget, customCustomers, customPrice)}
-            disabled={simulating}
-            className="btn btn-primary"
-            style={{ padding: '0.55rem 1.25rem', fontSize: '0.825rem' }}
-          >
-            <RefreshCw size={15} className={simulating ? 'spin' : ''} />
-            <span>{simulating ? 'Re-scoring Model...' : 'Calculate Scenario'}</span>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <button
+              onClick={() => runScenarioSimulation(customCapital, customBudget, customCustomers, customPrice)}
+              disabled={simulating}
+              className="btn btn-primary"
+              style={{ padding: '0.55rem 1.15rem', fontSize: '0.825rem' }}
+            >
+              <RefreshCw size={15} className={simulating ? 'spin' : ''} />
+              <span>{simulating ? 'Re-scoring Model...' : 'Calculate Scenario'}</span>
+            </button>
+
+            {isDifferentFromBaseline && (
+              <button
+                onClick={() => setShowConfirmModal(true)}
+                disabled={simulating || isApplying}
+                type="button"
+                style={{
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  padding: '0.55rem 1.25rem',
+                  fontSize: '0.825rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  borderRadius: '6px',
+                  border: 'none',
+                  cursor: isApplying ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <Check size={16} />
+                <span>Apply This Scenario & Update Business Plan</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {errorMsg && (
@@ -552,6 +709,173 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
           <p style={{ fontSize: '0.825rem', color: '#e2e8f0', lineHeight: '1.6' }}>
             {counterfactual_boundary.recommendation}
           </p>
+        </div>
+      )}
+
+      {/* Confirmation Modal: Apply Scenario & Update Business Plan */}
+      {showConfirmModal && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.78)',
+            backdropFilter: 'blur(5px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1050,
+            padding: '1rem'
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isApplying) setShowConfirmModal(false);
+          }}
+        >
+          <div 
+            className="glass-card"
+            style={{
+              maxWidth: '540px',
+              width: '100%',
+              background: '#0f172a',
+              border: '1.5px solid rgba(16, 185, 129, 0.5)',
+              borderRadius: '16px',
+              padding: '1.75rem',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+              animation: 'fadeIn 0.2s ease-out'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#34d399' }}>
+                <Sparkles size={22} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+                  Apply Scenario & Update Business Plan
+                </h3>
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                  Component 1: Feasibility Analysis & Business Plan Generator
+                </span>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '0.84rem', color: '#cbd5e1', lineHeight: '1.5', marginBottom: '1.25rem' }}>
+              You are adopting this customized simulation scenario as your new business baseline. The system will permanently update your inputs, re-run the research pipeline, and regenerate your <strong>5-section Personalized Business Plan</strong>.
+            </p>
+
+            {/* Parameter Change Breakdown */}
+            <div style={{ background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '10px', padding: '1rem', marginBottom: '1.25rem' }}>
+              <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: 700, letterSpacing: '0.5px', marginBottom: '0.75rem' }}>
+                Baseline vs. New Scenario Parameters
+              </div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.82rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#94a3b8' }}>Available Capital:</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ color: '#64748b', textDecoration: customCapital !== baselineCapital ? 'line-through' : 'none' }}>
+                      {formatCurrency(baselineCapital)}
+                    </span>
+                    {customCapital !== baselineCapital && (
+                      <>
+                        <ArrowRight size={12} style={{ color: '#10b981' }} />
+                        <strong style={{ color: '#34d399' }}>{formatCurrency(customCapital)}</strong>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#94a3b8' }}>Monthly Budget:</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ color: '#64748b', textDecoration: customBudget !== baselineBudget ? 'line-through' : 'none' }}>
+                      {formatCurrency(baselineBudget)}
+                    </span>
+                    {customBudget !== baselineBudget && (
+                      <>
+                        <ArrowRight size={12} style={{ color: '#818cf8' }} />
+                        <strong style={{ color: '#a5b4fc' }}>{formatCurrency(customBudget)}</strong>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#94a3b8' }}>Daily Customers:</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ color: '#64748b', textDecoration: customCustomers !== baselineCustomers ? 'line-through' : 'none' }}>
+                      {formatCustomersPerDay(baselineCustomers)}
+                    </span>
+                    {customCustomers !== baselineCustomers && (
+                      <>
+                        <ArrowRight size={12} style={{ color: '#38bdf8' }} />
+                        <strong style={{ color: '#38bdf8' }}>{formatCustomersPerDay(customCustomers)}</strong>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#94a3b8' }}>Expected Unit Price:</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ color: '#64748b', textDecoration: customPrice !== baselinePrice ? 'line-through' : 'none' }}>
+                      LKR {baselinePrice}
+                    </span>
+                    {customPrice !== baselinePrice && (
+                      <>
+                        <ArrowRight size={12} style={{ color: '#4ade80' }} />
+                        <strong style={{ color: '#4ade80' }}>LKR {customPrice}</strong>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                disabled={isApplying}
+                className="btn btn-secondary"
+                type="button"
+                style={{ padding: '0.6rem 1.25rem', fontSize: '0.85rem' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleApplyScenario}
+                disabled={isApplying}
+                type="button"
+                style={{
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '0.6rem 1.4rem',
+                  fontSize: '0.85rem',
+                  cursor: isApplying ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)'
+                }}
+              >
+                {isApplying ? (
+                  <>
+                    <RefreshCw size={15} className="spin" />
+                    <span>Regenerating Business Plan...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check size={16} />
+                    <span>Confirm & Regenerate Business Plan</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

@@ -206,6 +206,12 @@ export default function StrategyTradeoffModal({
           <div style={{ background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.25)', borderRadius: '8px', padding: '0.75rem 1rem', fontSize: '0.78rem', color: '#c7d2fe', lineHeight: 1.5 }}>
             <strong style={{ color: '#ffffff' }}>AI Advisory: </strong> {currentTradeOff.advisory}
           </div>
+
+          {/* HITL Flow Transparency Notice */}
+          <div style={{ background: 'rgba(15, 23, 42, 0.65)', border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: '8px', padding: '0.75rem 1rem', fontSize: '0.75rem', color: '#94a3b8', lineHeight: 1.5 }}>
+            <span style={{ color: '#60a5fa', fontWeight: 700 }}>Human-in-the-Loop Operational Adaptation: </span>
+            Confirming this will regenerate your 5-section Business Plan, calibrate your financial runway (LKR {Number(targetStrategy.estimated_capital_required_lkr || 0).toLocaleString()}), and tailor your Phase 1–3 milestones specifically around <strong>{targetStrategy.strategy_name}</strong>. The objective TOPSIS ranking leaderboard remains intact for analytical reference.
+          </div>
         </div>
 
         {/* Modal Action Buttons */}
