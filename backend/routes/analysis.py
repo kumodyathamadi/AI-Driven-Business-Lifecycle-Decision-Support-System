@@ -16,11 +16,20 @@ from backend.auth_utils import get_optional_user
 from backend.schemas import BusinessAnalysisRequest, PaginatedRecordsResponse, AnalysisRecordSummary, AdoptStrategyPayload
 from sqlalchemy.orm.attributes import flag_modified
 from src.orchestrator import analyze_business
-from src.preprocessing.preprocessor import InputValidationError
+from src.preprocessing.preprocessor import InputValidationError, validate_and_format_input
+from src.prediction.predictor import FeasibilityPredictor
 from src.planning.planner import PersonalizedPlanGenerator
 from src.explainability.explainer import format_feature_value_from_row
 
 router = APIRouter(prefix="/api/business", tags=["Business Analysis"])
+
+_shared_predictor = None
+
+def get_shared_predictor():
+    global _shared_predictor
+    if _shared_predictor is None:
+        _shared_predictor = FeasibilityPredictor()
+    return _shared_predictor
 
 
 def serialize_analysis_record(rec: AnalysisRecord) -> Dict[str, Any]:
@@ -138,6 +147,103 @@ def analyze_sme_business(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Business analysis failed: {str(e)}"
+        )
+
+
+@router.post("/simulate", response_model=Dict[str, Any], status_code=status.HTTP_200_OK)
+def simulate_sme_scenario(
+    payload: BusinessAnalysisRequest,
+    baseline_record_id: Optional[str] = Query(None, description="Optional baseline record ID to compute delta shifts against"),
+    db: Session = Depends(get_db)
+):
+    """
+    Dedicated What-If Scenario Simulation Endpoint:
+    Executes input validation, feature preprocessing, and Random Forest feasibility inference.
+    Computes multi-class probability deltas and viability index shifts against baseline state.
+    
+    CRITICAL ARCHITECTURAL GUARANTEES:
+    - NEVER creates or persists an AnalysisRecord in the database.
+    - NEVER creates or persists an AnalysisAuditLog entry.
+    - NEVER mutates or overwrites any existing database records.
+    """
+    try:
+        raw_input = payload.model_dump()
+        input_df, cleaned_input = validate_and_format_input(raw_input)
+        
+        predictor = get_shared_predictor()
+        feasibility_result = predictor.predict_feasibility(input_df)
+        
+        mod_probs = feasibility_result["probabilities"]
+        mod_feasible = float(mod_probs.get("Feasible", 0.0))
+        mod_cond = float(mod_probs.get("Conditionally Feasible", 0.0))
+        mod_infeas = float(mod_probs.get("Infeasible", 0.0))
+        # Viability Index = P(Feasible) + 0.5 * P(Conditionally Feasible)
+        new_viability = round(mod_feasible + 0.5 * mod_cond, 4)
+        
+        # Retrieve baseline probabilities if baseline_record_id provided
+        base_probs = {}
+        if baseline_record_id:
+            base_rec = db.query(AnalysisRecord).filter(AnalysisRecord.id == baseline_record_id).first()
+            if base_rec and base_rec.structured_profile:
+                prof = base_rec.structured_profile
+                if isinstance(prof, str):
+                    try:
+                        prof = json.loads(prof)
+                    except Exception:
+                        prof = {}
+                base_probs = prof.get("feasibility_analysis", {}).get("probabilities", {})
+
+        # Fallback to extraction_metadata if baseline_probabilities passed directly
+        if not base_probs and payload.extraction_metadata and isinstance(payload.extraction_metadata, dict):
+            base_probs = payload.extraction_metadata.get("baseline_probabilities", {})
+
+        deltas = {}
+        viability_delta = 0.0
+        base_viability = new_viability
+        if base_probs:
+            base_feasible = float(base_probs.get("Feasible", 0.0))
+            base_cond = float(base_probs.get("Conditionally Feasible", 0.0))
+            base_infeas = float(base_probs.get("Infeasible", 0.0))
+            base_viability = round(base_feasible + 0.5 * base_cond, 4)
+            deltas = {
+                "Feasible": round(mod_feasible - base_feasible, 4),
+                "Conditionally Feasible": round(mod_cond - base_cond, 4),
+                "Infeasible": round(mod_infeas - base_infeas, 4)
+            }
+            viability_delta = round(new_viability - base_viability, 4)
+
+        return {
+            "status": "simulated",
+            "is_simulation": True,
+            "business_input": cleaned_input,
+            "feasibility_analysis": {
+                "predicted_label": feasibility_result["prediction"],
+                "confidence_score": feasibility_result["confidence_score"],
+                "probabilities": mod_probs
+            },
+            "prediction": feasibility_result["prediction"],
+            "confidence_score": feasibility_result["confidence_score"],
+            "probabilities": mod_probs,
+            "probability_deltas": deltas,
+            "base_viability_score": base_viability,
+            "new_viability_score": new_viability,
+            "viability_delta": viability_delta,
+            "impact_summary": (
+                f"Viability index: {base_viability:.1%} -> {new_viability:.1%} ({'+' if viability_delta >= 0 else ''}{viability_delta:.1%}). "
+                f"Class shifts: Feasible ({'+' if deltas.get('Feasible', 0) >= 0 else ''}{deltas.get('Feasible', 0):.1%}), "
+                f"Conditional ({'+' if deltas.get('Conditionally Feasible', 0) >= 0 else ''}{deltas.get('Conditionally Feasible', 0):.1%}), "
+                f"Infeasible ({'+' if deltas.get('Infeasible', 0) >= 0 else ''}{deltas.get('Infeasible', 0):.1%})."
+            ) if base_probs else "Simulation executed against updated scenario parameters."
+        }
+    except (InputValidationError, ValueError) as ve:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Scenario simulation failed: {str(e)}"
         )
 
 

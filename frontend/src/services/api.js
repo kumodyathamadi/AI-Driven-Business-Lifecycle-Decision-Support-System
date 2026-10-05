@@ -108,6 +108,37 @@ export const analyzeBusiness = async (businessInput) => {
 };
 
 /**
+ * Dedicated What-If Scenario Simulation (Non-Persistent)
+ * Evaluates modified parameters through Random Forest inference without creating database records.
+ * @param {Object} businessInput Raw SME parameters dictionary
+ * @param {string} [baselineRecordId] Optional baseline record ID to compute delta shifts against
+ */
+export const simulateBusinessScenario = async (businessInput, baselineRecordId = null) => {
+  try {
+    const url = baselineRecordId 
+      ? `/business/simulate?baseline_record_id=${encodeURIComponent(baselineRecordId)}` 
+      : '/business/simulate';
+    const response = await apiClient.post(url, businessInput);
+    return response.data;
+  } catch (error) {
+    console.error('API Scenario Simulation Error:', error);
+    let errorMessage = 'Simulation failed';
+    if (typeof error.response?.data?.detail === 'string') {
+      errorMessage = error.response.data.detail;
+    } else if (Array.isArray(error.response?.data?.detail)) {
+      errorMessage = error.response.data.detail
+        .map(d => `${d.loc?.slice(-1)[0] || 'Field'}: ${d.msg}`)
+        .join(', ');
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    throw new Error(errorMessage);
+  }
+};
+
+/**
  * Retrieves paginated SME business analysis runs with total counts and numeric attributes
  */
 export const fetchAnalysisRecords = async (params = 10) => {

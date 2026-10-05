@@ -15,18 +15,18 @@ We evaluated 4 predefined operational assumption shifts across representative SM
 
 | Case ID | Category | Baseline Class | Base P(Feas) | Scenario ID | Scenario Title | New Class | New P(Feas) | Δ P(Feas) | Status Shift |
 | :--- | :--- | :--- | :---: | :--- | :--- | :--- | :---: | :---: | :--- |
-| **C00001** | Grocery/Mini-Mart | **Conditionally Feasible** | 24.50% | `SCEN_01` | +50% Capital Injection | **Conditionally Feasible** | 25.50% | **+1.00%** | No Shift (Conditionally Feasible) |
-| **C00001** | Grocery/Mini-Mart | **Conditionally Feasible** | 24.50% | `SCEN_02` | Secured SME Working Loan (LKR 500,000) | **Conditionally Feasible** | 16.00% | **-8.50%** | No Shift (Conditionally Feasible) |
-| **C00001** | Grocery/Mini-Mart | **Conditionally Feasible** | 24.50% | `SCEN_03` | +30% Customer Footfall Boost | **Conditionally Feasible** | 34.50% | **+10.00%** | No Shift (Conditionally Feasible) |
-| **C00001** | Grocery/Mini-Mart | **Conditionally Feasible** | 24.50% | `SCEN_04` | Optimized Operating Cost (-20% Monthly Budget) | **Conditionally Feasible** | 32.00% | **+7.50%** | No Shift (Conditionally Feasible) |
-| **C00002** | Grocery/Mini-Mart | **Infeasible** | 0.00% | `SCEN_01` | +50% Capital Injection | **Infeasible** | 2.50% | **+2.50%** | No Shift (Infeasible) |
-| **C00002** | Grocery/Mini-Mart | **Infeasible** | 0.00% | `SCEN_02` | Secured SME Working Loan (LKR 500,000) | **Conditionally Feasible** | 3.00% | **+3.00%** | Shifted: Infeasible → Conditionally Feasible |
-| **C00002** | Grocery/Mini-Mart | **Infeasible** | 0.00% | `SCEN_03` | +30% Customer Footfall Boost | **Infeasible** | 0.00% | **+0.00%** | No Shift (Infeasible) |
-| **C00002** | Grocery/Mini-Mart | **Infeasible** | 0.00% | `SCEN_04` | Optimized Operating Cost (-20% Monthly Budget) | **Infeasible** | 0.00% | **+0.00%** | No Shift (Infeasible) |
-| **C00018** | Grocery/Mini-Mart | **Feasible** | 55.00% | `SCEN_01` | +50% Capital Injection | **Feasible** | 56.50% | **+1.50%** | No Shift (Feasible) |
-| **C00018** | Grocery/Mini-Mart | **Feasible** | 55.00% | `SCEN_02` | Secured SME Working Loan (LKR 500,000) | **Conditionally Feasible** | 27.50% | **-27.50%** | Shifted: Feasible → Conditionally Feasible |
-| **C00018** | Grocery/Mini-Mart | **Feasible** | 55.00% | `SCEN_03` | +30% Customer Footfall Boost | **Conditionally Feasible** | 46.00% | **-9.00%** | Shifted: Feasible → Conditionally Feasible |
-| **C00018** | Grocery/Mini-Mart | **Feasible** | 55.00% | `SCEN_04` | Optimized Operating Cost (-20% Monthly Budget) | **Feasible** | 56.00% | **+1.00%** | No Shift (Feasible) |
+| **C00001** | Grocery / Mini-Mart | **Conditionally Feasible** | 24.50% | `SCEN_01` | +50% Capital Injection | **Conditionally Feasible** | 25.50% | **+1.00%** | No Shift (Conditionally Feasible) |
+| **C00001** | Grocery / Mini-Mart | **Conditionally Feasible** | 24.50% | `SCEN_02` | Secured SME Working Loan (LKR 500,000) | **Conditionally Feasible** | 16.00% | **-8.50%** | No Shift (Conditionally Feasible) |
+| **C00001** | Grocery / Mini-Mart | **Conditionally Feasible** | 24.50% | `SCEN_03` | +30% Customer Footfall Boost | **Conditionally Feasible** | 34.50% | **+10.00%** | No Shift (Conditionally Feasible) |
+| **C00001** | Grocery / Mini-Mart | **Conditionally Feasible** | 24.50% | `SCEN_04` | Optimized Operating Cost (-20% Monthly Budget) | **Conditionally Feasible** | 32.00% | **+7.50%** | No Shift (Conditionally Feasible) |
+| **C00002** | Grocery / Mini-Mart | **Infeasible** | 0.00% | `SCEN_01` | +50% Capital Injection | **Infeasible** | 2.50% | **+2.50%** | No Shift (Infeasible) |
+| **C00002** | Grocery / Mini-Mart | **Infeasible** | 0.00% | `SCEN_02` | Secured SME Working Loan (LKR 500,000) | **Conditionally Feasible** | 3.00% | **+3.00%** | Shifted: Infeasible → Conditionally Feasible |
+| **C00002** | Grocery / Mini-Mart | **Infeasible** | 0.00% | `SCEN_03` | +30% Customer Footfall Boost | **Infeasible** | 0.00% | **+0.00%** | No Shift (Infeasible) |
+| **C00002** | Grocery / Mini-Mart | **Infeasible** | 0.00% | `SCEN_04` | Optimized Operating Cost (-20% Monthly Budget) | **Infeasible** | 0.00% | **+0.00%** | No Shift (Infeasible) |
+| **C00018** | Grocery / Mini-Mart | **Feasible** | 55.00% | `SCEN_01` | +50% Capital Injection | **Feasible** | 56.50% | **+1.50%** | No Shift (Feasible) |
+| **C00018** | Grocery / Mini-Mart | **Feasible** | 55.00% | `SCEN_02` | Secured SME Working Loan (LKR 500,000) | **Conditionally Feasible** | 27.50% | **-27.50%** | Shifted: Feasible → Conditionally Feasible |
+| **C00018** | Grocery / Mini-Mart | **Feasible** | 55.00% | `SCEN_03` | +30% Customer Footfall Boost | **Conditionally Feasible** | 46.00% | **-9.00%** | Shifted: Feasible → Conditionally Feasible |
+| **C00018** | Grocery / Mini-Mart | **Feasible** | 55.00% | `SCEN_04` | Optimized Operating Cost (-20% Monthly Budget) | **Feasible** | 56.00% | **+1.00%** | No Shift (Feasible) |
 
 ---
 

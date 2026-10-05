@@ -61,7 +61,8 @@ def test_new_unseen_business():
 
     print("\n--- 4. WHAT-IF SCENARIOS ---")
     for scen in profile_result["scenario_analysis"]["what_if_simulations"]:
-        print(f"  * {scen['title']} -> New Outcome: {scen['new_prediction']} (Delta: {scen['feasibility_probability_delta']:+.2%})")
+        print(f"  * {scen['title']} -> New Outcome: {scen['new_prediction']} (Viability Delta: {scen.get('viability_delta', 0.0):+.2%})")
+        print(f"    {scen['impact_summary']}")
 
     print("\n--- 5. PERSONALIZED PLAN EXECUTIVE SUMMARY ---")
     plan = profile_result["personalized_business_plan"]

@@ -11,9 +11,9 @@ We evaluated generated 5-section strategic business plans across 3 representativ
 
 | Case ID | Category | District | Predicted Feasibility | Model Confidence | All 5 Sections Present? | Primary Recommended Strategy (TOPSIS) | Capital Runway | Roadmap Action Items | Plan Status |
 | :--- | :--- | :--- | :--- | :---: | :---: | :--- | :---: | :---: | :--- |
-| **C00001** | Grocery/Mini-Mart | Colombo | **Conditionally Feasible** | 71.0% | **Yes** | `Hybrid Digital & Local Delivery Model` | **3.9 mos** | 4 (0-3m) / 3 (3-12m) / 2 (1y+) | **Valid Complete Plan** |
-| **C00002** | Grocery/Mini-Mart | Colombo | **Infeasible** | 98.0% | **Yes** | `Hybrid Digital & Local Delivery Model` | **0.4 mos** | 4 (0-3m) / 3 (3-12m) / 2 (1y+) | **Valid Complete Plan** |
-| **C00018** | Grocery/Mini-Mart | Colombo | **Feasible** | 55.0% | **Yes** | `Hybrid Digital & Local Delivery Model` | **3.1 mos** | 4 (0-3m) / 3 (3-12m) / 2 (1y+) | **Valid Complete Plan** |
+| **C00001** | Grocery / Mini-Mart | Colombo | **Conditionally Feasible** | 71.0% | **Yes** | `Hybrid Digital & Local Delivery Model` | **3.5 mos** | 4 (0-3m) / 3 (3-12m) / 2 (1y+) | **Valid Complete Plan** |
+| **C00002** | Grocery / Mini-Mart | Colombo | **Infeasible** | 98.0% | **Yes** | `Hybrid Digital & Local Delivery Model` | **0.3 mos** | 4 (0-3m) / 3 (3-12m) / 2 (1y+) | **Valid Complete Plan** |
+| **C00018** | Grocery / Mini-Mart | Colombo | **Feasible** | 55.0% | **Yes** | `Hybrid Digital & Local Delivery Model` | **2.8 mos** | 4 (0-3m) / 3 (3-12m) / 2 (1y+) | **Valid Complete Plan** |
 
 ---
 
@@ -23,7 +23,8 @@ We evaluated generated 5-section strategic business plans across 3 representativ
 Executive Overview Section:
 {
   "title": "1. Executive Business Overview",
-  "business_summary": "Evaluation for a New Grocery/Mini-Mart located in Colombo, Sri Lanka. The AI feasibility decision support system predicts an outcome of 'Conditionally Feasible' with 71.0% model confidence.",
+  "business_name": null,
+  "business_summary": "Evaluation for a new_startup Grocery / Mini-Mart located in Colombo, Sri Lanka. The AI feasibility decision support system predicts an outcome of 'Conditionally Feasible' with 71.0% model confidence.",
   "key_enablers": [
     "Available Equipment Score (1-5)",
     "Available Capital (LKR)",
@@ -34,7 +35,10 @@ Executive Overview Section:
     "Expected Daily Customers",
     "Required Staff Count"
   ],
-  "recommended_primary_strategy": "Hybrid Digital & Local Delivery Model"
+  "recommended_primary_strategy": "Hybrid Digital & Local Delivery Model",
+  "strategic_focus": "Digital Channel Expansion & Low Fixed Cost",
+  "strategy_id": "STRAT_03",
+  "is_user_selected": false
 }
 
 Action Roadmap Section:
@@ -42,17 +46,26 @@ Action Roadmap Section:
   "title": "5. Time-Phased Action Roadmap",
   "phase_1_immediate_0_to_3_months": [
     "Register business name and obtain local municipal authority permits.",
-    "Implement core operational strategy: Hybrid Digital & Local Delivery Model.",
+    "Launch Hybrid Digital model for Your Grocery / Mini-Mart: establish social ordering channels and finalize local delivery agreements in Colombo.",
     "Procure initial inventory and establish supplier agreement terms.",
-    "Launch targeted local social media campaign."
+    "Launch targeted local campaign for Your Grocery / Mini-Mart."
   ],
   "phase_2_growth_3_to_12_months": [
-    "Track monthly cash flow against LKR 185,000.00 operating budget.",
-    "Evaluate customer footfall and aim to hit target daily volume.",
+    "Track monthly cash flow against LKR 157,250.00 operating budget.",
+    "Evaluate customer footfall and aim to hit target daily volume of 11 customers.",
+    "Review What-If scenario results for potential capital expansion."
+  ],
+  "phase_2_stabilization_3_to_12_months": [
+    "Track monthly cash flow against LKR 157,250.00 operating budget.",
+    "Evaluate customer footfall and aim to hit target daily volume of 11 customers.",
     "Review What-If scenario results for potential capital expansion."
   ],
   "phase_3_scale_1_year_plus": [
-    "Assess secondary location feasibility in neighboring Colombo hubs.",
+    "Assess secondary location feasibility in neighboring Colombo commercial hubs.",
+    "Re-run AI Feasibility pipeline with actual 12-month operational metrics."
+  ],
+  "phase_3_growth_1_year_plus": [
+    "Assess secondary location feasibility in neighboring Colombo commercial hubs.",
     "Re-run AI Feasibility pipeline with actual 12-month operational metrics."
   ]
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useOutletContext, useSearchParams } from 'react-router-dom';
+import { useOutletContext, useSearchParams, useParams } from 'react-router-dom';
 import { 
   Sliders, 
   RefreshCw, 
@@ -14,13 +14,14 @@ import {
   AlertTriangle,
   XCircle
 } from 'lucide-react';
-import { analyzeBusiness } from '../services/api';
+import { simulateBusinessScenario } from '../services/api';
 import { FeasibilityBadge } from './common/Badge';
 import { formatCurrency, formatCustomersPerDay } from '../utils/formatters';
 
 export default function WhatIfSimulator({ scenarioData: propScenario, currentInput: propInput, onScenarioSuccess }) {
   const ctx = useOutletContext();
   const [searchParams] = useSearchParams();
+  const { id } = useParams();
   const profile = ctx?.profile;
   const scenarioData = propScenario || profile?.scenario_analysis;
   const currentInput = propInput || profile?.business_input;
@@ -72,7 +73,9 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
         expected_price_lkr: parseFloat(price),
       };
       
-      const newResult = await analyzeBusiness(modifiedInput);
+      const recordId = id || profile?.metadata?.record_id || null;
+      // Dedicated non-persistent simulation endpoint - creates ZERO database records
+      const newResult = await simulateBusinessScenario(modifiedInput, recordId);
       setActiveCustomResult(newResult);
       if (onScenarioSuccess) onScenarioSuccess(newResult);
     } catch (err) {
@@ -124,8 +127,12 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
     ? (scenarioFeasibility.confidence_score || scenarioFeasibility.probability_score || 0)
     : baselineScore;
 
-  const scoreDelta = scenarioFeasibility ? (scenarioScore - baselineScore) : 0;
-  const scoreDeltaPct = (scoreDelta * 100).toFixed(1);
+  // Viability Index delta represents true multi-class shift: P(Feas) + 0.5 * P(Cond)
+  const viabilityDelta = activeCustomResult?.viability_delta !== undefined 
+    ? activeCustomResult.viability_delta 
+    : (scenarioFeasibility ? (scenarioScore - baselineScore) : 0);
+  const viabilityDeltaPct = (viabilityDelta * 100).toFixed(1);
+  const probDeltas = activeCustomResult?.probability_deltas || {};
 
   const what_if_simulations = scenarioData?.what_if_simulations || [];
   const counterfactual_boundary = scenarioData?.counterfactual_boundary || {};
@@ -261,34 +268,53 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
               flexDirection: 'column', 
               alignItems: 'center', 
               gap: '0.35rem',
-              background: scoreDelta > 0.01 
+              background: viabilityDelta > 0.005 
                 ? 'rgba(34, 197, 94, 0.15)' 
-                : scoreDelta < -0.01 
+                : viabilityDelta < -0.005 
                   ? 'rgba(239, 68, 68, 0.15)' 
                   : 'rgba(59, 130, 246, 0.15)',
-              border: `1px solid ${scoreDelta > 0.01 ? 'rgba(34, 197, 94, 0.3)' : scoreDelta < -0.01 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`,
-              padding: '0.75rem 1.25rem',
-              borderRadius: '12px'
+              border: `1px solid ${viabilityDelta > 0.005 ? 'rgba(34, 197, 94, 0.3)' : viabilityDelta < -0.005 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`,
+              padding: '0.75rem 1.15rem',
+              borderRadius: '12px',
+              minWidth: '155px'
             }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>
-                Score Impact
+              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Viability Impact
               </div>
               <div style={{ 
-                fontSize: '1.3rem', 
+                fontSize: '1.25rem', 
                 fontWeight: 900, 
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '0.35rem',
-                color: scoreDelta > 0.01 ? '#4ade80' : scoreDelta < -0.01 ? '#fca5a5' : '#60a5fa'
+                color: viabilityDelta > 0.005 ? '#4ade80' : viabilityDelta < -0.005 ? '#fca5a5' : '#60a5fa'
               }}>
-                {scoreDelta > 0.01 && <TrendingUp size={20} />}
-                {scoreDelta < -0.01 && <TrendingDown size={20} />}
-                {Math.abs(scoreDelta) <= 0.01 && <Minus size={20} />}
-                <span>{scoreDelta > 0 ? `+${scoreDeltaPct}%` : `${scoreDeltaPct}%`}</span>
+                {viabilityDelta > 0.005 && <TrendingUp size={18} />}
+                {viabilityDelta < -0.005 && <TrendingDown size={18} />}
+                {Math.abs(viabilityDelta) <= 0.005 && <Minus size={18} />}
+                <span>{viabilityDelta > 0 ? `+${viabilityDeltaPct}%` : `${viabilityDeltaPct}%`}</span>
               </div>
-              <span style={{ fontSize: '0.7rem', color: '#cbd5e1', textAlign: 'center' }}>
-                {scoreDelta > 0.01 ? 'Viability Enhanced' : scoreDelta < -0.01 ? 'Risk Increased' : 'Unchanged'}
+              <span style={{ fontSize: '0.68rem', color: '#cbd5e1', textAlign: 'center' }}>
+                {viabilityDelta > 0.005 ? 'Viability Enhanced' : viabilityDelta < -0.005 ? 'Risk Increased' : 'Unchanged'}
               </span>
+
+              {/* Multi-Class Probability Shifts Breakdown */}
+              {probDeltas && Object.keys(probDeltas).length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', marginTop: '0.35rem', fontSize: '0.67rem', paddingTop: '0.35rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)', width: '100%' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: (probDeltas.Feasible || 0) >= 0 ? '#4ade80' : '#fca5a5' }}>
+                    <span>Feasible:</span>
+                    <strong>{(probDeltas.Feasible || 0) >= 0 ? `+${((probDeltas.Feasible || 0) * 100).toFixed(1)}%` : `${((probDeltas.Feasible || 0) * 100).toFixed(1)}%`}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: (probDeltas['Conditionally Feasible'] || 0) >= 0 ? '#fde047' : '#fca5a5' }}>
+                    <span>Conditional:</span>
+                    <strong>{(probDeltas['Conditionally Feasible'] || 0) >= 0 ? `+${((probDeltas['Conditionally Feasible'] || 0) * 100).toFixed(1)}%` : `${((probDeltas['Conditionally Feasible'] || 0) * 100).toFixed(1)}%`}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: (probDeltas.Infeasible || 0) <= 0 ? '#4ade80' : '#fca5a5' }}>
+                    <span>Infeasible:</span>
+                    <strong>{(probDeltas.Infeasible || 0) >= 0 ? `+${((probDeltas.Infeasible || 0) * 100).toFixed(1)}%` : `${((probDeltas.Infeasible || 0) * 100).toFixed(1)}%`}</strong>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

@@ -23,7 +23,11 @@ class WhatIfEngine:
         and measures probability shifts against base state.
         """
         base_probs = base_prediction["probabilities"]
-        base_feasible_prob = base_probs.get("Feasible", 0.0)
+        base_feasible = float(base_probs.get("Feasible", 0.0))
+        base_cond = float(base_probs.get("Conditionally Feasible", 0.0))
+        base_infeas = float(base_probs.get("Infeasible", 0.0))
+        # Viability Index = P(Feasible) + 0.5 * P(Conditionally Feasible)
+        base_viability = round(base_feasible + 0.5 * base_cond, 4)
 
         scenarios_to_test = [
             {
@@ -70,8 +74,24 @@ class WhatIfEngine:
             mod_df, mod_cleaned = validate_and_format_input(mod_input)
             mod_pred = self.predictor.predict_feasibility(mod_df)
 
-            mod_feasible_prob = mod_pred["probabilities"].get("Feasible", 0.0)
-            prob_delta = round(mod_feasible_prob - base_feasible_prob, 4)
+            mod_probs = mod_pred["probabilities"]
+            mod_feasible = float(mod_probs.get("Feasible", 0.0))
+            mod_cond = float(mod_probs.get("Conditionally Feasible", 0.0))
+            mod_infeas = float(mod_probs.get("Infeasible", 0.0))
+            mod_viability = round(mod_feasible + 0.5 * mod_cond, 4)
+
+            delta_feasible = round(mod_feasible - base_feasible, 4)
+            delta_cond = round(mod_cond - base_cond, 4)
+            delta_infeas = round(mod_infeas - base_infeas, 4)
+            viability_delta = round(mod_viability - base_viability, 4)
+
+            # Informative human-readable summary reflecting all 3 classes
+            shifts_summary = (
+                f"Viability index: {base_viability:.1%} -> {mod_viability:.1%} ({'+' if viability_delta >= 0 else ''}{viability_delta:.1%}). "
+                f"Class shifts: Feasible ({'+' if delta_feasible >= 0 else ''}{delta_feasible:.1%}), "
+                f"Conditional ({'+' if delta_cond >= 0 else ''}{delta_cond:.1%}), "
+                f"Infeasible ({'+' if delta_infeas >= 0 else ''}{delta_infeas:.1%})."
+            )
 
             results.append({
                 "scenario_id": scen["scenario_id"],
@@ -79,12 +99,17 @@ class WhatIfEngine:
                 "modifications": scen["modifications"],
                 "rationale": scen["rationale"],
                 "new_prediction": mod_pred["prediction"],
-                "new_probabilities": mod_pred["probabilities"],
-                "feasibility_probability_delta": prob_delta,
-                "impact_summary": (
-                    f"Feasibility probability shifted from {base_feasible_prob:.2%} to {mod_feasible_prob:.2%} "
-                    f"({'+' if prob_delta >= 0 else ''}{prob_delta:.2%})."
-                )
+                "new_probabilities": mod_probs,
+                "probability_deltas": {
+                    "Feasible": delta_feasible,
+                    "Conditionally Feasible": delta_cond,
+                    "Infeasible": delta_infeas
+                },
+                "base_viability_score": base_viability,
+                "new_viability_score": mod_viability,
+                "viability_delta": viability_delta,
+                "feasibility_probability_delta": delta_feasible,
+                "impact_summary": shifts_summary
             })
 
         return results

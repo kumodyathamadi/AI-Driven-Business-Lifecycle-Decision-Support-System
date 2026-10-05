@@ -9,18 +9,18 @@
 
 | Case ID | Category | District | Feasibility Prediction | Primary SHAP Weakness | Strategy ID | Strategic Focus | Capital (LKR) | Relevant? | Constraint Compat.? | Actionable? |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: |
-| **C00008** | Grocery/Mini-Mart | Colombo | **Infeasible** | Requested Loan Amount (LKR) | `STRAT_01` | Risk Mitigation & Capital Preservation | LKR 100,498.8 | Yes | Yes | Yes |
-| **C00008** | Grocery/Mini-Mart | Colombo | **Infeasible** | Requested Loan Amount (LKR) | `STRAT_02` | Demand Generation & High Volume | LKR 184,247.8 | Yes | Yes | Yes |
-| **C00008** | Grocery/Mini-Mart | Colombo | **Infeasible** | Requested Loan Amount (LKR) | `STRAT_03` | Digital Channel Expansion & Low Fixed Cost | LKR 125,623.5 | Yes | Yes | Yes |
-| **C00008** | Grocery/Mini-Mart | Colombo | **Infeasible** | Requested Loan Amount (LKR) | `STRAT_04` | High Margin & Customer Loyalty | LKR 150,748.2 | Yes | Yes | Yes |
-| **C00001** | Grocery/Mini-Mart | Colombo | **Conditionally Feasible** | Required Equipment Score (1-5) | `STRAT_01` | Risk Mitigation & Capital Preservation | LKR 438,064.8 | Yes | Yes | Yes |
-| **C00001** | Grocery/Mini-Mart | Colombo | **Conditionally Feasible** | Required Equipment Score (1-5) | `STRAT_02` | Demand Generation & High Volume | LKR 803,118.8 | Yes | Yes | Yes |
-| **C00001** | Grocery/Mini-Mart | Colombo | **Conditionally Feasible** | Required Equipment Score (1-5) | `STRAT_03` | Digital Channel Expansion & Low Fixed Cost | LKR 547,581.0 | Yes | Yes | Yes |
-| **C00001** | Grocery/Mini-Mart | Colombo | **Conditionally Feasible** | Required Equipment Score (1-5) | `STRAT_04` | High Margin & Customer Loyalty | LKR 657,097.2 | Yes | Yes | Yes |
-| **C00002** | Grocery/Mini-Mart | Colombo | **Infeasible** | Business Category Clothing/ Garment | `STRAT_01` | Risk Mitigation & Capital Preservation | LKR 58,342.8 | Yes | Yes | Yes |
-| **C00002** | Grocery/Mini-Mart | Colombo | **Infeasible** | Business Category Clothing/ Garment | `STRAT_02` | Demand Generation & High Volume | LKR 106,961.8 | Yes | Yes | Yes |
-| **C00002** | Grocery/Mini-Mart | Colombo | **Infeasible** | Business Category Clothing/ Garment | `STRAT_03` | Digital Channel Expansion & Low Fixed Cost | LKR 72,928.5 | Yes | Yes | Yes |
-| **C00002** | Grocery/Mini-Mart | Colombo | **Infeasible** | Business Category Clothing/ Garment | `STRAT_04` | High Margin & Customer Loyalty | LKR 87,514.2 | Yes | Yes | Yes |
+| **C00008** | Grocery / Mini-Mart | Colombo | **Infeasible** | Requested Loan Amount (LKR) | `STRAT_01` | Risk Mitigation & Capital Preservation | LKR 100,498.8 | Yes | Yes | Yes |
+| **C00008** | Grocery / Mini-Mart | Colombo | **Infeasible** | Requested Loan Amount (LKR) | `STRAT_02` | Demand Generation & High Volume | LKR 184,247.8 | Yes | Yes | Yes |
+| **C00008** | Grocery / Mini-Mart | Colombo | **Infeasible** | Requested Loan Amount (LKR) | `STRAT_03` | Digital Channel Expansion & Low Fixed Cost | LKR 125,623.5 | Yes | Yes | Yes |
+| **C00008** | Grocery / Mini-Mart | Colombo | **Infeasible** | Requested Loan Amount (LKR) | `STRAT_04` | High Margin & Customer Loyalty | LKR 150,748.2 | Yes | Yes | Yes |
+| **C00001** | Grocery / Mini-Mart | Colombo | **Conditionally Feasible** | Required Equipment Score (1-5) | `STRAT_01` | Risk Mitigation & Capital Preservation | LKR 438,064.8 | Yes | Yes | Yes |
+| **C00001** | Grocery / Mini-Mart | Colombo | **Conditionally Feasible** | Required Equipment Score (1-5) | `STRAT_02` | Demand Generation & High Volume | LKR 803,118.8 | Yes | Yes | Yes |
+| **C00001** | Grocery / Mini-Mart | Colombo | **Conditionally Feasible** | Required Equipment Score (1-5) | `STRAT_03` | Digital Channel Expansion & Low Fixed Cost | LKR 547,581.0 | Yes | Yes | Yes |
+| **C00001** | Grocery / Mini-Mart | Colombo | **Conditionally Feasible** | Required Equipment Score (1-5) | `STRAT_04` | High Margin & Customer Loyalty | LKR 657,097.2 | Yes | Yes | Yes |
+| **C00002** | Grocery / Mini-Mart | Colombo | **Infeasible** | Business Category Clothing/ Garment | `STRAT_01` | Risk Mitigation & Capital Preservation | LKR 58,342.8 | Yes | Yes | Yes |
+| **C00002** | Grocery / Mini-Mart | Colombo | **Infeasible** | Business Category Clothing/ Garment | `STRAT_02` | Demand Generation & High Volume | LKR 106,961.8 | Yes | Yes | Yes |
+| **C00002** | Grocery / Mini-Mart | Colombo | **Infeasible** | Business Category Clothing/ Garment | `STRAT_03` | Digital Channel Expansion & Low Fixed Cost | LKR 72,928.5 | Yes | Yes | Yes |
+| **C00002** | Grocery / Mini-Mart | Colombo | **Infeasible** | Business Category Clothing/ Garment | `STRAT_04` | High Margin & Customer Loyalty | LKR 87,514.2 | Yes | Yes | Yes |
 
 ---
 
@@ -31,10 +31,10 @@
 
 | Strategy ID | Strategy Name | Financial Viability (↑) | Impl. Feasibility (↑) | Market Alignment (↑) | Operational Risk (↓) | Resource Efficiency (↑) | TOPSIS Score ($C_i^*$) | Rank |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| `STRAT_03` | Hybrid Digital & Local Delivery Model | 8.2 | 8.5 | 8.8 | 4.2 | 8.5 | **0.7005** | **#1** |
-| `STRAT_01` | Lean Bootstrapped Launch (Grocery/Mini-Mart) | 8.5 | 9.0 | 7.0 | 3.0 | 8.8 | **0.6507** | **#2** |
-| `STRAT_04` | Premium Quality & Niche Differentiation | 8.0 | 8.0 | 7.8 | 4.8 | 8.0 | **0.4528** | **#3** |
-| `STRAT_02` | Market Expansion & Customer Acquisition (Grocery/Mini-Mart) | 7.5 | 7.2 | 9.2 | 6.5 | 7.5 | **0.3493** | **#4** |
+| `STRAT_03` | Hybrid Digital & Local Delivery Model | 8.5 | 8.9 | 9.6 | 3.9 | 8.1 | **0.8417** | **#1** |
+| `STRAT_01` | Lean Bootstrapped Launch (Grocery / Mini-Mart) | 8.8 | 9.0 | 7.0 | 3.3 | 9.1 | **0.6567** | **#2** |
+| `STRAT_04` | Premium Quality & Niche Differentiation | 8.3 | 6.7 | 8.4 | 4.4 | 7.6 | **0.5483** | **#3** |
+| `STRAT_02` | Market Expansion & Customer Acquisition (Grocery / Mini-Mart) | 7.5 | 6.4 | 8.8 | 7.3 | 7.5 | **0.2632** | **#4** |
 
 ---
 
@@ -44,10 +44,10 @@ We evaluated strategy rankings across 4 methodologically defined criteria weight
 
 | Weight Scenario | Focus Area | Top-Ranked Strategy | Closeness Score ($C_i^*$) | Spearman Correlation ($ho$) | Ranking Stability |
 | :--- | :--- | :--- | :---: | :---: | :--- |
-| **Scenario 1** |  Baseline Balanced | `STRAT_03` (Hybrid Digital & Local De...) | **0.7005** | **1.0000** | High Stability |
-| **Scenario 2** |  Financial & Risk Focused | `STRAT_01` (Lean Bootstrapped Launch ...) | **0.8784** | **1.0000** | High Stability |
-| **Scenario 3** |  Market & Demand Focused | `STRAT_03` (Hybrid Digital & Local De...) | **0.7703** | **1.0000** | High Stability |
-| **Scenario 4** |  Resource Efficiency Focused | `STRAT_01` (Lean Bootstrapped Launch ...) | **0.7895** | **1.0000** | High Stability |
+| **Scenario 1** |  Baseline Balanced | `STRAT_03` (Hybrid Digital & Local De...) | **0.8417** | **1.0000** | High Stability |
+| **Scenario 2** |  Financial & Risk Focused | `STRAT_01` (Lean Bootstrapped Launch ...) | **0.8764** | **1.0000** | High Stability |
+| **Scenario 3** |  Market & Demand Focused | `STRAT_03` (Hybrid Digital & Local De...) | **0.9059** | **1.0000** | High Stability |
+| **Scenario 4** |  Resource Efficiency Focused | `STRAT_01` (Lean Bootstrapped Launch ...) | **0.8157** | **1.0000** | High Stability |
 
 ---
 
