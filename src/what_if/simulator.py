@@ -1,7 +1,14 @@
 import pandas as pd
 import numpy as np
-from typing import Dict, Any, List
+from typing import Dict, Any, List, TypedDict
 from src.preprocessing.preprocessor import validate_and_format_input
+
+
+class ScenarioDefinition(TypedDict):
+    scenario_id: str
+    title: str
+    modifications: Dict[str, Any]
+    rationale: str
 
 
 class WhatIfEngine:
@@ -29,7 +36,7 @@ class WhatIfEngine:
         # Viability Index = P(Feasible) + 0.5 * P(Conditionally Feasible)
         base_viability = round(base_feasible + 0.5 * base_cond, 4)
 
-        scenarios_to_test = [
+        scenarios_to_test: List[ScenarioDefinition] = [
             {
                 "scenario_id": "SCEN_01",
                 "title": "+50% Capital Injection",
@@ -127,32 +134,56 @@ class CounterfactualSearchEngine:
     def find_counterfactual(self, base_input_dict: Dict[str, Any]) -> Dict[str, Any]:
         """
         Grid searches minimum capital increment required to reach Feasible probability >= 0.50.
+        Uses adaptive step size and vectorized batch inference for instant sub-second response.
         """
-        base_capital = float(base_input_dict.get("available_capital_lkr", 500000.0))
+        base_capital = max(0.0, float(base_input_dict.get("available_capital_lkr", 500000.0)))
+        max_multiplier = 4.0
+        max_capital = max(base_capital * max_multiplier, base_capital + 1000000.0)
+        total_range = max_capital - base_capital
+
+        # Cap search at 20 steps with minimum step size of 50,000 LKR
+        max_steps = 20
+        step = max(50000.0, total_range / max_steps)
+
+        candidate_capitals = []
+        current_cap = base_capital
+        while current_cap <= max_capital and len(candidate_capitals) <= max_steps:
+            candidate_capitals.append(round(current_cap, 2))
+            current_cap += step
+
+        if not candidate_capitals:
+            candidate_capitals = [base_capital]
+
+        base_df, _ = validate_and_format_input(base_input_dict)
+        batch_df = pd.concat([base_df] * len(candidate_capitals), ignore_index=True)
+        batch_df["available_capital_lkr"] = candidate_capitals
+
+        processed_input = self.predictor.preprocessor.transform(batch_df)
+        if hasattr(processed_input, "toarray"):
+            dense_input = processed_input.toarray()
+        else:
+            dense_input = np.array(processed_input)
+
+        preds = self.predictor.model.predict(dense_input)
+        probs = self.predictor.model.predict_proba(dense_input)
+
+        feas_class_idx = self.predictor.classes.index("Feasible") if "Feasible" in self.predictor.classes else 0
+
         target_found = False
         optimal_capital = base_capital
-        step = 50000.0
-        max_multiplier = 4.0
-
-        current_cap = base_capital
         best_prob = 0.0
         best_pred = "Infeasible"
 
-        while current_cap <= base_capital * max_multiplier:
-            test_input = base_input_dict.copy()
-            test_input["available_capital_lkr"] = current_cap
-            test_df, _ = validate_and_format_input(test_input)
-            test_pred = self.predictor.predict_feasibility(test_df)
+        for i, cap_val in enumerate(candidate_capitals):
+            pred_label = str(preds[i])
+            feas_prob = float(probs[i][feas_class_idx])
 
-            feas_prob = test_pred["probabilities"].get("Feasible", 0.0)
-            if test_pred["prediction"] == "Feasible" or feas_prob >= 0.50:
+            if pred_label == "Feasible" or feas_prob >= 0.50:
                 target_found = True
-                optimal_capital = current_cap
+                optimal_capital = cap_val
                 best_prob = feas_prob
-                best_pred = test_pred["prediction"]
+                best_pred = pred_label
                 break
-
-            current_cap += step
 
         if target_found:
             capital_needed = optimal_capital - base_capital

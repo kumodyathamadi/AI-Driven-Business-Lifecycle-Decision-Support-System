@@ -4,8 +4,8 @@ from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
-from docx.oxml import OxmlElement, parse_xml
-from docx.oxml.ns import nsdecls, qn
+from docx.oxml import parse_xml
+from docx.oxml.ns import nsdecls
 
 from backend.services.business_plan_generator.chart_generator import BusinessPlanChartGenerator
 
@@ -15,7 +15,8 @@ LOGO_PATH = os.path.abspath(os.path.join(
 
 class BusinessPlanDocxGenerator:
     """
-    Generates an editable Microsoft Word (.docx) document for SME360 AI Business Plans using python-docx.
+    Generates an editable Microsoft Word (.docx) document for SME360 AI Business Plans
+    using python-docx adhering strictly to the 5 Research-Grounded Report Sections.
     """
 
     @staticmethod
@@ -53,30 +54,30 @@ class BusinessPlanDocxGenerator:
                 p_logo = doc.add_paragraph()
                 p_logo.alignment = WD_ALIGN_PARAGRAPH.LEFT
                 run_logo = p_logo.add_run()
-                run_logo.add_picture(LOGO_PATH, width=Inches(2.2))
+                run_logo.add_picture(LOGO_PATH, width=Inches(2.0))
             except Exception:
                 pass
 
         p_sub = doc.add_paragraph()
-        p_sub.paragraph_format.space_before = Pt(20)
-        p_sub.paragraph_format.space_after = Pt(4)
+        p_sub.paragraph_format.space_before = Pt(16)
+        p_sub.paragraph_format.space_after = Pt(2)
         run_sub = p_sub.add_run(metadata.get("system_brand", "SME360 AI"))
         run_sub.font.name = 'Arial'
-        run_sub.font.size = Pt(12)
+        run_sub.font.size = Pt(11)
         run_sub.font.bold = True
         run_sub.font.color.rgb = COLOR_ACCENT
 
         p_title = doc.add_paragraph()
-        p_title.paragraph_format.space_after = Pt(6)
-        run_title = p_title.add_run("BUSINESS PLAN")
+        p_title.paragraph_format.space_after = Pt(4)
+        run_title = p_title.add_run("STRATEGIC BUSINESS PLAN")
         run_title.font.name = 'Arial'
-        run_title.font.size = Pt(28)
+        run_title.font.size = Pt(24)
         run_title.font.bold = True
         run_title.font.color.rgb = COLOR_PRIMARY
 
         p_desc = doc.add_paragraph()
-        p_desc.paragraph_format.space_after = Pt(30)
-        run_desc = p_desc.add_run(metadata.get("document_subtitle", "AI-Assisted Business Feasibility & Growth Planning"))
+        p_desc.paragraph_format.space_after = Pt(24)
+        run_desc = p_desc.add_run(metadata.get("document_subtitle", "AI-Assisted Business Feasibility & Personalized Growth Report"))
         run_desc.font.name = 'Arial'
         run_desc.font.size = Pt(10)
         run_desc.font.color.rgb = COLOR_MUTED
@@ -88,7 +89,7 @@ class BusinessPlanDocxGenerator:
             ("BUSINESS NAME:", biz_id.get("business_name")),
             ("CATEGORY:", biz_id.get("business_category")),
             ("BUSINESS STAGE:", biz_id.get("business_stage")),
-            ("DISTRICT:", biz_id.get("district")),
+            ("DISTRICT & PROVINCE:", f"{biz_id.get('district')}, {biz_id.get('province')}"),
             ("PREPARED DATE:", metadata.get("generated_date")),
             ("RECORD ID:", metadata.get("record_id")),
         ]
@@ -97,252 +98,188 @@ class BusinessPlanDocxGenerator:
             row_cells = cov_table.rows[idx].cells
             row_cells[0].width = Inches(2.0)
             row_cells[1].width = Inches(4.5)
-            
+            BusinessPlanDocxGenerator.set_cell_background(row_cells[0], "F8FAFC")
+            BusinessPlanDocxGenerator.set_cell_background(row_cells[1], "FFFFFF")
             p0 = row_cells[0].paragraphs[0]
             r0 = p0.add_run(label)
             r0.font.bold = True
             r0.font.size = Pt(9.5)
-            r0.font.color.rgb = COLOR_DARK
-
+            r0.font.name = 'Arial'
             p1 = row_cells[1].paragraphs[0]
             r1 = p1.add_run(str(val))
             r1.font.size = Pt(9.5)
-            r1.font.color.rgb = COLOR_DARK
-
-            BusinessPlanDocxGenerator.set_cell_background(row_cells[0], "F8FAFC")
-            BusinessPlanDocxGenerator.set_cell_background(row_cells[1], "F8FAFC")
+            r1.font.name = 'Arial'
 
         doc.add_page_break()
 
         # =========================================================================
-        # HELPER FOR SECTION HEADINGS
+        # SECTION 01 — BUSINESS & MARKET OVERVIEW
         # =========================================================================
-        def add_heading_1(text):
-            p = doc.add_paragraph()
-            p.paragraph_format.space_before = Pt(16)
-            p.paragraph_format.space_after = Pt(6)
-            r = p.add_run(text)
-            r.font.name = 'Arial'
-            r.font.size = Pt(14)
-            r.font.bold = True
-            r.font.color.rgb = COLOR_PRIMARY
-            return p
+        sec_01 = report_data.get("section_01", {})
+        h1 = doc.add_heading(level=1)
+        r = h1.add_run("SECTION 01 — BUSINESS & MARKET OVERVIEW")
+        r.font.color.rgb = COLOR_PRIMARY
+        r.font.name = 'Arial'
 
-        def add_heading_2(text):
-            p = doc.add_paragraph()
-            p.paragraph_format.space_before = Pt(10)
-            p.paragraph_format.space_after = Pt(4)
-            r = p.add_run(text)
-            r.font.name = 'Arial'
-            r.font.size = Pt(11)
-            r.font.bold = True
-            r.font.color.rgb = COLOR_ACCENT
-            return p
+        sum_info = sec_01.get("business_summary", {})
+        concept = sec_01.get("business_concept", {})
+        mkt = sec_01.get("market_overview", {})
+        comp = sec_01.get("competition", {})
+        loc = sec_01.get("location", {})
+
+        p = doc.add_paragraph()
+        p.add_run("1.1 Business Identity & Summary\n").bold = True
+        p.add_run(f"• Business: {sum_info.get('business_name')} | Category: {sum_info.get('business_category')} | Stage: {sum_info.get('business_stage')}\n")
+        p.add_run(f"• Location: {sum_info.get('district')}, {sum_info.get('province')} ({loc.get('location_type')})\n")
+        p.add_run(f"• Concept: {concept.get('concept_overview', '')}\n")
+        if sum_info.get("business_description") and sum_info.get("business_description") != "Information not provided":
+            p.add_run(f"• Entrepreneur Objective: {sum_info.get('business_description')}\n")
+
+        p = doc.add_paragraph()
+        p.add_run("1.2 Market, Demand & Competition\n").bold = True
+        p.add_run(f"• Target Market: {mkt.get('target_market')} | Demand Index: {mkt.get('customer_demand_score')}\n")
+        p.add_run(f"• Expected Footfall: {mkt.get('expected_customers_per_day')} customers/day | Expected Unit Price: LKR {mkt.get('expected_selling_price_lkr', 0):,.2f}\n")
+        p.add_run(f"• Competition Level: {comp.get('competition_level')} ({comp.get('competitor_count_nearby')} competitors nearby)\n")
+        p.add_run(f"• Positioning: {comp.get('competitive_positioning')}\n")
 
         # =========================================================================
-        # 2. EXECUTIVE SUMMARY & FEASIBILITY SNAPSHOT
+        # SECTION 02 — AI FEASIBILITY & KEY INSIGHTS
         # =========================================================================
-        add_heading_1("1. Executive Summary & Feasibility Snapshot")
-        exec_summary = report_data.get("executive_summary", {})
-        
-        p_exec = doc.add_paragraph()
-        r_exec = p_exec.add_run(exec_summary.get("business_summary"))
-        r_exec.font.size = Pt(10)
-        r_exec.font.color.rgb = COLOR_DARK
+        sec_02 = report_data.get("section_02", {})
+        h1 = doc.add_heading(level=1)
+        r = h1.add_run("SECTION 02 — AI FEASIBILITY & KEY INSIGHTS")
+        r.font.color.rgb = COLOR_PRIMARY
+        r.font.name = 'Arial'
 
-        # KPI Cards Table
-        kpi_tbl = doc.add_table(rows=2, cols=4)
-        kpi_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
-        headers = ["Predicted Feasibility", "Model Confidence", "Available Capital", "Target Customers"]
-        vals = [
-            exec_summary.get("predicted_label"),
-            exec_summary.get("confidence_percent"),
-            f"LKR {report_data['financial_overview']['available_capital_lkr']:,.0f}",
-            f"{report_data['market_analysis']['expected_customers_per_day']} / day"
-        ]
+        feas = sec_02.get("feasibility_assessment", {})
+        probs = feas.get("probabilities", {})
+        pred_label = feas.get("final_predicted_label", "Conditionally Feasible")
 
-        for col_i in range(4):
-            c_hdr = kpi_tbl.rows[0].cells[col_i]
-            c_val = kpi_tbl.rows[1].cells[col_i]
-            BusinessPlanDocxGenerator.set_cell_background(c_hdr, "F1F5F9")
-            BusinessPlanDocxGenerator.set_cell_background(c_val, "F8FAFC")
-            
-            p_h = c_hdr.paragraphs[0]
-            p_h.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            r_h = p_h.add_run(headers[col_i])
-            r_h.font.bold = True
-            r_h.font.size = Pt(9)
+        p = doc.add_paragraph()
+        p.add_run("2.1 Model Feasibility Outcome\n").bold = True
+        p.add_run(f"• Outcome: {pred_label} (Model Confidence: {feas.get('confidence_percentage')})\n")
+        p.add_run(f"• Probability Distribution: Feasible {(probs.get('Feasible', 0.0)*100):.1f}% | Conditionally Feasible {(probs.get('Conditionally Feasible', 0.0)*100):.1f}% | Infeasible {(probs.get('Infeasible', 0.0)*100):.1f}%\n")
+        p.add_run(f"• Interpretation: {sec_02.get('feasibility_interpretation', '')}\n")
 
-            p_v = c_val.paragraphs[0]
-            p_v.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            r_v = p_v.add_run(vals[col_i])
-            r_v.font.bold = True
-            r_v.font.size = Pt(9.5)
-
-        # Embedded Probability Chart
+        # Chart
         try:
-            chart_bytes = BusinessPlanChartGenerator.generate_probability_chart(exec_summary.get("probabilities", {}))
+            chart_bytes = BusinessPlanChartGenerator.generate_probability_chart(probs)
             p_chart = doc.add_paragraph()
-            p_chart.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            p_chart.paragraph_format.space_before = Pt(10)
-            r_chart = p_chart.add_run()
-            r_chart.add_picture(io.BytesIO(chart_bytes), width=Inches(5.5))
+            p_chart.add_run().add_picture(io.BytesIO(chart_bytes), width=Inches(5.5))
         except Exception:
             pass
 
-        # =========================================================================
-        # 3. BUSINESS OVERVIEW
-        # =========================================================================
-        add_heading_1("2. Business Overview")
-        biz_ov = report_data.get("business_overview", {})
-        
-        b_tbl = doc.add_table(rows=3, cols=4)
-        b_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
-        b_data = [
-            [("Category:", biz_ov.get("category")), ("Experience:", f"{biz_ov.get('experience_years')} Years")],
-            [("Stage:", biz_ov.get("stage")), ("Staff Count:", f"{biz_ov.get('staff_count')} Person(s)")],
-            [("District:", biz_ov.get("district")), ("Competition:", biz_ov.get("competition_level"))],
-        ]
-
-        for row_i, r_pair in enumerate(b_data):
-            c0, c1, c2, c3 = b_tbl.rows[row_i].cells
-            
-            p0 = c0.paragraphs[0]
-            r0 = p0.add_run(r_pair[0][0])
-            r0.font.bold = True
-            r0.font.size = Pt(9)
-
-            p1 = c1.paragraphs[0]
-            p1.add_run(str(r_pair[0][1])).font.size = Pt(9)
-
-            p2 = c2.paragraphs[0]
-            r2 = p2.add_run(r_pair[1][0])
-            r2.font.bold = True
-            r2.font.size = Pt(9)
-
-            p3 = c3.paragraphs[0]
-            p3.add_run(str(r_pair[1][1])).font.size = Pt(9)
+        # SHAP
+        shap_info = sec_02.get("shap_explainability", {})
+        p = doc.add_paragraph()
+        p.add_run("2.2 Explainable AI Feature Attribution (SHAP)\n").bold = True
+        p.add_run("Top Positive Supporting Enablers (+):\n").bold = True
+        for item in shap_info.get("positive_enablers", [])[:3]:
+            p.add_run(f"  + {item.get('feature')} (Observed: {item.get('feature_value')}): {item.get('business_interpretation')}\n")
+        p.add_run("Key Operational Hurdles to Mitigate (-):\n").bold = True
+        for item in shap_info.get("negative_hurdles", [])[:3]:
+            p.add_run(f"  - {item.get('feature')} (Observed: {item.get('feature_value')}): {item.get('business_interpretation')}\n")
 
         # =========================================================================
-        # 4. FINANCIAL & OPERATIONAL PLAN
+        # SECTION 03 — STRATEGIC RECOMMENDATIONS & TOPSIS
         # =========================================================================
-        add_heading_1("3. Financial & Operational Plan")
-        fin = report_data.get("financial_overview", {})
+        sec_03 = report_data.get("section_03", {})
+        h1 = doc.add_heading(level=1)
+        r = h1.add_run("SECTION 03 — STRATEGIC RECOMMENDATIONS & TOPSIS RANKING")
+        r.font.color.rgb = COLOR_PRIMARY
+        r.font.name = 'Arial'
 
-        f_tbl = doc.add_table(rows=5, cols=3)
-        f_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
-        f_rows = [
-            ("Financial Metric", "Amount (LKR) / Status", "Strategic Planning Guidance"),
-            ("Available Starting Capital", f"LKR {fin.get('available_capital_lkr'):,.0f}", fin.get("guidance_summary")),
-            ("Monthly Operating Budget", f"LKR {fin.get('monthly_budget_lkr'):,.0f}", "Includes rent, inventory, utilities, and staffing."),
-            ("Target Unit Price", f"LKR {fin.get('expected_price_lkr'):,.0f}", "Expected selling price per unit."),
-            ("Est. Monthly Revenue", f"LKR {fin.get('estimated_monthly_revenue_lkr'):,.0f}", "Estimated revenue from target daily customer volume.")
-        ]
+        hitl = sec_03.get("human_in_the_loop_selection", {})
+        is_sel = hitl.get("is_user_selected", False)
+        active_strat = hitl.get("selected_strategy_name", "Lean Bootstrapped Launch")
 
-        for r_i, r_data in enumerate(f_rows):
-            row_cells = f_tbl.rows[r_i].cells
-            for c_i, text in enumerate(r_data):
-                p = row_cells[c_i].paragraphs[0]
-                r = p.add_run(text)
-                r.font.size = Pt(9)
-                if r_i == 0:
-                    r.font.bold = True
-                    r.font.color.rgb = RGBColor(255, 255, 255)
-                    BusinessPlanDocxGenerator.set_cell_background(row_cells[c_i], "1E3A8A")
+        p = doc.add_paragraph()
+        p.add_run(f"Active Operational Strategy: {active_strat} ({'Adopted by Entrepreneur' if is_sel else 'AI Recommended #1'})\n").bold = True
+        p.add_run(f"{hitl.get('alignment_status')}\n")
+
+        p = doc.add_paragraph()
+        p.add_run("TOPSIS Multi-Criteria Decision Ranking:\n").bold = True
+        for r in sec_03.get("strategy_ranking", []):
+            p.add_run(f"  Rank #{r.get('rank')} — {r.get('strategy_name')} (Score: {r.get('topsis_score')}) | Est. Capital: LKR {r.get('estimated_capital_required_lkr', 0):,.0f}\n")
 
         # =========================================================================
-        # 5. KEY BUSINESS FACTORS
+        # SECTION 04 — FINANCIAL & OPERATIONAL PLAN
         # =========================================================================
-        add_heading_1("4. Key Business Factors")
-        factors = report_data.get("key_business_factors", {})
-        
-        add_heading_2("Top Positive Supporting Factors (+):")
-        for item in factors.get("positive_enablers", []):
-            feat_name = item.get('feature', '').replace('_', ' ').title()
-            feat_val = item.get('feature_value', 'N/A')
-            p_b = doc.add_paragraph(style='List Bullet')
-            r_b = p_b.add_run(f"{feat_name} (Recorded Value: {feat_val}) — Provided strong positive support for predicted feasibility.")
-            r_b.font.size = Pt(9.5)
+        sec_04 = report_data.get("section_04", {})
+        h1 = doc.add_heading(level=1)
+        r = h1.add_run("SECTION 04 — FINANCIAL & OPERATIONAL PLAN")
+        r.font.color.rgb = COLOR_PRIMARY
+        r.font.name = 'Arial'
 
-        add_heading_2("Areas Needing Strategic Attention (-):")
-        for item in factors.get("risk_hurdles", []):
-            feat_name = item.get('feature', '').replace('_', ' ').title()
-            feat_val = item.get('feature_value', 'N/A')
-            p_b = doc.add_paragraph(style='List Bullet')
-            r_b = p_b.add_run(f"{feat_name} (Recorded Value: {feat_val}) — Identified risk hurdle requiring resource or operational mitigation.")
-            r_b.font.size = Pt(9.5)
+        fin_plan = sec_04.get("monthly_financial_plan", {})
+        startup = sec_04.get("startup_investment", {})
+        funding = sec_04.get("funding_structure", {})
+        ops = sec_04.get("operational_plan", {})
+        staff = ops.get("staffing", {})
+        equip = ops.get("equipment", {})
+        supp = ops.get("suppliers", {})
 
-        # =========================================================================
-        # 6. STRATEGY PRIORITIES
-        # =========================================================================
-        strat_prio = report_data.get("strategy_priorities", {})
-        active_strat = strat_prio.get("selected_strategy_name") or strat_prio.get("top_recommended_strategy", "Controlled Growth")
-        ai_top = strat_prio.get("ai_top_strategy", "Hybrid Digital & Local Delivery Model")
-        ai_score = strat_prio.get("ai_top_score", "0.8417")
-        is_user_sel = strat_prio.get("is_user_selected", False)
-
-        p_top = doc.add_paragraph()
-        if is_user_sel:
-            r_top = p_top.add_run(f"Operational Plan Strategy (Adopted by Entrepreneur): {active_strat}\n")
-            r_top.font.bold = True
-            r_top.font.color.rgb = RGBColor(5, 150, 105)
-            r_sub = p_top.add_run(f"*Note: Founder chose this operational pathway. AI MCDM Benchmark (#1): {ai_top} (Score: {ai_score}). Plan milestones and budget are tailored to {active_strat}.")
-            r_sub.font.italic = True
-            r_sub.font.size = Pt(8.5)
-            r_sub.font.color.rgb = RGBColor(100, 116, 139)
-        else:
-            r_top = p_top.add_run(f"Top Recommended Direction: {active_strat} (Decision Score: {ai_score})")
-            r_top.font.bold = True
-            r_top.font.color.rgb = COLOR_ACCENT
-
-        ranked_strats = strat_prio.get("ranked_strategies", [])
-        s_tbl = doc.add_table(rows=len(ranked_strats) + 1, cols=4)
-        s_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
-
-        headers_s = ["Rank", "Strategy Name", "Strategic Focus Area", "Decision Score"]
-        for c_i, h in enumerate(headers_s):
-            cell = s_tbl.rows[0].cells[c_i]
-            BusinessPlanDocxGenerator.set_cell_background(cell, "1E3A8A")
-            p = cell.paragraphs[0]
-            r = p.add_run(h)
-            r.font.bold = True
-            r.font.size = Pt(9)
-            r.font.color.rgb = RGBColor(255, 255, 255)
-
-        for s_i, s in enumerate(ranked_strats):
-            cells = s_tbl.rows[s_i + 1].cells
-            s_data = [f"#{s_i+1}", s.get("strategy_name", "Option"), s.get("strategic_focus", "Growth"), str(s.get("topsis_score", "N/A"))]
-            for c_i, val in enumerate(s_data):
-                p = cells[c_i].paragraphs[0]
-                p.add_run(val).font.size = Pt(9)
+        p = doc.add_paragraph()
+        p.add_run(f"Plan Dynamically Aligned to Strategy: {active_strat}\n").bold = True
+        p.add_run(f"• Strategy Target Capital: LKR {startup.get('strategy_target_capital_lkr', 0):,.0f}\n")
+        p.add_run(f"• Monthly Operating Budget: LKR {fin_plan.get('monthly_operating_budget_lkr', 0):,.0f}\n")
+        p.add_run(f"• Estimated Monthly Revenue: LKR {fin_plan.get('estimated_monthly_revenue_lkr', 0):,.0f} (Calculated from user assumptions)\n")
+        p.add_run(f"• Capital Runway Horizon: {funding.get('capital_runway_months', 0)} Months\n")
+        p.add_run(f"• Staffing: {staff.get('available_staff_count', 1)} available vs {staff.get('required_staff_count', 1)} required ({staff.get('capacity_status')})\n")
+        p.add_run(f"• Equipment Readiness: {equip.get('available_equipment_score')} score ({equip.get('readiness_status')})\n")
+        p.add_run(f"• Supplier Logistics: {supp.get('supplier_availability_score')} score ({supp.get('network_region')})\n")
 
         # =========================================================================
-        # 7. TIME-PHASED ACTION ROADMAP
+        # SECTION 05 — SCENARIO ANALYSIS & ACTION ROADMAP
         # =========================================================================
-        add_heading_1("6. Time-Phased Action Roadmap")
-        roadmap = report_data.get("action_roadmap", {})
+        sec_05 = report_data.get("section_05", {})
+        h1 = doc.add_heading(level=1)
+        r = h1.add_run("SECTION 05 — SCENARIO ANALYSIS & ACTION ROADMAP")
+        r.font.color.rgb = COLOR_PRIMARY
+        r.font.name = 'Arial'
 
-        add_heading_2("Phase 1: Immediate Launch Preparation (0 – 3 Months)")
-        for item in roadmap.get("phase_1", []):
-            doc.add_paragraph(item, style='List Bullet')
+        p = doc.add_paragraph()
+        p.add_run("5.1 What-If Scenario Simulations:\n").bold = True
+        for sc in sec_05.get("what_if_analysis", {}).get("scenarios", [])[:4]:
+            p.add_run(f"  • {sc.get('title')}: New Class '{sc.get('new_prediction')}' (Viability Δ: {sc.get('viability_delta', 0.0):+.1%})\n")
+            p.add_run(f"    {sc.get('impact_summary')}\n")
 
-        add_heading_2("Phase 2: Operational Stabilization (3 – 12 Months)")
-        for item in roadmap.get("phase_2", []):
-            doc.add_paragraph(item, style='List Bullet')
+        cf = sec_05.get("counterfactual_analysis", {})
+        p.add_run(f"\nCounterfactual Threshold: {cf.get('recommendation', 'Capital is adequate.')}\n\n")
 
-        add_heading_2("Phase 3: Growth & Expansion (1 Year+)")
-        for item in roadmap.get("phase_3", []):
-            doc.add_paragraph(item, style='List Bullet')
+        p = doc.add_paragraph()
+        p.add_run("5.2 Time-Phased Execution Milestones:\n").bold = True
+        rm = sec_05.get("personalized_action_roadmap", {})
+        p.add_run("Phase 1: Immediate Launch (0 – 30 Days):\n").bold = True
+        for a in rm.get("phase_0_to_30_days", []):
+            p.add_run(f"  • {a}\n")
+        p.add_run("Phase 2: Customer Acquisition & Burn Control (30 – 90 Days):\n").bold = True
+        for a in rm.get("phase_30_to_90_days", []):
+            p.add_run(f"  • {a}\n")
+        p.add_run("Phase 3: Operational Stabilization & Review (3 – 6 Months):\n").bold = True
+        for a in rm.get("phase_3_to_6_months", []):
+            p.add_run(f"  • {a}\n")
+        p.add_run("Phase 4: Business Scale & Regional Expansion (6 – 12 Months):\n").bold = True
+        for a in rm.get("phase_6_to_12_months", []):
+            p.add_run(f"  • {a}\n")
 
-        # =========================================================================
-        # 8. ASSUMPTIONS & DISCLOSURES
-        # =========================================================================
-        add_heading_1("7. Assumptions & Important Disclosures")
-        for item in report_data.get("assumptions_and_considerations", []):
-            doc.add_paragraph(item, style='List Bullet')
+        p = doc.add_paragraph()
+        p.add_run("5.3 Measurable Key Performance Indicators (KPIs):\n").bold = True
+        for k in sec_05.get("measurable_kpis", []):
+            p.add_run(f"  • {k.get('kpi_name')}: Target {k.get('target')} (Review: {k.get('frequency')})\n")
 
-        # Save buffer
-        buf = io.BytesIO()
-        doc.save(buf)
-        buf.seek(0)
-        return buf.getvalue()
+        # Final AI Recommendation Box
+        final_box = report_data.get("final_recommendation", {})
+        p = doc.add_paragraph()
+        p.add_run("\nFINAL AI DECISION RECOMMENDATION:\n").bold = True
+        p.add_run(f"• Feasibility Verdict: {final_box.get('ai_feasibility_verdict')}\n")
+        p.add_run(f"• AI Recommended Strategy: {final_box.get('ai_recommended_strategy')}\n")
+        p.add_run(f"• Selected Operational Strategy: {final_box.get('entrepreneur_selected_strategy')}\n")
+        p.add_run(f"• Primary Enabler: {final_box.get('main_positive_strength')}\n")
+        p.add_run(f"• Primary Hurdle: {final_box.get('main_operational_constraint')}\n")
+        p.add_run(f"• Immediate Recommended Next Step: {final_box.get('recommended_immediate_next_step')}\n")
+
+        bio = io.BytesIO()
+        doc.save(bio)
+        bio.seek(0)
+        return bio.getvalue()

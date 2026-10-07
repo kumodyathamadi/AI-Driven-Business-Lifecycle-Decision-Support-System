@@ -1,10 +1,20 @@
 import os
 from datetime import datetime
+from typing import Dict, Any
+
 
 class BusinessPlanReportBuilder:
     """
     Normalizes structured profile analysis results into a clean, comprehensive 
     BusinessPlanReport data dictionary for PDF and DOCX document generators.
+    
+    Structure adheres strictly to the 5 Research-Grounded Report Sections:
+    - Section 01: Business & Market Overview
+    - Section 02: AI Feasibility & Key Insights (Probabilities & SHAP)
+    - Section 03: Strategic Recommendations & TOPSIS Ranking
+    - Section 04: Financial & Operational Plan (Aligned with Selected Strategy)
+    - Section 05: Scenario Analysis & Action Roadmap
+    - Final AI Recommendation & Decision Summary
     """
 
     @staticmethod
@@ -17,60 +27,49 @@ class BusinessPlanReportBuilder:
         scenario_analysis = profile.get("scenario_analysis", {})
         personalized_business_plan = profile.get("personalized_business_plan", {})
 
-        # Business Identity
-        category = business_input.get("business_category", "SME Enterprise")
-        stage = business_input.get("business_stage", "Startup")
-        district = business_input.get("district", "Colombo")
-        raw_name = business_input.get("business_name") or profile.get("business_name") or f"{district} {category}"
-        business_name = raw_name.strip()
-
         # Date
-        created_at_raw = metadata.get("created_at") or datetime.now().isoformat()
+        created_at_raw = metadata.get("created_at") or metadata.get("generated_at") or datetime.now().isoformat()
         try:
-            date_str = datetime.fromisoformat(created_at_raw.replace("Z", "+00:00")).strftime("%B %d, %Y")
+            date_str = datetime.fromisoformat(str(created_at_raw).replace("Z", "+00:00")).strftime("%B %d, %Y")
         except Exception:
             date_str = datetime.now().strftime("%B %d, %Y")
 
-        # Feasibility Snapshot
-        predicted_label = feasibility_analysis.get("predicted_label", "Conditionally Feasible")
-        confidence_score = float(feasibility_analysis.get("confidence_score", 0.75))
+        # Identity
+        category = business_input.get("business_category", "SME Enterprise")
+        stage = business_input.get("business_stage", "New Startup")
+        district = business_input.get("district", "Colombo")
+        province = business_input.get("province", "Western")
+        raw_name = business_input.get("business_name") or profile.get("business_name") or f"{district} {category}"
+        business_name = str(raw_name).strip()
+
+        # Check for pre-built structured sections in personalized_business_plan
+        sec_01 = personalized_business_plan.get("section_01_business_market_overview")
+        sec_02 = personalized_business_plan.get("section_02_ai_feasibility_insights")
+        sec_03 = personalized_business_plan.get("section_03_strategic_recommendations")
+        sec_04 = personalized_business_plan.get("section_04_financial_operational_plan")
+        sec_05 = personalized_business_plan.get("section_05_scenario_action_roadmap")
+        final_rec = personalized_business_plan.get("final_recommendation")
+
+        # Fallback / extraction if older profile record without section_01
+        predicted_label = feasibility_analysis.get("predicted_label") or feasibility_analysis.get("prediction", "Conditionally Feasible")
+        confidence_score = float(feasibility_analysis.get("confidence_score", feasibility_analysis.get("probability_score", 0.65)))
         probabilities = feasibility_analysis.get("probabilities", {
             "Feasible": 0.25,
             "Conditionally Feasible": 0.65,
             "Infeasible": 0.10
         })
 
-        # Financial Parameters
-        capital = float(business_input.get("available_capital_lkr", 0.0))
-        monthly_budget = float(business_input.get("monthly_budget_lkr", 0.0))
-        customers_per_day = int(business_input.get("expected_customers_per_day", 0))
-        expected_price = float(business_input.get("expected_price_lkr", 0.0))
-        loan_required = capital < (monthly_budget * 6)
-
-        # Operational Parameters
-        experience = int(business_input.get("entrepreneur_experience_years", 0))
-        staff_count = int(business_input.get("available_staff_count", 1))
-        competition = business_input.get("competition_level", "Moderate")
-
-        # Executive Overview & Plan Sections
         executive_overview = personalized_business_plan.get("executive_overview", {})
         operational_plan = personalized_business_plan.get("operational_plan", {})
         marketing_plan = personalized_business_plan.get("marketing_plan", {})
         financial_plan = personalized_business_plan.get("financial_plan", {})
         action_roadmap = personalized_business_plan.get("action_roadmap", {})
 
-        # Key Drivers
-        positive_drivers = explainability.get("positive_drivers", [])
-        negative_drivers = explainability.get("negative_drivers", [])
-
-        # Strategies & TOPSIS Ranking
         candidate_strategies = strategic_recommendations.get("candidate_strategies", [])
         topsis_ranking = strategic_recommendations.get("topsis_ranking", {})
-        ai_top_strategy = topsis_ranking.get("top_recommended_strategy", "Controlled Operational Growth")
-        ai_top_score = topsis_ranking.get("top_topsis_score", "0.7850")
-        evaluation_criteria = topsis_ranking.get("evaluation_criteria", [])
-
-        # Check if user adopted an alternative strategy (HITL Decision Override)
+        ai_top_strategy = topsis_ranking.get("top_recommended_strategy", "Lean Operational Bootstrapping Strategy")
+        ai_top_score = str(topsis_ranking.get("top_topsis_score", "0.7850"))
+        
         selected_strategy_id = strategic_recommendations.get("selected_strategy_id") or executive_overview.get("strategy_id")
         selected_strategy_name = strategic_recommendations.get("selected_strategy_name") or executive_overview.get("recommended_primary_strategy")
         is_user_selected = bool(
@@ -81,38 +80,255 @@ class BusinessPlanReportBuilder:
         active_strategy_name = selected_strategy_name if is_user_selected else ai_top_strategy
         active_strategy_id = selected_strategy_id if is_user_selected else topsis_ranking.get("top_recommended_id", "STRAT_01")
 
-        # Scenario Simulations
-        what_if_simulations = scenario_analysis.get("what_if_simulations", [])
-
-        # Effective financial figures (use strategy-calibrated figures if present in financial_plan)
-        effective_capital = float(financial_plan.get("available_capital_lkr", capital))
-        effective_budget = float(financial_plan.get("monthly_operating_budget_lkr", monthly_budget))
+        effective_capital = float(financial_plan.get("available_capital_lkr", business_input.get("available_capital_lkr", 0.0)))
+        effective_budget = float(financial_plan.get("monthly_operating_budget_lkr", business_input.get("monthly_budget_lkr", 0.0)))
         capital_runway = financial_plan.get("capital_runway_months", round(effective_capital / max(effective_budget, 1.0), 1))
+        customers_per_day = int(marketing_plan.get("target_daily_customers", business_input.get("expected_customers_per_day", 0)))
+        expected_price = float(business_input.get("expected_price_lkr", 0.0))
+        operating_days = int(business_input.get("expected_operating_days_per_month", 26))
 
         # Build Normalized Report Dictionary
         report_data = {
             "metadata": {
                 "record_id": metadata.get("record_id", "N/A"),
-                "schema_version": metadata.get("schema_version", "1.1.0"),
+                "schema_version": metadata.get("schema_version", "2.0.0"),
                 "generated_date": date_str,
                 "system_brand": "SME360 AI",
-                "document_title": "BUSINESS PLAN",
-                "document_subtitle": "AI-Assisted Business Feasibility & Growth Planning",
+                "document_title": "STRATEGIC BUSINESS PLAN",
+                "document_subtitle": "AI-Assisted Business Feasibility & Personalized Growth Report",
             },
             "business_identity": {
                 "business_name": business_name,
                 "business_category": category,
                 "business_stage": stage,
                 "district": district,
-                "prepared_for": f"{business_name} Management",
+                "province": province,
+                "prepared_for": f"{business_name} Ownership / Management",
             },
+
+            # -----------------------------------------------------------------
+            # 5 Major Research Sections
+            # -----------------------------------------------------------------
+            "section_01": sec_01 or {
+                "section_number": "01",
+                "section_title": "01 — Business & Market Overview",
+                "business_summary": {
+                    "business_name": business_name,
+                    "business_category": category,
+                    "business_stage": stage,
+                    "business_model": business_input.get("business_model") or "Direct Retail / Service",
+                    "district": district,
+                    "province": province,
+                    "location_address": business_input.get("address") or "Information not provided",
+                    "proposed_action": business_input.get("proposed_action") or "Launch Operations",
+                    "business_description": business_input.get("additional_description") or "Information not provided"
+                },
+                "business_concept": {
+                    "concept_overview": executive_overview.get("business_summary", f"Strategic plan for a {stage.lower()} {category.lower()} operating in {district}."),
+                    "products_services": f"Products and commercial offerings in {category}",
+                    "target_customers": business_input.get("target_age_group") or f"Local consumers in {district}",
+                    "business_objectives": business_input.get("additional_description") or f"Establish a sustainable {category} in {district}."
+                },
+                "market_overview": {
+                    "target_market": f"{district} ({business_input.get('location_type', 'Urban')} Catchment)",
+                    "customer_profile": business_input.get("target_age_group") or "Information not provided",
+                    "expected_customers_per_day": customers_per_day,
+                    "expected_selling_price_lkr": expected_price,
+                    "operating_days_per_month": operating_days,
+                    "customer_demand_score": f"{business_input.get('customer_demand_score', 50)}/100"
+                },
+                "competition": {
+                    "competition_level": business_input.get("competition_level", "Moderate"),
+                    "competitor_count_nearby": business_input.get("competitor_count_nearby", 0),
+                    "competitor_information": business_input.get("competitor_information") or "Information not provided",
+                    "competitive_positioning": f"Differentiation via customer service and {active_strategy_name}."
+                },
+                "location": {
+                    "district": district,
+                    "province": province,
+                    "location_type": business_input.get("location_type", "Commercial Hub"),
+                    "location_suitability_score": f"{business_input.get('location_suitability_score', 3)}/5",
+                    "location_considerations": f"Commercial density and customer foot traffic in {district}."
+                }
+            },
+
+            "section_02": sec_02 or {
+                "section_number": "02",
+                "section_title": "02 — AI Feasibility & Key Insights",
+                "feasibility_assessment": {
+                    "final_predicted_label": predicted_label,
+                    "confidence_score": confidence_score,
+                    "confidence_percentage": f"{(confidence_score * 100):.1f}%",
+                    "probabilities": probabilities
+                },
+                "feasibility_interpretation": (
+                    f"The proposed business is assessed as '{predicted_label}' with {confidence_score:.1%} confidence "
+                    f"under the evaluated financial, operational, and market parameters."
+                ),
+                "shap_explainability": {
+                    "methodology_note": "SHAP feature attribution indicates factors that contributed to the model prediction without asserting causal proof.",
+                    "positive_enablers": [
+                        {
+                            "feature": d.get("feature", "").replace("_", " ").title(),
+                            "direction": "+",
+                            "relative_importance": round(abs(float(d.get("importance", d.get("impact_score", 0.0)))), 4),
+                            "feature_value": str(d.get("feature_value", "N/A")),
+                            "business_interpretation": f"Favorable recorded condition for {d.get('feature', '')} contributed positive support to feasibility."
+                        }
+                        for d in explainability.get("positive_drivers", [])[:4]
+                    ],
+                    "negative_hurdles": [
+                        {
+                            "feature": d.get("feature", "").replace("_", " ").title(),
+                            "direction": "-",
+                            "relative_importance": round(abs(float(d.get("importance", d.get("impact_score", 0.0)))), 4),
+                            "feature_value": str(d.get("feature_value", "N/A")),
+                            "business_interpretation": f"Constraint in {d.get('feature', '')} contributed downward pressure, highlighting an operational hurdle."
+                        }
+                        for d in explainability.get("negative_drivers", [])[:4]
+                    ]
+                },
+                "key_insights": {
+                    "strengths": [f"Favorable {d.get('feature', '')}: {d.get('feature_value', 'Adequate')}" for d in explainability.get("positive_drivers", [])[:3]] or ["Baseline readiness supports initial launch."],
+                    "constraints": [f"Constraint in {d.get('feature', '')}: {d.get('feature_value', 'Requires attention')}" for d in explainability.get("negative_drivers", [])[:3]] or ["Working capital buffer requires ongoing monitoring."]
+                }
+            },
+
+            "section_03": sec_03 or {
+                "section_number": "03",
+                "section_title": "03 — Strategic Recommendations & TOPSIS Ranking",
+                "available_strategic_alternatives": candidate_strategies,
+                "topsis_evaluation": {
+                    "criteria_weights": [
+                        {"criterion": "Financial Viability", "weight": 0.25, "description": "Assessment of cash flow adequacy, capital runway, and budgetary resilience."},
+                        {"criterion": "Implementation Feasibility", "weight": 0.20, "description": "Ease of operational execution given available experience and team size."},
+                        {"criterion": "Market Demand Alignment", "weight": 0.25, "description": "Alignment with local consumer demand score and footfall potential."},
+                        {"criterion": "Operational Risk", "weight": 0.15, "description": "Exposure to fixed-cost burn, supply dependencies, and resource hurdles."},
+                        {"criterion": "Resource Efficiency", "weight": 0.15, "description": "Ratio of output generation to invested equipment and human capital."}
+                    ]
+                },
+                "strategy_ranking": topsis_ranking.get("ranked_strategies", candidate_strategies),
+                "ai_recommended_strategy": {
+                    "strategy_name": ai_top_strategy,
+                    "strategy_id": topsis_ranking.get("top_recommended_id", "STRAT_01"),
+                    "topsis_score": ai_top_score
+                },
+                "human_in_the_loop_selection": {
+                    "is_user_selected": is_user_selected,
+                    "selected_strategy_id": active_strategy_id,
+                    "selected_strategy_name": active_strategy_name,
+                    "alignment_status": (
+                        "Selected strategy matches the AI's highest-ranked recommendation."
+                        if not is_user_selected else
+                        f"The entrepreneur selected an alternative strategy ({active_strategy_name}) that was ranked differently by the AI. The business plan has been re-aligned with the entrepreneur's selected strategy."
+                    )
+                }
+            },
+
+            "section_04": sec_04 or {
+                "section_number": "04",
+                "section_title": "04 — Financial & Operational Plan",
+                "active_strategy_alignment": {
+                    "strategy_name": active_strategy_name,
+                    "is_user_selected": is_user_selected
+                },
+                "startup_investment": {
+                    "available_capital_lkr": effective_capital,
+                    "strategy_target_capital_lkr": effective_capital,
+                    "loan_amount_lkr": float(business_input.get("loan_amount_lkr", 0.0)),
+                    "initial_inventory_cost_lkr": float(business_input.get("initial_inventory_cost_lkr", 0.0)),
+                    "funding_gap_lkr": 0.0,
+                    "funding_gap_status": "Fully funded from baseline capital"
+                },
+                "monthly_financial_plan": {
+                    "monthly_operating_budget_lkr": effective_budget,
+                    "expected_price_lkr": expected_price,
+                    "expected_customers_per_day": customers_per_day,
+                    "operating_days_per_month": operating_days,
+                    "estimated_monthly_revenue_lkr": customers_per_day * expected_price * operating_days,
+                    "revenue_calculation_formula": "Estimated Monthly Revenue = Target Customers/Day × Expected Unit Price × Operating Days/Month",
+                    "calculation_note": "Calculated from user-provided assumptions. Does not guarantee actual cash sales."
+                },
+                "funding_structure": {
+                    "equity_capital_lkr": effective_capital,
+                    "debt_financing_lkr": float(business_input.get("loan_amount_lkr", 0.0)),
+                    "total_available_funds_lkr": effective_capital + float(business_input.get("loan_amount_lkr", 0.0)),
+                    "target_required_capital_lkr": effective_capital,
+                    "capital_runway_months": capital_runway
+                },
+                "operational_plan": {
+                    "staffing": {
+                        "available_staff_count": business_input.get("available_staff_count", 1),
+                        "required_staff_count": business_input.get("required_staff_count", 1),
+                        "capacity_status": "Balanced staffing allocation"
+                    },
+                    "equipment": {
+                        "available_equipment_score": f"{business_input.get('available_equipment_score', 3)}/5",
+                        "required_equipment_score": f"{business_input.get('required_equipment_score', 3)}/5",
+                        "readiness_status": "Equipment meets operating baseline"
+                    },
+                    "suppliers": {
+                        "supplier_availability_score": f"{business_input.get('supplier_availability_score', 3)}/5",
+                        "network_region": f"{district} SME Vendor Network"
+                    }
+                },
+                "marketing_plan": {
+                    "marketing_channel": business_input.get("marketing_channel", "Word of Mouth"),
+                    "promotional_tactics": marketing_plan.get("promotional_tactics", [])
+                }
+            },
+
+            "section_05": sec_05 or {
+                "section_number": "05",
+                "section_title": "05 — Scenario Analysis & Action Roadmap",
+                "what_if_analysis": {
+                    "scenarios": scenario_analysis.get("what_if_simulations", [])
+                },
+                "counterfactual_analysis": scenario_analysis.get("counterfactual_boundary", {}),
+                "personalized_action_roadmap": {
+                    "phase_0_to_30_days": action_roadmap.get("phase_1", []),
+                    "phase_30_to_90_days": action_roadmap.get("phase_2", [])[:2],
+                    "phase_3_to_6_months": action_roadmap.get("phase_2", [])[2:],
+                    "phase_6_to_12_months": action_roadmap.get("phase_3", [])
+                },
+                "measurable_kpis": [
+                    {"kpi_name": "Monthly Revenue", "target": f"LKR {customers_per_day * expected_price * operating_days:,.2f}", "frequency": "Monthly"},
+                    {"kpi_name": "Daily Customer Count", "target": f"{customers_per_day} / Day", "frequency": "Daily"},
+                    {"kpi_name": "Operating Budget Compliance", "target": f"≤ LKR {effective_budget:,.2f} / Month", "frequency": "Monthly"},
+                    {"kpi_name": "Capital Runway", "target": f"≥ {capital_runway} Months", "frequency": "Quarterly"}
+                ],
+                "business_constraints_and_mitigation": [
+                    {"constraint": "Capital Limitation", "mitigation": "Enforce strict working capital controls and phase investments."},
+                    {"constraint": "Staff Capacity", "mitigation": "Establish standardized operating checklists and cross-train staff."},
+                    {"constraint": "Equipment Readiness", "mitigation": "Prioritize vital equipment only and arrange supplier warranties."}
+                ],
+                "final_ai_recommendation": {
+                    "ai_feasibility_verdict": predicted_label,
+                    "ai_recommended_strategy": ai_top_strategy,
+                    "entrepreneur_selected_strategy": active_strategy_name,
+                    "is_user_selected": is_user_selected,
+                    "recommended_immediate_next_step": "Finalize permits and establish initial inventory supplier terms."
+                }
+            },
+
+            "final_recommendation": final_rec or {
+                "ai_feasibility_verdict": predicted_label,
+                "ai_confidence_score": confidence_score,
+                "ai_recommended_strategy": ai_top_strategy,
+                "entrepreneur_selected_strategy": active_strategy_name,
+                "is_user_selected": is_user_selected,
+                "recommended_immediate_next_step": "Finalize permits and establish initial inventory supplier terms."
+            },
+
+            # -----------------------------------------------------------------
+            # Backward-Compatibility Keys
+            # -----------------------------------------------------------------
             "executive_summary": {
-                "business_summary": executive_overview.get("business_summary", f"Strategic business and feasibility evaluation for a {stage.lower()} {category.lower()} operating in {district} district."),
+                "business_summary": executive_overview.get("business_summary", f"Strategic plan for a {stage.lower()} {category.lower()} operating in {district}."),
                 "predicted_label": predicted_label,
                 "confidence_score": confidence_score,
                 "confidence_percent": f"{(confidence_score * 100):.1f}%",
                 "probabilities": probabilities,
-                "stage_focus": "New Startup Launch Preparation" if stage == "New Startup" else "Existing Business Growth & Expansion",
                 "active_strategy": active_strategy_name,
                 "is_user_selected": is_user_selected,
             },
@@ -120,36 +336,33 @@ class BusinessPlanReportBuilder:
                 "category": category,
                 "stage": stage,
                 "district": district,
-                "experience_years": experience,
-                "staff_count": staff_count,
-                "competition_level": competition,
-                "has_loans": business_input.get("has_existing_loans", False),
-                "has_equipment": business_input.get("has_equipment", False),
-                "has_suppliers": business_input.get("has_supplier_contacts", False),
+                "experience_years": int(business_input.get("entrepreneur_experience_years", 0)),
+                "staff_count": int(business_input.get("available_staff_count", 1)),
+                "competition_level": business_input.get("competition_level", "Moderate")
             },
             "financial_overview": {
                 "available_capital_lkr": effective_capital,
                 "monthly_budget_lkr": effective_budget,
                 "expected_price_lkr": expected_price,
-                "estimated_monthly_revenue_lkr": customers_per_day * expected_price * 26, # 26 operating days/month
-                "loan_required": loan_required,
+                "estimated_monthly_revenue_lkr": customers_per_day * expected_price * operating_days,
+                "loan_required": effective_capital < (effective_budget * 6),
                 "capital_runway_months": capital_runway,
-                "guidance_summary": financial_plan.get("counterfactual_guidance", "Maintain a 6-month capital buffer for working capital stability."),
+                "guidance_summary": financial_plan.get("counterfactual_guidance", "Maintain a 6-month capital buffer.")
             },
             "market_analysis": {
                 "expected_customers_per_day": customers_per_day,
-                "target_monthly_customers": customers_per_day * 26,
-                "competition_level": competition,
+                "target_monthly_customers": customers_per_day * operating_days,
+                "competition_level": business_input.get("competition_level", "Moderate"),
                 "demand_score": marketing_plan.get("demand_score", "Moderate Market Demand"),
-                "target_customer_desc": marketing_plan.get("target_daily_customers", f"{customers_per_day} target daily customers in {district}."),
+                "target_customer_desc": marketing_plan.get("target_daily_customers", f"{customers_per_day} target daily customers in {district}.")
             },
             "operational_plan": {
-                "staffing_requirements": operational_plan.get("staffing_requirements", f"Current staff allocation: {staff_count} employee(s)."),
-                "equipment_readiness": operational_plan.get("equipment_readiness", "Essential operating equipment requirements identified."),
+                "staffing_requirements": operational_plan.get("staffing_requirements", f"Current staff allocation: {business_input.get('available_staff_count', 1)}."),
+                "equipment_readiness": operational_plan.get("equipment_readiness", "Essential operating equipment requirements identified.")
             },
             "key_business_factors": {
-                "positive_enablers": positive_drivers,
-                "risk_hurdles": negative_drivers,
+                "positive_enablers": explainability.get("positive_drivers", []),
+                "risk_hurdles": explainability.get("negative_drivers", [])
             },
             "strategies": candidate_strategies,
             "strategy_priorities": {
@@ -160,30 +373,17 @@ class BusinessPlanReportBuilder:
                 "is_user_selected": is_user_selected,
                 "selected_strategy_id": active_strategy_id,
                 "selected_strategy_name": active_strategy_name,
-                "ranked_strategies": topsis_ranking.get("ranked_strategies", candidate_strategies),
-                "evaluation_criteria": evaluation_criteria,
+                "ranked_strategies": topsis_ranking.get("ranked_strategies", candidate_strategies)
             },
-            "scenarios": what_if_simulations,
+            "scenarios": scenario_analysis.get("what_if_simulations", []),
             "action_roadmap": {
-                "phase_1": action_roadmap.get("phase_1_immediate_0_to_3_months") or action_roadmap.get("phase_1", [
-                    "Verify initial working capital buffer and set up accounting controls.",
-                    "Finalize equipment acquisition and supplier agreements.",
-                    "Initiate targeted local marketing campaign in district."
-                ]),
-                "phase_2": action_roadmap.get("phase_2_growth_3_to_12_months") or action_roadmap.get("phase_2_stabilization_3_to_12_months") or action_roadmap.get("phase_2", [
-                    "Optimize operational throughput to hit daily customer target.",
-                    "Monitor monthly cash flow against operating budget limits.",
-                    "Conduct quarterly competitor price benchmark."
-                ]),
-                "phase_3": action_roadmap.get("phase_3_scale_1_year_plus") or action_roadmap.get("phase_3_growth_1_year_plus") or action_roadmap.get("phase_3", [
-                    "Evaluate secondary product lines or additional staffing requirements.",
-                    "Explore digital sales channels or secondary district expansion."
-                ])
+                "phase_1": action_roadmap.get("phase_1", []),
+                "phase_2": action_roadmap.get("phase_2", []),
+                "phase_3": action_roadmap.get("phase_3", [])
             },
             "assumptions_and_considerations": [
                 "Feasibility classification and decision rankings are model-based analytical estimates derived from Sri Lankan SME empirical datasets.",
-                "Financial projections assume 26 active operating days per calendar month and steady unit pricing.",
-                "External macroeconomic conditions, tax policy alterations, and unexpected inflation are not dynamically modelled.",
+                "Financial projections assume operating days and steady unit pricing based on provided business inputs.",
                 "Entrepreneur should perform on-the-ground market validation before committing heavy capital investments."
             ],
             "raw_profile": profile

@@ -6,11 +6,11 @@ import { useToast } from './common/Toast';
 import './plan/business_plan.css';
 import PlanHeader from './plan/PlanHeader';
 import PlanSnapshot from './plan/PlanSnapshot';
-import PlanSectionConcept from './plan/PlanSectionConcept';
-import PlanSectionOperations from './plan/PlanSectionOperations';
-import PlanSectionMarketing from './plan/PlanSectionMarketing';
-import PlanSectionFinance from './plan/PlanSectionFinance';
-import PlanSectionRoadmap from './plan/PlanSectionRoadmap';
+import PlanSection01Overview from './plan/PlanSection01Overview';
+import PlanSection02Feasibility from './plan/PlanSection02Feasibility';
+import PlanSection03Recommendations from './plan/PlanSection03Recommendations';
+import PlanSection04FinanceOps from './plan/PlanSection04FinanceOps';
+import PlanSection05ScenariosRoadmap from './plan/PlanSection05ScenariosRoadmap';
 import PlanHighlightsSidebar from './plan/PlanHighlightsSidebar';
 
 export default function BusinessPlan({ profile: propProfile }) {
@@ -101,37 +101,32 @@ export default function BusinessPlan({ profile: propProfile }) {
       {/* 3. Two-Column Layout: Main Continuous Document + Sticky Highlights Sidebar */}
       <div className="bp-layout">
         
-        {/* Main Document Body */}
+        {/* Main Continuous Research & Decision Document */}
         <main className="bp-document">
           
-          {/* Section 01: Business Concept & Feasibility */}
-          <PlanSectionConcept
+          {/* SECTION 01 — Business & Market Overview */}
+          <PlanSection01Overview
             profile={profile}
-            executiveOverview={executive_overview}
-            financialPlan={financial_plan}
           />
 
-          {/* Section 02: Operational & Resource Setup */}
-          <PlanSectionOperations
+          {/* SECTION 02 — AI Feasibility & Key Insights */}
+          <PlanSection02Feasibility
             profile={profile}
-            operationalPlan={operational_plan}
           />
 
-          {/* Section 03: Marketing & Customer Demand */}
-          <PlanSectionMarketing
+          {/* SECTION 03 — Strategic Recommendations & TOPSIS Ranking */}
+          <PlanSection03Recommendations
             profile={profile}
-            marketingPlan={marketing_plan}
           />
 
-          {/* Section 04: Financial Planning */}
-          <PlanSectionFinance
+          {/* SECTION 04 — Financial & Operational Plan (Strategy-Aligned) */}
+          <PlanSection04FinanceOps
             profile={profile}
-            financialPlan={financial_plan}
           />
 
-          {/* Section 05: Time-Phased Action Roadmap */}
-          <PlanSectionRoadmap
-            actionRoadmap={action_roadmap}
+          {/* SECTION 05 — Scenario Analysis & Action Roadmap */}
+          <PlanSection05ScenariosRoadmap
+            profile={profile}
           />
 
         </main>
