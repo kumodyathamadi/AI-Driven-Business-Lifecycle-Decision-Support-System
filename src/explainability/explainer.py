@@ -154,19 +154,63 @@ class SHAPExplainerService:
 
         row_dict = input_df.iloc[0].to_dict() if hasattr(input_df, "iloc") and len(input_df) > 0 else {}
 
-        feature_attributions = []
+        # Group and aggregate one-hot features into high-level business features
+        # Categorical columns in preprocessor
+        cat_prefixes = {
+            "cat__business_stage": "Business Stage",
+            "cat__business_category": "Business Category",
+            "cat__district": "District",
+            "cat__province": "Province",
+            "cat__location_type": "Location Type",
+            "cat__proposed_action": "Proposed Action",
+            "cat__competition_level": "Market Competition Level"
+        }
+
+        aggregated_attributions: Dict[str, Dict[str, Any]] = {}
+
         for i, (raw_fn, clean_fn) in enumerate(zip(self.feature_names, self.clean_feature_names)):
             shap_val = float(local_shap_values[i])
-            feat_val = format_feature_value_from_row(clean_fn, raw_fn, row_dict)
+            
+            # Check if this feature is a one-hot categorical dummy
+            matched_cat_prefix = None
+            for prefix, cat_title in cat_prefixes.items():
+                if raw_fn.startswith(prefix + "_") or raw_fn == prefix:
+                    matched_cat_prefix = (prefix, cat_title)
+                    break
+
+            if matched_cat_prefix:
+                _, cat_title = matched_cat_prefix
+                if cat_title not in aggregated_attributions:
+                    feat_val = format_feature_value_from_row(cat_title, raw_fn, row_dict)
+                    aggregated_attributions[cat_title] = {
+                        "raw_feature": cat_title.lower().replace(" ", "_"),
+                        "feature_name": cat_title,
+                        "feature_value": feat_val,
+                        "shap_value": 0.0,
+                    }
+                aggregated_attributions[cat_title]["shap_value"] += shap_val
+            else:
+                # Numerical or already single feature
+                feat_val = format_feature_value_from_row(clean_fn, raw_fn, row_dict)
+                aggregated_attributions[clean_fn] = {
+                    "raw_feature": raw_fn,
+                    "feature_name": clean_fn,
+                    "feature_value": feat_val,
+                    "shap_value": shap_val,
+                }
+
+        feature_attributions = []
+        for item in aggregated_attributions.values():
+            s_val = round(item["shap_value"], 5)
             feature_attributions.append({
-                "raw_feature": raw_fn,
-                "feature_name": clean_fn,
-                "feature_value": feat_val,
-                "shap_value": round(shap_val, 5),
-                "abs_shap_value": round(abs(shap_val), 5)
+                "raw_feature": item["raw_feature"],
+                "feature_name": item["feature_name"],
+                "feature_value": item["feature_value"],
+                "shap_value": s_val,
+                "abs_shap_value": round(abs(s_val), 5)
             })
 
-        # Sort attributions
+        # Sort attributions by absolute impact
         sorted_attributions = sorted(feature_attributions, key=lambda x: x["abs_shap_value"], reverse=True)
 
         positive_drivers = [
@@ -175,7 +219,7 @@ class SHAPExplainerService:
                 "raw_feature": item["raw_feature"],
                 "feature_value": item["feature_value"],
                 "impact_score": round(item["shap_value"], 4),
-                "direction": "Positive Driver"
+                "direction": "Positive Factor (Relative to Model Baseline)"
             }
             for item in sorted_attributions if item["shap_value"] > 0
         ][:7]
@@ -186,7 +230,7 @@ class SHAPExplainerService:
                 "raw_feature": item["raw_feature"],
                 "feature_value": item["feature_value"],
                 "impact_score": round(item["shap_value"], 4),
-                "direction": "Hurdle / Constraint"
+                "direction": "Operational Hurdle (Relative to Model Baseline)"
             }
             for item in sorted_attributions if item["shap_value"] < 0
         ][:7]

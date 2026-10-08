@@ -77,12 +77,19 @@ class PersonalizedPlanGenerator:
             "Infeasible": round(float(raw_probs.get("Infeasible", 0.0)), 4)
         }
 
+        is_new_startup = "new" in str(stage).lower() or "start" in str(stage).lower()
         display_name = business_name if business_name else f"Your {category}"
-        summary_intro = (
-            f"Strategic feasibility assessment for {business_name} ({stage} {category}) located in {district}, {province} Province, Sri Lanka."
-            if business_name else
-            f"Strategic feasibility assessment for a {stage} {category} located in {district}, {province} Province, Sri Lanka."
-        )
+        
+        if is_new_startup:
+            summary_intro = (
+                f"Strategic feasibility assessment for the planned launch of {business_name or 'the proposed enterprise'} "
+                f"(new startup {category}) located in {district}, {province} Province, Sri Lanka."
+            )
+        else:
+            summary_intro = (
+                f"Strategic feasibility assessment for {business_name or 'the enterprise'} "
+                f"({stage} {category}) located in {district}, {province} Province, Sri Lanka."
+            )
 
         # ---------------------------------------------------------------------
         # 2. Resolve Active Strategy (Downstream Human-in-the-Loop Alignment)
@@ -106,7 +113,7 @@ class PersonalizedPlanGenerator:
                 active_strategy = {
                     "strategy_id": "STRAT_01",
                     "strategy_name": ai_top_name,
-                    "strategic_focus": "Risk Mitigation & Capital Preservation",
+                    "strategic_focus": "Capital Preservation & Lean Operations",
                     "estimated_capital_required_lkr": capital,
                     "estimated_monthly_budget_lkr": budget,
                     "target_daily_customers": customers or 30,
@@ -145,7 +152,7 @@ class PersonalizedPlanGenerator:
                 "direction": "+",
                 "relative_importance": imp,
                 "feature_value": str(val),
-                "business_interpretation": f"Favorable recorded condition for {feat} ({val}) contributed positive support to the model feasibility prediction."
+                "business_interpretation": f"Recorded condition for {feat} ({val}) contributed positively relative to the model baseline."
             })
 
         structured_negative = []
@@ -159,7 +166,7 @@ class PersonalizedPlanGenerator:
                 "direction": "-",
                 "relative_importance": imp,
                 "feature_value": str(val),
-                "business_interpretation": f"Constraint in {feat} ({val}) contributed downward pressure to the model prediction, highlighting an operational or capital hurdle."
+                "business_interpretation": f"Recorded condition for {feat} ({val}) exerted downward pressure relative to the model baseline, highlighting an operational hurdle."
             })
 
         # Key evidence-based insights
@@ -169,20 +176,26 @@ class PersonalizedPlanGenerator:
         ] or ["Baseline capital and location attributes support initial operational startup."]
 
         constraints_list = [
-            f"Vulnerable {n['feature']} ({n['feature_value']}) requires resource mitigation."
+            f"Constraint in {n['feature']} ({n['feature_value']}) requires operational attention."
             for n in structured_negative[:3]
         ] or ["Operating budget burn rate and customer acquisition require close oversight."]
 
         # ---------------------------------------------------------------------
         # 4. SECTION 01 — BUSINESS & MARKET OVERVIEW
         # ---------------------------------------------------------------------
+        comp_summary = (
+            f"Competition level is recorded as '{comp_level}' with approximately {comp_count} direct competitor(s) noted."
+            if comp_count > 0 else
+            f"Competition level is recorded as '{comp_level}'. Specific nearby direct competitor counts were not provided in current business inputs."
+        )
+
         section_01 = {
             "section_number": "01",
             "section_title": "01 — Business & Market Overview",
             "business_summary": {
                 "business_name": business_name or "Information not provided",
                 "business_category": category,
-                "business_stage": stage,
+                "business_stage": "New Startup" if is_new_startup else "Existing Business",
                 "business_model": model,
                 "district": district,
                 "province": province,
@@ -192,9 +205,9 @@ class PersonalizedPlanGenerator:
             },
             "business_concept": {
                 "concept_overview": summary_intro,
-                "products_services": f"Products and commercial offerings in {category}",
+                "products_services": f"Commercial offerings in {category}",
                 "target_customers": target_age or f"Local consumers and households in {district}",
-                "business_objectives": additional_desc or f"Establish a financially sustainable {category} enterprise adhering to {active_strategy_name}."
+                "business_objectives": additional_desc or f"Establish a sustainable {category} enterprise adhering to {active_strategy_name}."
             },
             "market_overview": {
                 "target_market": f"{district} ({location_type} Catchment)",
@@ -206,16 +219,16 @@ class PersonalizedPlanGenerator:
             },
             "competition": {
                 "competition_level": comp_level,
-                "competitor_count_nearby": comp_count,
-                "competitor_information": comp_info or "Information not provided",
-                "competitive_positioning": f"Differentiation via {strat_focus.lower()} and localized customer value proposition."
+                "competitor_count_nearby": comp_count if (comp_count and comp_count > 0) else "Not provided in current business input",
+                "competitor_information": comp_summary,
+                "competitive_positioning": f"Differentiation via {strat_focus.lower()} and localized customer service responsiveness."
             },
             "location": {
                 "district": district,
                 "province": province,
                 "location_type": location_type,
                 "location_suitability_score": f"{loc_score}/5",
-                "location_considerations": f"Accessibility, consumer foot traffic, and proximity to regional commercial nodes in {district}."
+                "location_considerations": f"Commercial location in {district}, providing consumer access within the local trading catchment."
             }
         }
 
@@ -227,17 +240,22 @@ class PersonalizedPlanGenerator:
             "section_title": "02 — AI Feasibility & Key Insights",
             "feasibility_assessment": {
                 "final_predicted_label": prediction,
+                "predicted_class": prediction,
+                "predicted_class_probability": confidence_score,
+                "predicted_class_probability_percentage": f"{(confidence_score * 100):.1f}%",
                 "confidence_score": confidence_score,
                 "confidence_percentage": f"{(confidence_score * 100):.1f}%",
                 "probabilities": probs
             },
             "feasibility_interpretation": (
-                f"The proposed business is assessed as '{prediction}' with {confidence_score:.1%} model confidence "
-                f"under the evaluated financial, market, operational, and resource parameters. "
-                f"This decision-support outcome reflects multi-dimensional empirical patterns from Sri Lankan SME datasets."
+                f"The proposed business is assessed as '{prediction}' (Predicted Class Probability: {confidence_score:.1%}). "
+                f"Class Probabilities: Feasible ({probs['Feasible']:.1%}), Conditionally Feasible ({probs['Conditionally Feasible']:.1%}), "
+                f"Infeasible ({probs['Infeasible']:.1%}). "
+                f"The feasibility model developed in this study was trained and evaluated using the dataset used for this research. "
+                f"This decision-support outcome reflects multi-dimensional baseline patterns across capital, market, and operational indicators."
             ),
             "shap_explainability": {
-                "methodology_note": "SHAP (SHapley Additive exPlanations) attributes how each business parameter contributed to the model prediction without asserting causal proof.",
+                "methodology_note": "SHAP (SHapley Additive exPlanations) attributes how each business parameter contributed to the model prediction relative to the model baseline without asserting causal proof.",
                 "positive_enablers": structured_positive,
                 "negative_hurdles": structured_negative
             },
@@ -299,9 +317,10 @@ class PersonalizedPlanGenerator:
         # ---------------------------------------------------------------------
         # 7. SECTION 04 — FINANCIAL & OPERATIONAL PLAN (Aligned to Strategy)
         # ---------------------------------------------------------------------
-        est_monthly_revenue = strat_customers * price * operating_days if (strat_customers and price and operating_days) else 0.0
+        est_monthly_gross_sales = strat_customers * price * operating_days if (strat_customers and price and operating_days) else 0.0
         funding_gap = max(0.0, strat_capital - capital) if strat_capital > capital else 0.0
-        capital_runway = round(strat_capital / max(strat_budget, 1.0), 1)
+        strat_capital_coverage = round(strat_capital / max(strat_budget, 1.0), 1)
+        avail_funds_coverage = round(capital / max(strat_budget, 1.0), 1)
 
         section_04 = {
             "section_number": "04",
@@ -311,47 +330,53 @@ class PersonalizedPlanGenerator:
                 "is_user_selected": is_user_selected
             },
             "startup_investment": {
+                "available_capital_user_provided_lkr": capital,
                 "available_capital_lkr": capital,
                 "strategy_target_capital_lkr": strat_capital,
+                "loan_amount_user_provided_lkr": loan_amount,
                 "loan_amount_lkr": loan_amount,
                 "initial_inventory_cost_lkr": inventory_cost,
                 "funding_gap_lkr": funding_gap,
-                "funding_gap_status": "Fully funded from baseline capital" if funding_gap == 0.0 else f"LKR {funding_gap:,.2f} external funding gap required"
+                "funding_gap_status": "Fully funded from baseline capital" if funding_gap == 0.0 else f"LKR {funding_gap:,.2f} external funding requirement"
             },
             "monthly_financial_plan": {
                 "monthly_operating_budget_lkr": strat_budget,
                 "expected_price_lkr": price,
                 "expected_customers_per_day": strat_customers,
                 "operating_days_per_month": operating_days,
-                "estimated_monthly_revenue_lkr": est_monthly_revenue,
-                "revenue_calculation_formula": "Estimated Monthly Revenue = Target Customers/Day × Expected Unit Price × Operating Days/Month",
-                "calculation_note": "Calculated from user-provided assumptions. Does not guarantee actual cash sales."
+                "estimated_monthly_gross_sales_lkr": est_monthly_gross_sales,
+                "estimated_monthly_revenue_lkr": est_monthly_gross_sales,
+                "sales_calculation_formula": "Estimated Monthly Gross Sales = Target Customers/Day × Expected Unit Price × Operating Days/Month",
+                "calculation_qualification": "This is a gross sales estimate based on the stated customer volume, unit price, and operating days. It does not represent net profit or cash flow."
             },
             "funding_structure": {
-                "equity_capital_lkr": capital,
+                "available_capital_lkr": capital,
                 "debt_financing_lkr": loan_amount,
                 "total_available_funds_lkr": capital + loan_amount,
-                "target_required_capital_lkr": strat_capital,
-                "capital_runway_months": capital_runway
+                "strategy_target_capital_lkr": strat_capital,
+                "strategy_budget_coverage_months": strat_capital_coverage,
+                "available_funds_coverage_months": avail_funds_coverage,
+                "capital_runway_months": avail_funds_coverage,
+                "coverage_disclaimer": "Simplified budget coverage evaluates available funds relative to monthly operating expenditure. This is not a complete cash-flow runway and does not account for cost of goods sold, taxes, debt repayment, or working capital fluctuations."
             },
             "operational_plan": {
                 "staffing": {
                     "available_staff_count": avail_staff,
                     "required_staff_count": req_staff,
                     "staffing_gap": max(0, req_staff - avail_staff),
-                    "capacity_status": "Balanced staffing allocation" if avail_staff >= req_staff else "Additional staff hiring required before launch",
+                    "capacity_status": "Balanced staffing allocation" if avail_staff >= req_staff else "Additional staff allocation recommended before launch",
                     "recommended_approach": f"Deploy {avail_staff} core personnel with targeted task specialization and cross-training."
                 },
                 "equipment": {
                     "available_equipment_score": f"{avail_equip}/5",
                     "required_equipment_score": f"{req_equip}/5",
-                    "readiness_status": "Equipment meets operating baseline" if avail_equip >= req_equip else "Supplemental machinery/fixtures required",
-                    "recommended_approach": "Prioritize vital commercial equipment and evaluate lease-to-own arrangements."
+                    "readiness_status": "Equipment meets operating baseline" if avail_equip >= req_equip else "Supplemental commercial equipment required before full launch",
+                    "recommended_approach": "Prioritize vital commercial equipment and evaluate vendor warranty agreements."
                 },
                 "suppliers": {
                     "supplier_availability_score": f"{supplier_score}/5",
-                    "network_region": f"{district} SME Vendor Network",
-                    "sourcing_approach": "Establish dual-supplier vendor agreements to safeguard against single-source inventory bottlenecks."
+                    "network_region": f"Regional commercial vendor ecosystem in {district}",
+                    "sourcing_approach": "Establish dual-vendor supplier agreements for critical stock items to safeguard against inventory bottlenecks."
                 },
                 "operations_management": {
                     "procurement_inventory": f"Maintain minimum buffer inventory sized for {operating_days} operating days.",
@@ -360,12 +385,12 @@ class PersonalizedPlanGenerator:
                 }
             },
             "marketing_plan": {
-                "marketing_channel": marketing_channel or "Word of Mouth & Local Channels",
+                "marketing_channel": marketing_channel or "Local Community Outreach & Word-of-Mouth",
                 "customer_acquisition": f"Target local catchment in {district} to secure {strat_customers} daily patrons.",
                 "promotional_tactics": strat_tactics or [
-                    f"Deploy local awareness campaigns tailored for {display_name} in {district}.",
-                    "Introductory bundle promotions to encourage first-time trials.",
-                    "Customer loyalty cards to maximize repeat purchases."
+                    f"Deploy local awareness outreach tailored for {display_name} in {district}.",
+                    "Introductory trial promotions during opening weeks.",
+                    "Customer loyalty cards to encourage repeat visits."
                 ],
                 "retention_and_positioning": f"Differentiate via {strat_focus.lower()} and responsive community service."
             }
@@ -374,75 +399,83 @@ class PersonalizedPlanGenerator:
         # ---------------------------------------------------------------------
         # 8. SECTION 05 — SCENARIO ANALYSIS & ACTION ROADMAP
         # ---------------------------------------------------------------------
-        # 4-Phase Roadmap
         strat_id = active_strategy.get("strategy_id")
         if strat_id == "STRAT_01":
-            p1_strat_item = f"Implement Lean Bootstrapped setup for {display_name}: secure essential low-cost equipment and preserve cash reserves."
+            p1_strat_item = f"Implement Lean Bootstrapped setup for {display_name}: secure essential equipment and preserve cash reserves."
         elif strat_id == "STRAT_02":
-            p1_strat_item = f"Execute Market Expansion for {display_name}: secure commercial buffer, erect high-visibility signage, and launch volume promotions."
+            p1_strat_item = f"Prepare Market Acquisition setup for {display_name}: establish localized customer outreach channels and introductory offerings."
         elif strat_id == "STRAT_03":
-            p1_strat_item = f"Launch Hybrid Digital model for {display_name}: establish social ordering channels and finalize local delivery agreements in {district}."
+            p1_strat_item = f"Configure digital ordering and local delivery coordination for {display_name} in {district}."
         elif strat_id == "STRAT_04":
-            p1_strat_item = f"Establish Premium Quality differentiation for {display_name}: curate upscale branding, source superior ingredients/materials, and launch VIP packages."
+            p1_strat_item = f"Curate premium product presentation and distinctive service standards for {display_name}."
         else:
             p1_strat_item = f"Implement core operational strategy: {active_strategy_name}."
 
-        roadmap_phases = {
-            "phase_0_to_30_days": [
-                f"Register '{business_name}' and obtain local municipal authority permits." if business_name else "Register business legal structure and obtain municipal permits.",
+        if is_new_startup:
+            p1_actions = [
+                f"Establish initial operational workspace and layout for {display_name}.",
                 p1_strat_item,
-                "Finalize wholesale supplier contracts and credit payment terms.",
-                "Establish basic accounting and working capital cash control."
-            ],
+                "Confirm commercial supplier agreements and inventory delivery terms.",
+                "Establish daily cash recording and operating expenditure controls."
+            ]
+        else:
+            p1_actions = [
+                f"Review current operational setup and workspace layout for {display_name}.",
+                p1_strat_item,
+                "Renegotiate commercial supplier pricing and delivery terms.",
+                "Audit working capital reserves and monthly expenditure controls."
+            ]
+
+        roadmap_phases = {
+            "phase_0_to_30_days": p1_actions,
             "phase_30_to_90_days": [
-                f"Launch targeted promotional marketing to attain {strat_customers} daily customers.",
+                f"Launch targeted customer outreach to attain {strat_customers} daily patrons.",
                 f"Monitor monthly operating burn closely against LKR {strat_budget:,.2f} budget.",
-                "Review supplier fulfillment reliability and minimize product wastage.",
+                "Review supplier fulfillment reliability and inventory replenishment cycles.",
                 "Collect direct customer feedback on pricing and service quality."
             ],
             "phase_3_to_6_months": [
-                "Conduct quarterly financial review and audit working capital runway.",
-                "Optimize inventory reorder quantities based on validated top-selling SKUs.",
-                f"Evaluate marketing conversion and repeat customer retention rate in {district}."
+                "Conduct quarterly financial review and audit simplified budget coverage.",
+                "Optimize inventory reorder quantities based on top-selling items.",
+                f"Review repeat customer patronage rate and local marketing effectiveness in {district}."
             ],
             "phase_6_to_12_months": [
-                f"Assess potential commercial expansion or delivery radius extension in neighboring commercial hubs.",
-                "Re-run SME360 AI Feasibility pipeline with actual 12-month empirical operational figures.",
-                "Evaluate reinvestment of retained operating surplus into supplemental equipment."
+                "Evaluate whether commercial expansion or channel extension is justified by observed demand.",
+                "Re-run SME360 AI Feasibility pipeline using observed operating figures.",
+                "Assess reinvestment of operating surplus into operational productivity improvements."
             ]
         }
 
-        # Measurable KPIs
-        measurable_kpis = [
-            {"kpi_name": "Monthly Revenue", "target": f"LKR {est_monthly_revenue:,.2f}" if est_monthly_revenue > 0 else "Revenue target pending", "frequency": "Monthly", "type": "Financial"},
-            {"kpi_name": "Daily Customer Count", "target": f"{strat_customers} Customers / Day", "frequency": "Daily", "type": "Operational"},
-            {"kpi_name": "Operating Budget Compliance", "target": f"≤ LKR {strat_budget:,.2f} / Month", "frequency": "Monthly", "type": "Cost Control"},
-            {"kpi_name": "Capital Runway Horizon", "target": f"≥ {capital_runway} Months", "frequency": "Quarterly", "type": "Liquidity"},
-            {"kpi_name": "Customer Retention Rate", "target": "≥ 40% Repeat Patrons", "frequency": "Quarterly", "type": "Marketing"},
-            {"kpi_name": "Inventory Wastage Rate", "target": "< 3% of Monthly Stock", "frequency": "Monthly", "type": "Efficiency"}
+        # Management Monitoring Measures (Lightweight, Non-Predictive)
+        management_monitoring_measures = [
+            {"metric": "Daily Customer Volume", "focus": f"Track daily patrons against baseline assumption of {strat_customers} customers/day", "frequency": "Daily", "type": "Operational"},
+            {"metric": "Monthly Gross Sales", "focus": f"Compare actual receipts against gross sales estimate of LKR {est_monthly_gross_sales:,.2f}", "frequency": "Monthly", "type": "Sales Revenue"},
+            {"metric": "Operating Expenditure", "focus": f"Monitor monthly overhead against budget of LKR {strat_budget:,.2f}", "frequency": "Monthly", "type": "Cost Control"},
+            {"metric": "Repeat Patronage", "focus": "Establish baseline repeat customer rate during initial 90 operating days", "frequency": "Quarterly", "type": "Customer Retention"},
+            {"metric": "Supplier Delivery Fulfillment", "focus": "Track supplier delivery punctuality and order accuracy monthly", "frequency": "Monthly", "type": "Operations"}
         ]
 
-        # Business Constraints & Mitigation Considerations (Component 1 - NOT GNN risk prediction)
-        constraints_mitigation = [
+        # Operational Constraints & Management Considerations (Component 1 - NOT Component 4 Risk Prediction)
+        constraints_considerations = [
             {
-                "constraint": "Capital Limitation & Cash Flow Squeeze",
-                "mitigation": "Enforce strict working capital controls; phase non-essential capital expenditures and maintain lean inventory levels."
+                "constraint": "Working Capital Allocation & Cash Flow",
+                "management_action": "Prioritize vital commercial equipment and maintain disciplined operating cash reserves."
             },
             {
-                "constraint": "Staff Capacity & Experience Shortage",
-                "mitigation": "Establish standardized operating checklists and cross-train team members across both front-of-house and inventory roles."
+                "constraint": "Staff Capacity & Task Specialization",
+                "management_action": "Standardize daily operating checklists and cross-train existing team members."
             },
             {
                 "constraint": "Equipment Readiness & Maintenance",
-                "mitigation": "Prioritize vital equipment only; arrange supplier servicing warranties to eliminate unscheduled operational downtime."
+                "management_action": "Focus on essential commercial machinery and arrange supplier servicing agreements."
             },
             {
-                "constraint": "Local Competitor Saturation",
-                "mitigation": f"Execute consistent customer differentiation tailored to '{strat_focus}'; introduce loyalty perks to build localized defensibility."
+                "constraint": "Local Market Competition",
+                "management_action": f"Execute customer differentiation anchored upon {strat_focus.lower()} and responsive service."
             },
             {
-                "constraint": "Customer Demand Fluctuations",
-                "mitigation": "Adopt controlled initial product batches and monitor daily sales tracking before placing large advance wholesale orders."
+                "constraint": "Customer Demand Uncertainty",
+                "management_action": "Launch with controlled initial stock batches and track daily customer volume against assumptions."
             }
         ]
 
@@ -456,6 +489,7 @@ class PersonalizedPlanGenerator:
                 "rationale": scen.get("rationale"),
                 "new_prediction": scen.get("new_prediction"),
                 "probability_deltas": scen.get("probability_deltas", {}),
+                "probability_deltas_pp": scen.get("probability_deltas_pp", {}),
                 "new_probabilities": scen.get("new_probabilities", {}),
                 "viability_delta": scen.get("viability_delta", 0.0),
                 "feasibility_delta": scen.get("feasibility_probability_delta", 0.0),
@@ -465,7 +499,7 @@ class PersonalizedPlanGenerator:
         # Final AI Recommendation Summary
         final_summary = {
             "ai_feasibility_verdict": prediction,
-            "ai_confidence_score": confidence_score,
+            "predicted_class_probability": confidence_score,
             "ai_recommended_strategy": ai_top_name,
             "entrepreneur_selected_strategy": active_strategy_name,
             "is_user_selected": is_user_selected,
@@ -479,7 +513,7 @@ class PersonalizedPlanGenerator:
             "section_number": "05",
             "section_title": "05 — Scenario Analysis & Action Roadmap",
             "what_if_analysis": {
-                "description": "Empirical sensitivity simulations evaluated through the trained Random Forest pipeline.",
+                "description": "Sensitivity simulations evaluated through the trained Random Forest pipeline under defined scenario assumptions.",
                 "scenarios": scenarios_table
             },
             "counterfactual_analysis": {
@@ -492,8 +526,13 @@ class PersonalizedPlanGenerator:
                 "recommendation": counterfactual.get("recommendation", "Maintain balanced capital allocation.")
             },
             "personalized_action_roadmap": roadmap_phases,
-            "measurable_kpis": measurable_kpis,
-            "business_constraints_and_mitigation": constraints_mitigation,
+            "management_monitoring_measures": management_monitoring_measures,
+            "measurable_kpis": management_monitoring_measures,
+            "operational_constraints_and_management_considerations": constraints_considerations,
+            "business_constraints_and_mitigation": [
+                {"constraint": c["constraint"], "mitigation": c["management_action"]}
+                for c in constraints_considerations
+            ],
             "final_ai_recommendation": final_summary
         }
 
@@ -521,9 +560,10 @@ class PersonalizedPlanGenerator:
                 "business_summary": (
                     f"{summary_intro} "
                     f"The AI feasibility decision support system predicts an outcome of '{prediction}' "
-                    f"with {confidence_score:.1%} model confidence."
+                    f"with {confidence_score:.1%} predicted class probability."
                 ),
                 "key_enablers": [p["feature"] for p in structured_positive[:3]] or ["Local Location Suitability"],
+                "key_operational_hurdles": [n["feature"] for n in structured_negative[:3]] or ["Working Capital Reserve"],
                 "key_risk_hurdles": [n["feature"] for n in structured_negative[:3]] or ["Working Capital Reserve"],
                 "recommended_primary_strategy": active_strategy_name,
                 "strategic_focus": strat_focus,
@@ -537,7 +577,7 @@ class PersonalizedPlanGenerator:
                     f"{'Staff capacity is balanced.' if avail_staff >= req_staff else 'Additional staff hiring required before launch.'}"
                 ),
                 "equipment_readiness": f"Equipment Score: {avail_equip}/5 vs Required: {req_equip}/5.",
-                "supplier_logistics": f"Supplier Availability Score: {supplier_score}/5 ({district} SME Supply Network)."
+                "supplier_logistics": f"Supplier Availability Score: {supplier_score}/5 (Local supplier channels in {district})."
             },
             "marketing_plan": {
                 "title": "3. Marketing & Customer Acquisition",
@@ -555,7 +595,9 @@ class PersonalizedPlanGenerator:
                 "available_capital_lkr": strat_capital,
                 "monthly_operating_budget_lkr": strat_budget,
                 "requested_loan_lkr": loan_amount,
-                "capital_runway_months": capital_runway,
+                "capital_runway_months": strat_capital_coverage,
+                "strategy_budget_coverage_months": strat_capital_coverage,
+                "available_funds_coverage_months": avail_funds_coverage,
                 "counterfactual_guidance": counterfactual.get("recommendation", "Financial reserve is adequate.")
             },
             "action_roadmap": {

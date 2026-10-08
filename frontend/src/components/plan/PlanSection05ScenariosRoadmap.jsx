@@ -39,9 +39,10 @@ export default function PlanSection05ScenariosRoadmap({ profile }) {
   // 5.4 4-Phase Roadmap
   const roadmap = sec05.personalized_action_roadmap || {
     phase_0_to_30_days: [
-      'Complete legal registration and municipal permits.',
-      'Procure essential startup inventory and verify wholesale agreements.',
-      'Establish basic cash register and accounting books.'
+      'Establish operating workspace and essential equipment setup.',
+      'Procure initial startup inventory and verify supplier delivery terms.',
+      'Configure customer communication channels and local ordering procedures.',
+      'Establish daily cash recording and operating expenditure controls.'
     ],
     phase_30_to_90_days: [
       'Launch initial promotional campaigns to attain customer targets.',
@@ -60,18 +61,18 @@ export default function PlanSection05ScenariosRoadmap({ profile }) {
     ]
   };
 
-  // 5.5 Measurable KPIs
-  const kpis = sec05.measurable_kpis || [
-    { kpi_name: 'Monthly Revenue', target: 'Per financial plan assumptions', frequency: 'Monthly', type: 'Financial' },
+  // 5.5 Measurable KPIs / Management Monitoring Measures
+  const kpis = sec05.management_monitoring_measures || sec05.measurable_kpis || [
+    { kpi_name: 'Monthly Gross Sales', target: 'Per financial plan assumptions', frequency: 'Monthly', type: 'Financial' },
     { kpi_name: 'Daily Customer Count', target: 'Target footfall benchmark', frequency: 'Daily', type: 'Operational' },
-    { kpi_name: 'Operating Budget Burn', target: 'Within monthly operating budget', frequency: 'Monthly', type: 'Cost Control' },
-    { kpi_name: 'Capital Runway Horizon', target: '≥ 6 Months', frequency: 'Quarterly', type: 'Liquidity' },
-    { kpi_name: 'Customer Retention Rate', target: '≥ 40% repeat patrons', frequency: 'Quarterly', type: 'Marketing' }
+    { kpi_name: 'Operating Budget Compliance', target: 'Within monthly operating budget', frequency: 'Monthly', type: 'Cost Control' },
+    { kpi_name: 'Simplified Budget Coverage', target: 'Monitor capital-to-budget buffer', frequency: 'Monthly', type: 'Liquidity' },
+    { kpi_name: 'Customer Retention Tracking', target: 'Establish repeat customer baseline during initial 90 days', frequency: 'Monthly', type: 'Customer Retention' }
   ];
 
-  // 5.6 Business Constraints & Mitigation Considerations (NOT Component 4 GNN risk prediction)
-  const constraints = sec05.business_constraints_and_mitigation || [
-    { constraint: 'Capital Limitation & Cash Flow Squeeze', mitigation: 'Enforce strict working capital controls and maintain lean inventory levels.' },
+  // 5.6 Operational Constraints & Management Considerations (NOT Component 4 risk prediction)
+  const constraints = sec05.operational_constraints_and_management_considerations || sec05.business_constraints_and_mitigation || [
+    { constraint: 'Capital Allocation & Cash Buffer', mitigation: 'Enforce strict working capital controls and maintain lean inventory levels.' },
     { constraint: 'Staff Capacity Shortage', mitigation: 'Establish standardized operating checklists and cross-train existing personnel.' },
     { constraint: 'Equipment Readiness', mitigation: 'Prioritize vital core fixtures and arrange supplier warranties.' },
     { constraint: 'Local Competitor Saturation', mitigation: 'Execute clear service differentiation and introduce repeat customer perks.' },
@@ -88,7 +89,7 @@ export default function PlanSection05ScenariosRoadmap({ profile }) {
     main_positive_strength: 'Location Suitability & Footfall Potential',
     main_operational_constraint: 'Working Capital & Inventory Buffer',
     key_scenario_insight: 'What-If testing confirms sensitivity to operating capital and demand stability.',
-    recommended_immediate_next_step: roadmap.phase_0_to_30_days[0] || 'Complete municipal permits and setup.'
+    recommended_immediate_next_step: 'Confirm initial supplier arrangements, configure ordering channels, and prepare operating workspace.'
   };
 
   return (

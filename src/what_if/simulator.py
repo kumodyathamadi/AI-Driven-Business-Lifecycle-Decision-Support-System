@@ -92,13 +92,22 @@ class WhatIfEngine:
             delta_infeas = round(mod_infeas - base_infeas, 4)
             viability_delta = round(mod_viability - base_viability, 4)
 
-            # Informative human-readable summary reflecting all 3 classes
-            shifts_summary = (
-                f"Viability index: {base_viability:.1%} -> {mod_viability:.1%} ({'+' if viability_delta >= 0 else ''}{viability_delta:.1%}). "
-                f"Class shifts: Feasible ({'+' if delta_feasible >= 0 else ''}{delta_feasible:.1%}), "
-                f"Conditional ({'+' if delta_cond >= 0 else ''}{delta_cond:.1%}), "
-                f"Infeasible ({'+' if delta_infeas >= 0 else ''}{delta_infeas:.1%})."
-            )
+            df_pp = round(delta_feasible * 100, 1)
+            dc_pp = round(delta_cond * 100, 1)
+            di_pp = round(delta_infeas * 100, 1)
+
+            # Informative summary strictly separating class probability deltas (in percentage points) from viability index
+            if abs(df_pp) < 0.05 and abs(dc_pp) < 0.05 and abs(di_pp) < 0.05:
+                shifts_summary = (
+                    f"Class probability shifts: Feasible (+0.0 pp), Conditional (+0.0 pp), Infeasible (+0.0 pp). "
+                    f"Note: The simulated parameter adjustment remains within the same decision partition of the trained model (no measurable shift under current decision tree branches)."
+                )
+            else:
+                shifts_summary = (
+                    f"Class probability shifts: Feasible ({df_pp:+.1f} percentage points), "
+                    f"Conditional ({dc_pp:+.1f} percentage points), "
+                    f"Infeasible ({di_pp:+.1f} percentage points)."
+                )
 
             results.append({
                 "scenario_id": scen["scenario_id"],
@@ -112,6 +121,17 @@ class WhatIfEngine:
                     "Conditionally Feasible": delta_cond,
                     "Infeasible": delta_infeas
                 },
+                "probability_deltas_pp": {
+                    "Feasible": df_pp,
+                    "Conditionally Feasible": dc_pp,
+                    "Infeasible": di_pp
+                },
+                "class_shifts_percentage_points": {
+                    "Feasible": f"{df_pp:+.1f} percentage points",
+                    "Conditionally Feasible": f"{dc_pp:+.1f} percentage points",
+                    "Infeasible": f"{di_pp:+.1f} percentage points"
+                },
+                "tree_partition_note": "The simulated parameter adjustment remains within the same decision partition of the trained model (no measurable shift under current decision tree branches)." if (abs(df_pp) < 0.05 and abs(dc_pp) < 0.05 and abs(di_pp) < 0.05) else None,
                 "base_viability_score": base_viability,
                 "new_viability_score": mod_viability,
                 "viability_delta": viability_delta,
@@ -194,13 +214,19 @@ class CounterfactualSearchEngine:
                 "required_capital_lkr": round(optimal_capital, 2),
                 "additional_capital_needed_lkr": round(capital_needed, 2),
                 "recommendation": (
-                    f"Increasing available capital by LKR {capital_needed:,.2f} (total LKR {optimal_capital:,.2f}) "
-                    f"elevates predicted feasibility to '{best_pred}' with {best_prob:.2%} confidence."
+                    f"Capital boundary search under tested scenario assumptions indicates that an available capital allocation of "
+                    f"LKR {optimal_capital:,.2f} (+LKR {capital_needed:,.2f}) shifts the predicted feasibility to '{best_pred}' "
+                    f"(Predicted Class Probability: {best_prob:.1%}). Note: This single-variable boundary search evaluates parameter sensitivity "
+                    f"under fixed model assumptions and does not represent a guaranteed commercial optimum."
                 )
             }
         else:
             return {
                 "counterfactual_found": False,
                 "target_outcome": "Feasible",
-                "recommendation": "Multiple operational dimensions (capital, demand, equipment) require joint enhancement."
+                "recommendation": (
+                    "Capital boundary search under tested scenario assumptions did not identify a single-variable capital threshold "
+                    "to shift the outcome to Feasible within the tested range. Multiple operational dimensions (customer demand, location suitability, staffing) "
+                    "require joint enhancement."
+                )
             }

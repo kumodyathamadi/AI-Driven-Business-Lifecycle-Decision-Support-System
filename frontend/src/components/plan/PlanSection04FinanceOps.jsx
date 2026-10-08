@@ -74,8 +74,8 @@ export default function PlanSection04FinanceOps({ profile }) {
     },
     suppliers: {
       supplier_availability_score: `${businessInput.supplier_availability_score ?? 3}/5`,
-      network_region: `${businessInput.district || 'Western Province'} SME Vendor Network`,
-      sourcing_approach: 'Establish dual-supplier vendor agreements to safeguard against inventory bottlenecks.'
+      network_region: `Local supplier channels in ${businessInput.district || 'Western Province'}`,
+      sourcing_approach: 'Establish supplier agreements to safeguard against inventory bottlenecks.'
     },
     operations_management: {
       procurement_inventory: `Maintain minimum buffer inventory sized for ${monthlyFin.operating_days_per_month} operating days.`,

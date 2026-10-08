@@ -253,9 +253,10 @@ class BusinessPlanPDFGenerator:
         story.append(Paragraph("A Comprehensive Feasibility, Strategic Direction & Implementation Blueprint", ParagraphStyle('CoverSub2', parent=body_style, fontSize=10, textColor=muted_text, spaceAfter=25)))
 
         # Metadata Card (Executive Presentation, not a database dump)
+        clean_stage_display = "New Startup" if "new" in stage.lower() else "Existing Business"
         meta_items = [
             Paragraph(f"<b>Prepared For:</b> {biz_name}", body_style),
-            Paragraph(f"<b>Industry Category:</b> {category} | <b>Business Stage:</b> {stage}", body_style),
+            Paragraph(f"<b>Industry Category:</b> {category} | <b>Business Stage:</b> {clean_stage_display}", body_style),
             Paragraph(f"<b>Operating Location:</b> {district}, {province} Province, Sri Lanka", body_style),
             Paragraph(f"<b>Prepared Date:</b> {metadata.get('generated_date', 'Current')}", body_style),
             Paragraph(f"<b>Decision System Reference:</b> <font color='#64748b'>{metadata.get('record_id', 'N/A')}</font>", body_style)
@@ -264,7 +265,7 @@ class BusinessPlanPDFGenerator:
 
         story.append(Spacer(1, 40))
         story.append(Paragraph(
-            "<i>This document synthesizes empirical machine learning feasibility assessment, explainable SHAP feature attribution, "
+            "<i>This document synthesizes machine-learned feasibility assessment, explainable SHAP feature attribution, "
             "TOPSIS multi-criteria strategic prioritization, and sensitivity scenario stress-testing into an actionable strategic roadmap "
             "prepared specifically for the entrepreneur.</i>",
             ParagraphStyle('Disclaimer', parent=body_style, fontSize=8, leading=11.5, textColor=muted_text)
@@ -288,17 +289,23 @@ class BusinessPlanPDFGenerator:
         # 1.1 Business Overview Narrative
         story.append(Paragraph("<b>1.1 Business Overview</b>", h2_style))
         
-        clean_stage = stage.replace("_", " ").title()
+        is_new_startup = "new" in stage.lower()
         model_str = summary_info.get("business_model") or "Direct Retail / Service"
-        proposed_action_str = summary_info.get("proposed_action") or "establish new operations"
         
-        p1 = (
-            f"<b>{biz_name}</b> is an enterprise proposed for operation within the <b>{category}</b> sector, "
-            f"situated in {district}, {province} Province, Sri Lanka. The enterprise operates under a "
-            f"<b>{model_str}</b> model, providing commercial products and services tailored to the regional catchment. "
-            f"As a <b>{clean_stage}</b> venture, the undertaking represents an initiative to {proposed_action_str.lower()}, "
-            f"focusing on building a reliable customer base while maintaining controlled operating expenditures during launch."
-        )
+        if is_new_startup:
+            p1 = (
+                f"<b>{biz_name}</b> is a proposed new startup venture within the <b>{category}</b> sector, "
+                f"planned for launch in {district}, {province} Province, Sri Lanka. The enterprise is structured under a "
+                f"<b>{model_str}</b> model, providing commercial offerings tailored to the local market catchment. "
+                f"As a new venture in its initial setup phase, commercial priorities center on establishing initial operations, "
+                f"building customer awareness, and maintaining disciplined operating expenditure."
+            )
+        else:
+            p1 = (
+                f"<b>{biz_name}</b> is an established enterprise operating within the <b>{category}</b> sector, "
+                f"located in {district}, {province} Province, Sri Lanka. Operating under a <b>{model_str}</b> business model, "
+                f"the enterprise aims to execute strategic growth and operational refinement."
+            )
         story.append(Paragraph(p1, body_style))
 
         desc_text = summary_info.get("business_description")
@@ -315,7 +322,7 @@ class BusinessPlanPDFGenerator:
         # 1.2 Business Concept
         story.append(Spacer(1, 4))
         story.append(Paragraph("<b>1.2 Business Concept & Objectives</b>", h2_style))
-        concept_overview = concept.get("concept_overview", f"Strategic plan for a {stage.lower()} {category.lower()} in {district}.")
+        concept_overview = concept.get("concept_overview", f"Strategic plan for a proposed {category.lower()} in {district}.")
         products_services = concept.get("products_services", f"Commercial offerings within {category}")
         target_cust = concept.get("target_customers", f"Consumers and households in {district}")
         objectives = concept.get("business_objectives", f"Establish a sustainable {category} enterprise in {district}.")
@@ -357,24 +364,29 @@ class BusinessPlanPDFGenerator:
         story.append(Paragraph("<b>1.4 Competition & Location Dynamics</b>", h2_style))
         
         comp_level = comp.get("competition_level", "Moderate")
-        comp_count = comp.get("competitor_count_nearby", 0)
+        comp_count = comp.get("competitor_count_nearby")
         comp_pos = comp.get("competitive_positioning", "Localized service and operational differentiation.")
         loc_suit = loc.get("location_suitability_score", "3/5")
         loc_type = loc.get("location_type", "Commercial Area")
-        loc_notes = loc.get("location_considerations", f"Commercial density and pedestrian access in {district}.")
+        loc_notes = loc.get("location_considerations", f"Commercial density in {district}.")
 
-        p_comp = (
-            f"The local competitive environment is characterized as <b>{comp_level}</b> with approximately "
-            f"<b>{comp_count} direct competitor(s)</b> operating within the immediate trading radius. "
-            f"To secure customer loyalty and avoid direct price discounting wars, the business adopts a positioning strategy of: "
-            f"<i>{comp_pos}</i>"
-        )
+        if comp_count is not None and str(comp_count) not in ["0", "Not provided in current business input"]:
+            p_comp = (
+                f"The local competitive environment is characterized with a competition level of <b>{comp_level}</b>, "
+                f"with approximately <b>{comp_count} direct competitor(s)</b> noted in the business intake. "
+                f"To secure customer loyalty and avoid price discounting friction, the positioning strategy emphasizes: <i>{comp_pos}</i>"
+            )
+        else:
+            p_comp = (
+                f"The local competitive environment is recorded with a competition level of <b>{comp_level}</b>. "
+                f"Specific nearby direct competitor counts were not provided in current business inputs. "
+                f"To secure customer loyalty, the positioning strategy emphasizes: <i>{comp_pos}</i>"
+            )
         story.append(Paragraph(p_comp, body_style))
 
         p_loc = (
-            f"The operating location in {district} holds a suitability rating of <b>{loc_suit}</b> within a <b>{loc_type}</b> zone. "
-            f"This setting provides {loc_notes.lower()} The proximity to local transportation corridors and pedestrian flow supports steady "
-            f"patronage while requiring dedicated storefront signage and localized service reliability to maximize storefront capture."
+            f"The operating location in {district} holds a suitability rating of <b>{loc_suit}</b> within a <b>{loc_type}</b> setting. "
+            f"{loc_notes} Commercial operations will focus on direct customer service, operational reliability, and targeted local engagement."
         )
         story.append(Paragraph(p_loc, body_style))
 
@@ -386,7 +398,7 @@ class BusinessPlanPDFGenerator:
         sec_02 = report_data.get("section_02", {})
         feas = sec_02.get("feasibility_assessment", {})
         pred_label = feas.get("final_predicted_label", "Conditionally Feasible")
-        conf_pct = feas.get("confidence_percentage", "65.0%")
+        conf_pct = feas.get("predicted_probability_percentage") or feas.get("confidence_percentage", "65.0%")
         probs = feas.get("probabilities", {})
         prob_feas = probs.get("Feasible", 0.0)
         prob_cond = probs.get("Conditionally Feasible", 0.0)
@@ -400,20 +412,21 @@ class BusinessPlanPDFGenerator:
         
         feas_intro = (
             f"Based on the integrated evaluation of financial capital, market demand, operational staffing, and resource readiness, "
-            f"SME360 AI assesses <b>{biz_name}</b> as <b>{pred_label}</b> with a model confidence of <b>{conf_pct}</b>. "
-            f"The multi-class Random Forest engine assigns a probability of <b>{prob_cond:.1%}</b> to Conditionally Feasible, "
-            f"<b>{prob_feas:.1%}</b> to Feasible, and <b>{prob_infeas:.1%}</b> to Infeasible across 500 decision trees trained "
-            f"on empirical Sri Lankan SME benchmark datasets. This outcome indicates that while the business has solid commercial "
-            f"potential, specific operational hurdles and capital safeguards must be addressed before launch."
+            f"SME360 AI assesses <b>{biz_name}</b> as <b>{pred_label}</b> with a predicted class probability of <b>{conf_pct}</b>. "
+            f"The multi-class Random Forest feasibility model assigns a predicted probability of <b>{prob_cond:.1%}</b> to Conditionally Feasible, "
+            f"<b>{prob_feas:.1%}</b> to Feasible, and <b>{prob_infeas:.1%}</b> to Infeasible. "
+            f"The feasibility model developed in this study was trained and evaluated using the dataset used for this research. "
+            f"This classification indicates that while the business demonstrates commercial potential, specific operational hurdles "
+            f"and working capital safeguards should be addressed during setup."
         )
         story.append(Paragraph(feas_intro, body_style))
 
         # Highlighted Feasibility Outcome Card
         feas_badge_color = "#166534" if pred_label == "Feasible" else "#854d0e" if "Conditionally" in pred_label else "#991b1b"
         feas_card_content = [
-            Paragraph(f"<font color='{feas_badge_color}' size='11'><b>ASSESSMENT VERDICT: {pred_label.upper()} ({conf_pct})</b></font>", body_style),
+            Paragraph(f"<font color='{feas_badge_color}' size='11'><b>ASSESSMENT VERDICT: {pred_label.upper()} (Predicted Class Probability: {conf_pct})</b></font>", body_style),
             Spacer(1, 2),
-            Paragraph(f"<font color='#475569'>Probability Distribution: Feasible: <b>{prob_feas:.1%}</b>  |  Conditionally Feasible: <b>{prob_cond:.1%}</b>  |  Infeasible: <b>{prob_infeas:.1%}</b></font>", body_style)
+            Paragraph(f"<font color='#475569'>Class Probabilities: Feasible: <b>{prob_feas:.1%}</b>  |  Conditionally Feasible: <b>{prob_cond:.1%}</b>  |  Infeasible: <b>{prob_infeas:.1%}</b></font>", body_style)
         ]
         story.append(create_callout_box(feas_card_content, bg=colors.HexColor("#f8fafc"), border=card_border, padding=7))
 
@@ -431,7 +444,7 @@ class BusinessPlanPDFGenerator:
         story.append(Paragraph("<b>2.2 Why Did the AI Reach This Assessment? (Explainable AI Attribution)</b>", h2_style))
         
         shap_intro = (
-            "To provide full decision-support transparency, SME360 AI uses SHAP (SHapley Additive exPlanations) values to determine "
+            "To provide decision-support transparency, SME360 AI uses SHAP (SHapley Additive exPlanations) values to determine "
             "how specific business parameters influenced the model's classification. Rather than claiming absolute causality, SHAP "
             "identifies features that contributed positive supporting weight toward feasibility versus those that applied downward pressure "
             "as operational hurdles."
@@ -456,7 +469,7 @@ class BusinessPlanPDFGenerator:
 
         # Negative Drivers Subsection
         story.append(Spacer(1, 2))
-        story.append(Paragraph("<b>Operational Hurdles to Monitor & Mitigate:</b>", h3_style))
+        story.append(Paragraph("<b>Operational Hurdles Requiring Management Attention:</b>", h3_style))
         if neg_drivers:
             for item in neg_drivers[:3]:
                 feat_name = item.get("feature", "Constraint")
@@ -487,7 +500,7 @@ class BusinessPlanPDFGenerator:
         strat_intro = (
             f"Based on the feasibility diagnosis and identified operational constraints, SME360 AI formulated four tailored "
             f"strategic pathways for <b>{biz_name}</b>. Rather than proposing a generic one-size-fits-all plan, each alternative "
-            f"represents a distinct operational philosophy balancing capital intensity, channel deployment, and risk exposure."
+            f"represents a distinct operational philosophy balancing capital intensity, channel deployment, and resource constraints."
         )
         story.append(Paragraph(strat_intro, body_style))
 
@@ -501,7 +514,15 @@ class BusinessPlanPDFGenerator:
             s_cust = s.get("target_daily_customers", 0)
             s_score = s.get("topsis_score", "N/A")
             s_rank = s.get("rank", "-")
-            s_impact = s.get("expected_feasibility_impact", "Controlled growth")
+            s_impact = s.get("expected_feasibility_impact", "Controlled operations")
+
+            # Fallback lookup in ranked_list if rank or topsis_score is missing
+            if s_score in ["N/A", None] or s_rank in ["-", None]:
+                for r_item in ranked_list:
+                    if r_item.get("strategy_id") == s.get("strategy_id") or r_item.get("strategy_name") == s_name:
+                        s_rank = r_item.get("rank", s_rank)
+                        s_score = str(r_item.get("topsis_score", s_score))
+                        break
 
             strat_box_elements = [
                 Paragraph(f"<b>Strategy #{s_rank}: {s_name}</b>", ParagraphStyle('StratHead', parent=body_style, fontName='Helvetica-Bold', fontSize=9.5, textColor=primary_color)),
@@ -520,18 +541,17 @@ class BusinessPlanPDFGenerator:
             story.append(create_callout_box(strat_box_elements, bg=colors.HexColor("#f8fafc"), border=card_border, padding=6))
             story.append(Spacer(1, 4))
 
-        # 3.2 TOPSIS Prioritization (Narrative + Concise Focused Comparison Table)
+        # 3.2 TOPSIS Prioritization Table
         story.append(Spacer(1, 4))
         story.append(Paragraph("<b>3.2 Strategy Prioritization (TOPSIS Multi-Criteria Method)</b>", h2_style))
         topsis_expl = (
-            "The strategic alternatives were rigorously evaluated using the TOPSIS (Technique for Order of Preference by "
+            "The strategic alternatives were evaluated using the TOPSIS (Technique for Order of Preference by "
             "Similarity to Ideal Solution) decision methodology. The evaluation simultaneously weighed five validated criteria: "
             "<b>Financial Viability (25%)</b>, <b>Implementation Feasibility (20%)</b>, <b>Market Demand Alignment (25%)</b>, "
-            "<b>Operational Risk (15%)</b>, and <b>Resource Efficiency (15%)</b>. The table below summarizes the multi-criteria ranking:"
+            "<b>Resource & Operational Friction (15%)</b>, and <b>Resource Efficiency (15%)</b>. The table below summarizes the multi-criteria ranking:"
         )
         story.append(Paragraph(topsis_expl, body_style))
 
-        # Clean, focused comparison table (Good table usage!)
         comp_table_data = [
             [
                 Paragraph("<b>Rank</b>", table_header_style),
@@ -573,7 +593,7 @@ class BusinessPlanPDFGenerator:
             hitl_narrative = (
                 f"The entrepreneur reviewed the generated alternatives and selected <b>{active_strat_title}</b> to steer operations. "
                 f"While the AI system identified {ai_strat.get('strategy_name')} as the highest mathematical candidate under default weights, "
-                f"SME360 AI fully respects entrepreneur domain judgment and specific risk preferences. Consequently, all subsequent financial "
+                f"SME360 AI fully respects entrepreneur domain judgment and specific resource preferences. Consequently, all subsequent financial "
                 f"plans, operational structures, scenario stress-tests, and execution milestones across this report have been "
                 f"re-aligned with the entrepreneur's chosen strategy."
             )
@@ -607,11 +627,14 @@ class BusinessPlanPDFGenerator:
 
         target_cap = startup.get("strategy_target_capital_lkr", 0.0)
         monthly_exp = fin_plan.get("monthly_operating_budget_lkr", 0.0)
-        est_rev = fin_plan.get("estimated_monthly_revenue_lkr", 0.0)
-        runway = funding.get("capital_runway_months", 0.0)
-        equity_cap = funding.get("equity_capital_lkr", 0.0)
+        est_gross_sales = fin_plan.get("estimated_monthly_gross_sales_lkr", fin_plan.get("estimated_monthly_revenue_lkr", 0.0))
+        
+        strat_coverage = funding.get("strategy_budget_coverage_months", funding.get("capital_runway_months", 0.0))
+        avail_coverage = funding.get("available_funds_coverage_months", funding.get("capital_runway_months", 0.0))
+        
+        avail_cap = funding.get("available_capital_lkr", funding.get("initial_available_capital_lkr", funding.get("equity_capital_lkr", 0.0)))
         debt_cap = funding.get("debt_financing_lkr", 0.0)
-        total_funds = funding.get("total_available_funds_lkr", 0.0)
+        total_funds = funding.get("total_available_funds_lkr", avail_cap + debt_cap)
         gap_status = startup.get("funding_gap_status", "Fully funded")
 
         story.append(Paragraph("SECTION 04 — FINANCIAL & OPERATIONAL PLAN", h1_style))
@@ -625,30 +648,32 @@ class BusinessPlanPDFGenerator:
             f"<b>LKR {target_cap:,.0f}</b>. Under the baseline operating budget, recurring monthly operational expenditure is projected "
             f"at <b>LKR {monthly_exp:,.0f}</b>, covering commercial rent, essential payroll, utilities, and routine replenishment inventory. "
             f"With an expected customer throughput of <b>{cust_per_day} customers per day</b>, an expected unit price of <b>LKR {unit_price:,.2f}</b>, "
-            f"and an operating schedule of <b>{op_days} days per month</b>, projected monthly gross revenues total approximately "
-            f"<b>LKR {est_rev:,.0f}</b>."
+            f"and an operating schedule of <b>{op_days} days per month</b>, estimated monthly gross sales total approximately "
+            f"<b>LKR {est_gross_sales:,.0f}</b>. "
+            f"<i>(Note: This is an estimated monthly gross sales calculation based on stated volume, price, and operating days. It does not account for variable costs or net profit.)</i>"
         )
         story.append(Paragraph(fin_p1, body_style))
 
-        # Key Financial Figures Metric Strip (Visually Highlighted)
+        # Key Financial Figures Metric Strip
         story.append(Spacer(1, 2))
         fin_metrics = [
             ("Target Capital", f"LKR {target_cap:,.0f}", "Baseline Allocation"),
-            ("Monthly Budget", f"LKR {monthly_exp:,.0f}", "Operating Burn"),
-            ("Est. Monthly Revenue", f"LKR {est_rev:,.0f}", "Volume × Price × Days"),
-            ("Capital Runway", f"{runway} Months", "Survival Cushion")
+            ("Monthly Budget", f"LKR {monthly_exp:,.0f}", "Operating Expenditure"),
+            ("Est. Gross Sales", f"LKR {est_gross_sales:,.0f}", "Volume × Price × Days"),
+            ("Budget Coverage", f"{strat_coverage} Mo (Strat)", "Simplified Budget Ratio")
         ]
         story.append(create_metric_strip(fin_metrics))
         story.append(Spacer(1, 4))
 
-        # 4.2 Funding Position & Liquidity
-        story.append(Paragraph("<b>4.2 Funding Structure & Liquidity Buffer</b>", h3_style))
+        # 4.2 Funding Position & Simplified Budget Coverage
+        story.append(Paragraph("<b>4.2 Funding Structure & Simplified Budget Coverage</b>", h3_style))
         fin_p2 = (
-            f"The business financing structure comprises <b>LKR {equity_cap:,.0f}</b> in committed founder equity and "
-            f"<b>LKR {debt_cap:,.0f}</b> in external loan financing, delivering total available funds of <b>LKR {total_funds:,.0f}</b>. "
-            f"Comparing available capital against the target allocation indicates that the venture is <b>{gap_status.lower()}</b>. "
-            f"At the budgeted burn rate, available liquid capital provides an operational runway of <b>{runway} months</b>, "
-            f"ensuring that the business has adequate breathing room to build steady customer volume during the initial launch phase."
+            f"The business financing structure comprises <b>LKR {avail_cap:,.0f}</b> in recorded available capital and "
+            f"<b>LKR {debt_cap:,.0f}</b> in external loan financing, delivering total initial funding of <b>LKR {total_funds:,.0f}</b>. "
+            f"Comparing available capital against the target requirement (LKR {target_cap:,.0f}) indicates that the venture is <b>{gap_status.lower()}</b>. "
+            f"Under the baseline operating budget, simplified budget coverage corresponds to approximately <b>{strat_coverage} months</b> "
+            f"for the strategy allocation and <b>{avail_coverage} months</b> for total recorded funds. "
+            f"<i>(Note: Simplified budget coverage represents a capital-to-budget ratio and does not constitute a guaranteed survival period, as it does not model cash flow cycles or unforeseen costs.)</i>"
         )
         story.append(Paragraph(fin_p2, body_style))
 
@@ -662,7 +687,7 @@ class BusinessPlanPDFGenerator:
         equip_score = equip.get("available_equipment_score", "3/5")
         equip_status = equip.get("readiness_status", "Meets operating baseline")
         supp_score = supp.get("supplier_availability_score", "3/5")
-        supp_region = supp.get("network_region", "Local Vendor Network")
+        supp_region = supp.get("network_region", f"Local supplier channels in {district}")
 
         story.append(Paragraph("<b>Staffing & Workforce Management:</b>", h3_style))
         p_staff = (
@@ -682,9 +707,9 @@ class BusinessPlanPDFGenerator:
 
         story.append(Paragraph("<b>Supplier Logistics & Sourcing Policy:</b>", h3_style))
         p_supp = (
-            f"Regional supplier availability is rated at <b>{supp_score}</b> within the {supp_region}. Sourcing strategy will establish "
-            f"dual-vendor arrangements for critical input materials to safeguard against single-source stockouts, while negotiating "
-            f"favorable commercial trade terms to optimize cash liquidity."
+            f"Regional supplier availability is rated at <b>{supp_score}</b> for {supp_region}. Sourcing strategy will establish "
+            f"commercial terms with reliable suppliers for critical inventory to safeguard against stockouts, while maintaining "
+            f"controlled initial order quantities to optimize working capital."
         )
         story.append(Paragraph(p_supp, body_style))
 
@@ -703,7 +728,7 @@ class BusinessPlanPDFGenerator:
             for t in tactics[:4]:
                 story.append(Paragraph(f"• {t}", bullet_style))
         else:
-            story.append(Paragraph("• Deploy localized awareness campaigns and neighborhood signage within the commercial catchment.", bullet_style))
+            story.append(Paragraph("• Deploy localized awareness campaigns and neighborhood outreach within the commercial catchment.", bullet_style))
             story.append(Paragraph("• Introduce introductory trial bundles and promotional discounts during opening weeks.", bullet_style))
             story.append(Paragraph("• Implement a customer loyalty program to incentivize repeat visits and patron retention.", bullet_style))
             story.append(Paragraph("• Maintain active digital messaging channels for customer inquiries, bookings, and updates.", bullet_style))
@@ -717,65 +742,81 @@ class BusinessPlanPDFGenerator:
         scen_list = sec_05.get("what_if_analysis", {}).get("scenarios", [])
         cf = sec_05.get("counterfactual_analysis", {})
         rm = sec_05.get("personalized_action_roadmap", {})
-        kpis = sec_05.get("measurable_kpis", [])
-        constraints = sec_05.get("business_constraints_and_mitigation", [])
+        kpis = sec_05.get("management_monitoring_measures") or sec_05.get("measurable_kpis", [])
+        constraints = sec_05.get("operational_constraints_and_management_considerations") or sec_05.get("business_constraints_and_mitigation", [])
 
         story.append(Paragraph("SECTION 05 — SCENARIO ANALYSIS & ACTION ROADMAP", h1_style))
         story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
 
-        # 5.1 What-If Scenarios (Narrative Scenario Blocks, Not a Table)
+        # 5.1 What-If Scenarios
         story.append(Paragraph("<b>5.1 What-If Scenario Sensitivity Analysis</b>", h2_style))
         scen_intro = (
-            "To stress-test business resilience before committing capital, SME360 AI simulated four prospective operational shifts. "
-            "These scenarios represent sensitivity simulations rather than guaranteed future outcomes, highlighting how variances in "
+            "To evaluate business resilience before committing capital, SME360 AI simulated four prospective operational shifts. "
+            "These scenarios represent sensitivity simulations rather than guaranteed future outcomes, highlighting how adjustments in "
             "capital, credit, footfall, and operating costs alter the feasibility prediction:"
         )
         story.append(Paragraph(scen_intro, body_style))
 
         for sc in scen_list[:4]:
-            sc_title = sc.get("title", "Scenario")
+            sc_title = sc.get("title") or sc.get("scenario_name", "Scenario")
             sc_rat = sc.get("rationale", "Sensitivity test.")
             sc_pred = sc.get("new_prediction", "Conditionally Feasible")
             sc_vdelta = sc.get("viability_delta", 0.0)
-            sc_fdelta = sc.get("feasibility_delta", 0.0)
             sc_impact = sc.get("impact_summary", "Stable sensitivity.")
+            
+            shifts_pp = sc.get("class_shifts_percentage_points", {})
+            if shifts_pp:
+                f_pp = shifts_pp.get("Feasible", "0.0 pp")
+                c_pp = shifts_pp.get("Conditionally Feasible", "0.0 pp")
+                i_pp = shifts_pp.get("Infeasible", "0.0 pp")
+                shifts_str = f"Feasible Δ: <b>{f_pp}</b> | Conditionally Feasible Δ: <b>{c_pp}</b> | Infeasible Δ: <b>{i_pp}</b>"
+            else:
+                sc_fdelta = sc.get("feasibility_delta", 0.0) * 100
+                shifts_str = f"Feasible Δ: <b>{sc_fdelta:+.1f} percentage points</b>"
+
+            tree_note = sc.get("tree_partition_note", "")
 
             sc_box = [
                 Paragraph(f"<b>Scenario: {sc_title}</b>", ParagraphStyle('ScHead', parent=body_style, fontName='Helvetica-Bold', fontSize=9, textColor=primary_color)),
                 Spacer(1, 1),
                 Paragraph(f"<b>Simulation Objective:</b> {sc_rat}", body_style),
-                Paragraph(f"<b>Model Impact:</b> Predicted Class: <b>{sc_pred}</b>  |  Viability Shift: <b>{sc_vdelta:+.1%}</b>  |  Feasible Δ: <b>{sc_fdelta:+.1%}</b>", body_style),
+                Paragraph(f"<b>Model Impact:</b> Predicted Class: <b>{sc_pred}</b>  |  Viability Index Shift: <b>{sc_vdelta:+.1%}</b>", body_style),
+                Paragraph(f"<b>Class Shifts (Percentage Points):</b> {shifts_str}", body_style),
                 Paragraph(f"<b>Analytical Takeaway:</b> {sc_impact}", body_style)
             ]
+            if tree_note:
+                sc_box.append(Paragraph(f"<i>{tree_note}</i>", ParagraphStyle('TreeNote', parent=body_style, fontSize=7.5, textColor=muted_text)))
+
             story.append(create_callout_box(sc_box, bg=colors.HexColor("#f8fafc"), border=card_border, padding=6))
             story.append(Spacer(1, 3))
 
         # 5.2 Counterfactual Analysis
         story.append(Spacer(1, 3))
-        story.append(Paragraph("<b>5.2 Counterfactual Minimum Viability Threshold</b>", h2_style))
+        story.append(Paragraph("<b>5.2 Capital Boundary Search (Counterfactual Simulation)</b>", h2_style))
         cf_rec = cf.get("recommendation", "Multiple operational dimensions require joint enhancement.")
         cf_box = [
-            Paragraph(f"<b>Counterfactual Finding:</b> {cf_rec}", body_style),
+            Paragraph(f"<b>Boundary Search Finding:</b> {cf_rec}", body_style),
             Spacer(1, 1),
             Paragraph(
-                "<i>Insight: Adjusting working capital in isolation does not automatically elevate an enterprise to an unconstrained Feasible rating. "
-                "Sustainable viability requires coordinated improvements across working capital reserves, customer demand generation, and equipment readiness.</i>",
+                "<i>Insight: Under the tested scenario assumptions, parameter boundary search explores capital adjustments associated with class shifts. "
+                "Adjusting capital alone does not guarantee a higher classification, as viability depends jointly on demand volume, equipment readiness, and cost discipline. "
+                "This search identifies sensitivity boundaries under tested conditions and does not represent a global optimum.</i>",
                 ParagraphStyle('CfNote', parent=body_style, fontSize=7.5, textColor=muted_text)
             )
         ]
         story.append(create_callout_box(cf_box, bg=colors.HexColor("#f8fafc"), border=card_border, padding=6))
 
-        # 5.3 Action Roadmap (Timeline Format, Not a Table)
+        # 5.3 Action Roadmap
         story.append(Spacer(1, 4))
         story.append(Paragraph("<b>5.3 Time-Phased Execution Roadmap & Milestones</b>", h2_style))
         roadmap_intro = "The implementation roadmap translates strategic recommendations into time-phased execution milestones across four distinct operational horizons:"
         story.append(Paragraph(roadmap_intro, body_style))
 
         phases = [
-            ("Phase 1: Immediate Launch Preparation (0 – 30 Days)", rm.get("phase_0_to_30_days", [])),
+            ("Phase 1: Operational Setup & Supplier Sourcing (0 – 30 Days)", rm.get("phase_0_to_30_days", [])),
             ("Phase 2: Customer Acquisition & Burn Control (30 – 90 Days)", rm.get("phase_30_to_90_days", [])),
             ("Phase 3: Operational Stabilization & Review (3 – 6 Months)", rm.get("phase_3_to_6_months", [])),
-            ("Phase 4: Commercial Scale & Expansion (6 – 12 Months)", rm.get("phase_6_to_12_months", []))
+            ("Phase 4: Commercial Scale & Strategy Review (6 – 12 Months)", rm.get("phase_6_to_12_months", []))
         ]
 
         for p_title, p_items in phases:
@@ -784,28 +825,28 @@ class BusinessPlanPDFGenerator:
                 for item in p_items:
                     story.append(Paragraph(f"• {item}", bullet_style))
             else:
-                story.append(Paragraph("• Finalize operational milestones and review performance metrics.", bullet_style))
+                story.append(Paragraph("• Finalize operational setup and monitor performance metrics.", bullet_style))
 
-        # 5.4 Measurable KPIs (Visual KPI Strip + Concise Reference Table)
+        # 5.4 Management Monitoring Measures
         story.append(Spacer(1, 4))
-        story.append(Paragraph("<b>5.4 Measurable Key Performance Indicators (KPIs)</b>", h2_style))
-        story.append(Paragraph("To ensure operational reality stays aligned with planning assumptions, management should monitor these performance metrics regularly:", body_style))
+        story.append(Paragraph("<b>5.4 Key Management Monitoring Measures</b>", h2_style))
+        story.append(Paragraph("To track operational reality against planning assumptions, management should monitor these operational indicators regularly (Note: These represent management monitoring measures, not model predictions):", body_style))
 
         if kpis:
             kpi_table_data = [
                 [
-                    Paragraph("<b>KPI Metric</b>", table_header_style),
-                    Paragraph("<b>Target Value</b>", table_header_style),
+                    Paragraph("<b>Monitoring Measure</b>", table_header_style),
+                    Paragraph("<b>Target Metric</b>", table_header_style),
                     Paragraph("<b>Review Frequency</b>", table_header_style),
                     Paragraph("<b>Focus Category</b>", table_header_style)
                 ]
             ]
             for k in kpis[:5]:
                 kpi_table_data.append([
-                    Paragraph(f"<b>{k.get('kpi_name', '')}</b>", table_cell_style),
+                    Paragraph(f"<b>{k.get('measure_name') or k.get('kpi_name', '')}</b>", table_cell_style),
                     Paragraph(str(k.get("target", "")), table_cell_style),
                     Paragraph(k.get("frequency", "Monthly"), table_cell_style),
-                    Paragraph(k.get("type", "Operational"), table_cell_style)
+                    Paragraph(k.get("category") or k.get("type", "Operational"), table_cell_style)
                 ])
             kpi_table = Table(kpi_table_data, colWidths=[150, 160, 110, 120])
             kpi_table.setStyle(TableStyle([
@@ -817,13 +858,13 @@ class BusinessPlanPDFGenerator:
             ]))
             story.append(kpi_table)
 
-        # 5.5 Constraints & Mitigation (Narrative Subsections, Not a Table)
+        # 5.5 Operational Constraints
         story.append(Spacer(1, 4))
-        story.append(Paragraph("<b>5.5 Business Constraints & Strategic Mitigation</b>", h2_style))
+        story.append(Paragraph("<b>5.5 Operational Constraints & Practical Management Considerations</b>", h2_style))
         for c in constraints[:4]:
             c_name = c.get("constraint", "Constraint")
-            c_mit = c.get("mitigation", "Mitigation action.")
-            story.append(Paragraph(f"• <b>{c_name}:</b> {c_mit}", bullet_style))
+            c_action = c.get("management_action") or c.get("mitigation", "Management action.")
+            story.append(Paragraph(f"• <b>{c_name}:</b> {c_action}", bullet_style))
 
         story.append(Spacer(1, 10))
 
@@ -839,7 +880,7 @@ class BusinessPlanPDFGenerator:
         chosen_strat_val = final_box.get("entrepreneur_selected_strategy", active_strat_title)
         pos_enabler_val = final_box.get("main_positive_strength", "Available Capital")
         hurdle_val = final_box.get("main_operational_constraint", "Staff Capacity & Burn Control")
-        next_step_val = final_box.get("recommended_immediate_next_step", "Register business legal structure and finalize supplier terms.")
+        next_step_val = final_box.get("recommended_immediate_next_step", "Confirm initial supplier arrangements, configure ordering channels, and prepare operating workspace.")
 
         final_summary_narrative = (
             f"Following comprehensive evaluation across financial, market, operational, and algorithmic criteria, SME360 AI assesses "
@@ -853,7 +894,7 @@ class BusinessPlanPDFGenerator:
 
         # Highlighted Final Recommendation Summary Card
         rec_card_items = [
-            Paragraph(f"<b>AI FEASIBILITY ASSESSMENT:</b> <font color='{feas_badge_color}'><b>{verdict_val.upper()}</b></font>", body_style),
+            Paragraph(f"<b>AI FEASIBILITY ASSESSMENT:</b> <font color='{feas_badge_color}'><b>{verdict_val.upper()} (Predicted Class Probability: {conf_pct})</b></font>", body_style),
             Paragraph(f"<b>AI RECOMMENDED STRATEGY:</b> {rec_strat_val}", body_style),
             Paragraph(f"<b>ENTREPRENEUR SELECTED STRATEGY:</b> <b>{chosen_strat_val}</b> ({'Adopted Choice' if is_sel else 'Matches AI Rank #1'})", body_style),
             Paragraph(f"<b>PRIMARY POSITIVE ENABLER:</b> {pos_enabler_val}", body_style),

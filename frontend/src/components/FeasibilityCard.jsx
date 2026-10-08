@@ -60,7 +60,7 @@ export default function FeasibilityCard({ feasibilityData: propFeas, executiveSu
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#cbd5e1' }}>
             <Award size={18} style={{ color: '#60a5fa' }} />
-            <span>SME360 AI Model Confidence:</span>
+            <span>Predicted Class Probability:</span>
             <strong style={{ color: '#ffffff', fontSize: '1rem' }}>
               {(confidence_score * 100).toFixed(1)}%
             </strong>

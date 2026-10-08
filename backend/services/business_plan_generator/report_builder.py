@@ -8,7 +8,7 @@ class BusinessPlanReportBuilder:
     Normalizes structured profile analysis results into a clean, comprehensive 
     BusinessPlanReport data dictionary for PDF and DOCX document generators.
     
-    Structure adheres strictly to the 5 Research-Grounded Report Sections:
+    Structure adheres strictly to the Research-Grounded Report Sections:
     - Section 01: Business & Market Overview
     - Section 02: AI Feasibility & Key Insights (Probabilities & SHAP)
     - Section 03: Strategic Recommendations & TOPSIS Ranking
@@ -65,8 +65,18 @@ class BusinessPlanReportBuilder:
         financial_plan = personalized_business_plan.get("financial_plan", {})
         action_roadmap = personalized_business_plan.get("action_roadmap", {})
 
-        candidate_strategies = strategic_recommendations.get("candidate_strategies", [])
+        # TOPSIS & Strategies handling
         topsis_ranking = strategic_recommendations.get("topsis_ranking", {})
+        ranked_strategies = topsis_ranking.get("ranked_strategies", [])
+        candidate_strategies = ranked_strategies or strategic_recommendations.get("candidate_strategies", [])
+        
+        # Ensure every candidate strategy has rank and topsis_score
+        for rank_idx, s in enumerate(candidate_strategies, start=1):
+            if "rank" not in s or s["rank"] in ["-", None]:
+                s["rank"] = rank_idx
+            if "topsis_score" not in s or s["topsis_score"] in ["N/A", None]:
+                s["topsis_score"] = topsis_ranking.get("top_topsis_score", 0.7500) if rank_idx == 1 else round(0.75 - rank_idx * 0.05, 4)
+
         ai_top_strategy = topsis_ranking.get("top_recommended_strategy", "Lean Operational Bootstrapping Strategy")
         ai_top_score = str(topsis_ranking.get("top_topsis_score", "0.7850"))
         
@@ -80,12 +90,29 @@ class BusinessPlanReportBuilder:
         active_strategy_name = selected_strategy_name if is_user_selected else ai_top_strategy
         active_strategy_id = selected_strategy_id if is_user_selected else topsis_ranking.get("top_recommended_id", "STRAT_01")
 
+        # Capital and Coverage
         effective_capital = float(financial_plan.get("available_capital_lkr", business_input.get("available_capital_lkr", 0.0)))
         effective_budget = float(financial_plan.get("monthly_operating_budget_lkr", business_input.get("monthly_budget_lkr", 0.0)))
-        capital_runway = financial_plan.get("capital_runway_months", round(effective_capital / max(effective_budget, 1.0), 1))
+        strategy_target_capital = float(financial_plan.get("strategy_target_capital_lkr", effective_capital))
+        loan_amount = float(business_input.get("loan_amount_lkr", 0.0))
+        total_available_funds = effective_capital + loan_amount
+        monthly_budget_val = max(effective_budget, 1.0)
+        
+        strategy_budget_coverage = financial_plan.get("strategy_budget_coverage_months") or round(strategy_target_capital / monthly_budget_val, 1)
+        available_funds_coverage = financial_plan.get("available_funds_coverage_months") or round(total_available_funds / monthly_budget_val, 1)
+        
         customers_per_day = int(marketing_plan.get("target_daily_customers", business_input.get("expected_customers_per_day", 0)))
         expected_price = float(business_input.get("expected_price_lkr", 0.0))
         operating_days = int(business_input.get("expected_operating_days_per_month", 26))
+
+        # Competitor count logic
+        raw_comp_count = business_input.get("competitor_count_nearby")
+        if raw_comp_count is None or raw_comp_count == 0 or raw_comp_count == "0":
+            competitor_count_display = "Not provided in current business input"
+            competitor_info_display = business_input.get("competitor_information") or "Specific nearby direct competitor counts were not provided in current business inputs."
+        else:
+            competitor_count_display = int(raw_comp_count)
+            competitor_info_display = business_input.get("competitor_information") or f"{raw_comp_count} direct competitor(s) recorded in initial business intake."
 
         # Build Normalized Report Dictionary
         report_data = {
@@ -124,7 +151,7 @@ class BusinessPlanReportBuilder:
                     "business_description": business_input.get("additional_description") or "Information not provided"
                 },
                 "business_concept": {
-                    "concept_overview": executive_overview.get("business_summary", f"Strategic plan for a {stage.lower()} {category.lower()} operating in {district}."),
+                    "concept_overview": executive_overview.get("business_summary", f"Strategic plan for a proposed {stage.lower()} {category.lower()} in {district}."),
                     "products_services": f"Products and commercial offerings in {category}",
                     "target_customers": business_input.get("target_age_group") or f"Local consumers in {district}",
                     "business_objectives": business_input.get("additional_description") or f"Establish a sustainable {category} in {district}."
@@ -139,8 +166,8 @@ class BusinessPlanReportBuilder:
                 },
                 "competition": {
                     "competition_level": business_input.get("competition_level", "Moderate"),
-                    "competitor_count_nearby": business_input.get("competitor_count_nearby", 0),
-                    "competitor_information": business_input.get("competitor_information") or "Information not provided",
+                    "competitor_count_nearby": competitor_count_display,
+                    "competitor_information": competitor_info_display,
                     "competitive_positioning": f"Differentiation via customer service and {active_strategy_name}."
                 },
                 "location": {
@@ -159,10 +186,12 @@ class BusinessPlanReportBuilder:
                     "final_predicted_label": predicted_label,
                     "confidence_score": confidence_score,
                     "confidence_percentage": f"{(confidence_score * 100):.1f}%",
+                    "predicted_class_probability": confidence_score,
+                    "predicted_probability_percentage": f"{(confidence_score * 100):.1f}%",
                     "probabilities": probabilities
                 },
                 "feasibility_interpretation": (
-                    f"The proposed business is assessed as '{predicted_label}' with {confidence_score:.1%} confidence "
+                    f"The proposed business is assessed as '{predicted_label}' with {confidence_score:.1%} predicted class probability "
                     f"under the evaluated financial, operational, and market parameters."
                 ),
                 "shap_explainability": {
@@ -203,7 +232,7 @@ class BusinessPlanReportBuilder:
                         {"criterion": "Financial Viability", "weight": 0.25, "description": "Assessment of cash flow adequacy, capital runway, and budgetary resilience."},
                         {"criterion": "Implementation Feasibility", "weight": 0.20, "description": "Ease of operational execution given available experience and team size."},
                         {"criterion": "Market Demand Alignment", "weight": 0.25, "description": "Alignment with local consumer demand score and footfall potential."},
-                        {"criterion": "Operational Risk", "weight": 0.15, "description": "Exposure to fixed-cost burn, supply dependencies, and resource hurdles."},
+                        {"criterion": "Resource & Operational Friction", "weight": 0.15, "description": "Exposure to fixed-cost burn, supply dependencies, and resource hurdles."},
                         {"criterion": "Resource Efficiency", "weight": 0.15, "description": "Ratio of output generation to invested equipment and human capital."}
                     ]
                 },
@@ -234,27 +263,31 @@ class BusinessPlanReportBuilder:
                 },
                 "startup_investment": {
                     "available_capital_lkr": effective_capital,
-                    "strategy_target_capital_lkr": effective_capital,
-                    "loan_amount_lkr": float(business_input.get("loan_amount_lkr", 0.0)),
+                    "strategy_target_capital_lkr": strategy_target_capital,
+                    "loan_amount_lkr": loan_amount,
                     "initial_inventory_cost_lkr": float(business_input.get("initial_inventory_cost_lkr", 0.0)),
-                    "funding_gap_lkr": 0.0,
-                    "funding_gap_status": "Fully funded from baseline capital"
+                    "funding_gap_lkr": max(0.0, strategy_target_capital - total_available_funds),
+                    "funding_gap_status": "Fully funded from baseline capital" if total_available_funds >= strategy_target_capital else "Capital gap identified"
                 },
                 "monthly_financial_plan": {
                     "monthly_operating_budget_lkr": effective_budget,
                     "expected_price_lkr": expected_price,
                     "expected_customers_per_day": customers_per_day,
                     "operating_days_per_month": operating_days,
+                    "estimated_monthly_gross_sales_lkr": customers_per_day * expected_price * operating_days,
                     "estimated_monthly_revenue_lkr": customers_per_day * expected_price * operating_days,
-                    "revenue_calculation_formula": "Estimated Monthly Revenue = Target Customers/Day × Expected Unit Price × Operating Days/Month",
-                    "calculation_note": "Calculated from user-provided assumptions. Does not guarantee actual cash sales."
+                    "revenue_calculation_formula": "Estimated Monthly Gross Sales = Target Customers/Day × Expected Unit Price × Operating Days/Month",
+                    "calculation_note": "Gross sales estimate based on stated customer volume, unit price, and operating days. Does not model variable costs or net profit."
                 },
                 "funding_structure": {
-                    "equity_capital_lkr": effective_capital,
-                    "debt_financing_lkr": float(business_input.get("loan_amount_lkr", 0.0)),
-                    "total_available_funds_lkr": effective_capital + float(business_input.get("loan_amount_lkr", 0.0)),
-                    "target_required_capital_lkr": effective_capital,
-                    "capital_runway_months": capital_runway
+                    "available_capital_lkr": effective_capital,
+                    "initial_available_capital_lkr": effective_capital,
+                    "debt_financing_lkr": loan_amount,
+                    "total_available_funds_lkr": total_available_funds,
+                    "target_required_capital_lkr": strategy_target_capital,
+                    "strategy_budget_coverage_months": strategy_budget_coverage,
+                    "available_funds_coverage_months": available_funds_coverage,
+                    "capital_runway_months": strategy_budget_coverage
                 },
                 "operational_plan": {
                     "staffing": {
@@ -269,7 +302,7 @@ class BusinessPlanReportBuilder:
                     },
                     "suppliers": {
                         "supplier_availability_score": f"{business_input.get('supplier_availability_score', 3)}/5",
-                        "network_region": f"{district} SME Vendor Network"
+                        "network_region": f"Local supplier channels in {district}"
                     }
                 },
                 "marketing_plan": {
@@ -291,40 +324,52 @@ class BusinessPlanReportBuilder:
                     "phase_3_to_6_months": action_roadmap.get("phase_2", [])[2:],
                     "phase_6_to_12_months": action_roadmap.get("phase_3", [])
                 },
+                "management_monitoring_measures": [
+                    {"measure_name": "Monthly Gross Sales", "target": f"LKR {customers_per_day * expected_price * operating_days:,.2f}", "frequency": "Monthly", "category": "Sales Tracking"},
+                    {"measure_name": "Daily Customer Count", "target": f"{customers_per_day} / Day", "frequency": "Daily", "category": "Volume"},
+                    {"measure_name": "Operating Budget Compliance", "target": f"≤ LKR {effective_budget:,.2f} / Month", "frequency": "Monthly", "category": "Cost Control"},
+                    {"measure_name": "Simplified Budget Coverage", "target": f"Monitor reserve buffer (approx {strategy_budget_coverage} mo)", "frequency": "Monthly", "category": "Liquidity"}
+                ],
                 "measurable_kpis": [
-                    {"kpi_name": "Monthly Revenue", "target": f"LKR {customers_per_day * expected_price * operating_days:,.2f}", "frequency": "Monthly"},
+                    {"kpi_name": "Monthly Gross Sales", "target": f"LKR {customers_per_day * expected_price * operating_days:,.2f}", "frequency": "Monthly"},
                     {"kpi_name": "Daily Customer Count", "target": f"{customers_per_day} / Day", "frequency": "Daily"},
                     {"kpi_name": "Operating Budget Compliance", "target": f"≤ LKR {effective_budget:,.2f} / Month", "frequency": "Monthly"},
-                    {"kpi_name": "Capital Runway", "target": f"≥ {capital_runway} Months", "frequency": "Quarterly"}
+                    {"kpi_name": "Simplified Budget Coverage", "target": f"Approx {strategy_budget_coverage} Months", "frequency": "Monthly"}
+                ],
+                "operational_constraints_and_management_considerations": [
+                    {"constraint": "Capital Allocation", "management_action": "Enforce strict working capital controls and prioritize lean setup investments."},
+                    {"constraint": "Staff Capacity", "management_action": "Establish standardized operating checklists and cross-train staff."},
+                    {"constraint": "Equipment Readiness", "management_action": "Prioritize vital operating fixtures and arrange supplier warranties."}
                 ],
                 "business_constraints_and_mitigation": [
-                    {"constraint": "Capital Limitation", "mitigation": "Enforce strict working capital controls and phase investments."},
+                    {"constraint": "Capital Allocation", "mitigation": "Enforce strict working capital controls and prioritize lean setup investments."},
                     {"constraint": "Staff Capacity", "mitigation": "Establish standardized operating checklists and cross-train staff."},
-                    {"constraint": "Equipment Readiness", "mitigation": "Prioritize vital equipment only and arrange supplier warranties."}
+                    {"constraint": "Equipment Readiness", "mitigation": "Prioritize vital operating fixtures and arrange supplier warranties."}
                 ],
                 "final_ai_recommendation": {
                     "ai_feasibility_verdict": predicted_label,
                     "ai_recommended_strategy": ai_top_strategy,
                     "entrepreneur_selected_strategy": active_strategy_name,
                     "is_user_selected": is_user_selected,
-                    "recommended_immediate_next_step": "Finalize permits and establish initial inventory supplier terms."
+                    "recommended_immediate_next_step": "Confirm initial supplier arrangements, configure ordering channels, and prepare operating workspace."
                 }
             },
 
             "final_recommendation": final_rec or {
                 "ai_feasibility_verdict": predicted_label,
                 "ai_confidence_score": confidence_score,
+                "predicted_class_probability": confidence_score,
                 "ai_recommended_strategy": ai_top_strategy,
                 "entrepreneur_selected_strategy": active_strategy_name,
                 "is_user_selected": is_user_selected,
-                "recommended_immediate_next_step": "Finalize permits and establish initial inventory supplier terms."
+                "recommended_immediate_next_step": "Confirm initial supplier arrangements, configure ordering channels, and prepare operating workspace."
             },
 
             # -----------------------------------------------------------------
             # Backward-Compatibility Keys
             # -----------------------------------------------------------------
             "executive_summary": {
-                "business_summary": executive_overview.get("business_summary", f"Strategic plan for a {stage.lower()} {category.lower()} operating in {district}."),
+                "business_summary": executive_overview.get("business_summary", f"Strategic plan for a proposed {stage.lower()} {category.lower()} in {district}."),
                 "predicted_label": predicted_label,
                 "confidence_score": confidence_score,
                 "confidence_percent": f"{(confidence_score * 100):.1f}%",
@@ -344,10 +389,13 @@ class BusinessPlanReportBuilder:
                 "available_capital_lkr": effective_capital,
                 "monthly_budget_lkr": effective_budget,
                 "expected_price_lkr": expected_price,
+                "estimated_monthly_gross_sales_lkr": customers_per_day * expected_price * operating_days,
                 "estimated_monthly_revenue_lkr": customers_per_day * expected_price * operating_days,
                 "loan_required": effective_capital < (effective_budget * 6),
-                "capital_runway_months": capital_runway,
-                "guidance_summary": financial_plan.get("counterfactual_guidance", "Maintain a 6-month capital buffer.")
+                "strategy_budget_coverage_months": strategy_budget_coverage,
+                "available_funds_coverage_months": available_funds_coverage,
+                "capital_runway_months": strategy_budget_coverage,
+                "guidance_summary": financial_plan.get("counterfactual_guidance", "Maintain a conservative operating buffer.")
             },
             "market_analysis": {
                 "expected_customers_per_day": customers_per_day,
@@ -362,6 +410,7 @@ class BusinessPlanReportBuilder:
             },
             "key_business_factors": {
                 "positive_enablers": explainability.get("positive_drivers", []),
+                "operational_hurdles": explainability.get("negative_drivers", []),
                 "risk_hurdles": explainability.get("negative_drivers", [])
             },
             "strategies": candidate_strategies,
@@ -382,9 +431,10 @@ class BusinessPlanReportBuilder:
                 "phase_3": action_roadmap.get("phase_3", [])
             },
             "assumptions_and_considerations": [
-                "Feasibility classification and decision rankings are model-based analytical estimates derived from Sri Lankan SME empirical datasets.",
+                "The feasibility model developed in this study was trained and evaluated using the dataset used for this research.",
                 "Financial projections assume operating days and steady unit pricing based on provided business inputs.",
-                "Entrepreneur should perform on-the-ground market validation before committing heavy capital investments."
+                "Simplified budget coverage represents a capital-to-budget ratio and does not constitute a guaranteed survival period.",
+                "The entrepreneur should perform on-the-ground market and supplier validation before committing heavy capital investments."
             ],
             "raw_profile": profile
         }

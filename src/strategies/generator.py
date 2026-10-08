@@ -79,16 +79,16 @@ class SMEStrategyGenerator:
         strategies.append({
             "strategy_id": "STRAT_01",
             "strategy_name": f"Lean Bootstrapped Launch ({display_name})",
-            "strategic_focus": "Risk Mitigation & Capital Preservation",
+            "strategic_focus": "Capital Preservation & Lean Operations",
             "operational_approach": (
                 f"Optimize initial setup for {display_name} by operating lean. Focus on essential equipment "
-                f"and low-cost marketing to mitigate constraint around {top_hurdle}."
+                f"and low-cost customer outreach to address the constraint around {top_hurdle}."
             ),
             "estimated_capital_required_lkr": s1_capital,
             "estimated_monthly_budget_lkr": s1_budget,
             "target_daily_customers": int(customers * 0.8),
             "implementation_complexity": "Low",
-            "expected_feasibility_impact": "High Risk Reduction (+15% Feasibility Probability)",
+            "expected_feasibility_impact": "Capital Preservation and Leaner Launch",
             "criteria_scores": {
                 "financial_viability": clamp(s1_fin),
                 "implementation_feasibility": clamp(s1_feas),
@@ -121,16 +121,16 @@ class SMEStrategyGenerator:
         strategies.append({
             "strategy_id": "STRAT_02",
             "strategy_name": f"Market Expansion & Customer Acquisition ({display_name})",
-            "strategic_focus": "Demand Generation & High Volume",
+            "strategic_focus": "Demand Generation & Volume Reach",
             "operational_approach": (
-                f"Invest heavily in targeted local promotions and location visibility for {display_name} to overcome {competition} "
-                f"competition level and capture high market demand."
+                f"Allocate resources toward targeted local customer outreach and visibility for {display_name} to address {competition} "
+                f"competition and capture available market demand."
             ),
             "estimated_capital_required_lkr": s2_capital,
             "estimated_monthly_budget_lkr": s2_budget,
             "target_daily_customers": int(customers * 1.3),
             "implementation_complexity": "Moderate to High",
-            "expected_feasibility_impact": "High Revenue Potential (Requires Micro-Loan buffer)",
+            "expected_feasibility_impact": "Higher Volume Throughput with Staged Outlays",
             "criteria_scores": {
                 "financial_viability": clamp(s2_fin),
                 "implementation_feasibility": clamp(s2_feas),
@@ -138,7 +138,7 @@ class SMEStrategyGenerator:
                 "operational_risk": clamp(s2_risk),  # Cost criterion
                 "resource_efficiency": clamp(s2_eff)
             },
-            "criteria_rationale": "High revenue throughput enabled by market scale; risk increases under capital constraints."
+            "criteria_rationale": "High revenue throughput enabled by market scale; capital intensity requires staged commitments."
         })
 
         # =====================================================================
@@ -165,8 +165,8 @@ class SMEStrategyGenerator:
             "strategy_name": "Hybrid Digital & Local Delivery Model",
             "strategic_focus": "Digital Channel Expansion & Low Fixed Cost",
             "operational_approach": (
-                f"Combine small physical footprint with online ordering, social commerce, and local delivery "
-                f"partnerships to maximize customer reach in {district}."
+                f"Combine focused physical setup with online ordering, social messaging channels, and local delivery "
+                f"coordination to extend customer reach in {district}."
             ),
             "estimated_capital_required_lkr": s3_capital,
             "estimated_monthly_budget_lkr": s3_budget,
@@ -180,7 +180,7 @@ class SMEStrategyGenerator:
                 "operational_risk": clamp(s3_risk),  # Cost criterion
                 "resource_efficiency": clamp(s3_eff)
             },
-            "criteria_rationale": "Omnichannel reach bypasses physical retail congestion with controlled operating costs."
+            "criteria_rationale": "Omnichannel reach expands customer access while maintaining controlled operating overhead."
         })
 
         # =====================================================================
@@ -207,14 +207,14 @@ class SMEStrategyGenerator:
             "strategy_name": "Premium Quality & Niche Differentiation",
             "strategic_focus": "High Margin & Customer Loyalty",
             "operational_approach": (
-                f"Focus on premium product quality, customized service, and unique branding to achieve higher pricing "
-                f"margins without depending on huge customer footfall."
+                f"Focus on premium product quality, customized service, and distinctive branding to achieve higher margins "
+                f"without relying heavily on mass customer volume."
             ),
             "estimated_capital_required_lkr": s4_capital,
             "estimated_monthly_budget_lkr": s4_budget,
             "target_daily_customers": int(customers * 0.7),
             "implementation_complexity": "Moderate",
-            "expected_feasibility_impact": "High Profit Margin Stability",
+            "expected_feasibility_impact": "Margin Stability via Differentiated Pricing",
             "criteria_scores": {
                 "financial_viability": clamp(s4_fin),
                 "implementation_feasibility": clamp(s4_feas),
@@ -222,7 +222,7 @@ class SMEStrategyGenerator:
                 "operational_risk": clamp(s4_risk),  # Cost criteria
                 "resource_efficiency": clamp(s4_eff)
             },
-            "criteria_rationale": "High gross margin shielding against volume volatility; dependent on equipment readiness."
+            "criteria_rationale": "Differentiated margins protect cash flow against customer volume fluctuations."
         })
 
         return strategies

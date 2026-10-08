@@ -227,9 +227,10 @@ class BusinessPlanDocxGenerator:
         run_desc.font.color.rgb = COLOR_MUTED
 
         # Cover Executive Metadata Panel
+        clean_stage_display = "New Startup" if "new" in stage.lower() else "Existing Business"
         cov_lines = [
             f"Prepared For: {biz_name}",
-            f"Enterprise Category & Stage: {category} • {stage.replace('_', ' ').title()}",
+            f"Enterprise Category & Stage: {category} • {clean_stage_display}",
             f"Operating Catchment: {district}, {province} Province, Sri Lanka",
             f"Preparation Date: {metadata.get('generated_date', 'Current')}",
             f"Decision Record Reference: {metadata.get('record_id', 'N/A')}"
@@ -264,17 +265,23 @@ class BusinessPlanDocxGenerator:
 
         # 1.1 Business Overview
         add_h2("1.1 Business Overview")
-        clean_stage = stage.replace("_", " ").title()
+        is_new_startup = "new" in stage.lower()
         model_str = summary_info.get("business_model") or "Direct Retail / Service"
-        proposed_action_str = summary_info.get("proposed_action") or "establish new operations"
 
-        p1 = (
-            f"{biz_name} is an enterprise proposed for operation within the {category} sector, "
-            f"situated in {district}, {province} Province, Sri Lanka. The enterprise operates under a "
-            f"{model_str} business model, providing commercial products and services tailored to the regional catchment. "
-            f"As a {clean_stage} venture, the undertaking represents an initiative to {proposed_action_str.lower()}, "
-            f"focusing on building a reliable customer base while maintaining controlled operating expenditures during launch."
-        )
+        if is_new_startup:
+            p1 = (
+                f"{biz_name} is a proposed new startup venture within the {category} sector, "
+                f"planned for launch in {district}, {province} Province, Sri Lanka. The enterprise is structured under a "
+                f"{model_str} business model, providing commercial offerings tailored to the regional catchment. "
+                f"As a new venture in its initial setup phase, commercial priorities center on establishing initial operations, "
+                f"building customer awareness, and maintaining disciplined operating expenditure."
+            )
+        else:
+            p1 = (
+                f"{biz_name} is an established enterprise operating within the {category} sector, "
+                f"located in {district}, {province} Province, Sri Lanka. Operating under a {model_str} business model, "
+                f"the enterprise aims to execute strategic growth and operational refinement."
+            )
         add_body_p(p1)
 
         desc_text = summary_info.get("business_description")
@@ -282,13 +289,13 @@ class BusinessPlanDocxGenerator:
             add_body_p(f"Based on the operational details provided: {desc_text}")
         else:
             add_body_p(
-                f"The business is structured to address core commercial demand in {district} through focused service execution, "
+                f"The business is structured to meet consumer demand in {district} through focused service execution, "
                 f"relying on founder oversight and targeted local promotions to establish commercial presence."
             )
 
         # 1.2 Business Concept & Objectives
         add_h2("1.2 Business Concept & Strategic Purpose")
-        concept_overview = concept.get("concept_overview", f"Strategic plan for a {stage.lower()} {category.lower()} in {district}.")
+        concept_overview = concept.get("concept_overview", f"Strategic plan for a proposed {category.lower()} in {district}.")
         products_services = concept.get("products_services", f"Commercial offerings within {category}")
         target_cust = concept.get("target_customers", f"Consumers and households in {district}")
         objectives = concept.get("business_objectives", f"Establish a sustainable {category} enterprise in {district}.")
@@ -326,24 +333,29 @@ class BusinessPlanDocxGenerator:
         # 1.4 Competition & Location
         add_h2("1.4 Competition & Location Dynamics")
         comp_level = comp.get("competition_level", "Moderate")
-        comp_count = comp.get("competitor_count_nearby", 0)
+        comp_count = comp.get("competitor_count_nearby")
         comp_pos = comp.get("competitive_positioning", "Localized service and operational differentiation.")
         loc_suit = loc.get("location_suitability_score", "3/5")
         loc_type = loc.get("location_type", "Commercial Area")
-        loc_notes = loc.get("location_considerations", f"Commercial density and pedestrian access in {district}.")
+        loc_notes = loc.get("location_considerations", f"Commercial density in {district}.")
 
-        p_comp = (
-            f"The local competitive environment is characterized as {comp_level} with approximately "
-            f"{comp_count} direct competitor(s) operating within the immediate trading radius. "
-            f"To secure customer loyalty and avoid direct price discounting wars, the business adopts a positioning strategy of: "
-            f"{comp_pos}"
-        )
+        if comp_count is not None and str(comp_count) not in ["0", "Not provided in current business input"]:
+            p_comp = (
+                f"The local competitive environment is characterized with a competition level of {comp_level}, "
+                f"with approximately {comp_count} direct competitor(s) noted in the business intake. "
+                f"To secure customer loyalty and avoid price discounting friction, the positioning strategy emphasizes: {comp_pos}"
+            )
+        else:
+            p_comp = (
+                f"The local competitive environment is recorded with a competition level of {comp_level}. "
+                f"Specific nearby direct competitor counts were not provided in current business inputs. "
+                f"To secure customer loyalty, the positioning strategy emphasizes: {comp_pos}"
+            )
         add_body_p(p_comp)
 
         p_loc = (
-            f"The operating location in {district} holds a suitability rating of {loc_suit} within a {loc_type} zone. "
-            f"This setting provides {loc_notes.lower()} The proximity to local transportation corridors and pedestrian flow supports steady "
-            f"patronage while requiring dedicated storefront signage and localized service reliability to maximize storefront capture."
+            f"The operating location in {district} holds a suitability rating of {loc_suit} within a {loc_type} setting. "
+            f"{loc_notes} Commercial operations will focus on direct customer service, operational reliability, and targeted local engagement."
         )
         add_body_p(p_loc)
 
@@ -353,7 +365,7 @@ class BusinessPlanDocxGenerator:
         sec_02 = report_data.get("section_02", {})
         feas = sec_02.get("feasibility_assessment", {})
         pred_label = feas.get("final_predicted_label", "Conditionally Feasible")
-        conf_pct = feas.get("confidence_percentage", "65.0%")
+        conf_pct = feas.get("predicted_probability_percentage") or feas.get("confidence_percentage", "65.0%")
         probs = feas.get("probabilities", {})
         prob_feas = probs.get("Feasible", 0.0)
         prob_cond = probs.get("Conditionally Feasible", 0.0)
@@ -364,18 +376,19 @@ class BusinessPlanDocxGenerator:
         add_h2("2.1 AI Feasibility Assessment")
         feas_intro = (
             f"Based on the integrated evaluation of financial capital, market demand, operational staffing, and resource readiness, "
-            f"SME360 AI assesses {biz_name} as {pred_label} with a model confidence of {conf_pct}. "
-            f"The multi-class Random Forest engine assigns a probability of {prob_cond:.1%} to Conditionally Feasible, "
-            f"{prob_feas:.1%} to Feasible, and {prob_infeas:.1%} to Infeasible across 500 decision trees trained "
-            f"on empirical Sri Lankan SME benchmark datasets. This outcome indicates that while the business has solid commercial "
-            f"potential, specific operational hurdles and capital safeguards must be addressed before launch."
+            f"SME360 AI assesses {biz_name} as {pred_label} with a predicted class probability of {conf_pct}. "
+            f"The multi-class Random Forest feasibility model assigns a predicted probability of {prob_cond:.1%} to Conditionally Feasible, "
+            f"{prob_feas:.1%} to Feasible, and {prob_infeas:.1%} to Infeasible. "
+            f"The feasibility model developed in this study was trained and evaluated using the dataset used for this research. "
+            f"This classification indicates that while the business demonstrates commercial potential, specific operational hurdles "
+            f"and working capital safeguards should be addressed during setup."
         )
         add_body_p(feas_intro)
 
         # Highlighted Feasibility Outcome Box
         add_callout_box(
-            f"ASSESSMENT VERDICT: {pred_label.upper()} ({conf_pct})",
-            [f"Probability Distribution: Feasible: {prob_feas:.1%}  |  Conditionally Feasible: {prob_cond:.1%}  |  Infeasible: {prob_infeas:.1%}"],
+            f"ASSESSMENT VERDICT: {pred_label.upper()} (Predicted Class Probability: {conf_pct})",
+            [f"Class Probabilities: Feasible: {prob_feas:.1%}  |  Conditionally Feasible: {prob_cond:.1%}  |  Infeasible: {prob_infeas:.1%}"],
             bg_hex="F8FAFC"
         )
 
@@ -391,7 +404,7 @@ class BusinessPlanDocxGenerator:
         # 2.2 Explainable AI Attribution (SHAP)
         add_h2("2.2 Why Did the AI Reach This Assessment? (Explainable AI Attribution)")
         shap_intro = (
-            "To provide full decision-support transparency, SME360 AI uses SHAP (SHapley Additive exPlanations) values to determine "
+            "To provide decision-support transparency, SME360 AI uses SHAP (SHapley Additive exPlanations) values to determine "
             "how specific business parameters influenced the model's classification. Rather than claiming absolute causality, SHAP "
             "identifies features that contributed positive supporting weight toward feasibility versus those that applied downward pressure "
             "as operational hurdles."
@@ -412,7 +425,7 @@ class BusinessPlanDocxGenerator:
         else:
             add_bullet_p("Baseline capital and operating assumptions align with initial industry requirements.")
 
-        add_h3("Operational Hurdles to Monitor & Mitigate:")
+        add_h3("Operational Hurdles Requiring Management Attention:")
         if neg_drivers:
             for item in neg_drivers[:3]:
                 feat_name = item.get("feature", "Constraint")
@@ -439,7 +452,7 @@ class BusinessPlanDocxGenerator:
         strat_intro = (
             f"Based on the feasibility diagnosis and identified operational constraints, SME360 AI formulated four tailored "
             f"strategic pathways for {biz_name}. Rather than proposing a generic one-size-fits-all plan, each alternative "
-            f"represents a distinct operational philosophy balancing capital intensity, channel deployment, and risk exposure."
+            f"represents a distinct operational philosophy balancing capital intensity, channel deployment, and resource constraints."
         )
         add_body_p(strat_intro)
 
@@ -453,7 +466,15 @@ class BusinessPlanDocxGenerator:
             s_cust = s.get("target_daily_customers", 0)
             s_score = s.get("topsis_score", "N/A")
             s_rank = s.get("rank", "-")
-            s_impact = s.get("expected_feasibility_impact", "Controlled growth")
+            s_impact = s.get("expected_feasibility_impact", "Controlled operations")
+
+            # Fallback lookup in ranked_list if rank or topsis_score is missing
+            if s_score in ["N/A", None] or s_rank in ["-", None]:
+                for r_item in ranked_list:
+                    if r_item.get("strategy_id") == s.get("strategy_id") or r_item.get("strategy_name") == s_name:
+                        s_rank = r_item.get("rank", s_rank)
+                        s_score = str(r_item.get("topsis_score", s_score))
+                        break
 
             lines = [
                 f"Strategic Focus: {s_focus} — {s_approach}",
@@ -465,9 +486,9 @@ class BusinessPlanDocxGenerator:
         # 3.2 TOPSIS Prioritization Table
         add_h2("3.2 Strategy Prioritization (TOPSIS Multi-Criteria Method)")
         topsis_expl = (
-            "The strategic alternatives were rigorously evaluated using the TOPSIS (Technique for Order of Preference by "
+            "The strategic alternatives were evaluated using the TOPSIS (Technique for Order of Preference by "
             "Similarity to Ideal Solution) decision methodology. The evaluation simultaneously weighed five validated criteria: "
-            "Financial Viability (25%), Implementation Feasibility (20%), Market Demand Alignment (25%), Operational Risk (15%), "
+            "Financial Viability (25%), Implementation Feasibility (20%), Market Demand Alignment (25%), Resource & Operational Friction (15%), "
             "and Resource Efficiency (15%). The table below summarizes the multi-criteria ranking:"
         )
         add_body_p(topsis_expl)
@@ -527,7 +548,7 @@ class BusinessPlanDocxGenerator:
             hitl_narrative = (
                 f"The entrepreneur reviewed the generated alternatives and selected {active_strat_title} to steer operations. "
                 f"While the AI system identified {ai_strat.get('strategy_name')} as the highest mathematical candidate under default weights, "
-                f"SME360 AI fully respects entrepreneur domain judgment and specific risk preferences. Consequently, all subsequent financial "
+                f"SME360 AI fully respects entrepreneur domain judgment and specific resource preferences. Consequently, all subsequent financial "
                 f"plans, operational structures, scenario stress-tests, and execution milestones across this report have been "
                 f"re-aligned with the entrepreneur's chosen strategy."
             )
@@ -558,11 +579,14 @@ class BusinessPlanDocxGenerator:
 
         target_cap = startup.get("strategy_target_capital_lkr", 0.0)
         monthly_exp = fin_plan.get("monthly_operating_budget_lkr", 0.0)
-        est_rev = fin_plan.get("estimated_monthly_revenue_lkr", 0.0)
-        runway = funding.get("capital_runway_months", 0.0)
-        equity_cap = funding.get("equity_capital_lkr", 0.0)
+        est_gross_sales = fin_plan.get("estimated_monthly_gross_sales_lkr", fin_plan.get("estimated_monthly_revenue_lkr", 0.0))
+        
+        strat_coverage = funding.get("strategy_budget_coverage_months", funding.get("capital_runway_months", 0.0))
+        avail_coverage = funding.get("available_funds_coverage_months", funding.get("capital_runway_months", 0.0))
+        
+        avail_cap = funding.get("available_capital_lkr", funding.get("initial_available_capital_lkr", funding.get("equity_capital_lkr", 0.0)))
         debt_cap = funding.get("debt_financing_lkr", 0.0)
-        total_funds = funding.get("total_available_funds_lkr", 0.0)
+        total_funds = funding.get("total_available_funds_lkr", avail_cap + debt_cap)
         gap_status = startup.get("funding_gap_status", "Fully funded")
 
         add_h1("SECTION 04 — FINANCIAL & OPERATIONAL PLAN")
@@ -574,28 +598,30 @@ class BusinessPlanDocxGenerator:
             f"LKR {target_cap:,.0f}. Under the baseline operating budget, recurring monthly operational expenditure is projected "
             f"at LKR {monthly_exp:,.0f}, covering commercial rent, essential payroll, utilities, and routine replenishment inventory. "
             f"With an expected customer throughput of {cust_per_day} customers per day, an expected unit price of LKR {unit_price:,.2f}, "
-            f"and an operating schedule of {op_days} days per month, projected monthly gross revenues total approximately "
-            f"LKR {est_rev:,.0f}."
+            f"and an operating schedule of {op_days} days per month, estimated monthly gross sales total approximately "
+            f"LKR {est_gross_sales:,.0f}. "
+            f"(Note: This is an estimated monthly gross sales calculation based on stated volume, price, and operating days. It does not account for variable costs or net profit.)"
         )
         add_body_p(fin_p1)
 
         # Highlighted Key Financial Figures Metric Strip
         fin_metrics = [
             ("Target Capital", f"LKR {target_cap:,.0f}", "Baseline Allocation"),
-            ("Monthly Budget", f"LKR {monthly_exp:,.0f}", "Operating Burn"),
-            ("Est. Revenue", f"LKR {est_rev:,.0f}", "Volume × Price × Days"),
-            ("Capital Runway", f"{runway} Months", "Survival Cushion")
+            ("Monthly Budget", f"LKR {monthly_exp:,.0f}", "Operating Expenditure"),
+            ("Est. Gross Sales", f"LKR {est_gross_sales:,.0f}", "Volume × Price × Days"),
+            ("Budget Coverage", f"{strat_coverage} Mo (Strat)", "Simplified Budget Ratio")
         ]
         add_metric_strip(fin_metrics)
 
-        # 4.2 Funding Position & Liquidity
-        add_h3("4.2 Funding Structure & Liquidity Buffer")
+        # 4.2 Funding Position & Simplified Budget Coverage
+        add_h3("4.2 Funding Structure & Simplified Budget Coverage")
         fin_p2 = (
-            f"The business financing structure comprises LKR {equity_cap:,.0f} in committed founder equity and "
-            f"LKR {debt_cap:,.0f} in external loan financing, delivering total available funds of LKR {total_funds:,.0f}. "
-            f"Comparing available capital against the target allocation indicates that the venture is {gap_status.lower()}. "
-            f"At the budgeted burn rate, available liquid capital provides an operational runway of {runway} months, "
-            f"ensuring that the business has adequate breathing room to build steady customer volume during the initial launch phase."
+            f"The business financing structure comprises LKR {avail_cap:,.0f} in recorded available capital and "
+            f"LKR {debt_cap:,.0f} in external loan financing, delivering total initial funding of LKR {total_funds:,.0f}. "
+            f"Comparing available capital against the target requirement (LKR {target_cap:,.0f}) indicates that the venture is {gap_status.lower()}. "
+            f"Under the baseline operating budget, simplified budget coverage corresponds to approximately {strat_coverage} months "
+            f"for the strategy allocation and {avail_coverage} months for total recorded funds. "
+            f"(Note: Simplified budget coverage represents a capital-to-budget ratio and does not constitute a guaranteed survival period, as it does not model cash flow cycles or unforeseen costs.)"
         )
         add_body_p(fin_p2)
 
@@ -607,7 +633,7 @@ class BusinessPlanDocxGenerator:
         equip_score = equip.get("available_equipment_score", "3/5")
         equip_status = equip.get("readiness_status", "Meets operating baseline")
         supp_score = supp.get("supplier_availability_score", "3/5")
-        supp_region = supp.get("network_region", "Local Vendor Network")
+        supp_region = supp.get("network_region", f"Local supplier channels in {district}")
 
         add_h3("Staffing & Team Capacity:")
         p_staff = (
@@ -627,9 +653,9 @@ class BusinessPlanDocxGenerator:
 
         add_h3("Supplier Logistics & Sourcing Policy:")
         p_supp = (
-            f"Regional supplier availability is rated at {supp_score} within the {supp_region}. Sourcing strategy will establish "
-            f"dual-vendor arrangements for critical input materials to safeguard against single-source stockouts, while negotiating "
-            f"favorable commercial trade terms to optimize cash liquidity."
+            f"Regional supplier availability is rated at {supp_score} for {supp_region}. Sourcing strategy will establish "
+            f"commercial terms with reliable suppliers for critical inventory to safeguard against stockouts, while maintaining "
+            f"controlled initial order quantities to optimize working capital."
         )
         add_body_p(p_supp)
 
@@ -647,7 +673,7 @@ class BusinessPlanDocxGenerator:
             for t in tactics[:4]:
                 add_bullet_p(t)
         else:
-            add_bullet_p("Deploy localized awareness campaigns and neighborhood signage within the commercial catchment.")
+            add_bullet_p("Deploy localized awareness campaigns and neighborhood outreach within the commercial catchment.")
             add_bullet_p("Introduce introductory trial bundles and promotional discounts during opening weeks.")
             add_bullet_p("Implement a customer loyalty program to incentivize repeat visits and patron retention.")
             add_bullet_p("Maintain active digital messaging channels for customer inquiries, bookings, and updates.")
@@ -659,43 +685,58 @@ class BusinessPlanDocxGenerator:
         scen_list = sec_05.get("what_if_analysis", {}).get("scenarios", [])
         cf = sec_05.get("counterfactual_analysis", {})
         rm = sec_05.get("personalized_action_roadmap", {})
-        kpis = sec_05.get("measurable_kpis", [])
-        constraints = sec_05.get("business_constraints_and_mitigation", [])
+        kpis = sec_05.get("management_monitoring_measures") or sec_05.get("measurable_kpis", [])
+        constraints = sec_05.get("operational_constraints_and_management_considerations") or sec_05.get("business_constraints_and_mitigation", [])
 
         add_h1("SECTION 05 — SCENARIO ANALYSIS & ACTION ROADMAP")
 
         # 5.1 What-If Scenarios
         add_h2("5.1 What-If Scenario Sensitivity Analysis")
         scen_intro = (
-            "To stress-test business resilience before committing capital, SME360 AI simulated four prospective operational shifts. "
-            "These scenarios represent sensitivity simulations rather than guaranteed future outcomes, highlighting how variances in "
+            "To evaluate business resilience before committing capital, SME360 AI simulated four prospective operational shifts. "
+            "These scenarios represent sensitivity simulations rather than guaranteed future outcomes, highlighting how adjustments in "
             "capital, credit, footfall, and operating costs alter the feasibility prediction:"
         )
         add_body_p(scen_intro)
 
         for sc in scen_list[:4]:
-            sc_title = sc.get("title", "Scenario")
+            sc_title = sc.get("title") or sc.get("scenario_name", "Scenario")
             sc_rat = sc.get("rationale", "Sensitivity test.")
             sc_pred = sc.get("new_prediction", "Conditionally Feasible")
             sc_vdelta = sc.get("viability_delta", 0.0)
-            sc_fdelta = sc.get("feasibility_delta", 0.0)
             sc_impact = sc.get("impact_summary", "Stable sensitivity.")
+
+            shifts_pp = sc.get("class_shifts_percentage_points", {})
+            if shifts_pp:
+                f_pp = shifts_pp.get("Feasible", "0.0 pp")
+                c_pp = shifts_pp.get("Conditionally Feasible", "0.0 pp")
+                i_pp = shifts_pp.get("Infeasible", "0.0 pp")
+                shifts_str = f"Feasible Δ: {f_pp}  |  Conditionally Feasible Δ: {c_pp}  |  Infeasible Δ: {i_pp}"
+            else:
+                sc_fdelta = sc.get("feasibility_delta", 0.0) * 100
+                shifts_str = f"Feasible Δ: {sc_fdelta:+.1f} percentage points"
+
+            tree_note = sc.get("tree_partition_note", "")
 
             lines = [
                 f"Simulation Objective: {sc_rat}",
-                f"Model Impact: Predicted Class: {sc_pred}  |  Viability Shift: {sc_vdelta:+.1%}  |  Feasible Δ: {sc_fdelta:+.1%}",
+                f"Model Impact: Predicted Class: {sc_pred}  |  Viability Index Shift: {sc_vdelta:+.1%}",
+                f"Class Shifts (Percentage Points): {shifts_str}",
                 f"Analytical Takeaway: {sc_impact}"
             ]
+            if tree_note:
+                lines.append(f"Note: {tree_note}")
+
             add_callout_box(f"Scenario: {sc_title}", lines, bg_hex="F8FAFC")
 
         # 5.2 Counterfactual Analysis
-        add_h2("5.2 Counterfactual Minimum Viability Threshold")
+        add_h2("5.2 Capital Boundary Search (Counterfactual Simulation)")
         cf_rec = cf.get("recommendation", "Multiple operational dimensions require joint enhancement.")
         add_callout_box(
-            "Counterfactual Optimization Finding",
+            "Capital Boundary Search Finding",
             [
                 cf_rec,
-                "Insight: Adjusting working capital in isolation does not automatically elevate an enterprise to an unconstrained Feasible rating. Sustainable viability requires coordinated improvements across working capital reserves, customer demand generation, and equipment readiness."
+                "Insight: Under the tested scenario assumptions, parameter boundary search explores capital adjustments associated with class shifts. Adjusting capital alone does not guarantee a higher classification, as viability depends jointly on demand volume, equipment readiness, and cost discipline. This search identifies sensitivity boundaries under tested conditions and does not represent a global optimum."
             ],
             bg_hex="F8FAFC"
         )
@@ -705,10 +746,10 @@ class BusinessPlanDocxGenerator:
         add_body_p("The implementation roadmap translates strategic recommendations into time-phased execution milestones across four distinct operational horizons:")
 
         phases = [
-            ("Phase 1: Immediate Launch Preparation (0 – 30 Days)", rm.get("phase_0_to_30_days", [])),
+            ("Phase 1: Operational Setup & Supplier Sourcing (0 – 30 Days)", rm.get("phase_0_to_30_days", [])),
             ("Phase 2: Customer Acquisition & Burn Control (30 – 90 Days)", rm.get("phase_30_to_90_days", [])),
             ("Phase 3: Operational Stabilization & Review (3 – 6 Months)", rm.get("phase_3_to_6_months", [])),
-            ("Phase 4: Commercial Scale & Expansion (6 – 12 Months)", rm.get("phase_6_to_12_months", []))
+            ("Phase 4: Commercial Scale & Strategy Review (6 – 12 Months)", rm.get("phase_6_to_12_months", []))
         ]
 
         for p_title, p_items in phases:
@@ -717,16 +758,16 @@ class BusinessPlanDocxGenerator:
                 for item in p_items:
                     add_bullet_p(item)
             else:
-                add_bullet_p("Finalize operational milestones and review performance metrics.")
+                add_bullet_p("Finalize operational setup and monitor performance metrics.")
 
-        # 5.4 Measurable KPIs Table
-        add_h2("5.4 Measurable Key Performance Indicators (KPIs)")
-        add_body_p("To ensure operational reality stays aligned with planning assumptions, management should monitor these performance metrics regularly:")
+        # 5.4 Management Monitoring Measures
+        add_h2("5.4 Key Management Monitoring Measures")
+        add_body_p("To track operational reality against planning assumptions, management should monitor these operational indicators regularly (Note: These represent management monitoring measures, not model predictions):")
 
         if kpis:
             kpi_table = doc.add_table(rows=len(kpis[:5]) + 1, cols=4)
             kpi_table.alignment = WD_TABLE_ALIGNMENT.CENTER
-            kpi_headers = ["KPI Metric", "Target Value", "Review Frequency", "Focus Category"]
+            kpi_headers = ["Monitoring Measure", "Target Metric", "Review Frequency", "Focus Category"]
             kpi_widths = [Inches(2.0), Inches(2.2), Inches(1.4), Inches(1.4)]
 
             for col_idx, (h_text, w) in enumerate(zip(kpi_headers, kpi_widths)):
@@ -735,6 +776,7 @@ class BusinessPlanDocxGenerator:
                 BusinessPlanDocxGenerator.set_cell_background(cell, "1E3A8A")
                 BusinessPlanDocxGenerator.set_cell_margins(cell, top=100, bottom=100, left=120, right=120)
                 p = cell.paragraphs[0]
+                p.alignment = WD_ALIGN_PARAGRAPH.LEFT
                 r = p.add_run(h_text)
                 r.font.name = 'Arial'
                 r.font.size = Pt(8.5)
@@ -743,10 +785,10 @@ class BusinessPlanDocxGenerator:
 
             for row_idx, k_item in enumerate(kpis[:5], start=1):
                 row_data = [
-                    k_item.get("kpi_name", ""),
+                    k_item.get("measure_name") or k_item.get("kpi_name", ""),
                     str(k_item.get("target", "")),
                     k_item.get("frequency", "Monthly"),
-                    k_item.get("type", "Operational")
+                    k_item.get("category") or k_item.get("type", "Operational")
                 ]
                 for col_idx, val in enumerate(row_data):
                     cell = kpi_table.cell(row_idx, col_idx)
@@ -764,12 +806,12 @@ class BusinessPlanDocxGenerator:
 
             doc.add_paragraph().paragraph_format.space_after = Pt(4)
 
-        # 5.5 Constraints & Mitigation Subsections
-        add_h2("5.5 Business Constraints & Strategic Mitigation")
+        # 5.5 Constraints & Practical Management Considerations
+        add_h2("5.5 Operational Constraints & Practical Management Considerations")
         for c in constraints[:4]:
             c_name = c.get("constraint", "Constraint")
-            c_mit = c.get("mitigation", "Mitigation action.")
-            add_bullet_p(c_mit, bold_prefix=f"{c_name}: ")
+            c_action = c.get("management_action") or c.get("mitigation", "Management action.")
+            add_bullet_p(c_action, bold_prefix=f"{c_name}: ")
 
         # =========================================================================
         # FINAL AI DECISION RECOMMENDATION & SUMMARY
@@ -782,7 +824,7 @@ class BusinessPlanDocxGenerator:
         chosen_strat_val = final_box.get("entrepreneur_selected_strategy", active_strat_title)
         pos_enabler_val = final_box.get("main_positive_strength", "Available Capital")
         hurdle_val = final_box.get("main_operational_constraint", "Staff Capacity & Burn Control")
-        next_step_val = final_box.get("recommended_immediate_next_step", "Register business legal structure and finalize supplier terms.")
+        next_step_val = final_box.get("recommended_immediate_next_step", "Confirm initial supplier arrangements, configure ordering channels, and prepare operating workspace.")
 
         final_summary_narrative = (
             f"Following comprehensive evaluation across financial, market, operational, and algorithmic criteria, SME360 AI assesses "
@@ -802,7 +844,7 @@ class BusinessPlanDocxGenerator:
             f"Primary Operational Hurdle: {hurdle_val}",
             f"Immediate Recommended Action Step: {next_step_val}"
         ]
-        add_callout_box(f"AI FEASIBILITY ASSESSMENT: {verdict_val.upper()}", rec_card_lines, bg_hex="F8FAFC")
+        add_callout_box(f"AI FEASIBILITY ASSESSMENT: {verdict_val.upper()} (Predicted Class Probability: {conf_pct})", rec_card_lines, bg_hex="F8FAFC")
 
         add_h3("Assumptions & Analytical Disclosures:")
         for a in report_data.get("assumptions_and_considerations", []):
