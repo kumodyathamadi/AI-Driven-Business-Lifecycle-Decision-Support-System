@@ -1,7 +1,8 @@
 import os
 import io
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
+from reportlab.lib.utils import ImageReader
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak, KeepTogether, HRFlowable
 )
@@ -9,6 +10,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfgen import canvas
 
 from backend.services.business_plan_generator.chart_generator import BusinessPlanChartGenerator
+from backend.services.business_plan_generator.cover_image_handler import CoverImageHandler
 
 # Path to logo asset
 LOGO_PATH = os.path.abspath(os.path.join(
@@ -18,9 +20,10 @@ LOGO_PATH = os.path.abspath(os.path.join(
 class NumberedCanvas(canvas.Canvas):
     """
     Two-pass canvas to dynamically compute and draw total page count, 
-    running header with logo, and running footer.
+    running header with logo, running footer, and user-provided cover page if present.
     """
     def __init__(self, *args, **kwargs):
+        self.cover_info = kwargs.pop("cover_info", None)
         super().__init__(*args, **kwargs)
         self._saved_page_states = []
 
@@ -37,32 +40,62 @@ class NumberedCanvas(canvas.Canvas):
         super().save()
 
     def draw_page_decorations(self, page_count):
-        if self.getPageNumber() == 1:
-            # Suppress running header/footer on cover page
+        current_page = self.getPageNumber()
+
+        # If custom cover page is provided, Page 1 is the full A4 cover page
+        if self.cover_info and current_page == 1:
+            self.saveState()
+            try:
+                img_reader = ImageReader(io.BytesIO(self.cover_info["image_bytes"]))
+                geom = self.cover_info["pdf_geometry"]
+                self.drawImage(
+                    img_reader,
+                    geom["x"],
+                    geom["y"],
+                    width=geom["width"],
+                    height=geom["height"],
+                    preserveAspectRatio=True
+                )
+            except Exception:
+                pass
+            self.restoreState()
+            # Suppress headers, footers, and page numbers on cover page
+            return
+
+        # Suppress running header/footer on the business plan title page
+        title_page_num = 2 if self.cover_info else 1
+        if current_page <= title_page_num:
             return
 
         self.saveState()
         self.setFont("Helvetica", 8)
         self.setFillColor(colors.HexColor("#64748b"))
 
-        # Running Header
+        # Running Header on A4 (margins 27.6pt, usable width 540pt -> 28 to 568)
         self.setLineWidth(0.5)
         self.setStrokeColor(colors.HexColor("#cbd5e1"))
-        self.line(36, 756, 576, 756)
+        self.line(28, 800, 568, 800)
         
-        self.drawString(36, 762, "SME360 AI — Strategic Business Plan & Decision Support Report")
+        self.drawString(28, 806, "SME360 AI — Strategic Business Plan & Decision Support Report")
         
         if os.path.exists(LOGO_PATH):
             try:
-                self.drawImage(LOGO_PATH, 530, 758, width=46, height=18, preserveAspectRatio=True, mask='auto')
+                self.drawImage(LOGO_PATH, 522, 802, width=46, height=18, preserveAspectRatio=True, mask='auto')
             except Exception:
                 pass
 
         # Running Footer
-        self.line(36, 45, 576, 45)
-        self.drawString(36, 32, "Confidential — Prepared by SME360 AI Decision Support Engine")
-        page_text = f"Page {self.getPageNumber()} of {page_count}"
-        self.drawRightString(576, 32, page_text)
+        self.line(28, 45, 568, 45)
+        self.drawString(28, 32, "Confidential — Prepared by SME360 AI Decision Support Engine")
+        
+        if self.cover_info:
+            display_page = current_page - 1
+            display_total = page_count - 1
+            page_text = f"Page {display_page} of {display_total}"
+        else:
+            page_text = f"Page {current_page} of {page_count}"
+            
+        self.drawRightString(568, 32, page_text)
 
         self.restoreState()
 
@@ -77,12 +110,20 @@ class BusinessPlanPDFGenerator:
 
     @staticmethod
     def generate_pdf(report_data: dict) -> bytes:
+        raw_cover = report_data.get("cover_image")
+        cover_info = None
+        if raw_cover:
+            try:
+                cover_info = CoverImageHandler.process_cover_image(raw_cover)
+            except Exception:
+                cover_info = None
+
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
             buffer,
-            pagesize=letter,
-            leftMargin=36,
-            rightMargin=36,
+            pagesize=A4,
+            leftMargin=27.6,
+            rightMargin=27.6,
             topMargin=54,
             bottomMargin=54
         )
@@ -190,6 +231,10 @@ class BusinessPlanPDFGenerator:
         )
 
         story = []
+
+        if cover_info:
+            # Page 1 is reserved for the full-page cover image drawn by canvas
+            story.append(PageBreak())
 
         # Helper: Creates a styled callout box
         def create_callout_box(flowables, bg=card_bg, border=card_border, padding=8):
@@ -909,6 +954,10 @@ class BusinessPlanPDFGenerator:
             story.append(Paragraph(f"• {a}", bullet_style))
 
         # Build PDF document
-        doc.build(story, canvasmaker=NumberedCanvas)
+        def canvas_maker(*args, **kwargs):
+            kwargs["cover_info"] = cover_info
+            return NumberedCanvas(*args, **kwargs)
+
+        doc.build(story, canvasmaker=canvas_maker)
         buffer.seek(0)
         return buffer.getvalue()

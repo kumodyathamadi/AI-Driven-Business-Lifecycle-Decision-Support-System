@@ -114,8 +114,11 @@ class BusinessPlanReportBuilder:
             competitor_count_display = int(raw_comp_count)
             competitor_info_display = business_input.get("competitor_information") or f"{raw_comp_count} direct competitor(s) recorded in initial business intake."
 
+        cover_image = profile.get("cover_image") or metadata.get("cover_image") or business_input.get("cover_image")
+
         # Build Normalized Report Dictionary
         report_data = {
+            "cover_image": cover_image,
             "metadata": {
                 "record_id": metadata.get("record_id", "N/A"),
                 "schema_version": metadata.get("schema_version", "2.0.0"),

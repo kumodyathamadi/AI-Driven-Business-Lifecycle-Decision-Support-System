@@ -23,6 +23,7 @@ export default function PlanHighlightsSidebar({
   downloadingPdf,
   downloadingDocx,
   copiedLink,
+  coverImage,
   onDownloadPdf,
   onDownloadDocx,
   onShareLink,
@@ -112,6 +113,12 @@ export default function PlanHighlightsSidebar({
 
         {/* Quick Document CTAs */}
         <div className="bp-sidebar-actions">
+          {coverImage && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', color: '#38bdf8', marginBottom: '0.25rem' }}>
+              <Sparkles size={12} />
+              <span>Page 1 Cover Attached</span>
+            </div>
+          )}
           <button
             onClick={onDownloadPdf}
             disabled={downloadingPdf}

@@ -21,6 +21,7 @@ export default function PlanHeader({
   downloadingPdf,
   downloadingDocx,
   copiedLink,
+  coverImage,
   onDownloadPdf,
   onDownloadDocx,
   onShareLink,
@@ -57,6 +58,13 @@ export default function PlanHeader({
               <span className="bp-badge-pill stage">
                 <Compass size={13} />
                 <span>AI Recommended</span>
+              </span>
+            )}
+
+            {coverImage && (
+              <span className="bp-badge-pill adopted" style={{ background: 'rgba(56, 189, 248, 0.15)', borderColor: 'rgba(56, 189, 248, 0.35)', color: '#38bdf8' }}>
+                <Sparkles size={13} />
+                <span>Page 1 Cover Attached</span>
               </span>
             )}
 

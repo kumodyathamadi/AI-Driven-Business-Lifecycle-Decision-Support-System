@@ -8,6 +8,7 @@ from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls
 
 from backend.services.business_plan_generator.chart_generator import BusinessPlanChartGenerator
+from backend.services.business_plan_generator.cover_image_handler import CoverImageHandler
 
 LOGO_PATH = os.path.abspath(os.path.join(
     os.path.dirname(__file__), "..", "..", "..", "frontend", "src", "assets", "logo", "sme360-ai-logo.png"
@@ -39,12 +40,52 @@ class BusinessPlanDocxGenerator:
     def generate_docx(report_data: dict) -> bytes:
         doc = Document()
 
-        # Page Margins (0.75 in / 54 pt)
-        for section in doc.sections:
-            section.top_margin = Inches(0.75)
-            section.bottom_margin = Inches(0.75)
-            section.left_margin = Inches(0.75)
-            section.right_margin = Inches(0.75)
+        raw_cover = report_data.get("cover_image")
+        cover_info = None
+        if raw_cover:
+            try:
+                cover_info = CoverImageHandler.process_cover_image(raw_cover)
+            except Exception:
+                cover_info = None
+
+        if cover_info:
+            # 0. Custom Cover Page Section (Full A4, zero margins)
+            sec_cover = doc.sections[0]
+            sec_cover.page_width = Inches(cover_info["docx_geometry"]["page_width_in"])
+            sec_cover.page_height = Inches(cover_info["docx_geometry"]["page_height_in"])
+            sec_cover.top_margin = Inches(0)
+            sec_cover.bottom_margin = Inches(0)
+            sec_cover.left_margin = Inches(0)
+            sec_cover.right_margin = Inches(0)
+
+            p_cover = doc.add_paragraph()
+            p_cover.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            p_cover.paragraph_format.space_before = Pt(cover_info["docx_geometry"]["top_space_pt"])
+            p_cover.paragraph_format.space_after = Pt(0)
+            run_cov = p_cover.add_run()
+            run_cov.add_picture(
+                io.BytesIO(cover_info["image_bytes"]),
+                width=Inches(cover_info["docx_geometry"]["width_in"]),
+                height=Inches(cover_info["docx_geometry"]["height_in"])
+            )
+
+            # Section break: Business Plan content begins cleanly on Page 2
+            sec_body = doc.add_section()
+            sec_body.page_width = Inches(cover_info["docx_geometry"]["page_width_in"])
+            sec_body.page_height = Inches(cover_info["docx_geometry"]["page_height_in"])
+            sec_body.top_margin = Inches(0.75)
+            sec_body.bottom_margin = Inches(0.75)
+            sec_body.left_margin = Inches(0.75)
+            sec_body.right_margin = Inches(0.75)
+        else:
+            # Standard Business Plan without custom cover
+            sec_body = doc.sections[0]
+            sec_body.page_width = Inches(8.27)
+            sec_body.page_height = Inches(11.69)
+            sec_body.top_margin = Inches(0.75)
+            sec_body.bottom_margin = Inches(0.75)
+            sec_body.left_margin = Inches(0.75)
+            sec_body.right_margin = Inches(0.75)
 
         # Corporate Color Palette
         COLOR_PRIMARY = RGBColor(30, 58, 138)   # #1e3a8a Deep Navy
