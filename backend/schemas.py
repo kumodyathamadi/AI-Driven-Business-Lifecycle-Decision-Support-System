@@ -66,6 +66,24 @@ class BusinessAnalysisRequest(BaseModel):
     province: Optional[str] = Field(default=None, examples=["Western"])
     proposed_action: Optional[str] = Field(default=None, examples=["Establish New Commercial Enterprise"])
 
+    # Optional Supplementary Growth Fields (for Existing Business Growth Plan)
+    current_monthly_revenue_lkr: Optional[float] = Field(default=None, ge=0, examples=[450000.0])
+    current_monthly_net_profit_lkr: Optional[float] = Field(default=None, examples=[75000.0])
+    existing_monthly_debt_obligations_lkr: Optional[float] = Field(default=None, ge=0, examples=[25000.0])
+    business_age_years: Optional[float] = Field(default=None, ge=0, examples=[3.5])
+    expansion_capex_lkr: Optional[float] = Field(default=None, ge=0, examples=[350000.0])
+    target_payback_months: Optional[int] = Field(default=None, ge=1, le=120, examples=[18])
+    current_capacity_utilization_pct: Optional[float] = Field(default=None, ge=0, le=100, examples=[85.0])
+    expansion_type: Optional[str] = Field(default=None, examples=["Physical Branch Expansion"])
+
+    # Optional Narrative & Report Metadata Fields
+    business_model: Optional[str] = Field(default=None, examples=["B2C (Business to Consumer)"])
+    address: Optional[str] = Field(default=None, examples=["No. 45, High Level Road, Homagama"])
+    additional_description: Optional[str] = Field(default=None, description="Detailed business concept or expansion description")
+    marketing_details: Optional[str] = Field(default=None, description="Marketing and customer acquisition details")
+    competitor_information: Optional[str] = Field(default=None, description="Local competition dynamics")
+    financial_overview: Optional[str] = Field(default=None, description="Additional financial overview notes")
+
     # Research Traceability Extensions
     original_business_description: Optional[str] = Field(default=None, description="Original natural language text entered by user")
     extraction_metadata: Optional[Dict[str, Any]] = Field(default=None, description="Metadata from AI intake extraction & user verification")
@@ -89,9 +107,22 @@ class BusinessAnalysisRequest(BaseModel):
     @field_validator(
         "available_capital_lkr", "loan_amount_lkr", "monthly_budget_lkr",
         "initial_inventory_cost_lkr", "expected_price_lkr",
+        "current_monthly_revenue_lkr", "current_monthly_net_profit_lkr",
+        "existing_monthly_debt_obligations_lkr", "business_age_years",
+        "expansion_capex_lkr", "current_capacity_utilization_pct",
         mode="before"
     )
     def validate_floats(cls, v, info):
+        # Optional supplementary growth fields return None if empty
+        if info.field_name in (
+            "current_monthly_revenue_lkr", "current_monthly_net_profit_lkr",
+            "existing_monthly_debt_obligations_lkr", "business_age_years",
+            "expansion_capex_lkr", "current_capacity_utilization_pct"
+        ):
+            if v is None or (isinstance(v, str) and not v.strip()):
+                return None
+            return parse_clean_numeric(v, 0.0)
+
         # Conditional fields default to 0.0 if not provided
         if info.field_name in ("loan_amount_lkr", "initial_inventory_cost_lkr"):
             if v is None or (isinstance(v, str) and not v.strip()):
@@ -114,9 +145,15 @@ class BusinessAnalysisRequest(BaseModel):
         "location_suitability_score", "available_staff_count",
         "required_staff_count", "available_equipment_score",
         "required_equipment_score", "supplier_availability_score",
+        "target_payback_months",
         mode="before"
     )
     def validate_ints(cls, v, info):
+        if info.field_name == "target_payback_months":
+            if v is None or (isinstance(v, str) and not v.strip()):
+                return None
+            return int(round(parse_clean_numeric(v, 0.0)))
+
         # System-derived or optional fields
         if info.field_name == "expected_operating_days_per_month":
             if v is None or (isinstance(v, str) and not v.strip()):

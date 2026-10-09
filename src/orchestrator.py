@@ -72,13 +72,16 @@ def analyze_business(raw_business_input: Dict[str, Any]) -> Dict[str, Any]:
     counterfactual = _counterfactual_engine.find_counterfactual(cleaned_input)
 
     # Step 7: Personalized Business & Growth Plan Generation
+    selected_strategy_id = raw_business_input.get("selected_strategy_id") or cleaned_input.get("selected_strategy_id")
     personalized_plan = _plan_generator.generate_plan(
         cleaned_input,
         feasibility_result,
         shap_explanation,
         topsis_ranking,
         what_if_scenarios,
-        counterfactual
+        counterfactual,
+        selected_strategy_id=selected_strategy_id,
+        candidate_strategies=candidate_strategies
     )
 
     # Step 8: Assemble Structured Business Profile JSON
@@ -90,7 +93,8 @@ def analyze_business(raw_business_input: Dict[str, Any]) -> Dict[str, Any]:
         topsis_ranking,
         what_if_scenarios,
         counterfactual,
-        personalized_plan
+        personalized_plan,
+        selected_strategy_id=selected_strategy_id
     )
 
     return structured_profile

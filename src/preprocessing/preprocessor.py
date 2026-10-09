@@ -157,13 +157,13 @@ def normalize_proposed_action(action_val: Any, stage: str) -> str:
     Maps user action string to model categorical token: 'start', 'expand', 'improve', or 'maintain'.
     """
     act_str = str(action_val or "").strip().lower()
-    if any(k in act_str for k in ["start", "establish", "launch", "new"]):
+    if any(k in act_str for k in ["start", "establish", "launch", "new", "startup"]):
         return "start"
-    elif any(k in act_str for k in ["expand", "branch", "product", "grow"]):
+    elif any(k in act_str for k in ["expand", "branch", "product", "grow", "scale", "capacity", "line"]):
         return "expand"
-    elif any(k in act_str for k in ["improve", "upgrade", "efficiency"]):
+    elif any(k in act_str for k in ["improve", "upgrade", "efficiency", "optimize", "delivery", "digital", "online"]):
         return "improve"
-    elif any(k in act_str for k in ["maintain", "stabilize"]):
+    elif any(k in act_str for k in ["maintain", "stabilize", "current"]):
         return "maintain"
     return "start" if "new" in stage.lower() else "expand"
 
@@ -296,26 +296,29 @@ def validate_and_format_input(raw_input: Dict[str, Any]) -> Tuple[pd.DataFrame, 
     model_action = normalize_proposed_action(raw_input.get("proposed_action", ""), model_stage)
     cleaned_input["proposed_action"] = raw_input.get("proposed_action") or f"{model_action.capitalize()} {display_category}"
 
-    # 7. Preserve optional business name and narrative metadata in cleaned_input
-    if "business_name" in raw_input and raw_input["business_name"]:
-        cleaned_input["business_name"] = str(raw_input["business_name"]).strip()
-    if "address" in raw_input and raw_input["address"]:
-        cleaned_input["address"] = str(raw_input["address"]).strip()
-    if "business_model" in raw_input and raw_input["business_model"]:
-        cleaned_input["business_model"] = str(raw_input["business_model"]).strip()
-    if "additional_description" in raw_input and raw_input["additional_description"]:
-        cleaned_input["additional_description"] = str(raw_input["additional_description"]).strip()
+    # 7. Preserve optional business name, narrative metadata, and supplementary growth fields in cleaned_input
+    optional_fields_to_preserve = [
+        "business_name", "address", "business_model", "additional_description",
+        "marketing_details", "competitor_information", "financial_overview",
+        "current_monthly_revenue_lkr", "current_monthly_net_profit_lkr",
+        "existing_monthly_debt_obligations_lkr", "business_age_years",
+        "expansion_capex_lkr", "target_payback_months",
+        "current_capacity_utilization_pct", "expansion_type"
+    ]
+    for opt_key in optional_fields_to_preserve:
+        if opt_key in raw_input and raw_input[opt_key] is not None and raw_input[opt_key] != "":
+            cleaned_input[opt_key] = raw_input[opt_key]
 
     # 8. Prepare DataFrame row with exact categorical tokens expected by preprocessor.joblib OneHotEncoder
-    model_input = cleaned_input.copy()
+    model_input = {}
+    for num_col in REQUIRED_NUMERICAL_FIELDS:
+        model_input[num_col] = cleaned_input[num_col]
+    for cat_col in REQUIRED_CATEGORICAL_FIELDS:
+        model_input[cat_col] = cleaned_input[cat_col]
+
     model_input["business_stage"] = model_stage
     model_input["business_category"] = model_category
     model_input["proposed_action"] = model_action
-
-    # Drop non-model features from model input DataFrame as model was not trained on them
-    for extra_key in ["stage_label", "business_name", "address", "business_model", "additional_description"]:
-        if extra_key in model_input:
-            del model_input[extra_key]
 
     df = pd.DataFrame([model_input])
 

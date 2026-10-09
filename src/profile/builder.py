@@ -18,7 +18,8 @@ class StructuredProfileBuilder:
         topsis_result: Dict[str, Any],
         what_if_scenarios: List[Dict[str, Any]],
         counterfactual: Dict[str, Any],
-        business_plan: Dict[str, Any]
+        business_plan: Dict[str, Any],
+        selected_strategy_id: Any = None
     ) -> Dict[str, Any]:
 
         timestamp = datetime.now(timezone.utc).isoformat()
@@ -43,7 +44,8 @@ class StructuredProfileBuilder:
             },
             "strategic_recommendations": {
                 "candidate_strategies": strategies,
-                "topsis_ranking": topsis_result
+                "topsis_ranking": topsis_result,
+                "selected_strategy_id": selected_strategy_id
             },
             "scenario_analysis": {
                 "what_if_simulations": what_if_scenarios,

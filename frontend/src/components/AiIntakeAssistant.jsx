@@ -873,6 +873,7 @@ export default function AiIntakeAssistant({ onCompleteIntake, onSwitchToManual, 
 
       {intakeStep === 'form' && (
         <BusinessForm
+          selectedStage={selectedStage}
           initialValues={prefilledFormData}
           aiFilledKeys={aiFilledKeys}
           onSubmit={onCompleteIntake}

@@ -181,7 +181,7 @@ class PersonalizedPlanGenerator:
         ] or ["Operating budget burn rate and customer acquisition require close oversight."]
 
         # ---------------------------------------------------------------------
-        # 4. SECTION 01 — BUSINESS & MARKET OVERVIEW
+        # 4. SECTION 01 — BUSINESS & MARKET OVERVIEW / ENTERPRISE BASELINE
         # ---------------------------------------------------------------------
         comp_summary = (
             f"Competition level is recorded as '{comp_level}' with approximately {comp_count} direct competitor(s) noted."
@@ -189,48 +189,114 @@ class PersonalizedPlanGenerator:
             f"Competition level is recorded as '{comp_level}'. Specific nearby direct competitor counts were not provided in current business inputs."
         )
 
-        section_01 = {
-            "section_number": "01",
-            "section_title": "01 — Business & Market Overview",
-            "business_summary": {
-                "business_name": business_name or "Information not provided",
-                "business_category": category,
-                "business_stage": "New Startup" if is_new_startup else "Existing Business",
-                "business_model": model,
-                "district": district,
-                "province": province,
-                "location_address": address or "Information not provided",
-                "proposed_action": proposed_action,
-                "business_description": additional_desc or "Information not provided"
-            },
-            "business_concept": {
-                "concept_overview": summary_intro,
-                "products_services": f"Commercial offerings in {category}",
-                "target_customers": target_age or f"Local consumers and households in {district}",
-                "business_objectives": additional_desc or f"Establish a sustainable {category} enterprise adhering to {active_strategy_name}."
-            },
-            "market_overview": {
-                "target_market": f"{district} ({location_type} Catchment)",
-                "customer_profile": target_age or "Information not provided",
-                "expected_customers_per_day": customers,
-                "expected_selling_price_lkr": price,
-                "operating_days_per_month": operating_days,
-                "customer_demand_score": f"{demand_score_val}/100"
-            },
-            "competition": {
-                "competition_level": comp_level,
-                "competitor_count_nearby": comp_count if (comp_count and comp_count > 0) else "Not provided in current business input",
-                "competitor_information": comp_summary,
-                "competitive_positioning": f"Differentiation via {strat_focus.lower()} and localized customer service responsiveness."
-            },
-            "location": {
-                "district": district,
-                "province": province,
-                "location_type": location_type,
-                "location_suitability_score": f"{loc_score}/5",
-                "location_considerations": f"Commercial location in {district}, providing consumer access within the local trading catchment."
+        if is_new_startup:
+            section_01 = {
+                "section_number": "01",
+                "section_title": "01 — Business & Market Overview",
+                "business_summary": {
+                    "business_name": business_name or "Information not provided",
+                    "business_category": category,
+                    "business_stage": "New Startup",
+                    "business_model": model,
+                    "district": district,
+                    "province": province,
+                    "location_address": address or "Information not provided",
+                    "proposed_action": proposed_action,
+                    "business_description": additional_desc or "Information not provided"
+                },
+                "business_concept": {
+                    "concept_overview": summary_intro,
+                    "products_services": f"Commercial offerings in {category}",
+                    "target_customers": target_age or f"Local consumers and households in {district}",
+                    "business_objectives": additional_desc or f"Establish a sustainable {category} enterprise adhering to {active_strategy_name}."
+                },
+                "market_overview": {
+                    "target_market": f"{district} ({location_type} Catchment)",
+                    "customer_profile": target_age or "Information not provided",
+                    "expected_customers_per_day": customers,
+                    "expected_selling_price_lkr": price,
+                    "operating_days_per_month": operating_days,
+                    "customer_demand_score": f"{demand_score_val}/100"
+                },
+                "competition": {
+                    "competition_level": comp_level,
+                    "competitor_count_nearby": comp_count if (comp_count and comp_count > 0) else "Not provided in current business input",
+                    "competitor_information": comp_summary,
+                    "competitive_positioning": f"Differentiation via {strat_focus.lower()} and localized customer service responsiveness."
+                },
+                "location": {
+                    "district": district,
+                    "province": province,
+                    "location_type": location_type,
+                    "location_suitability_score": f"{loc_score}/5",
+                    "location_considerations": f"Commercial location in {district}, providing consumer access within the local trading catchment."
+                }
             }
-        }
+        else:
+            # Dedicated Existing Business Baseline & Expansion Scope
+            baseline_rev = cleaned_input.get("current_monthly_revenue_lkr")
+            baseline_profit = cleaned_input.get("current_monthly_net_profit_lkr")
+            baseline_debt = cleaned_input.get("existing_monthly_debt_obligations_lkr")
+            biz_age = cleaned_input.get("business_age_years")
+            cap_util = cleaned_input.get("current_capacity_utilization_pct")
+            exp_type = cleaned_input.get("expansion_type") or "Physical Branch / Operational Expansion"
+
+            section_01 = {
+                "section_number": "01",
+                "section_title": "01 — Enterprise Baseline & Expansion Scope",
+                "business_summary": {
+                    "business_name": business_name or "Information not provided",
+                    "business_category": category,
+                    "business_stage": "Existing Business",
+                    "business_model": model,
+                    "district": district,
+                    "province": province,
+                    "location_address": address or "Information not provided",
+                    "proposed_action": proposed_action,
+                    "expansion_type": exp_type,
+                    "business_description": additional_desc or "Information not provided"
+                },
+                "enterprise_baseline": {
+                    "current_monthly_revenue_lkr": f"LKR {float(baseline_rev):,.2f}" if baseline_rev is not None else "Information not provided",
+                    "current_monthly_net_profit_lkr": f"LKR {float(baseline_profit):,.2f}" if baseline_profit is not None else "Information not provided",
+                    "existing_monthly_debt_repayments_lkr": f"LKR {float(baseline_debt):,.2f}" if baseline_debt is not None else "Information not provided",
+                    "business_operating_age_years": f"{biz_age} years" if biz_age is not None else "Information not provided",
+                    "capacity_utilization": f"{cap_util}%" if cap_util is not None else "Information not provided",
+                    "baseline_evaluation": (
+                        f"Established enterprise operating in {district}. "
+                        + (f"Recorded baseline turnover is LKR {float(baseline_rev):,.2f}/month. " if baseline_rev is not None else "Historical financial performance metrics were not provided in business intake. ")
+                        + f"Growth objective is centered on: '{proposed_action}'."
+                    )
+                },
+                "expansion_scope": {
+                    "concept_overview": summary_intro,
+                    "products_services": f"Expanded commercial offerings within {category}",
+                    "target_market": f"{district} ({location_type} Catchment)",
+                    "target_customers": target_age or f"Local consumers, professionals, and households in {district}",
+                    "expansion_objectives": additional_desc or f"Execute capacity expansion and market development adhering to {active_strategy_name}."
+                },
+                "market_overview": {
+                    "target_market": f"{district} Expansion Catchment",
+                    "customer_profile": target_age or "Information not provided",
+                    "expected_customers_per_day": customers,
+                    "expected_selling_price_lkr": price,
+                    "operating_days_per_month": operating_days,
+                    "customer_demand_score": f"{demand_score_val}/100"
+                },
+                "competition": {
+                    "competition_level": comp_level,
+                    "competitor_count_nearby": comp_count if (comp_count and comp_count > 0) else "Not provided in current business input",
+                    "competitor_information": comp_summary,
+                    "competitive_positioning": f"Leveraging established reputation and {strat_focus.lower()} to capture market share."
+                },
+                "location": {
+                    "district": district,
+                    "province": province,
+                    "location_type": location_type,
+                    "location_suitability_score": f"{loc_score}/5",
+                    "location_considerations": f"Expansion site in {district}, providing commercial density and local logistics access."
+                }
+            }
 
         # ---------------------------------------------------------------------
         # 5. SECTION 02 — AI FEASIBILITY & KEY INSIGHTS
@@ -317,49 +383,93 @@ class PersonalizedPlanGenerator:
         # ---------------------------------------------------------------------
         # 7. SECTION 04 — FINANCIAL & OPERATIONAL PLAN (Aligned to Strategy)
         # ---------------------------------------------------------------------
+        baseline_monthly_gross_sales = customers * price * operating_days if (customers and price and operating_days) else 0.0
         est_monthly_gross_sales = strat_customers * price * operating_days if (strat_customers and price and operating_days) else 0.0
+        projected_total_monthly_gross_sales = (customers + strat_customers) * price * operating_days if not is_new_startup else est_monthly_gross_sales
+
         funding_gap = max(0.0, strat_capital - capital) if strat_capital > capital else 0.0
         strat_capital_coverage = round(strat_capital / max(strat_budget, 1.0), 1)
         avail_funds_coverage = round(capital / max(strat_budget, 1.0), 1)
 
-        section_04 = {
-            "section_number": "04",
-            "section_title": "04 — Financial & Operational Plan",
-            "active_strategy_alignment": {
-                "strategy_name": active_strategy_name,
-                "is_user_selected": is_user_selected
-            },
-            "startup_investment": {
+        # Funding gap status with missing-capital guard
+        if capital is None or capital <= 0.0:
+            funding_gap_status = "Funding status pending (Capital not provided)"
+        elif funding_gap == 0.0:
+            funding_gap_status = "Fully funded from allocated expansion capital" if not is_new_startup else "Fully funded from baseline capital"
+        else:
+            funding_gap_status = f"LKR {funding_gap:,.2f} external funding requirement"
+
+        # Payback Period & Financial Safeguards for Existing Business
+        capex_raw = cleaned_input.get("expansion_capex_lkr")
+        profit_raw = cleaned_input.get("current_monthly_net_profit_lkr")
+        payback_dict = {}
+        if not is_new_startup:
+            if capex_raw is not None and float(capex_raw) > 0 and profit_raw is not None and float(profit_raw) > 0:
+                calc_payback = round(float(capex_raw) / float(profit_raw), 1)
+                payback_dict = {
+                    "payback_status": f"Estimated Payback Period: ~{calc_payback} months (based on stated monthly net profit baseline).",
+                    "estimated_payback_months": calc_payback,
+                    "target_payback_months": cleaned_input.get("target_payback_months") or "Not specified",
+                    "is_calculated": True
+                }
+            else:
+                missing_payback_fields = []
+                if capex_raw is None or float(capex_raw) <= 0:
+                    missing_payback_fields.append("One-Time Expansion CapEx (LKR)")
+                if profit_raw is None or float(profit_raw) <= 0:
+                    missing_payback_fields.append("Current Net Monthly Operating Profit (LKR)")
+                payback_dict = {
+                    "payback_status": "Insufficient data to calculate",
+                    "missing_inputs": missing_payback_fields,
+                    "is_calculated": False,
+                    "qualification": "Payback period requires verified one-time expansion CapEx and net operating profit. It cannot be derived from gross sales alone."
+                }
+
+        if is_new_startup:
+            startup_investment_dict = {
                 "available_capital_user_provided_lkr": capital,
                 "available_capital_lkr": capital,
                 "strategy_target_capital_lkr": strat_capital,
+                "strategy_target_expansion_capital_lkr": strat_capital,
                 "loan_amount_user_provided_lkr": loan_amount,
                 "loan_amount_lkr": loan_amount,
+                "total_available_funds_lkr": capital + loan_amount,
+                "total_available_expansion_funds_lkr": capital + loan_amount,
                 "initial_inventory_cost_lkr": inventory_cost,
                 "funding_gap_lkr": funding_gap,
-                "funding_gap_status": "Fully funded from baseline capital" if funding_gap == 0.0 else f"LKR {funding_gap:,.2f} external funding requirement"
-            },
-            "monthly_financial_plan": {
+                "funding_gap_status": funding_gap_status
+            }
+            monthly_plan_dict = {
                 "monthly_operating_budget_lkr": strat_budget,
+                "additional_monthly_operating_budget_lkr": strat_budget,
                 "expected_price_lkr": price,
                 "expected_customers_per_day": strat_customers,
+                "baseline_daily_customers": customers,
                 "operating_days_per_month": operating_days,
-                "estimated_monthly_gross_sales_lkr": est_monthly_gross_sales,
-                "estimated_monthly_revenue_lkr": est_monthly_gross_sales,
+                "baseline_monthly_gross_sales_lkr": baseline_monthly_gross_sales,
+                "expansion_uplift_monthly_gross_sales_lkr": 0.0,
+                "projected_total_monthly_gross_sales_lkr": est_monthly_gross_sales,
+                "estimated_monthly_gross_sales_lkr": baseline_monthly_gross_sales,
+                "estimated_monthly_revenue_lkr": baseline_monthly_gross_sales,
                 "sales_calculation_formula": "Estimated Monthly Gross Sales = Target Customers/Day × Expected Unit Price × Operating Days/Month",
                 "calculation_qualification": "This is a gross sales estimate based on the stated customer volume, unit price, and operating days. It does not represent net profit or cash flow."
-            },
-            "funding_structure": {
+            }
+            funding_structure_dict = {
                 "available_capital_lkr": capital,
+                "allocated_expansion_capital_lkr": capital,
                 "debt_financing_lkr": loan_amount,
                 "total_available_funds_lkr": capital + loan_amount,
+                "total_available_expansion_funds_lkr": capital + loan_amount,
                 "strategy_target_capital_lkr": strat_capital,
+                "strategy_target_expansion_capital_lkr": strat_capital,
+                "monthly_operating_budget_lkr": strat_budget,
                 "strategy_budget_coverage_months": strat_capital_coverage,
                 "available_funds_coverage_months": avail_funds_coverage,
                 "capital_runway_months": avail_funds_coverage,
+                "funding_gap_status": funding_gap_status,
                 "coverage_disclaimer": "Simplified budget coverage evaluates available funds relative to monthly operating expenditure. This is not a complete cash-flow runway and does not account for cost of goods sold, taxes, debt repayment, or working capital fluctuations."
-            },
-            "operational_plan": {
+            }
+            ops_plan_dict = {
                 "staffing": {
                     "available_staff_count": avail_staff,
                     "required_staff_count": req_staff,
@@ -383,31 +493,153 @@ class PersonalizedPlanGenerator:
                     "daily_operations": f"Manage daily store operations targeted at {strat_customers} customers per day.",
                     "delivery_digital": "Utilize digital messaging and local delivery logistics where applicable."
                 }
-            },
-            "marketing_plan": {
-                "marketing_channel": marketing_channel or "Local Community Outreach & Word-of-Mouth",
-                "customer_acquisition": f"Target local catchment in {district} to secure {strat_customers} daily patrons.",
-                "promotional_tactics": strat_tactics or [
-                    f"Deploy local awareness outreach tailored for {display_name} in {district}.",
-                    "Introductory trial promotions during opening weeks.",
-                    "Customer loyalty cards to encourage repeat visits."
-                ],
-                "retention_and_positioning": f"Differentiate via {strat_focus.lower()} and responsive community service."
             }
-        }
+            section_04 = {
+                "section_number": "04",
+                "section_title": "04 — Financial & Operational Plan",
+                "active_strategy_alignment": {
+                    "strategy_name": active_strategy_name,
+                    "is_user_selected": is_user_selected
+                },
+                "startup_investment": startup_investment_dict,
+                "expansion_investment": startup_investment_dict,
+                "monthly_financial_plan": monthly_plan_dict,
+                "funding_structure": funding_structure_dict,
+                "operational_plan": ops_plan_dict,
+                "operational_scaling_plan": ops_plan_dict,
+                "marketing_plan": {
+                    "marketing_channel": marketing_channel or "Local Community Outreach & Word-of-Mouth",
+                    "customer_acquisition": f"Target local catchment in {district} to secure {strat_customers} daily patrons.",
+                    "promotional_tactics": strat_tactics or [
+                        f"Deploy local awareness outreach tailored for {display_name} in {district}.",
+                        "Introductory trial promotions during opening weeks.",
+                        "Customer loyalty cards to encourage repeat visits."
+                    ],
+                    "retention_and_positioning": f"Differentiate via {strat_focus.lower()} and responsive community service."
+                }
+            }
+        else:
+            # Dedicated Existing Business Expansion Financial & Operational Plan with normalized keys
+            expansion_inv_dict = {
+                "allocated_expansion_capital_lkr": capital,
+                "available_capital_lkr": capital,
+                "strategy_target_expansion_capital_lkr": strat_capital,
+                "strategy_target_capital_lkr": strat_capital,
+                "planned_expansion_loan_lkr": loan_amount,
+                "loan_amount_lkr": loan_amount,
+                "total_available_funds_lkr": capital + loan_amount,
+                "total_available_expansion_funds_lkr": capital + loan_amount,
+                "additional_inventory_investment_lkr": inventory_cost,
+                "one_time_expansion_capex_lkr": float(capex_raw) if capex_raw is not None else "Information not provided",
+                "funding_gap_lkr": funding_gap,
+                "funding_gap_status": funding_gap_status
+            }
+            monthly_plan_dict = {
+                "monthly_operating_budget_lkr": strat_budget,
+                "additional_monthly_operating_budget_lkr": strat_budget,
+                "average_customer_spend_lkr": price,
+                "expected_price_lkr": price,
+                "expected_additional_customers_per_day": strat_customers,
+                "expected_customers_per_day": customers,
+                "baseline_daily_customers": customers,
+                "operating_days_per_month": operating_days,
+                "baseline_monthly_gross_sales_lkr": baseline_monthly_gross_sales,
+                "expansion_uplift_monthly_gross_sales_lkr": est_monthly_gross_sales,
+                "projected_total_monthly_gross_sales_lkr": projected_total_monthly_gross_sales,
+                "estimated_monthly_gross_sales_lkr": baseline_monthly_gross_sales,
+                "incremental_monthly_gross_sales_lkr": est_monthly_gross_sales,
+                "sales_calculation_formula": "Total Projected Gross Sales = (Baseline Customers + Additional Customers) × Expected Unit Price × Operating Days/Month",
+                "calculation_qualification": "Gross sales estimates reflect stated customer volume, price, and operating days. They do not account for variable costs or net profit."
+            }
+            funding_structure_dict = {
+                "allocated_expansion_capital_lkr": capital,
+                "available_capital_lkr": capital,
+                "debt_financing_lkr": loan_amount,
+                "total_available_expansion_funds_lkr": capital + loan_amount,
+                "total_available_funds_lkr": capital + loan_amount,
+                "strategy_target_capital_lkr": strat_capital,
+                "strategy_target_expansion_capital_lkr": strat_capital,
+                "monthly_operating_budget_lkr": strat_budget,
+                "strategy_budget_coverage_months": strat_capital_coverage,
+                "available_funds_coverage_months": avail_funds_coverage,
+                "capital_runway_months": avail_funds_coverage,
+                "funding_gap_status": funding_gap_status,
+                "coverage_disclaimer": "Evaluates allocated expansion funds relative to additional monthly operating expenditure. This does not represent total parent enterprise cash reserves."
+            }
+            ops_scaling_dict = {
+                "staffing": {
+                    "available_staff_count": avail_staff,
+                    "required_staff_count": req_staff,
+                    "additional_staff_needed": max(0, req_staff - avail_staff),
+                    "capacity_status": "Balanced staffing allocation" if avail_staff >= req_staff else "Additional headcount required for expansion",
+                    "recommended_approach": f"Deploy experienced staff from core facility to mentor new hires across {district}."
+                },
+                "staffing_reallocation": {
+                    "available_staff_count": avail_staff,
+                    "required_staff_count": req_staff,
+                    "additional_staff_needed": max(0, req_staff - avail_staff),
+                    "capacity_status": "Balanced staffing allocation" if avail_staff >= req_staff else "Additional headcount required for expansion",
+                    "recommended_approach": f"Deploy experienced staff from core facility to mentor new hires across {district}."
+                },
+                "equipment": {
+                    "available_equipment_score": f"{avail_equip}/5",
+                    "required_equipment_score": f"{req_equip}/5",
+                    "readiness_status": "Equipment meets operating baseline" if avail_equip >= req_equip else "Supplemental commercial machinery required for expansion",
+                    "recommended_approach": "Audit equipment sharing between parent operations and new capacity."
+                },
+                "equipment_capacity": {
+                    "available_equipment_score": f"{avail_equip}/5",
+                    "required_equipment_score": f"{req_equip}/5",
+                    "readiness_status": "Equipment meets operating baseline" if avail_equip >= req_equip else "Supplemental commercial machinery required for expansion",
+                    "recommended_approach": "Audit equipment sharing between parent operations and new capacity."
+                },
+                "suppliers": {
+                    "supplier_availability_score": f"{supplier_score}/5",
+                    "sourcing_approach": "Leverage existing wholesale supplier accounts to negotiate volume discounts."
+                },
+                "supplier_scaling": {
+                    "supplier_availability_score": f"{supplier_score}/5",
+                    "sourcing_approach": "Leverage existing wholesale supplier accounts to negotiate volume discounts."
+                }
+            }
+            section_04 = {
+                "section_number": "04",
+                "section_title": "04 — Expansion Financial & Operational Plan",
+                "active_strategy_alignment": {
+                    "strategy_name": active_strategy_name,
+                    "is_user_selected": is_user_selected
+                },
+                "expansion_investment": expansion_inv_dict,
+                "startup_investment": expansion_inv_dict,
+                "monthly_financial_plan": monthly_plan_dict,
+                "funding_structure": funding_structure_dict,
+                "payback_and_roi_analysis": payback_dict,
+                "operational_scaling_plan": ops_scaling_dict,
+                "operational_plan": ops_scaling_dict,
+                "marketing_plan": {
+                    "marketing_channel": marketing_channel or "Existing Customer Cross-Promotion & Local Outreach",
+                    "customer_acquisition": f"Target local catchment in {district} to secure {strat_customers} incremental daily patrons.",
+                    "promotional_tactics": strat_tactics or [
+                        f"Deploy targeted promotional announcements to existing customer base.",
+                        f"Introductory cross-store promotions for the expanded line or branch in {district}.",
+                        "Incentivize existing patrons with loyalty bonus rewards."
+                    ],
+                    "retention_and_positioning": f"Leverage established brand credibility and {strat_focus.lower()}."
+                }
+            }
 
         # ---------------------------------------------------------------------
-        # 8. SECTION 05 — SCENARIO ANALYSIS & ACTION ROADMAP
+        # 8. SECTION 05 — SCENARIO ANALYSIS & ACTION ROADMAP / GROWTH ROADMAP
         # ---------------------------------------------------------------------
         strat_id = active_strategy.get("strategy_id")
         if strat_id == "STRAT_01":
-            p1_strat_item = f"Implement Lean Bootstrapped setup for {display_name}: secure essential equipment and preserve cash reserves."
+            p1_strat_item = f"Implement Phased Modular Expansion setup for {display_name}: secure essential equipment and preserve cash reserves." if not is_new_startup else f"Implement Lean Bootstrapped setup for {display_name}: secure essential equipment and preserve cash reserves."
         elif strat_id == "STRAT_02":
-            p1_strat_item = f"Prepare Market Acquisition setup for {display_name}: establish localized customer outreach channels and introductory offerings."
+            p1_strat_item = f"Prepare Capacity & Scale Expansion for {display_name}: establish expanded customer outreach channels and production readiness." if not is_new_startup else f"Prepare Market Acquisition setup for {display_name}: establish localized customer outreach channels and introductory offerings."
         elif strat_id == "STRAT_03":
-            p1_strat_item = f"Configure digital ordering and local delivery coordination for {display_name} in {district}."
+            p1_strat_item = f"Configure omnichannel digital ordering and delivery coordination for {display_name} in {district}."
         elif strat_id == "STRAT_04":
-            p1_strat_item = f"Curate premium product presentation and distinctive service standards for {display_name}."
+            p1_strat_item = f"Curate product/service-line extension packages and distinctive service standards for {display_name}."
         else:
             p1_strat_item = f"Implement core operational strategy: {active_strategy_name}."
 
@@ -418,42 +650,166 @@ class PersonalizedPlanGenerator:
                 "Confirm commercial supplier agreements and inventory delivery terms.",
                 "Establish daily cash recording and operating expenditure controls."
             ]
+            roadmap_phases = {
+                "phase_0_to_30_days": p1_actions,
+                "phase_30_to_90_days": [
+                    f"Launch targeted customer outreach to attain {strat_customers} daily patrons.",
+                    f"Monitor monthly operating burn closely against LKR {strat_budget:,.2f} budget.",
+                    "Review supplier fulfillment reliability and inventory replenishment cycles.",
+                    "Collect direct customer feedback on pricing and service quality."
+                ],
+                "phase_3_to_6_months": [
+                    "Conduct quarterly financial review and audit simplified budget coverage.",
+                    "Optimize inventory reorder quantities based on top-selling items.",
+                    f"Review repeat customer patronage rate and local marketing effectiveness in {district}."
+                ],
+                "phase_6_to_12_months": [
+                    "Evaluate whether commercial expansion or channel extension is justified by observed demand.",
+                    "Re-run SME360 AI Feasibility pipeline using observed operating figures.",
+                    "Assess reinvestment of operating surplus into operational productivity improvements."
+                ]
+            }
         else:
-            p1_actions = [
-                f"Review current operational setup and workspace layout for {display_name}.",
-                p1_strat_item,
-                "Renegotiate commercial supplier pricing and delivery terms.",
-                "Audit working capital reserves and monthly expenditure controls."
+            # Dedicated 4-Phase Growth Roadmap for Existing Business
+            roadmap_phases = {
+                "phase_0_to_30_days": [
+                    f"Finalize expansion site agreements, space layout, and legal compliance for {display_name}.",
+                    p1_strat_item,
+                    "Leverage existing commercial vendor agreements to lock in volume purchase terms.",
+                    "Reallocate core senior staff to oversee expansion preparation."
+                ],
+                "phase_30_to_90_days": [
+                    f"Complete interior fit-out and equipment installation in {district}.",
+                    "Conduct pilot test runs and soft-launch to existing loyal customer database.",
+                    f"Monitor additional monthly operating burn strictly against LKR {strat_budget:,.2f}.",
+                    "Collect initial customer feedback on new offerings or branch accessibility."
+                ],
+                "phase_3_to_6_months": [
+                    f"Execute full commercial expansion launch targeted at {strat_customers} additional daily patrons.",
+                    "Implement cross-promotional campaigns between parent facility and expansion project.",
+                    "Audit incremental revenue contribution and operating gross margins quarterly."
+                ],
+                "phase_6_to_12_months": [
+                    "Conduct comprehensive payback review against initial investment.",
+                    "Re-run SME360 AI Feasibility pipeline using actual expansion financial records.",
+                    "Evaluate further capacity scaling or regional multi-unit expansion."
+                ]
+            }
+
+        # Management Monitoring Measures (All 5 Rows Populated with Plan-Derived Targets)
+        if not is_new_startup:
+            management_monitoring_measures = [
+                {
+                    "measure_name": "Daily Customer Volume",
+                    "metric": "Daily Customer Volume",
+                    "target": f"{customers} baseline + {strat_customers} additional customers/day (Total target: {customers + strat_customers}/day)",
+                    "focus": f"Track daily patrons against target of {customers} baseline + {strat_customers} additional customers/day",
+                    "frequency": "Daily",
+                    "category": "Operational Footfall",
+                    "type": "Operational"
+                },
+                {
+                    "measure_name": "Monthly Gross Sales",
+                    "metric": "Monthly Gross Sales",
+                    "target": f"LKR {baseline_monthly_gross_sales:,.0f} baseline + LKR {est_monthly_gross_sales:,.0f} expansion uplift (Projected total: LKR {projected_total_monthly_gross_sales:,.0f}/month)",
+                    "focus": f"Compare monthly receipts against projected total gross sales of LKR {projected_total_monthly_gross_sales:,.0f}/month",
+                    "frequency": "Monthly",
+                    "category": "Sales Revenue",
+                    "type": "Sales Revenue"
+                },
+                {
+                    "measure_name": "Operating Budget Compliance",
+                    "metric": "Operating Budget Compliance",
+                    "target": f"≤ LKR {strat_budget:,.0f} / month (Strict operational overhead compliance)",
+                    "focus": f"Monitor monthly overhead strictly against operating budget of LKR {strat_budget:,.0f}",
+                    "frequency": "Monthly",
+                    "category": "Cost Control",
+                    "type": "Cost Control"
+                },
+                {
+                    "measure_name": "Stock-Out & Inventory Replenishment",
+                    "metric": "Stock-Out & Inventory Replenishment",
+                    "target": "< 2 stock-out incidents / month (Maintain minimum buffer stock)",
+                    "focus": "Track stock-out frequency and vendor replenishment lead-times",
+                    "frequency": "Bi-weekly",
+                    "category": "Inventory Control",
+                    "type": "Operations"
+                },
+                {
+                    "measure_name": "Customer Retention & Repeat Visits",
+                    "metric": "Customer Retention & Repeat Visits",
+                    "target": "≥ 60% repeat customer rate (Track repeat patron transactions)",
+                    "focus": "Track repeat customer rate and cross-promotion effectiveness",
+                    "frequency": "Monthly",
+                    "category": "Customer Retention",
+                    "type": "Customer Retention"
+                }
+            ]
+        else:
+            management_monitoring_measures = [
+                {
+                    "measure_name": "Daily Customer Volume",
+                    "metric": "Daily Customer Volume",
+                    "target": f"{strat_customers} target customers / day (Intake baseline: {customers} customers/day)",
+                    "focus": f"Track daily patrons against target assumption of {strat_customers} customers/day",
+                    "frequency": "Daily",
+                    "category": "Operational Footfall",
+                    "type": "Operational"
+                },
+                {
+                    "measure_name": "Monthly Gross Sales",
+                    "metric": "Monthly Gross Sales",
+                    "target": f"LKR {est_monthly_gross_sales:,.0f} / month (Intake baseline: LKR {baseline_monthly_gross_sales:,.0f})",
+                    "focus": f"Compare actual receipts against gross sales estimate of LKR {est_monthly_gross_sales:,.0f}",
+                    "frequency": "Monthly",
+                    "category": "Sales Revenue",
+                    "type": "Sales Revenue"
+                },
+                {
+                    "measure_name": "Operating Budget Compliance",
+                    "metric": "Operating Budget Compliance",
+                    "target": f"≤ LKR {strat_budget:,.0f} / month (Monitor operational burn against budget)",
+                    "focus": f"Monitor monthly overhead against budget of LKR {strat_budget:,.0f}",
+                    "frequency": "Monthly",
+                    "category": "Cost Control",
+                    "type": "Cost Control"
+                },
+                {
+                    "measure_name": "Stock-Out & Inventory Replenishment",
+                    "metric": "Stock-Out & Inventory Replenishment",
+                    "target": "< 2 stock-out incidents / month (Maintain inventory buffer)",
+                    "focus": "Track stock-outs and vendor replenishment turnaround",
+                    "frequency": "Bi-weekly",
+                    "category": "Inventory Control",
+                    "type": "Operations"
+                },
+                {
+                    "measure_name": "Customer Retention & Repeat Visits",
+                    "metric": "Customer Retention & Repeat Visits",
+                    "target": "≥ 60% repeat customer rate (Track loyalty patrons)",
+                    "focus": "Track customer satisfaction and repeat patron transactions",
+                    "frequency": "Monthly",
+                    "category": "Customer Retention",
+                    "type": "Customer Retention"
+                }
             ]
 
-        roadmap_phases = {
-            "phase_0_to_30_days": p1_actions,
-            "phase_30_to_90_days": [
-                f"Launch targeted customer outreach to attain {strat_customers} daily patrons.",
-                f"Monitor monthly operating burn closely against LKR {strat_budget:,.2f} budget.",
-                "Review supplier fulfillment reliability and inventory replenishment cycles.",
-                "Collect direct customer feedback on pricing and service quality."
-            ],
-            "phase_3_to_6_months": [
-                "Conduct quarterly financial review and audit simplified budget coverage.",
-                "Optimize inventory reorder quantities based on top-selling items.",
-                f"Review repeat customer patronage rate and local marketing effectiveness in {district}."
-            ],
-            "phase_6_to_12_months": [
-                "Evaluate whether commercial expansion or channel extension is justified by observed demand.",
-                "Re-run SME360 AI Feasibility pipeline using observed operating figures.",
-                "Assess reinvestment of operating surplus into operational productivity improvements."
+        section_05 = {
+            "section_number": "05",
+            "section_title": "05 — Personalized Growth Roadmap & Monitoring" if not is_new_startup else "05 — Scenario Analysis & Action Roadmap",
+            "active_strategy_roadmap": {
+                "strategy_name": active_strategy_name,
+                "strategy_id": active_strategy_id,
+                "is_user_selected": is_user_selected,
+                "phases": roadmap_phases
+            },
+            "management_monitoring_measures": management_monitoring_measures,
+            "operational_safeguards": [
+                f"Maintain minimum working reserve covering at least {avail_funds_coverage:.1f} months of additional operating budget.",
+                "Review weekly inventory turnover to prevent capital lockup in slow-moving items.",
+                "Establish dual-vendor supplier options for mission-critical stock categories."
             ]
         }
-
-        # Management Monitoring Measures (Lightweight, Non-Predictive)
-        management_monitoring_measures = [
-            {"metric": "Daily Customer Volume", "focus": f"Track daily patrons against baseline assumption of {strat_customers} customers/day", "frequency": "Daily", "type": "Operational"},
-            {"metric": "Monthly Gross Sales", "focus": f"Compare actual receipts against gross sales estimate of LKR {est_monthly_gross_sales:,.2f}", "frequency": "Monthly", "type": "Sales Revenue"},
-            {"metric": "Operating Expenditure", "focus": f"Monitor monthly overhead against budget of LKR {strat_budget:,.2f}", "frequency": "Monthly", "type": "Cost Control"},
-            {"metric": "Repeat Patronage", "focus": "Establish baseline repeat customer rate during initial 90 operating days", "frequency": "Quarterly", "type": "Customer Retention"},
-            {"metric": "Supplier Delivery Fulfillment", "focus": "Track supplier delivery punctuality and order accuracy monthly", "frequency": "Monthly", "type": "Operations"}
-        ]
 
         # Operational Constraints & Management Considerations (Component 1 - NOT Component 4 Risk Prediction)
         constraints_considerations = [

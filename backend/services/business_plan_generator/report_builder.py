@@ -116,6 +116,127 @@ class BusinessPlanReportBuilder:
 
         cover_image = profile.get("cover_image") or metadata.get("cover_image") or business_input.get("cover_image")
 
+        is_new_startup = "new" in str(stage).lower() or "start" in str(stage).lower()
+        doc_title = "STRATEGIC BUSINESS PLAN" if is_new_startup else "STRATEGIC BUSINESS GROWTH & EXPANSION PLAN"
+        doc_subtitle = (
+            "A Comprehensive Feasibility, Strategic Direction & Implementation Blueprint"
+            if is_new_startup else
+            "AI-Driven Business Growth, Expansion Feasibility & Investment Planning"
+        )
+
+        # Standardize Section 04 for robust generator consumption across both Startup & Existing Business
+        if sec_04 and isinstance(sec_04, dict):
+            inv_block = sec_04.get("expansion_investment") or sec_04.get("startup_investment") or {}
+            fin_block = sec_04.get("monthly_financial_plan") or {}
+            funding_block = sec_04.get("funding_structure") or {}
+            ops_block = sec_04.get("operational_scaling_plan") or sec_04.get("operational_plan") or {}
+
+            # Standardized Target Capital
+            t_cap = (
+                inv_block.get("strategy_target_expansion_capital_lkr") or
+                inv_block.get("strategy_target_capital_lkr") or
+                funding_block.get("strategy_target_capital_lkr") or
+                strategy_target_capital
+            )
+            # Standardized Available Capital
+            a_cap = (
+                inv_block.get("allocated_expansion_capital_lkr") or
+                inv_block.get("available_capital_lkr") or
+                funding_block.get("allocated_expansion_capital_lkr") or
+                funding_block.get("available_capital_lkr") or
+                effective_capital
+            )
+            # Standardized Monthly Operating Budget
+            m_bud = (
+                fin_block.get("additional_monthly_operating_budget_lkr") or
+                fin_block.get("monthly_operating_budget_lkr") or
+                funding_block.get("monthly_operating_budget_lkr") or
+                effective_budget
+            )
+            # Standardized Total Funds
+            tot_f = (
+                funding_block.get("total_available_expansion_funds_lkr") or
+                funding_block.get("total_available_funds_lkr") or
+                inv_block.get("total_available_funds_lkr") or
+                (a_cap + loan_amount)
+            )
+            # Standardized Funding Gap Status
+            gap_stat = inv_block.get("funding_gap_status")
+            if not gap_stat or a_cap is None or a_cap <= 0.0:
+                if a_cap is None or a_cap <= 0.0:
+                    gap_stat = "Funding status pending (Capital not provided)"
+                else:
+                    gap_stat = "Fully funded from baseline capital" if tot_f >= t_cap else "Capital gap identified"
+
+            # Gross Sales calculations
+            b_sales = fin_block.get("baseline_monthly_gross_sales_lkr") or (customers_per_day * expected_price * operating_days)
+            u_sales = fin_block.get("expansion_uplift_monthly_gross_sales_lkr") or 0.0
+            p_sales = fin_block.get("projected_total_monthly_gross_sales_lkr") or (b_sales + u_sales if not is_new_startup else b_sales)
+
+            standard_inv = {
+                **inv_block,
+                "strategy_target_capital_lkr": t_cap,
+                "strategy_target_expansion_capital_lkr": t_cap,
+                "available_capital_lkr": a_cap,
+                "allocated_expansion_capital_lkr": a_cap,
+                "loan_amount_lkr": loan_amount,
+                "total_available_funds_lkr": tot_f,
+                "total_available_expansion_funds_lkr": tot_f,
+                "funding_gap_status": gap_stat
+            }
+            standard_fin = {
+                **fin_block,
+                "monthly_operating_budget_lkr": m_bud,
+                "additional_monthly_operating_budget_lkr": m_bud,
+                "expected_price_lkr": expected_price,
+                "operating_days_per_month": operating_days,
+                "baseline_monthly_gross_sales_lkr": b_sales,
+                "expansion_uplift_monthly_gross_sales_lkr": u_sales,
+                "projected_total_monthly_gross_sales_lkr": p_sales,
+                "estimated_monthly_gross_sales_lkr": b_sales
+            }
+            standard_funding = {
+                **funding_block,
+                "strategy_target_capital_lkr": t_cap,
+                "strategy_target_expansion_capital_lkr": t_cap,
+                "available_capital_lkr": a_cap,
+                "allocated_expansion_capital_lkr": a_cap,
+                "total_available_funds_lkr": tot_f,
+                "total_available_expansion_funds_lkr": tot_f,
+                "monthly_operating_budget_lkr": m_bud,
+                "funding_gap_status": gap_stat,
+                "strategy_budget_coverage_months": funding_block.get("strategy_budget_coverage_months", round(t_cap / max(m_bud, 1.0), 1)),
+                "available_funds_coverage_months": funding_block.get("available_funds_coverage_months", round(tot_f / max(m_bud, 1.0), 1))
+            }
+            sec_04["startup_investment"] = standard_inv
+            sec_04["expansion_investment"] = standard_inv
+            sec_04["monthly_financial_plan"] = standard_fin
+            sec_04["funding_structure"] = standard_funding
+            sec_04["operational_plan"] = ops_block
+            sec_04["operational_scaling_plan"] = ops_block
+
+        # Standardize Section 05 monitoring measures
+        if sec_05 and isinstance(sec_05, dict):
+            raw_measures = sec_05.get("management_monitoring_measures") or sec_05.get("measurable_kpis") or []
+            std_measures = []
+            for m in raw_measures:
+                m_name = m.get("measure_name") or m.get("metric") or m.get("kpi_name") or "Operational Metric"
+                t_val = str(m.get("target") or m.get("focus") or "")
+                freq_val = str(m.get("frequency") or "Monthly")
+                cat_val = str(m.get("category") or m.get("type") or "Operational")
+                std_measures.append({
+                    "measure_name": m_name,
+                    "metric": m_name,
+                    "kpi_name": m_name,
+                    "target": t_val,
+                    "focus": t_val,
+                    "frequency": freq_val,
+                    "category": cat_val,
+                    "type": cat_val
+                })
+            sec_05["management_monitoring_measures"] = std_measures
+            sec_05["measurable_kpis"] = std_measures
+
         # Build Normalized Report Dictionary
         report_data = {
             "cover_image": cover_image,
@@ -124,8 +245,9 @@ class BusinessPlanReportBuilder:
                 "schema_version": metadata.get("schema_version", "2.0.0"),
                 "generated_date": date_str,
                 "system_brand": "SME360 AI",
-                "document_title": "STRATEGIC BUSINESS PLAN",
-                "document_subtitle": "AI-Assisted Business Feasibility & Personalized Growth Report",
+                "document_title": doc_title,
+                "document_subtitle": doc_subtitle,
+                "is_new_startup": is_new_startup
             },
             "business_identity": {
                 "business_name": business_name,

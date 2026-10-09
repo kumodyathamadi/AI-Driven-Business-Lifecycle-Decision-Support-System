@@ -293,9 +293,17 @@ class BusinessPlanPDFGenerator:
         district = biz_id.get("district", "Colombo")
         province = biz_id.get("province", "Western")
 
+        is_new_startup = "new" in stage.lower() or "start" in stage.lower()
+        doc_title = metadata.get("document_title") or ("STRATEGIC BUSINESS PLAN" if is_new_startup else "STRATEGIC BUSINESS GROWTH & EXPANSION PLAN")
+        doc_subtitle = metadata.get("document_subtitle") or (
+            "A Comprehensive Feasibility, Strategic Direction & Implementation Blueprint"
+            if is_new_startup else
+            "AI-Driven Business Growth, Expansion Feasibility & Investment Planning"
+        )
+
         story.append(Paragraph(metadata.get("system_brand", "SME360 AI"), subtitle_style))
-        story.append(Paragraph("STRATEGIC BUSINESS PLAN", title_style))
-        story.append(Paragraph("A Comprehensive Feasibility, Strategic Direction & Implementation Blueprint", ParagraphStyle('CoverSub2', parent=body_style, fontSize=10, textColor=muted_text, spaceAfter=25)))
+        story.append(Paragraph(doc_title, title_style))
+        story.append(Paragraph(doc_subtitle, ParagraphStyle('CoverSub2', parent=body_style, fontSize=10, textColor=muted_text, spaceAfter=25)))
 
         # Metadata Card (Executive Presentation, not a database dump)
         clean_stage_display = "New Startup" if "new" in stage.lower() else "Existing Business"
@@ -328,7 +336,12 @@ class BusinessPlanPDFGenerator:
         comp = sec_01.get("competition", {})
         loc = sec_01.get("location", {})
 
-        story.append(Paragraph("SECTION 01 — BUSINESS & MARKET OVERVIEW", h1_style))
+        sec_01_name = sec_01.get("section_title")
+        if sec_01_name:
+            sec_01_display = f"SECTION {sec_01_name.upper()}" if not sec_01_name.upper().startswith("SECTION") else sec_01_name.upper()
+        else:
+            sec_01_display = "SECTION 01 — BUSINESS & MARKET OVERVIEW" if is_new_startup else "SECTION 01 — ENTERPRISE BASELINE & EXPANSION SCOPE"
+        story.append(Paragraph(sec_01_display, h1_style))
         story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
 
         # 1.1 Business Overview Narrative
@@ -449,7 +462,12 @@ class BusinessPlanPDFGenerator:
         prob_cond = probs.get("Conditionally Feasible", 0.0)
         prob_infeas = probs.get("Infeasible", 0.0)
 
-        story.append(Paragraph("SECTION 02 — AI FEASIBILITY & KEY INSIGHTS", h1_style))
+        sec_02_name = sec_02.get("section_title")
+        if sec_02_name:
+            sec_02_display = f"SECTION {sec_02_name.upper()}" if not sec_02_name.upper().startswith("SECTION") else sec_02_name.upper()
+        else:
+            sec_02_display = "SECTION 02 — AI FEASIBILITY & KEY INSIGHTS" if is_new_startup else "SECTION 02 — AI FEASIBILITY ASSESSMENT & EXPLANATION"
+        story.append(Paragraph(sec_02_display, h1_style))
         story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
 
         # 2.1 AI Feasibility Statement
@@ -537,7 +555,12 @@ class BusinessPlanPDFGenerator:
         strat_candidates = sec_03.get("available_strategic_alternatives", [])
         ranked_list = sec_03.get("strategy_ranking", [])
 
-        story.append(Paragraph("SECTION 03 — STRATEGIC RECOMMENDATIONS & TOPSIS RANKING", h1_style))
+        sec_03_name = sec_03.get("section_title")
+        if sec_03_name:
+            sec_03_display = f"SECTION {sec_03_name.upper()}" if not sec_03_name.upper().startswith("SECTION") else sec_03_name.upper()
+        else:
+            sec_03_display = "SECTION 03 — STRATEGIC RECOMMENDATIONS & TOPSIS RANKING" if is_new_startup else "SECTION 03 — GROWTH STRATEGY PRIORITIZATION & TOPSIS RANKING"
+        story.append(Paragraph(sec_03_display, h1_style))
         story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
 
         # 3.1 Strategic Direction
@@ -670,41 +693,72 @@ class BusinessPlanPDFGenerator:
         supp = ops.get("suppliers", {})
         mkt_plan = sec_04.get("marketing_plan", {})
 
-        target_cap = startup.get("strategy_target_capital_lkr", 0.0)
-        monthly_exp = fin_plan.get("monthly_operating_budget_lkr", 0.0)
-        est_gross_sales = fin_plan.get("estimated_monthly_gross_sales_lkr", fin_plan.get("estimated_monthly_revenue_lkr", 0.0))
+        target_cap_val = startup.get("strategy_target_capital_lkr") or startup.get("strategy_target_expansion_capital_lkr")
+        monthly_exp_val = fin_plan.get("monthly_operating_budget_lkr") or fin_plan.get("additional_monthly_operating_budget_lkr")
         
+        baseline_gross_sales = fin_plan.get("baseline_monthly_gross_sales_lkr") or (cust_per_day * unit_price * op_days)
+        uplift_gross_sales = fin_plan.get("expansion_uplift_monthly_gross_sales_lkr", 0.0)
+        projected_total_sales = fin_plan.get("projected_total_monthly_gross_sales_lkr") or (baseline_gross_sales + uplift_gross_sales if not is_new_startup else baseline_gross_sales)
+        strat_cust_additional = fin_plan.get("expected_additional_customers_per_day", 0)
+
         strat_coverage = funding.get("strategy_budget_coverage_months", funding.get("capital_runway_months", 0.0))
         avail_coverage = funding.get("available_funds_coverage_months", funding.get("capital_runway_months", 0.0))
         
-        avail_cap = funding.get("available_capital_lkr", funding.get("initial_available_capital_lkr", funding.get("equity_capital_lkr", 0.0)))
-        debt_cap = funding.get("debt_financing_lkr", 0.0)
-        total_funds = funding.get("total_available_funds_lkr", avail_cap + debt_cap)
-        gap_status = startup.get("funding_gap_status", "Fully funded")
+        avail_cap_val = funding.get("available_capital_lkr") or funding.get("allocated_expansion_capital_lkr")
+        debt_cap_val = funding.get("debt_financing_lkr", 0.0)
+        total_funds_val = funding.get("total_available_funds_lkr") or funding.get("total_available_expansion_funds_lkr")
 
-        story.append(Paragraph("SECTION 04 — FINANCIAL & OPERATIONAL PLAN", h1_style))
+        # Handling missing / zero values per rule 4
+        target_cap_display = f"LKR {target_cap_val:,.0f}" if (target_cap_val is not None and target_cap_val > 0) else "Not provided"
+        monthly_exp_display = f"LKR {monthly_exp_val:,.0f}" if (monthly_exp_val is not None and monthly_exp_val > 0) else "Not provided"
+        avail_cap_display = f"LKR {avail_cap_val:,.0f}" if (avail_cap_val is not None and avail_cap_val > 0) else "Not provided"
+        total_funds_display = f"LKR {total_funds_val:,.0f}" if (total_funds_val is not None and total_funds_val > 0) else "Not provided"
+
+        gap_status = startup.get("funding_gap_status") or funding.get("funding_gap_status", "")
+        if not gap_status or avail_cap_val is None or avail_cap_val <= 0.0:
+            gap_status = "Funding status pending (Capital not provided)"
+
+        sec_04_name = sec_04.get("section_title")
+        if sec_04_name:
+            sec_04_display = f"SECTION {sec_04_name.upper()}" if not sec_04_name.upper().startswith("SECTION") else sec_04_name.upper()
+        else:
+            sec_04_display = "SECTION 04 — FINANCIAL & OPERATIONAL PLAN" if is_new_startup else "SECTION 04 — EXPANSION FINANCIAL & OPERATIONAL PLAN"
+        story.append(Paragraph(sec_04_display, h1_style))
         story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
 
         # 4.1 Financial Overview Narrative
         story.append(Paragraph(f"<b>4.1 Financial Overview — Aligned with {active_strat_title}</b>", h2_style))
         
-        fin_p1 = (
-            f"To operationalize the chosen strategy, the enterprise establishes a target capital allocation of approximately "
-            f"<b>LKR {target_cap:,.0f}</b>. Under the baseline operating budget, recurring monthly operational expenditure is projected "
-            f"at <b>LKR {monthly_exp:,.0f}</b>, covering commercial rent, essential payroll, utilities, and routine replenishment inventory. "
-            f"With an expected customer throughput of <b>{cust_per_day} customers per day</b>, an expected unit price of <b>LKR {unit_price:,.2f}</b>, "
-            f"and an operating schedule of <b>{op_days} days per month</b>, estimated monthly gross sales total approximately "
-            f"<b>LKR {est_gross_sales:,.0f}</b>. "
-            f"<i>(Note: This is an estimated monthly gross sales calculation based on stated volume, price, and operating days. It does not account for variable costs or net profit.)</i>"
-        )
+        if not is_new_startup:
+            fin_p1 = (
+                f"To operationalize the chosen strategy, the enterprise establishes a target expansion capital allocation of "
+                f"<b>{target_cap_display}</b>. Under the baseline operating budget, recurring monthly operational expenditure is projected "
+                f"at <b>{monthly_exp_display}</b>, covering commercial rent, essential payroll, utilities, and routine replenishment inventory. "
+                f"Current operations generate an estimated baseline gross sales volume of <b>LKR {baseline_gross_sales:,.0f}</b> "
+                f"({cust_per_day} baseline customers per day × LKR {unit_price:,.2f} × {op_days} operating days). "
+                f"Following the operational expansion, the enterprise projects an incremental sales uplift of <b>LKR {uplift_gross_sales:,.0f}</b> "
+                f"from {strat_cust_additional} additional daily patrons, bringing total projected monthly gross sales to approximately "
+                f"<b>LKR {projected_total_sales:,.0f}</b>. "
+                f"<i>(Note: These figures represent estimated gross sales based on stated customer volume, price, and operating schedule. They do not account for variable costs or net profit.)</i>"
+            )
+        else:
+            fin_p1 = (
+                f"To operationalize the chosen strategy, the enterprise establishes a target capital allocation of approximately "
+                f"<b>{target_cap_display}</b>. Under the baseline operating budget, recurring monthly operational expenditure is projected "
+                f"at <b>{monthly_exp_display}</b>, covering commercial rent, essential payroll, utilities, and routine replenishment inventory. "
+                f"With an expected customer throughput of <b>{cust_per_day} customers per day</b>, an expected unit price of <b>LKR {unit_price:,.2f}</b>, "
+                f"and an operating schedule of <b>{op_days} days per month</b>, estimated monthly gross sales total approximately "
+                f"<b>LKR {baseline_gross_sales:,.0f}</b>. "
+                f"<i>(Note: This is an estimated monthly gross sales calculation based on stated volume, price, and operating days. It does not account for variable costs or net profit.)</i>"
+            )
         story.append(Paragraph(fin_p1, body_style))
 
-        # Key Financial Figures Metric Strip
+        # Key Financial Figures Metric Strip (Showing baseline gross sales per rule 2)
         story.append(Spacer(1, 2))
         fin_metrics = [
-            ("Target Capital", f"LKR {target_cap:,.0f}", "Baseline Allocation"),
-            ("Monthly Budget", f"LKR {monthly_exp:,.0f}", "Operating Expenditure"),
-            ("Est. Gross Sales", f"LKR {est_gross_sales:,.0f}", "Volume × Price × Days"),
+            ("Target Capital", target_cap_display, "Expansion Allocation" if not is_new_startup else "Baseline Allocation"),
+            ("Monthly Budget", monthly_exp_display, "Operating Expenditure"),
+            ("Baseline Gross Sales", f"LKR {baseline_gross_sales:,.0f}", f"Current ({cust_per_day} cust/day × LKR {unit_price:,.0f})"),
             ("Budget Coverage", f"{strat_coverage} Mo (Strat)", "Simplified Budget Ratio")
         ]
         story.append(create_metric_strip(fin_metrics))
@@ -712,15 +766,36 @@ class BusinessPlanPDFGenerator:
 
         # 4.2 Funding Position & Simplified Budget Coverage
         story.append(Paragraph("<b>4.2 Funding Structure & Simplified Budget Coverage</b>", h3_style))
+        debt_display = f"LKR {debt_cap_val:,.0f}" if debt_cap_val > 0 else "LKR 0"
         fin_p2 = (
-            f"The business financing structure comprises <b>LKR {avail_cap:,.0f}</b> in recorded available capital and "
-            f"<b>LKR {debt_cap:,.0f}</b> in external loan financing, delivering total initial funding of <b>LKR {total_funds:,.0f}</b>. "
-            f"Comparing available capital against the target requirement (LKR {target_cap:,.0f}) indicates that the venture is <b>{gap_status.lower()}</b>. "
-            f"Under the baseline operating budget, simplified budget coverage corresponds to approximately <b>{strat_coverage} months</b> "
+            f"The business financing structure comprises <b>{avail_cap_display}</b> in recorded available capital and "
+            f"<b>{debt_display}</b> in external loan financing, delivering total initial funding of <b>{total_funds_display}</b>. "
+            f"Comparing available capital against the target requirement ({target_cap_display}) indicates that the venture status is: <b>{gap_status}</b>. "
+            f"Under the baseline operating budget ({monthly_exp_display}), simplified budget coverage corresponds to approximately <b>{strat_coverage} months</b> "
             f"for the strategy allocation and <b>{avail_coverage} months</b> for total recorded funds. "
             f"<i>(Note: Simplified budget coverage represents a capital-to-budget ratio and does not constitute a guaranteed survival period, as it does not model cash flow cycles or unforeseen costs.)</i>"
         )
         story.append(Paragraph(fin_p2, body_style))
+
+        # Payback Analysis / Safeguards (For Existing Business Expansion)
+        payback_info = sec_04.get("payback_and_roi_analysis")
+        if payback_info:
+            story.append(Spacer(1, 4))
+            story.append(Paragraph("<b>4.2b Expansion Payback & Capital Recovery Analysis</b>", h3_style))
+            if payback_info.get("is_calculated"):
+                p_payback = (
+                    f"Based on the supplied one-time expansion CapEx and net operating profit baseline, the target investment "
+                    f"payback period is estimated at <b>~{payback_info.get('estimated_payback_months')} months</b>. "
+                    f"<i>(Note: This calculation assumes consistent net cash flow generation without unexpected working capital shocks.)</i>"
+                )
+            else:
+                missing_str = ", ".join(payback_info.get("missing_inputs", [])) if payback_info.get("missing_inputs") else "Expansion CapEx and Operating Net Profit"
+                p_payback = (
+                    f"<b>Payback Analysis Status:</b> <font color='#991b1b'><b>Insufficient data to calculate</b></font>. "
+                    f"The following required baseline inputs were not provided: <i>{missing_str}</i>. "
+                    f"To prevent misleading financial forecasts, payback period and return on investment are not estimated from gross sales alone."
+                )
+            story.append(Paragraph(p_payback, body_style))
 
         # 4.3 Operational Plan Subsections
         story.append(Spacer(1, 4))
@@ -790,7 +865,12 @@ class BusinessPlanPDFGenerator:
         kpis = sec_05.get("management_monitoring_measures") or sec_05.get("measurable_kpis", [])
         constraints = sec_05.get("operational_constraints_and_management_considerations") or sec_05.get("business_constraints_and_mitigation", [])
 
-        story.append(Paragraph("SECTION 05 — SCENARIO ANALYSIS & ACTION ROADMAP", h1_style))
+        sec_05_name = sec_05.get("section_title")
+        if sec_05_name:
+            sec_05_display = f"SECTION {sec_05_name.upper()}" if not sec_05_name.upper().startswith("SECTION") else sec_05_name.upper()
+        else:
+            sec_05_display = "SECTION 05 — SCENARIO ANALYSIS & ACTION ROADMAP" if is_new_startup else "SECTION 05 — PERSONALIZED GROWTH ROADMAP & MONITORING"
+        story.append(Paragraph(sec_05_display, h1_style))
         story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
 
         # 5.1 What-If Scenarios
@@ -887,11 +967,15 @@ class BusinessPlanPDFGenerator:
                 ]
             ]
             for k in kpis[:5]:
+                m_label = k.get('measure_name') or k.get('metric') or k.get('kpi_name') or "Operational Measure"
+                t_label = str(k.get("target") or k.get("focus") or "")
+                freq_label = str(k.get("frequency") or "Monthly")
+                cat_label = str(k.get("category") or k.get("type") or "Operational")
                 kpi_table_data.append([
-                    Paragraph(f"<b>{k.get('measure_name') or k.get('kpi_name', '')}</b>", table_cell_style),
-                    Paragraph(str(k.get("target", "")), table_cell_style),
-                    Paragraph(k.get("frequency", "Monthly"), table_cell_style),
-                    Paragraph(k.get("category") or k.get("type", "Operational"), table_cell_style)
+                    Paragraph(f"<b>{m_label}</b>", table_cell_style),
+                    Paragraph(t_label, table_cell_style),
+                    Paragraph(freq_label, table_cell_style),
+                    Paragraph(cat_label, table_cell_style)
                 ])
             kpi_table = Table(kpi_table_data, colWidths=[150, 160, 110, 120])
             kpi_table.setStyle(TableStyle([
