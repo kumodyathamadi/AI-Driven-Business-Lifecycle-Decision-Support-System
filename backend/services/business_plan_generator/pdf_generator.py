@@ -693,30 +693,17 @@ class BusinessPlanPDFGenerator:
         supp = ops.get("suppliers", {})
         mkt_plan = sec_04.get("marketing_plan", {})
 
-        target_cap_val = startup.get("strategy_target_capital_lkr") or startup.get("strategy_target_expansion_capital_lkr")
-        monthly_exp_val = fin_plan.get("monthly_operating_budget_lkr") or fin_plan.get("additional_monthly_operating_budget_lkr")
+        target_cap = startup.get("strategy_target_capital_lkr", 0.0)
+        monthly_exp = fin_plan.get("monthly_operating_budget_lkr", 0.0)
+        est_gross_sales = fin_plan.get("estimated_monthly_gross_sales_lkr", fin_plan.get("estimated_monthly_revenue_lkr", 0.0))
         
-        baseline_gross_sales = fin_plan.get("baseline_monthly_gross_sales_lkr") or (cust_per_day * unit_price * op_days)
-        uplift_gross_sales = fin_plan.get("expansion_uplift_monthly_gross_sales_lkr", 0.0)
-        projected_total_sales = fin_plan.get("projected_total_monthly_gross_sales_lkr") or (baseline_gross_sales + uplift_gross_sales if not is_new_startup else baseline_gross_sales)
-        strat_cust_additional = fin_plan.get("expected_additional_customers_per_day", 0)
-
         strat_coverage = funding.get("strategy_budget_coverage_months", funding.get("capital_runway_months", 0.0))
         avail_coverage = funding.get("available_funds_coverage_months", funding.get("capital_runway_months", 0.0))
         
-        avail_cap_val = funding.get("available_capital_lkr") or funding.get("allocated_expansion_capital_lkr")
-        debt_cap_val = funding.get("debt_financing_lkr", 0.0)
-        total_funds_val = funding.get("total_available_funds_lkr") or funding.get("total_available_expansion_funds_lkr")
-
-        # Handling missing / zero values per rule 4
-        target_cap_display = f"LKR {target_cap_val:,.0f}" if (target_cap_val is not None and target_cap_val > 0) else "Not provided"
-        monthly_exp_display = f"LKR {monthly_exp_val:,.0f}" if (monthly_exp_val is not None and monthly_exp_val > 0) else "Not provided"
-        avail_cap_display = f"LKR {avail_cap_val:,.0f}" if (avail_cap_val is not None and avail_cap_val > 0) else "Not provided"
-        total_funds_display = f"LKR {total_funds_val:,.0f}" if (total_funds_val is not None and total_funds_val > 0) else "Not provided"
-
-        gap_status = startup.get("funding_gap_status") or funding.get("funding_gap_status", "")
-        if not gap_status or avail_cap_val is None or avail_cap_val <= 0.0:
-            gap_status = "Funding status pending (Capital not provided)"
+        avail_cap = funding.get("available_capital_lkr", funding.get("initial_available_capital_lkr", funding.get("equity_capital_lkr", 0.0)))
+        debt_cap = funding.get("debt_financing_lkr", 0.0)
+        total_funds = funding.get("total_available_funds_lkr", avail_cap + debt_cap)
+        gap_status = startup.get("funding_gap_status", "Fully funded")
 
         sec_04_name = sec_04.get("section_title")
         if sec_04_name:
@@ -729,36 +716,23 @@ class BusinessPlanPDFGenerator:
         # 4.1 Financial Overview Narrative
         story.append(Paragraph(f"<b>4.1 Financial Overview — Aligned with {active_strat_title}</b>", h2_style))
         
-        if not is_new_startup:
-            fin_p1 = (
-                f"To operationalize the chosen strategy, the enterprise establishes a target expansion capital allocation of "
-                f"<b>{target_cap_display}</b>. Under the baseline operating budget, recurring monthly operational expenditure is projected "
-                f"at <b>{monthly_exp_display}</b>, covering commercial rent, essential payroll, utilities, and routine replenishment inventory. "
-                f"Current operations generate an estimated baseline gross sales volume of <b>LKR {baseline_gross_sales:,.0f}</b> "
-                f"({cust_per_day} baseline customers per day × LKR {unit_price:,.2f} × {op_days} operating days). "
-                f"Following the operational expansion, the enterprise projects an incremental sales uplift of <b>LKR {uplift_gross_sales:,.0f}</b> "
-                f"from {strat_cust_additional} additional daily patrons, bringing total projected monthly gross sales to approximately "
-                f"<b>LKR {projected_total_sales:,.0f}</b>. "
-                f"<i>(Note: These figures represent estimated gross sales based on stated customer volume, price, and operating schedule. They do not account for variable costs or net profit.)</i>"
-            )
-        else:
-            fin_p1 = (
-                f"To operationalize the chosen strategy, the enterprise establishes a target capital allocation of approximately "
-                f"<b>{target_cap_display}</b>. Under the baseline operating budget, recurring monthly operational expenditure is projected "
-                f"at <b>{monthly_exp_display}</b>, covering commercial rent, essential payroll, utilities, and routine replenishment inventory. "
-                f"With an expected customer throughput of <b>{cust_per_day} customers per day</b>, an expected unit price of <b>LKR {unit_price:,.2f}</b>, "
-                f"and an operating schedule of <b>{op_days} days per month</b>, estimated monthly gross sales total approximately "
-                f"<b>LKR {baseline_gross_sales:,.0f}</b>. "
-                f"<i>(Note: This is an estimated monthly gross sales calculation based on stated volume, price, and operating days. It does not account for variable costs or net profit.)</i>"
-            )
+        fin_p1 = (
+            f"To operationalize the chosen strategy, the enterprise establishes a target capital allocation of approximately "
+            f"<b>LKR {target_cap:,.0f}</b>. Under the baseline operating budget, recurring monthly operational expenditure is projected "
+            f"at <b>LKR {monthly_exp:,.0f}</b>, covering commercial rent, essential payroll, utilities, and routine replenishment inventory. "
+            f"With an expected customer throughput of <b>{cust_per_day} customers per day</b>, an expected unit price of <b>LKR {unit_price:,.2f}</b>, "
+            f"and an operating schedule of <b>{op_days} days per month</b>, estimated monthly gross sales total approximately "
+            f"<b>LKR {est_gross_sales:,.0f}</b>. "
+            f"<i>(Note: This is an estimated monthly gross sales calculation based on stated volume, price, and operating days. It does not account for variable costs or net profit.)</i>"
+        )
         story.append(Paragraph(fin_p1, body_style))
 
-        # Key Financial Figures Metric Strip (Showing baseline gross sales per rule 2)
+        # Key Financial Figures Metric Strip
         story.append(Spacer(1, 2))
         fin_metrics = [
-            ("Target Capital", target_cap_display, "Expansion Allocation" if not is_new_startup else "Baseline Allocation"),
-            ("Monthly Budget", monthly_exp_display, "Operating Expenditure"),
-            ("Baseline Gross Sales", f"LKR {baseline_gross_sales:,.0f}", f"Current ({cust_per_day} cust/day × LKR {unit_price:,.0f})"),
+            ("Target Capital", f"LKR {target_cap:,.0f}", "Baseline Allocation"),
+            ("Monthly Budget", f"LKR {monthly_exp:,.0f}", "Operating Expenditure"),
+            ("Est. Gross Sales", f"LKR {est_gross_sales:,.0f}", "Volume × Price × Days"),
             ("Budget Coverage", f"{strat_coverage} Mo (Strat)", "Simplified Budget Ratio")
         ]
         story.append(create_metric_strip(fin_metrics))
@@ -766,12 +740,11 @@ class BusinessPlanPDFGenerator:
 
         # 4.2 Funding Position & Simplified Budget Coverage
         story.append(Paragraph("<b>4.2 Funding Structure & Simplified Budget Coverage</b>", h3_style))
-        debt_display = f"LKR {debt_cap_val:,.0f}" if debt_cap_val > 0 else "LKR 0"
         fin_p2 = (
-            f"The business financing structure comprises <b>{avail_cap_display}</b> in recorded available capital and "
-            f"<b>{debt_display}</b> in external loan financing, delivering total initial funding of <b>{total_funds_display}</b>. "
-            f"Comparing available capital against the target requirement ({target_cap_display}) indicates that the venture status is: <b>{gap_status}</b>. "
-            f"Under the baseline operating budget ({monthly_exp_display}), simplified budget coverage corresponds to approximately <b>{strat_coverage} months</b> "
+            f"The business financing structure comprises <b>LKR {avail_cap:,.0f}</b> in recorded available capital and "
+            f"<b>LKR {debt_cap:,.0f}</b> in external loan financing, delivering total initial funding of <b>LKR {total_funds:,.0f}</b>. "
+            f"Comparing available capital against the target requirement (LKR {target_cap:,.0f}) indicates that the venture is <b>{gap_status.lower()}</b>. "
+            f"Under the baseline operating budget, simplified budget coverage corresponds to approximately <b>{strat_coverage} months</b> "
             f"for the strategy allocation and <b>{avail_coverage} months</b> for total recorded funds. "
             f"<i>(Note: Simplified budget coverage represents a capital-to-budget ratio and does not constitute a guaranteed survival period, as it does not model cash flow cycles or unforeseen costs.)</i>"
         )
@@ -967,15 +940,11 @@ class BusinessPlanPDFGenerator:
                 ]
             ]
             for k in kpis[:5]:
-                m_label = k.get('measure_name') or k.get('metric') or k.get('kpi_name') or "Operational Measure"
-                t_label = str(k.get("target") or k.get("focus") or "")
-                freq_label = str(k.get("frequency") or "Monthly")
-                cat_label = str(k.get("category") or k.get("type") or "Operational")
                 kpi_table_data.append([
-                    Paragraph(f"<b>{m_label}</b>", table_cell_style),
-                    Paragraph(t_label, table_cell_style),
-                    Paragraph(freq_label, table_cell_style),
-                    Paragraph(cat_label, table_cell_style)
+                    Paragraph(f"<b>{k.get('measure_name') or k.get('kpi_name', '')}</b>", table_cell_style),
+                    Paragraph(str(k.get("target", "")), table_cell_style),
+                    Paragraph(k.get("frequency", "Monthly"), table_cell_style),
+                    Paragraph(k.get("category") or k.get("type", "Operational"), table_cell_style)
                 ])
             kpi_table = Table(kpi_table_data, colWidths=[150, 160, 110, 120])
             kpi_table.setStyle(TableStyle([
