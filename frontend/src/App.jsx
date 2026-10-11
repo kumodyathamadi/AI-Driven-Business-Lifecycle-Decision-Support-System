@@ -16,6 +16,7 @@ import NotFoundPage from './components/NotFoundPage';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './components/common/Toast';
 import { LanguageProvider } from './context/LanguageContext';
+import { ThemeProvider } from './context/ThemeContext';
 function AppLayout({ activeProfile }) {
   return (
     <div className="app-container">
@@ -38,10 +39,11 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <LanguageProvider>
-          <ToastProvider>
-            <Routes>
+      <ThemeProvider>
+        <AuthProvider>
+          <LanguageProvider>
+            <ToastProvider>
+              <Routes>
               {/* Redirect /login directly to /dashboard (Login/Register form removed) */}
               <Route path="/login" element={<Navigate to="/dashboard" replace />} />
 
@@ -88,6 +90,7 @@ export default function App() {
           </ToastProvider>
         </LanguageProvider>
       </AuthProvider>
-    </BrowserRouter>
-  );
+    </ThemeProvider>
+  </BrowserRouter>
+);
 }

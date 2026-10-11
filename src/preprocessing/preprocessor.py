@@ -108,16 +108,7 @@ USER_REQUIRED_FIELDS = {
 
 # Standard Sri Lankan District to Province geographic mapping
 DISTRICT_TO_PROVINCE = {
-    "Colombo": "Western", "Gampaha": "Western", "Kalutara": "Western",
-    "Kandy": "Central", "Matale": "Central", "Nuwara Eliya": "Central",
-    "Galle": "Southern", "Matara": "Southern", "Hambantota": "Southern",
-    "Jaffna": "Northern", "Kilinochchi": "Northern", "Mannar": "Northern",
-    "Vavuniya": "Northern", "Mullaitivu": "Northern",
-    "Batticaloa": "Eastern", "Ampara": "Eastern", "Trincomalee": "Eastern",
-    "Kurunegala": "North Western", "Puttalam": "North Western",
-    "Anuradhapura": "North Central", "Polonnaruwa": "North Central",
-    "Badulla": "Uva", "Monaragala": "Uva",
-    "Ratnapura": "Sabaragamuwa", "Kegalle": "Sabaragamuwa"
+    "Colombo": "Western", "Gampaha": "Western", "Kalutara": "Western"
 }
 
 # The 4 strictly supported SME business categories

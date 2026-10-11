@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { extractIntakeInformation } from '../services/api';
 import BusinessForm from './BusinessForm';
 import Logo from './Logo';
@@ -28,11 +28,9 @@ import startupImg from '../assets/images/startup_illustration.jpg';
 import expansionImg from '../assets/images/expansion_illustration.jpg';
 
 const SRI_LANKA_DISTRICTS = [
-  'Colombo', 'Gampaha', 'Kalutara', 'Kandy', 'Matale', 'Nuwara Eliya',
-  'Galle', 'Matara', 'Hambantota', 'Jaffna', 'Kilinochchi', 'Mannar',
-  'Vavuniya', 'Mullaitivu', 'Batticaloa', 'Ampara', 'Trincomalee',
-  'Kurunegala', 'Puttalam', 'Anuradhapura', 'Polonnaruwa', 'Badulla',
-  'Monaragala', 'Ratnapura', 'Kegalle'
+  'Colombo',
+  'Gampaha',
+  'Kalutara'
 ];
 
 const SUPPORTED_CATEGORIES = [
@@ -123,15 +121,18 @@ export default function AiIntakeAssistant({ onCompleteIntake, onSwitchToManual, 
     setErrorMsg('');
   };
 
+  const latestFormDataRef = useRef(null);
+
   const handleFormChange = useCallback((updated) => {
     if (updated) {
-      setPrefilledFormData((prev) => ({ ...prev, ...updated }));
+      latestFormDataRef.current = updated;
     }
   }, []);
 
   const handleBack = useCallback((currentData) => {
-    if (currentData) {
-      setPrefilledFormData((prev) => ({ ...prev, ...currentData }));
+    const dataToSave = currentData || latestFormDataRef.current;
+    if (dataToSave) {
+      setPrefilledFormData((prev) => ({ ...prev, ...dataToSave }));
     }
     if (intakeStep === 'form') {
       if (selectedStage === 'Existing') {
@@ -211,9 +212,13 @@ export default function AiIntakeAssistant({ onCompleteIntake, onSwitchToManual, 
       }
 
       if (data.extracted_fields?.district?.value) {
-        const found = SRI_LANKA_DISTRICTS.find(
-          d => d.toLowerCase() === String(data.extracted_fields.district.value).toLowerCase()
-        );
+        const rawDist = String(data.extracted_fields.district.value).trim().toLowerCase();
+        const found = SRI_LANKA_DISTRICTS.find(d => {
+          const dl = d.toLowerCase();
+          if (dl === rawDist) return true;
+          if ((rawDist === 'kalutara' || rawDist === 'kaluthara') && (dl === 'kalutara' || dl === 'kaluthara')) return true;
+          return false;
+        });
         if (found) {
           prefilled.district = found;
           filledKeys.add('district');
@@ -281,52 +286,51 @@ export default function AiIntakeAssistant({ onCompleteIntake, onSwitchToManual, 
 
   return (
     <>
-      <div className="glass-card" style={{ maxWidth: '960px', margin: '0 auto', padding: '1.85rem' }}>
+      <div className="wizard-glass-container">
 
       {/* Header bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '1.1rem', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <Logo variant="compact" height={34} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '1.25rem', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '0.85rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+          <Logo variant="compact" height={36} />
           <div>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.2px' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.3px', margin: 0 }}>
               AI Business Plan Generator
             </h2>
           </div>
         </div>
 
-        {/* Stepper indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(15, 23, 42, 0.7)', padding: '0.3rem 0.6rem', borderRadius: '30px', border: '1px solid var(--border-color)' }}>
-          {[
-            { id: 'type_select', label: '1. Business Type' },
-            { id: 'form', label: '2. Multi-Step Form & Plan' },
-          ].map((s, idx) => {
-            const isCurrent = 
-              (s.id === 'type_select' && (intakeStep === 'type_select' || intakeStep === 'expansion_select')) ||
-              (s.id === 'form' && intakeStep === 'form');
-            
-            const isPast = 
-              (s.id === 'type_select' && intakeStep === 'form');
+        {/* Sleek Step Indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div
+            style={{
+              background: (intakeStep === 'type_select' || intakeStep === 'expansion_select')
+                ? 'linear-gradient(135deg, #0ea5e9, #3b82f6)'
+                : 'rgba(56, 189, 248, 0.2)',
+              color: '#ffffff',
+              padding: '0.35rem 0.9rem',
+              borderRadius: '24px',
+              fontWeight: 700,
+              fontSize: '0.78rem',
+              boxShadow: (intakeStep === 'type_select' || intakeStep === 'expansion_select')
+                ? '0 0 18px rgba(14, 165, 233, 0.55)'
+                : 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem'
+            }}
+          >
+            <span>1. Business Type</span>
+          </div>
 
-            return (
-              <div
-                key={s.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                  fontSize: '0.72rem',
-                  fontWeight: isCurrent ? 700 : 500,
-                  color: isCurrent ? '#60a5fa' : isPast ? '#4ade80' : '#64748b',
-                  padding: '0.15rem 0.45rem',
-                  borderRadius: '12px',
-                  background: isCurrent ? 'rgba(59, 130, 246, 0.15)' : 'transparent'
-                }}
-              >
-                {isPast ? <Check size={11} /> : null}
-                <span>{s.label}</span>
-              </div>
-            );
-          })}
+          <span 
+            style={{ 
+              color: intakeStep === 'form' ? '#38bdf8' : '#64748b', 
+              fontSize: '0.8rem', 
+              fontWeight: intakeStep === 'form' ? 700 : 500 
+            }}
+          >
+            2. Multi-Step Form & Plan
+          </span>
         </div>
       </div>
 
@@ -342,13 +346,13 @@ export default function AiIntakeAssistant({ onCompleteIntake, onSwitchToManual, 
       {/* STEP 1A: BUSINESS TYPE SELECTION (NEW STARTUP vs EXISTING BUSINESS EXPANSION) */}
       {/* ========================================================================= */}
       {intakeStep === 'type_select' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.2px' }}>
+              <h3 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.3px', margin: '0 0 0.35rem 0' }}>
                 Select Business Type
               </h3>
-              <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+              <p style={{ fontSize: '0.9rem', color: '#94a3b8', margin: 0, lineHeight: 1.5 }}>
                 Choose whether you are launching a new enterprise or scaling an existing operation.
               </p>
             </div>
@@ -356,21 +360,21 @@ export default function AiIntakeAssistant({ onCompleteIntake, onSwitchToManual, 
             <button
               type="button"
               onClick={handleManualSwitchWithContext}
-              className="btn btn-secondary"
-              style={{ fontSize: '0.78rem', padding: '0.45rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              className="ghost-manual-btn"
+              title="Skip AI assistant and jump straight to the multi-step form"
             >
-              <FileEdit size={14} />
+              <FileEdit size={15} style={{ color: '#94a3b8' }} />
               <span>Fill Form Manually</span>
             </button>
           </div>
 
+          {/* 2-Column Selection Cards */}
           <div 
-            className="grid-2" 
             style={{ 
               display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
-              gap: '1.25rem', 
-              marginTop: '0.5rem' 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
+              gap: '1.5rem', 
+              marginTop: '0.25rem' 
             }}
           >
             {/* Card 1: New Startup */}
@@ -379,64 +383,71 @@ export default function AiIntakeAssistant({ onCompleteIntake, onSwitchToManual, 
               tabIndex={0}
               onClick={handleSelectStartup}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelectStartup(); } }}
-              style={{
-                background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(20, 184, 166, 0.08))',
-                border: '1px solid rgba(56, 189, 248, 0.35)',
-                borderRadius: '16px',
-                padding: '1.75rem',
-                cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '1.2rem',
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                outline: 'none',
-                position: 'relative',
-                overflow: 'hidden'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-3px)';
-                e.currentTarget.style.borderColor = '#38bdf8';
-                e.currentTarget.style.boxShadow = '0 12px 30px rgba(14, 165, 233, 0.25)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.borderColor = 'rgba(56, 189, 248, 0.35)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = '#38bdf8';
-                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(56, 189, 248, 0.3)';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(56, 189, 248, 0.35)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
+              className="wizard-card-startup"
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1.15rem' }}>
-                <img 
-                  src={startupImg} 
-                  alt="New Startup" 
-                  style={{ 
-                    width: '76px', 
-                    height: '76px', 
-                    borderRadius: '14px', 
-                    objectFit: 'cover', 
-                    border: '1px solid rgba(56, 189, 248, 0.4)',
-                    boxShadow: '0 6px 18px rgba(14, 165, 233, 0.35)',
-                    flexShrink: 0
-                  }} 
-                />
-                <div>
-                  <h4 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.35rem', letterSpacing: '-0.3px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1.25rem' }}>
+                <div style={{ maxWidth: '240px' }}>
+                  <h4 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.5rem', letterSpacing: '-0.3px' }}>
                     New Startup
                   </h4>
-                  <p style={{ fontSize: '0.86rem', color: '#94a3b8', lineHeight: 1.45, margin: 0 }}>
+                  <p style={{ fontSize: '0.86rem', color: '#94a3b8', lineHeight: 1.5, margin: 0 }}>
                     Turn your business idea into a clear, professional plan and take the first step toward launching your business.
                   </p>
                 </div>
+
+                {/* 3D Isometric Glowing Blue Neon Rocket Illustration */}
+                <div 
+                  style={{ 
+                    width: '100px', 
+                    height: '100px', 
+                    flexShrink: 0, 
+                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      width: '75px',
+                      height: '75px',
+                      borderRadius: '50%',
+                      background: 'radial-gradient(circle, rgba(6, 182, 212, 0.35) 0%, rgba(59, 130, 246, 0.15) 50%, transparent 75%)',
+                      filter: 'blur(14px)',
+                      zIndex: 0,
+                    }}
+                  />
+                  <svg width="90" height="90" viewBox="0 0 100 100" fill="none" style={{ position: 'relative', zIndex: 1, filter: 'drop-shadow(0 0 10px rgba(6, 182, 212, 0.65))' }}>
+                    <defs>
+                      <linearGradient id="rocketBodyGrad" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#38bdf8" />
+                        <stop offset="60%" stopColor="#0284c7" />
+                        <stop offset="100%" stopColor="#0369a1" />
+                      </linearGradient>
+                      <linearGradient id="neonGlowGrad" x1="0" y1="1" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#06b6d4" />
+                        <stop offset="100%" stopColor="#38bdf8" />
+                      </linearGradient>
+                    </defs>
+                    {/* Isometric Launch Blueprint Floor Plane */}
+                    <polygon points="50,75 85,60 50,45 15,60" fill="rgba(6, 182, 212, 0.08)" stroke="#06b6d4" strokeWidth="1" strokeDasharray="3 3" />
+                    {/* Rocket Exhaust Trail */}
+                    <polygon points="46,55 54,55 51,78 49,78" fill="url(#neonGlowGrad)" opacity="0.8" />
+                    <circle cx="50" cy="80" r="4" fill="#38bdf8" opacity="0.6" />
+                    {/* Left & Right Fins */}
+                    <path d="M36,46 L26,58 L38,55 Z" fill="#0284c7" stroke="#38bdf8" strokeWidth="1.5" />
+                    <path d="M64,46 L74,58 L62,55 Z" fill="#0284c7" stroke="#38bdf8" strokeWidth="1.5" />
+                    {/* Main Rocket Fuselage */}
+                    <path d="M50,15 C44,28 42,42 42,54 L58,54 C58,42 56,28 50,15 Z" fill="url(#rocketBodyGrad)" stroke="#38bdf8" strokeWidth="2" />
+                    {/* Porthole */}
+                    <circle cx="50" cy="34" r="5" fill="#0c4a6e" stroke="#22d3ee" strokeWidth="1.8" />
+                    <circle cx="50" cy="34" r="2.5" fill="#38bdf8" />
+                  </svg>
+                </div>
               </div>
 
-              <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#38bdf8', fontSize: '0.85rem', fontWeight: 700 }}>
+              <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#22d3ee', fontSize: '0.88rem', fontWeight: 700, paddingTop: '0.5rem' }}>
                 <span>Select New Startup</span>
                 <ArrowRight size={16} />
               </div>
@@ -448,64 +459,82 @@ export default function AiIntakeAssistant({ onCompleteIntake, onSwitchToManual, 
               tabIndex={0}
               onClick={handleSelectExpansion}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelectExpansion(); } }}
-              style={{
-                background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.12), rgba(249, 115, 22, 0.08))',
-                border: '1px solid rgba(168, 85, 247, 0.35)',
-                borderRadius: '16px',
-                padding: '1.75rem',
-                cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '1.2rem',
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                outline: 'none',
-                position: 'relative',
-                overflow: 'hidden'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-3px)';
-                e.currentTarget.style.borderColor = '#c084fc';
-                e.currentTarget.style.boxShadow = '0 12px 30px rgba(168, 85, 247, 0.25)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.35)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = '#c084fc';
-                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(168, 85, 247, 0.3)';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.35)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
+              className="wizard-card-expansion"
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1.15rem' }}>
-                <img 
-                  src={expansionImg} 
-                  alt="Existing Business Expansion" 
-                  style={{ 
-                    width: '76px', 
-                    height: '76px', 
-                    borderRadius: '14px', 
-                    objectFit: 'cover', 
-                    border: '1px solid rgba(168, 85, 247, 0.4)',
-                    boxShadow: '0 6px 18px rgba(168, 85, 247, 0.35)',
-                    flexShrink: 0
-                  }} 
-                />
-                <div>
-                  <h4 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.35rem', letterSpacing: '-0.3px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1.25rem' }}>
+                <div style={{ maxWidth: '240px' }}>
+                  <h4 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.5rem', letterSpacing: '-0.3px' }}>
                     Existing Business Expansion
                   </h4>
-                  <p style={{ fontSize: '0.86rem', color: '#94a3b8', lineHeight: 1.45, margin: 0 }}>
+                  <p style={{ fontSize: '0.86rem', color: '#94a3b8', lineHeight: 1.5, margin: 0 }}>
                     Plan your next stage of growth, from opening a new location to introducing new products or services.
                   </p>
                 </div>
+
+                {/* 3D Isometric Glowing Purple Building Blocks & Trending Arrow */}
+                <div 
+                  style={{ 
+                    width: '100px', 
+                    height: '100px', 
+                    flexShrink: 0, 
+                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      width: '75px',
+                      height: '75px',
+                      borderRadius: '50%',
+                      background: 'radial-gradient(circle, rgba(168, 85, 247, 0.35) 0%, rgba(217, 70, 239, 0.15) 50%, transparent 75%)',
+                      filter: 'blur(14px)',
+                      zIndex: 0,
+                    }}
+                  />
+                  <svg width="90" height="90" viewBox="0 0 100 100" fill="none" style={{ position: 'relative', zIndex: 1, filter: 'drop-shadow(0 0 10px rgba(168, 85, 247, 0.65))' }}>
+                    <defs>
+                      <linearGradient id="cubeTopGrad" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#c084fc" />
+                        <stop offset="100%" stopColor="#9333ea" />
+                      </linearGradient>
+                      <linearGradient id="cubeLeftGrad" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#7e22ce" />
+                        <stop offset="100%" stopColor="#581c87" />
+                      </linearGradient>
+                      <linearGradient id="cubeRightGrad" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#9333ea" />
+                        <stop offset="100%" stopColor="#6b21a8" />
+                      </linearGradient>
+                    </defs>
+                    {/* Isometric Cube 1 (Low) */}
+                    <g transform="translate(18, 54)">
+                      <polygon points="12,0 24,6 12,12 0,6" fill="url(#cubeTopGrad)" stroke="#c084fc" strokeWidth="1" />
+                      <polygon points="0,6 12,12 12,22 0,16" fill="url(#cubeLeftGrad)" stroke="#c084fc" strokeWidth="1" />
+                      <polygon points="12,12 24,6 24,16 12,22" fill="url(#cubeRightGrad)" stroke="#c084fc" strokeWidth="1" />
+                    </g>
+                    {/* Isometric Cube 2 (Mid) */}
+                    <g transform="translate(38, 42)">
+                      <polygon points="12,0 24,6 12,12 0,6" fill="url(#cubeTopGrad)" stroke="#c084fc" strokeWidth="1" />
+                      <polygon points="0,6 12,12 12,34 0,28" fill="url(#cubeLeftGrad)" stroke="#c084fc" strokeWidth="1" />
+                      <polygon points="12,12 24,6 24,28 12,34" fill="url(#cubeRightGrad)" stroke="#c084fc" strokeWidth="1" />
+                    </g>
+                    {/* Isometric Cube 3 (High) */}
+                    <g transform="translate(58, 30)">
+                      <polygon points="12,0 24,6 12,12 0,6" fill="url(#cubeTopGrad)" stroke="#c084fc" strokeWidth="1" />
+                      <polygon points="0,6 12,12 12,46 0,40" fill="url(#cubeLeftGrad)" stroke="#c084fc" strokeWidth="1" />
+                      <polygon points="12,12 24,6 24,40 12,46" fill="url(#cubeRightGrad)" stroke="#c084fc" strokeWidth="1" />
+                    </g>
+                    {/* Upward Trending Neon Magenta/Purple Arrow */}
+                    <path d="M22,50 Q48,32 72,16" stroke="#f472b6" strokeWidth="3" strokeLinecap="round" />
+                    <polygon points="78,13 65,14 74,23" fill="#f472b6" />
+                  </svg>
+                </div>
               </div>
 
-              <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#c084fc', fontSize: '0.85rem', fontWeight: 700 }}>
+              <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#c084fc', fontSize: '0.88rem', fontWeight: 700, paddingTop: '0.5rem' }}>
                 <span>Select Expansion Path</span>
                 <ArrowRight size={16} />
               </div>
