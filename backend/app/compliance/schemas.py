@@ -24,9 +24,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 class ApplicabilityStatus(str, Enum):
     """Three-valued (plus conditional) applicability verdict."""
     APPLICABLE = "applicable"          # all trigger facts are True
-    CONDITIONAL = "conditional"        # triggers true but ≥1 exception unresolved
-    NOT_APPLICABLE = "not_applicable"  # at least one trigger fact is False
+    CONDITIONAL = "conditional"        # triggers true but >=1 exception unresolved or unverified conditions
+    NOT_IDENTIFIED = "not_identified"  # not identified for this profile (with reason, e.g. Employees = 0)
     UNKNOWN = "unknown"                # insufficient facts; never defaults to False
+    NOT_COVERED = "not_covered"        # selected authority/province is not yet covered by verified rules
 
 
 class ReviewerStatus(str, Enum):
@@ -154,7 +155,10 @@ class EvidenceChunk(BaseModel):
     quote: str
     url: Optional[str] = None
     retrieved_date: Optional[str] = None
+    effective_date: Optional[str] = None
+    source_title: Optional[str] = None
     authority: Optional[str] = None
+    reviewer_status: ReviewerStatus = ReviewerStatus.DRAFT
 
 
 class ObligationResult(BaseModel):
@@ -162,6 +166,10 @@ class ObligationResult(BaseModel):
     id: str
     name: str
     status: ApplicabilityStatus
+    reason: Optional[str] = Field(
+        None,
+        description="Explanation of verdict, required for not_identified (e.g. 'Employees = 0').",
+    )
     trigger_facts: Dict[str, Any] = Field(
         default_factory=dict,
         description="Profile fields that drove the verdict.",
@@ -173,10 +181,12 @@ class ObligationResult(BaseModel):
     authority: str
     jurisdiction: str
     required_action: str
+    reviewer_status: ReviewerStatus = ReviewerStatus.DRAFT
     evidence: List[EvidenceChunk] = Field(default_factory=list)
+    has_verified_source: bool = False
     caveat: str = (
-        "This analysis is computer-generated for guidance only. "
-        "Consult a qualified legal professional before acting."
+        "Rule-based guidance with AI-phrased explanations. "
+        "Not legal advice. Verify with the authority or a licensed practitioner."
     )
 
 
@@ -189,6 +199,6 @@ class ComplianceAnalysisResponse(BaseModel):
     )
     obligations: List[ObligationResult]
     caveat: str = (
-        "AI-generated guidance only. Not legal advice. "
-        "Verify with a licensed Sri Lankan legal practitioner."
+        "Rule-based guidance with AI-phrased explanations. "
+        "Not legal advice. Verify with the authority or a licensed practitioner."
     )
