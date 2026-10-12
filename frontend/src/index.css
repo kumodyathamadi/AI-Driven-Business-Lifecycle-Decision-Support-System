@@ -35,8 +35,6 @@
 }
 
 body {
-  background-color: var(--bg-dark);
-  color: var(--text-primary);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.5;
   min-height: 100vh;
