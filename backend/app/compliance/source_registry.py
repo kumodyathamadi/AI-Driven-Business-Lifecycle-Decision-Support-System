@@ -27,10 +27,15 @@ def _load_register() -> Dict[str, Dict[str, str]]:
         return {row["source_id"]: row for row in reader}
 
 
+def get_source_details(source_id: str) -> Dict[str, str]:
+    """Return full row dict for a given source_id from source register."""
+    register = _load_register()
+    return register.get(source_id, {})
+
+
 def get_source_url_and_date(source_id: str) -> Tuple[Optional[str], Optional[str]]:
     """Return (url, retrieved_date) for a given source_id, or (None, None)."""
-    register = _load_register()
-    row = register.get(source_id, {})
+    row = get_source_details(source_id)
     url = row.get("url") or None
     retrieved_date = row.get("retrieved_date") or None
     return url, retrieved_date
