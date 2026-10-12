@@ -94,7 +94,7 @@ def main() -> None:
             print(f"  - {e}", file=sys.stderr)
         sys.exit(1)
     else:
-        print(f"✓ Rulebook valid: {len(rulebook.obligations)} obligations, all source IDs verified.")
+        print(f"[OK] Rulebook valid: {len(rulebook.obligations)} obligations, all source IDs verified.")
 
 
 if __name__ == "__main__":
