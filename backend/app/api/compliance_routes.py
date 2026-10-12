@@ -104,3 +104,20 @@ async def list_sources() -> List[Dict[str, Any]]:
     Provides transparency: every legal source cited by the engine is listed here.
     """
     return get_all_sources()
+
+
+@router.get("/sample-profiles/{profile_id}")
+async def get_sample_profile(profile_id: str) -> Dict[str, Any]:
+    """
+    Return a demo sample profile from data/compliance/profiles/.
+    Valid profile_id: clear_case, conditional_case, missing_info_case
+    """
+    import json
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parents[3]
+    profile_path = repo_root / "data" / "compliance" / "profiles" / f"{profile_id}.json"
+    if not profile_path.exists():
+        raise HTTPException(status_code=404, detail=f"Sample profile '{profile_id}' not found")
+    with open(profile_path, encoding="utf-8") as f:
+        return json.load(f)
