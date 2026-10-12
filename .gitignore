@@ -25,6 +25,9 @@ build/
 .vscode/
 .idea/
 
+# Avoid nesting another checkout of this repository.
+/AI-Driven-Business-Lifecycle-Decision-Support-System/
+
 # OS
 .DS_Store
 Thumbs.db
