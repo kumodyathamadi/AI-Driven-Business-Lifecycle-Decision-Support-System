@@ -1,0 +1,10 @@
+{
+  "business_type": "bakery",
+  "local_authority": "Colombo Municipal Council",
+  "handles_food": true,
+  "has_physical_premises": true,
+  "employee_band": "1_9",
+  "is_manufacturing": true,
+  "legal_form": "sole_proprietorship",
+  "jurisdiction": "Western Province"
+}
