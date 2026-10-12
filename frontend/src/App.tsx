@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { RegistrationComplianceDashboard } from './components/component2';
+import { RegistrationComplianceDashboard } from './components/component2.tsx';
 
 export const App: React.FC = () => {
   const [activeComponent, setActiveComponent] = useState<'comp1' | 'comp2' | 'comp3' | 'comp4'>('comp2');
