@@ -95,11 +95,11 @@ class SMEStrategyGenerator:
             # =====================================================================
             # EXISTING BUSINESS GROWTH STRATEGIES
             # =====================================================================
-            # Strategy A: Phased Modular Expansion (Capital-Guarded)
+            # Strategy A: Step-by-Step Staged Expansion (Capital-Guarded)
             strategies.append({
                 "strategy_id": "STRAT_01",
-                "strategy_name": f"Phased Modular Expansion ({display_name})",
-                "strategic_focus": "Capital Preservation & Phased Scale",
+                "strategy_name": f"Step-by-Step Staged Expansion ({display_name})",
+                "strategic_focus": "Capital Protection & Phased Scale",
                 "operational_approach": (
                     f"Execute a staged expansion for {display_name}, validating initial branch or service capacity "
                     f"with controlled layout to mitigate exposure around {top_hurdle} before committing further capital."
@@ -119,10 +119,10 @@ class SMEStrategyGenerator:
                 "criteria_rationale": "Staged rollout preserves parent enterprise cash flow while proving expansion demand."
             })
 
-            # Strategy B: Capacity & Scale Expansion
+            # Strategy B: Full-Scale Capacity Growth
             strategies.append({
                 "strategy_id": "STRAT_02",
-                "strategy_name": f"Capacity & Scale Expansion ({display_name})",
+                "strategy_name": f"Full-Scale Capacity Growth ({display_name})",
                 "strategic_focus": "High Volume & Capacity Scaling",
                 "operational_approach": (
                     f"Rapidly expand customer-serving capacity, equipment throughput, and team size for {display_name} "
@@ -143,11 +143,11 @@ class SMEStrategyGenerator:
                 "criteria_rationale": "Aggressive capacity scale maximizes market capture; requires structured operational oversight."
             })
 
-            # Strategy C: Omnichannel & Shared-Facility Growth
+            # Strategy C: Online Ordering & Delivery Expansion
             strategies.append({
                 "strategy_id": "STRAT_03",
-                "strategy_name": "Omnichannel & Shared-Facility Growth",
-                "strategic_focus": "Channel Diversification & Shared Asset Efficiency",
+                "strategy_name": "Online Ordering & Delivery Expansion",
+                "strategic_focus": "Multi-Channel Orders & Shared Hub Efficiency",
                 "operational_approach": (
                     f"Leverage {display_name}'s existing commercial infrastructure and supplier network through "
                     f"digital ordering, delivery dispatch, and multi-channel fulfillment without proportional fixed rent increases."
@@ -167,11 +167,11 @@ class SMEStrategyGenerator:
                 "criteria_rationale": "Shared facilities and digital fulfillment enhance margin without heavy duplicate overhead."
             })
 
-            # Strategy D: Product / Service-Line Extension
+            # Strategy D: New Products & Service Additions
             strategies.append({
                 "strategy_id": "STRAT_04",
-                "strategy_name": "Product / Service-Line Extension",
-                "strategic_focus": "High Margin & Offering Diversification",
+                "strategy_name": "New Products & Service Additions",
+                "strategic_focus": "Higher Margins via New Offerings",
                 "operational_approach": (
                     f"Introduce complementary, high-margin product offerings or specialized service packages within "
                     f"{display_name}'s current operations to drive higher spend per visit and cross-selling."
@@ -193,22 +193,22 @@ class SMEStrategyGenerator:
 
         else:
             # =====================================================================
-            # NEW STARTUP LAUNCH STRATEGIES (Preserved)
+            # NEW STARTUP LAUNCH STRATEGIES (Business-Friendly Practical Titles)
             # =====================================================================
-            # Strategy 1: Lean Operational Bootstrapping Strategy
+            # Strategy 1: Low-Cost, Low-Risk Start
             strategies.append({
                 "strategy_id": "STRAT_01",
-                "strategy_name": f"Lean Bootstrapped Launch ({display_name})",
-                "strategic_focus": "Capital Preservation & Lean Operations",
+                "strategy_name": f"Low-Cost, Low-Risk Start ({display_name})",
+                "strategic_focus": "Capital Protection & Essential Setup",
                 "operational_approach": (
-                    f"Optimize initial setup for {display_name} by operating lean. Focus on essential equipment "
-                    f"and low-cost customer outreach to address the constraint around {top_hurdle}."
+                    f"Start with essential equipment and minimal initial inventory for {display_name}. Focus on lean operations "
+                    f"to keep overhead low and manage constraints around {top_hurdle}."
                 ),
                 "estimated_capital_required_lkr": s1_capital,
                 "estimated_monthly_budget_lkr": s1_budget,
                 "target_daily_customers": int(customers * 0.8),
                 "implementation_complexity": "Low",
-                "expected_feasibility_impact": "Capital Preservation and Leaner Launch",
+                "expected_feasibility_impact": "Capital Protection & Low-Risk Launch",
                 "criteria_scores": {
                     "financial_viability": clamp(s1_fin),
                     "implementation_feasibility": clamp(s1_feas),
@@ -216,23 +216,23 @@ class SMEStrategyGenerator:
                     "operational_risk": clamp(s1_risk),
                     "resource_efficiency": clamp(s1_eff)
                 },
-                "criteria_rationale": "High financial cushion and lean execution mitigate early operational overhead."
+                "criteria_rationale": "Minimal initial investment and low fixed costs safeguard cash reserves during early operations."
             })
 
-            # Strategy 2: Aggressive Market Penetration & Scale Strategy
+            # Strategy 2: High-Volume Local Promotion
             strategies.append({
                 "strategy_id": "STRAT_02",
-                "strategy_name": f"Market Expansion & Customer Acquisition ({display_name})",
-                "strategic_focus": "Demand Generation & Volume Reach",
+                "strategy_name": f"High-Volume Local Promotion ({display_name})",
+                "strategic_focus": "Rapid Customer Reach & Opening Discounts",
                 "operational_approach": (
-                    f"Allocate resources toward targeted local customer outreach and visibility for {display_name} to address {competition} "
-                    f"competition and capture available market demand."
+                    f"Invest in active local flyers, introductory discounts, and neighborhood visibility for {display_name} to stand out against {competition} "
+                    f"competition and attract high daily customer footfall."
                 ),
                 "estimated_capital_required_lkr": s2_capital,
                 "estimated_monthly_budget_lkr": s2_budget,
                 "target_daily_customers": int(customers * 1.3),
                 "implementation_complexity": "Moderate to High",
-                "expected_feasibility_impact": "Higher Volume Throughput with Staged Outlays",
+                "expected_feasibility_impact": "High Daily Sales Volume via Local Visibility",
                 "criteria_scores": {
                     "financial_viability": clamp(s2_fin),
                     "implementation_feasibility": clamp(s2_feas),
@@ -240,23 +240,23 @@ class SMEStrategyGenerator:
                     "operational_risk": clamp(s2_risk),
                     "resource_efficiency": clamp(s2_eff)
                 },
-                "criteria_rationale": "High revenue throughput enabled by market scale; capital intensity requires staged commitments."
+                "criteria_rationale": "Strong opening promotion accelerates daily sales volume, though marketing costs require careful monitoring."
             })
 
-            # Strategy 3: Digital & Direct-to-Consumer Partnership Strategy
+            # Strategy 3: Storefront + Home Delivery Model
             strategies.append({
                 "strategy_id": "STRAT_03",
-                "strategy_name": "Hybrid Digital & Local Delivery Model",
-                "strategic_focus": "Digital Channel Expansion & Low Fixed Cost",
+                "strategy_name": "Storefront + Home Delivery Model",
+                "strategic_focus": "In-Store Sales with Phone & WhatsApp Orders",
                 "operational_approach": (
-                    f"Combine focused physical setup with online ordering, social messaging channels, and local delivery "
-                    f"coordination to extend customer reach in {district}."
+                    f"Combine your physical shop in {district} with convenient phone and messaging delivery for nearby households, "
+                    f"expanding customer reach without opening a second location."
                 ),
                 "estimated_capital_required_lkr": s3_capital,
                 "estimated_monthly_budget_lkr": s3_budget,
                 "target_daily_customers": int(customers * 1.1),
                 "implementation_complexity": "Moderate",
-                "expected_feasibility_impact": "Balanced Growth with Controlled Operating Expenditure",
+                "expected_feasibility_impact": "Broader Reach via Storefront & Home Delivery",
                 "criteria_scores": {
                     "financial_viability": clamp(s3_fin),
                     "implementation_feasibility": clamp(s3_feas),
@@ -264,23 +264,23 @@ class SMEStrategyGenerator:
                     "operational_risk": clamp(s3_risk),
                     "resource_efficiency": clamp(s3_eff)
                 },
-                "criteria_rationale": "Omnichannel reach expands customer access while maintaining controlled operating overhead."
+                "criteria_rationale": "Combining walk-in sales with direct local delivery increases daily orders while keeping fixed rent low."
             })
 
-            # Strategy 4: High Value Premium Niche Positioning
+            # Strategy 4: Specialty & High-Quality Focus
             strategies.append({
                 "strategy_id": "STRAT_04",
-                "strategy_name": "Premium Quality & Niche Differentiation",
-                "strategic_focus": "High Margin & Customer Loyalty",
+                "strategy_name": "Specialty & High-Quality Focus",
+                "strategic_focus": "Premium Products & Higher Profit Margins",
                 "operational_approach": (
-                    f"Focus on premium product quality, customized service, and distinctive branding to achieve higher margins "
-                    f"without relying heavily on mass customer volume."
+                    f"Offer curated, superior-quality products and attentive personal customer service to achieve higher profit margins per sale "
+                    f"rather than relying purely on mass foot traffic."
                 ),
                 "estimated_capital_required_lkr": s4_capital,
                 "estimated_monthly_budget_lkr": s4_budget,
                 "target_daily_customers": int(customers * 0.7),
                 "implementation_complexity": "Moderate",
-                "expected_feasibility_impact": "Margin Stability via Differentiated Pricing",
+                "expected_feasibility_impact": "Healthy Profit Margins via High-Quality Specialty Items",
                 "criteria_scores": {
                     "financial_viability": clamp(s4_fin),
                     "implementation_feasibility": clamp(s4_feas),
@@ -288,7 +288,7 @@ class SMEStrategyGenerator:
                     "operational_risk": clamp(s4_risk),
                     "resource_efficiency": clamp(s4_eff)
                 },
-                "criteria_rationale": "Differentiated margins protect cash flow against customer volume fluctuations."
+                "criteria_rationale": "Higher profit margins per sale protect business cash flow against customer traffic fluctuations."
             })
 
         return strategies

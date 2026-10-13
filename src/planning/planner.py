@@ -566,13 +566,13 @@ class PersonalizedPlanGenerator:
         # ---------------------------------------------------------------------
         strat_id = active_strategy.get("strategy_id")
         if strat_id == "STRAT_01":
-            p1_strat_item = f"Implement Phased Modular Expansion setup for {display_name}: secure essential equipment and preserve cash reserves." if not is_new_startup else f"Implement Lean Bootstrapped setup for {display_name}: secure essential equipment and preserve cash reserves."
+            p1_strat_item = f"Implement Step-by-Step Staged Expansion for {display_name}: secure essential equipment and preserve cash reserves." if not is_new_startup else f"Implement Low-Cost, Low-Risk setup for {display_name}: secure essential equipment and preserve cash reserves."
         elif strat_id == "STRAT_02":
-            p1_strat_item = f"Prepare Capacity & Scale Expansion for {display_name}: establish expanded customer outreach channels and production readiness." if not is_new_startup else f"Prepare Market Acquisition setup for {display_name}: establish localized customer outreach channels and introductory offerings."
+            p1_strat_item = f"Prepare Full-Scale Capacity Growth for {display_name}: establish expanded customer outreach channels and production readiness." if not is_new_startup else f"Prepare High-Volume Local Promotion setup for {display_name}: establish localized customer outreach channels and introductory offerings."
         elif strat_id == "STRAT_03":
-            p1_strat_item = f"Configure omnichannel digital ordering and delivery coordination for {display_name} in {district}."
+            p1_strat_item = f"Configure online ordering and delivery expansion for {display_name} in {district}." if not is_new_startup else f"Configure storefront and home delivery coordination for {display_name} in {district}."
         elif strat_id == "STRAT_04":
-            p1_strat_item = f"Curate product/service-line extension packages and distinctive service standards for {display_name}."
+            p1_strat_item = f"Curate new products and service additions for {display_name}." if not is_new_startup else f"Curate specialty high-quality offerings and distinctive service standards for {display_name}."
         else:
             p1_strat_item = f"Implement core operational strategy: {active_strategy_name}."
 

@@ -550,7 +550,7 @@ class BusinessPlanPDFGenerator:
         sec_03 = report_data.get("section_03", {})
         hitl = sec_03.get("human_in_the_loop_selection", {})
         is_sel = hitl.get("is_user_selected", False)
-        active_strat_title = hitl.get("selected_strategy_name", "Lean Bootstrapped Launch")
+        active_strat_title = hitl.get("selected_strategy_name", "Low-Cost, Low-Risk Start")
         ai_strat = sec_03.get("ai_recommended_strategy", {})
         strat_candidates = sec_03.get("available_strategic_alternatives", [])
         ranked_list = sec_03.get("strategy_ranking", [])

@@ -150,7 +150,7 @@ export default function StrategyTradeoffModal({
           <div style={{ paddingRight: '0.75rem', borderRight: '1px solid rgba(255, 255, 255, 0.08)' }}>
             <span style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>AI Baseline (#1)</span>
             <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#93c5fd', marginTop: '0.2rem' }}>
-              {aiTopStrategy?.strategy_name || 'Lean Bootstrapped Launch'}
+              {aiTopStrategy?.strategy_name || 'Low-Cost, Low-Risk Start'}
             </div>
             <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginTop: '0.4rem' }}>
               Capital: <strong>LKR {Number(aiTopStrategy?.estimated_capital_required_lkr || 0).toLocaleString()}</strong>

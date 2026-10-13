@@ -23,7 +23,7 @@ export default function PlanSection04FinanceOps({ profile }) {
   
   // Strategy alignment info
   const stratAlignment = sec04.active_strategy_alignment || {
-    strategy_name: personalizedPlan.executive_overview?.recommended_primary_strategy || 'Lean Bootstrapped Launch',
+    strategy_name: personalizedPlan.executive_overview?.recommended_primary_strategy || 'Low-Cost, Low-Risk Start',
     is_user_selected: Boolean(personalizedPlan.executive_overview?.is_user_selected)
   };
 

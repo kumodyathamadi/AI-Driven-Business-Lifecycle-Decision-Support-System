@@ -33,7 +33,7 @@ export default function PlanHighlightsSidebar({
   const feasibility = profile?.feasibility_analysis || {};
 
   const isAdopted = executiveOverview.is_user_selected;
-  const activeStrategy = executiveOverview.recommended_primary_strategy || 'Lean Bootstrapped Launch';
+  const activeStrategy = executiveOverview.recommended_primary_strategy || 'Low-Cost, Low-Risk Start';
   const label = feasibility.predicted_label || 'Conditionally Feasible';
   const confidence = feasibility.confidence_score || feasibility.probability_score || 0.6;
 

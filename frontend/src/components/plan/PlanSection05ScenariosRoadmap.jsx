@@ -83,8 +83,8 @@ export default function PlanSection05ScenariosRoadmap({ profile }) {
   const finalSummary = sec05.final_ai_recommendation || sec05.final_recommendation || personalizedPlan.final_recommendation || {
     ai_feasibility_verdict: profile?.feasibility_analysis?.predicted_label || 'Conditionally Feasible',
     ai_confidence_score: profile?.feasibility_analysis?.confidence_score || 0.65,
-    ai_recommended_strategy: profile?.strategic_recommendations?.topsis_ranking?.top_recommended_strategy || 'Lean Bootstrapped Launch',
-    entrepreneur_selected_strategy: profile?.strategic_recommendations?.selected_strategy_name || 'Lean Bootstrapped Launch',
+    ai_recommended_strategy: profile?.strategic_recommendations?.topsis_ranking?.top_recommended_strategy || 'Low-Cost, Low-Risk Start',
+    entrepreneur_selected_strategy: profile?.strategic_recommendations?.selected_strategy_name || 'Low-Cost, Low-Risk Start',
     is_user_selected: Boolean(personalizedPlan.executive_overview?.is_user_selected),
     main_positive_strength: 'Location Suitability & Footfall Potential',
     main_operational_constraint: 'Working Capital & Inventory Buffer',

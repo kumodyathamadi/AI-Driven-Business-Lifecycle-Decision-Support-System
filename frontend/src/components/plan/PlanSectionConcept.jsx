@@ -13,7 +13,7 @@ import { formatCurrency } from '../../utils/formatters';
 export default function PlanSectionConcept({ profile, executiveOverview = {}, financialPlan = {} }) {
   const businessInput = profile?.business_input || {};
   const isAdopted = executiveOverview.is_user_selected;
-  const strategyName = executiveOverview.recommended_primary_strategy || 'Lean Bootstrapped Launch';
+  const strategyName = executiveOverview.recommended_primary_strategy || 'Low-Cost, Low-Risk Start';
   const strategicFocus = executiveOverview.strategic_focus;
   const enablers = executiveOverview.key_enablers || [];
   const hurdles = executiveOverview.key_risk_hurdles || [];
