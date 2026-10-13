@@ -27,8 +27,8 @@ function AppLayout({ activeProfile }) {
           <Outlet />
         </main>
       </div>
-      <footer style={{ borderTop: '1px solid var(--border-color)', padding: '1rem 2rem', textAlign: 'center', fontSize: '0.8rem', color: '#64748b', background: 'rgba(9, 13, 22, 0.95)' }}>
-        <strong style={{ color: '#94a3b8' }}>SME360 AI</strong> — Professional AI Business Plan Generator
+      <footer style={{ borderTop: '1px solid var(--border-color)', padding: '1rem 2rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', background: 'var(--bg-card-solid)' }}>
+        <strong style={{ color: 'var(--text-secondary)' }}>SME360 AI</strong> — Professional AI Business Plan Generator
       </footer>
     </div>
   );

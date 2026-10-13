@@ -108,12 +108,12 @@ export default function Navbar({ currentProfile }) {
             display: 'inline-flex',
             alignItems: 'center',
             gap: '0.35rem',
-            background: 'rgba(15, 23, 42, 0.85)',
-            border: '1px solid rgba(59, 130, 246, 0.3)',
+            background: isDarkMode ? 'rgba(15, 23, 42, 0.85)' : '#ffffff',
+            border: isDarkMode ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid #cbd5e1',
             borderRadius: '24px',
             padding: '0.28rem 0.55rem',
             cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+            boxShadow: isDarkMode ? '0 2px 8px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
             transition: 'all 0.2s ease',
           }}
         >
@@ -155,15 +155,15 @@ export default function Navbar({ currentProfile }) {
               display: 'flex',
               alignItems: 'center',
               gap: '0.55rem',
-              background: 'rgba(15, 23, 42, 0.85)',
-              border: '1px solid rgba(59, 130, 246, 0.28)',
+              background: isDarkMode ? 'rgba(15, 23, 42, 0.85)' : '#ffffff',
+              border: isDarkMode ? '1px solid rgba(59, 130, 246, 0.28)' : '1px solid #cbd5e1',
               padding: '0.35rem 0.75rem',
               borderRadius: '24px',
               cursor: 'pointer',
-              color: '#f8fafc',
+              color: isDarkMode ? '#f8fafc' : '#0f172a',
               fontSize: '0.82rem',
               fontWeight: 600,
-              boxShadow: '0 2px 10px rgba(0, 0, 0, 0.25)',
+              boxShadow: isDarkMode ? '0 2px 10px rgba(0, 0, 0, 0.25)' : '0 2px 10px rgba(0, 0, 0, 0.06)',
               transition: 'all 0.2s ease',
             }}
           >
@@ -183,7 +183,7 @@ export default function Navbar({ currentProfile }) {
               <User size={13} />
             </div>
             <span>{user?.full_name || 'SME Decision Maker'}</span>
-            <ChevronDown size={14} style={{ color: '#94a3b8', transform: showProfileMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+            <ChevronDown size={14} style={{ color: isDarkMode ? '#94a3b8' : '#64748b', transform: showProfileMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
           </button>
 
           {/* Profile Menu Popup */}
@@ -194,21 +194,21 @@ export default function Navbar({ currentProfile }) {
                 top: 'calc(100% + 8px)',
                 right: 0,
                 width: '220px',
-                background: '#0b1329',
-                border: '1px solid rgba(59, 130, 246, 0.35)',
+                background: isDarkMode ? '#0b1329' : '#ffffff',
+                border: isDarkMode ? '1px solid rgba(59, 130, 246, 0.35)' : '1px solid #e2e8f0',
                 borderRadius: '12px',
                 padding: '0.5rem',
-                boxShadow: '0 12px 36px rgba(0, 0, 0, 0.55), 0 0 20px rgba(59, 130, 246, 0.15)',
+                boxShadow: isDarkMode ? '0 12px 36px rgba(0, 0, 0, 0.55), 0 0 20px rgba(59, 130, 246, 0.15)' : '0 12px 36px rgba(0, 0, 0, 0.12), 0 2px 10px rgba(0, 0, 0, 0.05)',
                 zIndex: 150,
                 backdropFilter: 'blur(16px)',
                 animation: 'fadeIn 0.15s ease-out',
               }}
             >
-              <div style={{ padding: '0.5rem 0.65rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f8fafc' }}>
+              <div style={{ padding: '0.5rem 0.65rem', borderBottom: isDarkMode ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: isDarkMode ? '#f8fafc' : '#0f172a' }}>
                   {user?.full_name || 'SME Decision Maker'}
                 </div>
-                <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                <div style={{ fontSize: '0.72rem', color: isDarkMode ? '#64748b' : '#64748b' }}>
                   Enterprise Plan · Active
                 </div>
               </div>

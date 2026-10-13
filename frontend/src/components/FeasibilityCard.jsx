@@ -27,9 +27,9 @@ export default function FeasibilityCard({ feasibilityData: propFeas, executiveSu
   };
 
   const getBadgeIcon = (label) => {
-    if (label === 'Feasible') return <CheckCircle2 size={22} style={{ color: '#4ade80' }} />;
-    if (label === 'Conditionally Feasible') return <AlertTriangle size={22} style={{ color: '#fde047' }} />;
-    return <XCircle size={22} style={{ color: '#fca5a5' }} />;
+    if (label === 'Feasible') return <CheckCircle2 size={22} color="currentColor" />;
+    if (label === 'Conditionally Feasible') return <AlertTriangle size={22} color="currentColor" />;
+    return <XCircle size={22} color="currentColor" />;
   };
 
   const formatFeatureLabel = (featureStr) => {
@@ -49,7 +49,7 @@ export default function FeasibilityCard({ feasibilityData: propFeas, executiveSu
         
         {/* Result Card */}
         <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
-          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '0.85rem' }}>
+          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '0.85rem' }}>
             SME360 AI Predicted Feasibility Outcome
           </div>
           
@@ -58,10 +58,10 @@ export default function FeasibilityCard({ feasibilityData: propFeas, executiveSu
             <span>{predicted_label}</span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#cbd5e1' }}>
-            <Award size={18} style={{ color: '#60a5fa' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            <Award size={18} style={{ color: '#3b82f6' }} />
             <span>Predicted Class Probability:</span>
-            <strong style={{ color: '#ffffff', fontSize: '1rem' }}>
+            <strong style={{ color: 'var(--text-primary)', fontSize: '1rem' }}>
               {(confidence_score * 100).toFixed(1)}%
             </strong>
           </div>
@@ -69,7 +69,7 @@ export default function FeasibilityCard({ feasibilityData: propFeas, executiveSu
 
         {/* Probability Distribution Chart Card */}
         <div className="glass-card">
-          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', marginBottom: '1rem' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '1rem' }}>
             Class Probability Distribution
           </h3>
           <ProbabilityChart probabilities={probabilities} />
@@ -78,14 +78,14 @@ export default function FeasibilityCard({ feasibilityData: propFeas, executiveSu
 
       {/* Factor Contributions Explainability Section (Why the score is what it is) */}
       {(positiveDrivers.length > 0 || negativeDrivers.length > 0) && (
-        <div className="glass-card" style={{ border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+        <div className="glass-card feasibility-explainability-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
             <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <HelpCircle size={18} style={{ color: '#60a5fa' }} />
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <HelpCircle size={18} style={{ color: '#3b82f6' }} />
                 Explainability: Why This Score Was Predicted
               </h3>
-              <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
                 Operational, financial, and market factor contributions identified by our ML explainability model.
               </p>
             </div>
@@ -93,7 +93,7 @@ export default function FeasibilityCard({ feasibilityData: propFeas, executiveSu
             {id && (
               <Link 
                 to={`/businesses/${id}/insights`}
-                style={{ fontSize: '0.78rem', color: '#60a5fa', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', textDecoration: 'none', fontWeight: 600 }}
+                style={{ fontSize: '0.78rem', color: '#3b82f6', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', textDecoration: 'none', fontWeight: 600 }}
               >
                 <span>Full Technical Attribution</span>
                 <ArrowRight size={14} />
@@ -103,22 +103,22 @@ export default function FeasibilityCard({ feasibilityData: propFeas, executiveSu
 
           <div className="grid-2" style={{ gap: '1rem' }}>
             {/* Positive Drivers */}
-            <div style={{ background: 'rgba(6, 78, 59, 0.25)', border: '1px solid rgba(34, 197, 94, 0.3)', padding: '1rem', borderRadius: '10px' }}>
-              <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#4ade80', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.75rem' }}>
+            <div className="feasibility-drivers-box positive">
+              <h4 className="feasibility-drivers-heading positive">
                 <TrendingUp size={16} />
                 Key Supporting Factors (+)
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                 {positiveDrivers.slice(0, 3).map((driver, idx) => (
-                  <div key={idx} style={{ background: 'rgba(15, 23, 42, 0.85)', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
+                  <div key={idx} className="feasibility-driver-item positive">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', fontWeight: 600 }}>
-                      <span style={{ color: '#f1f5f9' }}>{formatFeatureLabel(driver.feature)}</span>
-                      <span style={{ color: '#4ade80', fontSize: '0.72rem', background: 'rgba(34, 197, 94, 0.15)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                      <span className="feasibility-driver-name">{formatFeatureLabel(driver.feature)}</span>
+                      <span className="feasibility-driver-badge positive">
                         + Positive Driver
                       </span>
                     </div>
-                    <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.25rem' }}>
-                      Value: <strong style={{ color: '#cbd5e1' }}>{resolveDriverValue(driver, businessInput)}</strong>
+                    <div className="feasibility-driver-value">
+                      Value: <strong>{resolveDriverValue(driver, businessInput)}</strong>
                     </div>
                   </div>
                 ))}
@@ -126,22 +126,22 @@ export default function FeasibilityCard({ feasibilityData: propFeas, executiveSu
             </div>
 
             {/* Negative Risk Drivers */}
-            <div style={{ background: 'rgba(127, 29, 29, 0.25)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '1rem', borderRadius: '10px' }}>
-              <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fca5a5', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.75rem' }}>
+            <div className="feasibility-drivers-box negative">
+              <h4 className="feasibility-drivers-heading negative">
                 <AlertOctagon size={16} />
                 Key Risk Hurdles (-)
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                 {negativeDrivers.slice(0, 3).map((driver, idx) => (
-                  <div key={idx} style={{ background: 'rgba(15, 23, 42, 0.85)', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                  <div key={idx} className="feasibility-driver-item negative">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', fontWeight: 600 }}>
-                      <span style={{ color: '#f1f5f9' }}>{formatFeatureLabel(driver.feature)}</span>
-                      <span style={{ color: '#fca5a5', fontSize: '0.72rem', background: 'rgba(239, 68, 68, 0.15)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                      <span className="feasibility-driver-name">{formatFeatureLabel(driver.feature)}</span>
+                      <span className="feasibility-driver-badge negative">
                         - Risk Factor
                       </span>
                     </div>
-                    <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.25rem' }}>
-                      Value: <strong style={{ color: '#cbd5e1' }}>{resolveDriverValue(driver, businessInput)}</strong>
+                    <div className="feasibility-driver-value">
+                      Value: <strong>{resolveDriverValue(driver, businessInput)}</strong>
                     </div>
                   </div>
                 ))}
@@ -154,10 +154,10 @@ export default function FeasibilityCard({ feasibilityData: propFeas, executiveSu
       {/* Executive Summary */}
       {executiveSummary && (
         <div className="glass-card">
-          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#60a5fa', marginBottom: '0.5rem' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#3b82f6', marginBottom: '0.5rem' }}>
             Executive Feasibility Summary
           </h3>
-          <p style={{ fontSize: '0.875rem', color: '#cbd5e1', lineHeight: '1.6' }}>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
             {executiveSummary}
           </p>
         </div>

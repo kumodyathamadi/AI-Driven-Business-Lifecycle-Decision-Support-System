@@ -43,6 +43,7 @@ export default function StatusBadge({ label, score, size = 'md' }) {
 
   return (
     <div
+      className={`status-badge-root status-badge-${isFeasible ? 'feasible' : isConditional ? 'conditional' : 'infeasible'}`}
       role="status"
       aria-label={`Feasibility outcome: ${text} with ${formattedScore} confidence`}
       style={{

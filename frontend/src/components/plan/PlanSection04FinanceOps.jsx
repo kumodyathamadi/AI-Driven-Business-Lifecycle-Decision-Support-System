@@ -116,39 +116,19 @@ export default function PlanSection04FinanceOps({ profile }) {
       </div>
 
       {/* Strategy Re-Alignment Notification Callout */}
-      <div style={{
-        padding: '0.85rem 1.15rem',
-        borderRadius: '8px',
-        background: stratAlignment.is_user_selected 
-          ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(15, 23, 42, 0.85))'
-          : 'linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(15, 23, 42, 0.85))',
-        border: `1px solid ${stratAlignment.is_user_selected ? 'rgba(16, 185, 129, 0.4)' : 'rgba(59, 130, 246, 0.3)'}`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '0.75rem'
-      }}>
+      <div className={`bp-strat-alignment-callout ${stratAlignment.is_user_selected ? 'selected' : 'ai'}`}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <Sparkles size={16} style={{ color: stratAlignment.is_user_selected ? '#34d399' : '#60a5fa' }} />
+          <Sparkles size={16} className="bp-strat-alignment-icon" />
           <div>
-            <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#94a3b8', fontWeight: 700 }}>
+            <span className="bp-strat-alignment-label">
               Operating Strategic Baseline:
             </span>
-            <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#ffffff' }}>
+            <div className="bp-strat-alignment-title">
               {stratAlignment.strategy_name}
             </div>
           </div>
         </div>
-        <span style={{
-          fontSize: '0.74rem',
-          fontWeight: 700,
-          padding: '0.25rem 0.65rem',
-          borderRadius: '4px',
-          background: stratAlignment.is_user_selected ? 'rgba(16, 185, 129, 0.2)' : 'rgba(59, 130, 246, 0.2)',
-          color: stratAlignment.is_user_selected ? '#34d399' : '#60a5fa',
-          border: `1px solid ${stratAlignment.is_user_selected ? 'rgba(16, 185, 129, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`
-        }}>
+        <span className={`bp-strat-alignment-badge ${stratAlignment.is_user_selected ? 'selected' : 'ai'}`}>
           {stratAlignment.is_user_selected ? 'User-Selected Strategy Aligned' : 'AI Top Recommendation Aligned'}
         </span>
       </div>
@@ -157,137 +137,116 @@ export default function PlanSection04FinanceOps({ profile }) {
       <div className="bp-fin-grid">
         <div className="bp-fin-card primary">
           <div className="bp-fin-card-label">Target Required Capital</div>
-          <div className="bp-fin-card-num" style={{ color: '#38bdf8' }}>
+          <div className="bp-fin-card-num val-blue">
             {formatCurrency(startupInv.strategy_target_capital_lkr)}
           </div>
-          <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginTop: '0.35rem' }}>
+          <div className="bp-fin-card-sub">
             Allocated baseline capital: {formatCurrency(startupInv.available_capital_lkr)}
           </div>
         </div>
 
         <div className="bp-fin-card">
           <div className="bp-fin-card-label">Monthly Operating Budget</div>
-          <div className="bp-fin-card-num" style={{ color: '#a5b4fc' }}>
+          <div className="bp-fin-card-num val-indigo">
             {formatCurrency(monthlyFin.monthly_operating_budget_lkr)}
           </div>
-          <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginTop: '0.35rem' }}>
+          <div className="bp-fin-card-sub">
             Recurring operational burn / month
           </div>
         </div>
 
         <div className="bp-fin-card">
           <div className="bp-fin-card-label">Estimated Monthly Revenue</div>
-          <div className="bp-fin-card-num" style={{ color: '#34d399' }}>
+          <div className="bp-fin-card-num val-emerald">
             {formatCurrency(monthlyFin.estimated_monthly_revenue_lkr)}
           </div>
-          <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginTop: '0.35rem' }}>
+          <div className="bp-fin-card-sub">
             Calculated from customer assumptions
           </div>
         </div>
 
         <div className="bp-fin-card runway">
           <div className="bp-fin-card-label">Capital Runway Horizon</div>
-          <div className="bp-fin-card-num" style={{ color: '#fbbf24' }}>
+          <div className="bp-fin-card-num val-amber">
             ~{funding.capital_runway_months} Mo
           </div>
-          <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginTop: '0.35rem' }}>
+          <div className="bp-fin-card-sub">
             Operating months at zero external debt
           </div>
         </div>
       </div>
 
       {/* 4.2 Transparent Revenue Calculation Formula Card */}
-      <div style={{
-        background: 'rgba(15, 23, 42, 0.75)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '9px',
-        padding: '1rem 1.25rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.65rem'
-      }}>
+      <div className="bp-formula-card">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Calculator size={15} style={{ color: '#38bdf8' }} />
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: '#94a3b8' }}>
+            <Calculator size={15} style={{ color: '#0284c7' }} />
+            <span className="bp-formula-label">
               4.2 Monthly Revenue Derivation Formula
             </span>
           </div>
-          <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontStyle: 'italic' }}>
+          <span className="bp-formula-sub">
             Explicit Assumption Transparency
           </span>
         </div>
 
-        <div style={{
-          background: 'rgba(2, 6, 23, 0.85)',
-          padding: '0.75rem 1rem',
-          borderRadius: '6px',
-          border: '1px solid rgba(59, 130, 246, 0.25)',
-          fontFamily: 'ui-monospace, monospace',
-          fontSize: '0.84rem',
-          color: '#e2e8f0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '0.5rem'
-        }}>
+        <div className="bp-formula-block">
           <div>
-            <span style={{ color: '#38bdf8' }}>{formatCustomersPerDay(monthlyFin.expected_customers_per_day)}</span>
+            <span className="bp-formula-term-cust">{formatCustomersPerDay(monthlyFin.expected_customers_per_day)}</span>
             {' × '}
-            <span style={{ color: '#34d399' }}>{formatCurrency(monthlyFin.expected_price_lkr)}</span>
+            <span className="bp-formula-term-price">{formatCurrency(monthlyFin.expected_price_lkr)}</span>
             {' × '}
-            <span style={{ color: '#fbbf24' }}>{monthlyFin.operating_days_per_month} Days/Mo</span>
+            <span className="bp-formula-term-days">{monthlyFin.operating_days_per_month} Days/Mo</span>
           </div>
-          <div style={{ fontWeight: 800, color: '#4ade80' }}>
+          <div className="bp-formula-result">
             = {formatCurrency(monthlyFin.estimated_monthly_revenue_lkr)} / Month
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.75rem', color: '#94a3b8' }}>
-          <Info size={13} style={{ color: '#38bdf8', flexShrink: 0 }} />
+        <div className="bp-formula-note">
+          <Info size={13} style={{ color: '#0284c7', flexShrink: 0 }} />
           <span>{monthlyFin.calculation_note}</span>
         </div>
       </div>
 
       {/* 4.3 Funding Structure Breakdown */}
       <div className="bp-narrative-card">
-        <div style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#38bdf8', fontWeight: 700, marginBottom: '0.75rem' }}>
+        <div style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#0284c7', fontWeight: 700, marginBottom: '0.75rem' }}>
           4.3 Capital Structure & Working Capital Adequacy
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
-          <div style={{ background: 'rgba(15, 23, 42, 0.7)', padding: '0.75rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-            <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase' }}>Available Equity Capital</span>
-            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#38bdf8', marginTop: '0.2rem' }}>
+          <div className="bp-capital-tile">
+            <span className="bp-capital-label">Available Equity Capital</span>
+            <div className="bp-capital-val highlight">
               {formatCurrency(startupInv.available_capital_lkr)}
             </div>
           </div>
 
-          <div style={{ background: 'rgba(15, 23, 42, 0.7)', padding: '0.75rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-            <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase' }}>Debt / Loan Financing</span>
-            <div style={{ fontSize: '1rem', fontWeight: 800, color: startupInv.loan_amount_lkr > 0 ? '#fbbf24' : '#cbd5e1', marginTop: '0.2rem' }}>
+          <div className="bp-capital-tile">
+            <span className="bp-capital-label">Debt / Loan Financing</span>
+            <div className={`bp-capital-val ${startupInv.loan_amount_lkr > 0 ? 'amber' : 'normal'}`}>
               {formatCurrency(startupInv.loan_amount_lkr)}
             </div>
           </div>
 
-          <div style={{ background: 'rgba(15, 23, 42, 0.7)', padding: '0.75rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-            <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase' }}>Initial Inventory Cost</span>
-            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#cbd5e1', marginTop: '0.2rem' }}>
+          <div className="bp-capital-tile">
+            <span className="bp-capital-label">Initial Inventory Cost</span>
+            <div className="bp-capital-val normal">
               {formatCurrency(startupInv.initial_inventory_cost_lkr)}
             </div>
           </div>
 
-          <div style={{ background: 'rgba(15, 23, 42, 0.7)', padding: '0.75rem', borderRadius: '6px', border: hasFundingGap ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid rgba(34, 197, 94, 0.35)' }}>
-            <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase' }}>Funding Gap Status</span>
-            <div style={{ fontSize: '1rem', fontWeight: 800, color: hasFundingGap ? '#f87171' : '#34d399', marginTop: '0.2rem' }}>
+          <div className={`bp-capital-tile ${hasFundingGap ? 'gap' : 'funded'}`}>
+            <span className="bp-capital-label">Funding Gap Status</span>
+            <div className={`bp-capital-val ${hasFundingGap ? 'danger' : 'success'}`}>
               {hasFundingGap ? formatCurrency(startupInv.funding_gap_lkr) : 'Zero Gap (100% Funded)'}
             </div>
           </div>
         </div>
 
-        <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: '#94a3b8' }}>
-          Status Note: <strong style={{ color: '#ffffff' }}>{startupInv.funding_gap_status}</strong>. Total available funds: <strong style={{ color: '#38bdf8' }}>{formatCurrency(funding.total_available_funds_lkr)}</strong>.
+        <div className="bp-capital-status-note">
+          Status Note: <strong className="bp-meta-strong">{startupInv.funding_gap_status}</strong>. Total available funds: <strong className="bp-capital-total">{formatCurrency(funding.total_available_funds_lkr)}</strong>.
         </div>
       </div>
 
@@ -296,100 +255,87 @@ export default function PlanSection04FinanceOps({ profile }) {
         {/* Tile 1: Staffing Capacity */}
         <div className="bp-ops-tile">
           <div className="bp-ops-tile-title">
-            <Users size={14} style={{ color: '#818cf8' }} />
+            <Users size={14} style={{ color: '#6366f1' }} />
             <span>Staffing Capacity</span>
           </div>
           <div className="bp-ops-tile-val" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>{ops.staffing.available_staff_count} Avail / {ops.staffing.required_staff_count} Req</span>
             {isStaffBalanced ? (
-              <CheckCircle2 size={16} style={{ color: '#34d399' }} />
+              <CheckCircle2 size={16} style={{ color: '#059669' }} />
             ) : (
-              <AlertCircle size={16} style={{ color: '#f59e0b' }} />
+              <AlertCircle size={16} style={{ color: '#d97706' }} />
             )}
           </div>
           <div className="bp-ops-tile-desc">
             {ops.staffing.capacity_status}. {ops.staffing.recommended_approach}
           </div>
-          <div style={{ fontSize: '0.74rem', color: '#94a3b8', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '0.35rem' }}>
-            Gap: <strong style={{ color: isStaffBalanced ? '#34d399' : '#f87171' }}>{ops.staffing.staffing_gap} personnel needed</strong>
+          <div style={{ fontSize: '0.74rem', color: '#64748b', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem' }}>
+            Gap: <strong style={{ color: isStaffBalanced ? '#059669' : '#dc2626' }}>{ops.staffing.staffing_gap} personnel needed</strong>
           </div>
         </div>
 
         {/* Tile 2: Equipment & Machinery Readiness */}
         <div className="bp-ops-tile">
           <div className="bp-ops-tile-title">
-            <Wrench size={14} style={{ color: '#38bdf8' }} />
+            <Wrench size={14} style={{ color: '#0284c7' }} />
             <span>Equipment Readiness</span>
           </div>
           <div className="bp-ops-tile-val" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>Score: {ops.equipment.available_equipment_score}</span>
-            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Target: {ops.equipment.required_equipment_score}</span>
+            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Target: {ops.equipment.required_equipment_score}</span>
           </div>
           <div className="bp-ops-tile-desc">
             {ops.equipment.readiness_status}. {ops.equipment.recommended_approach}
           </div>
-          <div style={{ fontSize: '0.74rem', color: '#94a3b8', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '0.35rem' }}>
-            Focus: <strong style={{ color: '#cbd5e1' }}>Prioritize essential commercial fixtures</strong>
+          <div style={{ fontSize: '0.74rem', color: '#64748b', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem' }}>
+            Focus: <strong className="bp-meta-strong">Prioritize essential commercial fixtures</strong>
           </div>
         </div>
 
         {/* Tile 3: Supply Chain Network */}
         <div className="bp-ops-tile">
           <div className="bp-ops-tile-title">
-            <Truck size={14} style={{ color: '#34d399' }} />
+            <Truck size={14} style={{ color: '#059669' }} />
             <span>Supplier Network</span>
           </div>
-          <div className="bp-ops-tile-val" style={{ color: '#34d399' }}>
+          <div className="bp-ops-tile-val" style={{ color: '#059669' }}>
             Availability: {ops.suppliers.supplier_availability_score}
           </div>
           <div className="bp-ops-tile-desc">
             Regional Hub: {ops.suppliers.network_region}. {ops.suppliers.sourcing_approach}
           </div>
-          <div style={{ fontSize: '0.74rem', color: '#94a3b8', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '0.35rem' }}>
-            Strategy: <strong style={{ color: '#cbd5e1' }}>Dual-supplier contracts to avert bottlenecks</strong>
+          <div style={{ fontSize: '0.74rem', color: '#64748b', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem' }}>
+            Strategy: <strong className="bp-meta-strong">Dual-supplier contracts to avert bottlenecks</strong>
           </div>
         </div>
       </div>
 
       {/* 4.5 Marketing Plan & Promotional Tactics */}
       <div className="bp-narrative-card">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
-          <div style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#38bdf8', fontWeight: 700 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#0284c7', fontWeight: 700 }}>
             4.5 Marketing Plan & Customer Acquisition Strategy
           </div>
-          <span style={{ fontSize: '0.74rem', color: '#cbd5e1', background: 'rgba(56, 189, 248, 0.1)', padding: '0.2rem 0.5rem', borderRadius: '4px', border: '1px solid rgba(56, 189, 248, 0.2)' }}>
+          <span className="bp-marketing-badge">
             Primary Channel: {marketing.marketing_channel}
           </span>
         </div>
 
-        <p style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: 1.55, margin: '0 0 0.85rem 0' }}>
-          {marketing.customer_acquisition} Competitive positioning is anchored upon {marketing.retention_and_positioning}
+        <p className="bp-marketing-desc">
+          {marketing.customer_acquisition} {marketing.retention_and_positioning ? `Competitive positioning is anchored upon ${marketing.retention_and_positioning}` : ''}
         </p>
 
-        <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#94a3b8', fontWeight: 700, marginBottom: '0.5rem' }}>
+        <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#64748b', fontWeight: 700, marginBottom: '0.5rem' }}>
           Actionable Promotional Tactics:
         </div>
 
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+        <ul className="bp-marketing-tactics">
           {(marketing.promotional_tactics || []).map((tactic, idx) => (
-            <li key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.55rem', fontSize: '0.83rem', color: '#e2e8f0', lineHeight: 1.45 }}>
-              <span style={{
-                width: '18px',
-                height: '18px',
-                borderRadius: '50%',
-                background: 'rgba(56, 189, 248, 0.15)',
-                color: '#38bdf8',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '0.68rem',
-                fontWeight: 800,
-                flexShrink: 0,
-                marginTop: '0.1rem'
-              }}>
+            <li key={idx} className="bp-marketing-tactic-item">
+              <span className="bp-marketing-tactic-num">
                 {idx + 1}
               </span>
-              <span>{tactic}</span>
+              <span className="bp-marketing-tactic-text">{tactic}</span>
             </li>
           ))}
         </ul>

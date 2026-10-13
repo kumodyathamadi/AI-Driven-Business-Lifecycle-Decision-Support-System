@@ -174,7 +174,7 @@ export default function BusinessOverview({ profile: propProfile }) {
         padding: '0.75rem 0.25rem',
         fontSize: '0.75rem',
         color: '#64748b',
-        borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+        borderTop: '1px solid var(--border-color)',
         flexWrap: 'wrap',
         gap: '0.75rem'
       }}>
@@ -216,14 +216,11 @@ export default function BusinessOverview({ profile: propProfile }) {
           aria-labelledby="prudential-checklist-title"
         >
           <div
-            className="glass-card"
+            className="glass-card overview-modal-card"
             style={{
               maxWidth: '580px',
               width: '100%',
               padding: '1.75rem',
-              background: '#0d131f',
-              border: '1px solid rgba(255, 255, 255, 0.16)',
-              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.85)',
               position: 'relative'
             }}
             onClick={(e) => e.stopPropagation()}
@@ -234,10 +231,10 @@ export default function BusinessOverview({ profile: propProfile }) {
                   <ShieldCheck size={20} />
                 </div>
                 <div>
-                  <h3 id="prudential-checklist-title" style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                  <h3 id="prudential-checklist-title" style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>
                     CBSL SME Prudential Checklist
                   </h3>
-                  <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+                  <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
                     Guidelines v2025 • Benchmark Verification
                   </span>
                 </div>
@@ -252,22 +249,22 @@ export default function BusinessOverview({ profile: propProfile }) {
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem', fontSize: '0.82rem', color: '#cbd5e1' }}>
-              <div style={{ padding: '0.75rem 1rem', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem', fontSize: '0.82rem' }}>
+              <div style={{ padding: '0.75rem 1rem', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>Minimum Startup Capital Buffer (&ge; 3 months OpEx)</span>
-                <strong style={{ color: '#34d399' }}>Verified (7.3 mo)</strong>
+                <strong style={{ color: '#059669' }}>Verified (7.3 mo)</strong>
               </div>
-              <div style={{ padding: '0.75rem 1rem', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ padding: '0.75rem 1rem', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>Target Breakeven Daily Volume (&le; 20 customers)</span>
-                <strong style={{ color: '#34d399' }}>Satisfied ({breakEvenCust}/day)</strong>
+                <strong style={{ color: '#059669' }}>Satisfied ({breakEvenCust}/day)</strong>
               </div>
-              <div style={{ padding: '0.75rem 1rem', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ padding: '0.75rem 1rem', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>Commercial Lease Burden Ratio (&le; 40% of OpEx)</span>
-                <strong style={{ color: '#fbbf24' }}>Monitored (38%)</strong>
+                <strong style={{ color: '#d97706' }}>Monitored (38%)</strong>
               </div>
-              <div style={{ padding: '0.75rem 1rem', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ padding: '0.75rem 1rem', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>Debt-Service Coverage Capacity</span>
-                <strong style={{ color: '#34d399' }}>Adequate</strong>
+                <strong style={{ color: '#059669' }}>Adequate</strong>
               </div>
             </div>
 

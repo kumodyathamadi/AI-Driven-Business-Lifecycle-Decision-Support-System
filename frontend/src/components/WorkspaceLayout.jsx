@@ -141,7 +141,7 @@ export default function WorkspaceLayout({ onProfileLoaded }) {
 
             <div className="template-tags-row">
               {businessName && (
-                <span className="template-badge-pill badge-pill-indigo" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#a5b4fc', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
+                <span className="template-badge-pill badge-pill-indigo">
                   {categoryName}
                 </span>
               )}
@@ -158,13 +158,10 @@ export default function WorkspaceLayout({ onProfileLoaded }) {
                   <button
                     type="button"
                     onClick={() => setShowSwitcherDropdown(!showSwitcherDropdown)}
-                    className="btn-template-plan"
+                    className="btn-template-plan btn-switcher-toggle"
                     style={{
                       padding: '0.2rem 0.65rem',
-                      background: 'rgba(30, 41, 59, 0.7)',
-                      borderColor: 'rgba(255, 255, 255, 0.15)',
                       fontSize: '0.72rem',
-                      color: '#cbd5e1',
                       borderRadius: '9999px',
                       boxShadow: 'none'
                     }}
@@ -179,15 +176,12 @@ export default function WorkspaceLayout({ onProfileLoaded }) {
 
                   {showSwitcherDropdown && (
                     <div
+                      className="workspace-switcher-dropdown"
                       style={{
                         position: 'absolute',
                         top: '115%',
                         left: 0,
                         zIndex: 50,
-                        background: '#0d131f',
-                        border: '1px solid rgba(255, 255, 255, 0.16)',
-                        borderRadius: '10px',
-                        boxShadow: '0 16px 36px rgba(0, 0, 0, 0.85)',
                         minWidth: '280px',
                         maxWidth: '380px',
                         padding: '0.5rem',
@@ -213,6 +207,7 @@ export default function WorkspaceLayout({ onProfileLoaded }) {
                             <button
                               key={b.id}
                               type="button"
+                              className={`workspace-switcher-item ${isCurrent ? 'active' : ''}`}
                               onClick={() => {
                                 setShowSwitcherDropdown(false);
                                 if (!isCurrent) {
@@ -225,9 +220,6 @@ export default function WorkspaceLayout({ onProfileLoaded }) {
                                 textAlign: 'left',
                                 padding: '0.5rem 0.65rem',
                                 borderRadius: '6px',
-                                background: isCurrent ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-                                border: isCurrent ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid transparent',
-                                color: isCurrent ? '#ffffff' : '#cbd5e1',
                                 fontSize: '0.76rem',
                                 cursor: 'pointer',
                                 display: 'flex',
@@ -237,8 +229,8 @@ export default function WorkspaceLayout({ onProfileLoaded }) {
                               role="menuitem"
                             >
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
-                                <strong style={{ color: isCurrent ? '#a5b4fc' : '#f8fafc' }}>{bTitle}</strong>
-                                <span style={{ fontSize: '0.68rem', color: '#64748b' }}>{bLabel}</span>
+                                <strong className="switcher-item-title">{bTitle}</strong>
+                                <span className="switcher-item-label">{bLabel}</span>
                               </div>
                               {isCurrent && <span style={{ fontSize: '0.68rem', color: '#818cf8', fontWeight: 700 }}>Active</span>}
                             </button>

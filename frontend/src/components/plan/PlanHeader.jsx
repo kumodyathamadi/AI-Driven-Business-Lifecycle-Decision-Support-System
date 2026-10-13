@@ -71,7 +71,7 @@ export default function PlanHeader({
             <FeasibilityBadge label={label} size="small" />
 
             <span style={{ fontSize: '0.74rem', color: '#94a3b8', marginLeft: '0.25rem' }}>
-              Confidence: <strong style={{ color: '#ffffff' }}>{formatConfidence(confidence)}</strong>
+              Confidence: <strong className="bp-hero-strong">{formatConfidence(confidence)}</strong>
             </span>
           </div>
 
@@ -134,7 +134,7 @@ export default function PlanHeader({
             onClick={onDownloadDocx}
             disabled={downloadingDocx}
             className="btn btn-secondary"
-            style={{ padding: '0.65rem 1.15rem', fontSize: '0.825rem', background: 'rgba(30, 41, 59, 0.85)' }}
+            style={{ padding: '0.65rem 1.15rem', fontSize: '0.825rem' }}
             title="Export editable Word (.docx) Business Plan"
           >
             {downloadingDocx ? (

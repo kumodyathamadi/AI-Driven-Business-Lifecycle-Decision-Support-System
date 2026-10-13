@@ -16,8 +16,8 @@ export default function ProbabilityChart({ probabilities }) {
         return (
           <div key={cls} className="progress-container">
             <div className="progress-header">
-              <span style={{ color: '#cbd5e1' }}>{cls}</span>
-              <span style={{ color: '#ffffff', fontWeight: 700 }}>{pct}%</span>
+              <span className="progress-label">{cls}</span>
+              <span className="progress-percent">{pct}%</span>
             </div>
             <div className="progress-bar-bg">
               <div

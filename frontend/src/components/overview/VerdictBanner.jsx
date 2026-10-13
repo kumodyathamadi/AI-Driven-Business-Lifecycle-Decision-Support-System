@@ -74,6 +74,7 @@ export default function VerdictBanner({
               cy="29"
               r={radius}
               fill="none"
+              className="verdict-gauge-track"
               stroke="rgba(255, 255, 255, 0.08)"
               strokeWidth="4"
             />
@@ -122,7 +123,7 @@ export default function VerdictBanner({
           <h2 className="verdict-single-headline">
             {displayBizName ? (
               <>
-                <strong style={{ color: '#ffffff', fontWeight: 800 }}>{displayBizName}</strong> in {districtName} is{' '}
+                <strong className="verdict-biz-name" style={{ fontWeight: 800 }}>{displayBizName}</strong> in {districtName} is{' '}
               </>
             ) : (
               <>Your {categoryName} in {districtName} is{' '}</>

@@ -40,13 +40,13 @@ export default function PlanSnapshot({ profile, financialPlan = {}, marketingPla
       <div className="bp-snapshot-tile">
         <div className="bp-snapshot-tile-header">
           <span className="bp-snapshot-label">Feasibility</span>
-          <ShieldCheck size={16} className="bp-snapshot-icon" style={{ color: '#38bdf8' }} />
+          <ShieldCheck size={16} className="bp-snapshot-icon icon-blue" />
         </div>
-        <div className="bp-snapshot-value" style={{ fontSize: '1.05rem', color: '#60a5fa' }}>
+        <div className="bp-snapshot-value val-blue">
           {feasibilityLabel}
         </div>
         <div className="bp-snapshot-sub">
-          Confidence: <strong style={{ color: '#e2e8f0' }}>{formatConfidence(confidenceScore)}</strong>
+          Confidence: <strong className="bp-snapshot-highlight">{formatConfidence(confidenceScore)}</strong>
         </div>
       </div>
 
@@ -54,9 +54,9 @@ export default function PlanSnapshot({ profile, financialPlan = {}, marketingPla
       <div className="bp-snapshot-tile">
         <div className="bp-snapshot-tile-header">
           <span className="bp-snapshot-label">Target Capital</span>
-          <DollarSign size={16} className="bp-snapshot-icon" style={{ color: '#34d399' }} />
+          <DollarSign size={16} className="bp-snapshot-icon icon-emerald" />
         </div>
-        <div className="bp-snapshot-value" style={{ color: '#34d399' }}>
+        <div className="bp-snapshot-value val-emerald">
           {formatCurrency(targetCapital)}
         </div>
         <div className="bp-snapshot-sub">
@@ -68,9 +68,9 @@ export default function PlanSnapshot({ profile, financialPlan = {}, marketingPla
       <div className="bp-snapshot-tile">
         <div className="bp-snapshot-tile-header">
           <span className="bp-snapshot-label">Monthly Budget</span>
-          <DollarSign size={16} className="bp-snapshot-icon" style={{ color: '#818cf8' }} />
+          <DollarSign size={16} className="bp-snapshot-icon icon-indigo" />
         </div>
-        <div className="bp-snapshot-value" style={{ color: '#a5b4fc' }}>
+        <div className="bp-snapshot-value val-indigo">
           {formatCurrency(monthlyBudget)}
         </div>
         <div className="bp-snapshot-sub">
@@ -82,10 +82,10 @@ export default function PlanSnapshot({ profile, financialPlan = {}, marketingPla
       <div className="bp-snapshot-tile">
         <div className="bp-snapshot-tile-header">
           <span className="bp-snapshot-label">Capital Runway</span>
-          <Clock size={16} className="bp-snapshot-icon" style={{ color: '#f59e0b' }} />
+          <Clock size={16} className="bp-snapshot-icon icon-amber" />
         </div>
-        <div className="bp-snapshot-value" style={{ color: '#fbbf24' }}>
-          {capitalRunway} <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8' }}>Months</span>
+        <div className="bp-snapshot-value val-amber">
+          {capitalRunway} <span className="bp-snapshot-unit">Months</span>
         </div>
         <div className="bp-snapshot-sub">
           Operational buffer
@@ -96,13 +96,13 @@ export default function PlanSnapshot({ profile, financialPlan = {}, marketingPla
       <div className="bp-snapshot-tile">
         <div className="bp-snapshot-tile-header">
           <span className="bp-snapshot-label">Target Daily Demand</span>
-          <Target size={16} className="bp-snapshot-icon" style={{ color: '#c084fc' }} />
+          <Target size={16} className="bp-snapshot-icon icon-purple" />
         </div>
-        <div className="bp-snapshot-value" style={{ color: '#e879f9' }}>
+        <div className="bp-snapshot-value val-purple">
           {formatCustomersPerDay(targetCustomers)}
         </div>
         <div className="bp-snapshot-sub">
-          Demand Index: <strong style={{ color: '#e2e8f0' }}>{demandVal || 'Normal'}</strong>
+          Demand Index: <strong className="bp-snapshot-highlight">{demandVal || 'Normal'}</strong>
         </div>
       </div>
 
@@ -110,10 +110,10 @@ export default function PlanSnapshot({ profile, financialPlan = {}, marketingPla
       <div className="bp-snapshot-tile">
         <div className="bp-snapshot-tile-header">
           <span className="bp-snapshot-label">Staff Capacity</span>
-          <Users size={16} className="bp-snapshot-icon" style={{ color: '#2dd4bf' }} />
+          <Users size={16} className="bp-snapshot-icon icon-teal" />
         </div>
-        <div className="bp-snapshot-value" style={{ color: '#2dd4bf' }}>
-          {availStaff} / {reqStaff} <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8' }}>Staff</span>
+        <div className="bp-snapshot-value val-teal">
+          {availStaff} / {reqStaff} <span className="bp-snapshot-unit">Staff</span>
         </div>
         <div className="bp-snapshot-sub">
           {availStaff >= reqStaff ? 'Balanced staffing' : 'Additional staff needed'}

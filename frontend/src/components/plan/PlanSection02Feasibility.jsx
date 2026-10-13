@@ -61,15 +61,15 @@ export default function PlanSection02Feasibility({ profile }) {
 
       {/* 2.1 Feasibility Assessment Card & Probability Distribution */}
       <div className="bp-narrative-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
           <div>
-            <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#94a3b8', fontWeight: 700 }}>
+            <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#64748b', fontWeight: 700 }}>
               Random Forest Feasibility Prediction
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
               <FeasibilityBadge label={predLabel} size="large" />
-              <span style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>
-                Confidence: <strong style={{ color: '#ffffff' }}>{assessment.confidence_percentage}</strong>
+              <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                Confidence: <strong className="bp-meta-strong">{assessment.confidence_percentage}</strong>
               </span>
             </div>
           </div>
@@ -81,8 +81,8 @@ export default function PlanSection02Feasibility({ profile }) {
 
         {/* Multi-Class Probability Bars */}
         <div style={{ marginBottom: '1.15rem' }}>
-          <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#94a3b8', fontWeight: 700, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <BarChart3 size={13} style={{ color: '#60a5fa' }} />
+          <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#64748b', fontWeight: 700, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <BarChart3 size={13} style={{ color: '#0284c7' }} />
             <span>Multi-Class Prediction Probability Distribution</span>
           </div>
 
@@ -90,47 +90,47 @@ export default function PlanSection02Feasibility({ profile }) {
             {/* Feasible */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '0.2rem' }}>
-                <span style={{ color: '#4ade80', fontWeight: 600 }}>Feasible</span>
-                <span style={{ color: '#ffffff', fontWeight: 700 }}>{(pFeasible * 100).toFixed(1)}%</span>
+                <span className="bp-prob-name feasible">Feasible</span>
+                <span className="bp-prob-pct">{(pFeasible * 100).toFixed(1)}%</span>
               </div>
-              <div style={{ height: '7px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: `${pFeasible * 100}%`, height: '100%', background: '#22c55e', borderRadius: '4px', transition: 'width 0.4s ease' }} />
+              <div className="bp-prob-track">
+                <div style={{ width: `${pFeasible * 100}%`, height: '100%', background: '#16a34a', borderRadius: '4px', transition: 'width 0.4s ease' }} />
               </div>
             </div>
 
             {/* Conditionally Feasible */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '0.2rem' }}>
-                <span style={{ color: '#facc15', fontWeight: 600 }}>Conditionally Feasible</span>
-                <span style={{ color: '#ffffff', fontWeight: 700 }}>{(pCond * 100).toFixed(1)}%</span>
+                <span className="bp-prob-name conditional">Conditionally Feasible</span>
+                <span className="bp-prob-pct">{(pCond * 100).toFixed(1)}%</span>
               </div>
-              <div style={{ height: '7px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: `${pCond * 100}%`, height: '100%', background: '#eab308', borderRadius: '4px', transition: 'width 0.4s ease' }} />
+              <div className="bp-prob-track">
+                <div style={{ width: `${pCond * 100}%`, height: '100%', background: '#ca8a04', borderRadius: '4px', transition: 'width 0.4s ease' }} />
               </div>
             </div>
 
             {/* Infeasible */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '0.2rem' }}>
-                <span style={{ color: '#f87171', fontWeight: 600 }}>Infeasible</span>
-                <span style={{ color: '#ffffff', fontWeight: 700 }}>{(pInfeas * 100).toFixed(1)}%</span>
+                <span className="bp-prob-name infeasible">Infeasible</span>
+                <span className="bp-prob-pct">{(pInfeas * 100).toFixed(1)}%</span>
               </div>
-              <div style={{ height: '7px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: `${pInfeas * 100}%`, height: '100%', background: '#ef4444', borderRadius: '4px', transition: 'width 0.4s ease' }} />
+              <div className="bp-prob-track">
+                <div style={{ width: `${pInfeas * 100}%`, height: '100%', background: '#dc2626', borderRadius: '4px', transition: 'width 0.4s ease' }} />
               </div>
             </div>
           </div>
         </div>
 
         {/* 2.2 Feasibility Interpretation */}
-        <div style={{ padding: '0.75rem 1rem', background: 'rgba(15, 23, 42, 0.7)', borderRadius: '8px', borderLeft: '3px solid #60a5fa', fontSize: '0.825rem', color: '#cbd5e1', lineHeight: 1.55 }}>
+        <div className="bp-interpretation-box">
           {sec02.feasibility_interpretation || `The proposed business is assessed as '${predLabel}' under the evaluated financial, market, operational, and resource conditions.`}
         </div>
       </div>
 
       {/* 2.3 SHAP Feature Attribution Cards */}
       <div>
-        <div style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#94a3b8', fontWeight: 700, marginBottom: '0.25rem' }}>
+        <div style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#64748b', fontWeight: 700, marginBottom: '0.25rem' }}>
           2.3 Why Did the AI Give This Result? (SHAP Feature Attribution)
         </div>
         <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.75rem' }}>
@@ -140,20 +140,20 @@ export default function PlanSection02Feasibility({ profile }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '0.85rem' }}>
           
           {/* Positive Supporting Enablers */}
-          <div style={{ background: 'rgba(34, 197, 94, 0.05)', border: '1px solid rgba(34, 197, 94, 0.25)', borderRadius: '10px', padding: '1rem' }}>
-            <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#4ade80', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.65rem' }}>
+          <div className="bp-shap-container positive">
+            <div className="bp-shap-header positive">
               <TrendingUp size={15} />
               <span>Positive Supporting Enablers (+)</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               {(shapData.positive_enablers || []).map((item, idx) => (
-                <div key={idx} style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.6rem 0.75rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.04)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', fontWeight: 700, color: '#ffffff' }}>
-                    <span>{item.feature}</span>
-                    <span style={{ color: '#4ade80', fontSize: '0.74rem' }}>{item.feature_value ? `Value: ${item.feature_value}` : ''}</span>
+                <div key={idx} className="bp-shap-item positive">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', fontWeight: 700 }}>
+                    <span className="bp-shap-name">{item.feature}</span>
+                    <span className="bp-shap-badge positive">{item.feature_value ? `Value: ${item.feature_value}` : ''}</span>
                   </div>
-                  <div style={{ fontSize: '0.74rem', color: '#cbd5e1', marginTop: '0.25rem', lineHeight: 1.4 }}>
+                  <div className="bp-shap-desc">
                     {item.business_interpretation || 'Contributed positive support to the feasibility prediction.'}
                   </div>
                 </div>
@@ -162,20 +162,20 @@ export default function PlanSection02Feasibility({ profile }) {
           </div>
 
           {/* Negative Operational Hurdles */}
-          <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '10px', padding: '1rem' }}>
-            <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#fca5a5', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.65rem' }}>
+          <div className="bp-shap-container negative">
+            <div className="bp-shap-header negative">
               <AlertTriangle size={15} />
               <span>Operational Risk Hurdles to Mitigate (-)</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               {(shapData.negative_hurdles || []).map((item, idx) => (
-                <div key={idx} style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.6rem 0.75rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.04)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', fontWeight: 700, color: '#ffffff' }}>
-                    <span>{item.feature}</span>
-                    <span style={{ color: '#fca5a5', fontSize: '0.74rem' }}>{item.feature_value ? `Value: ${item.feature_value}` : ''}</span>
+                <div key={idx} className="bp-shap-item negative">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', fontWeight: 700 }}>
+                    <span className="bp-shap-name">{item.feature}</span>
+                    <span className="bp-shap-badge negative">{item.feature_value ? `Value: ${item.feature_value}` : ''}</span>
                   </div>
-                  <div style={{ fontSize: '0.74rem', color: '#cbd5e1', marginTop: '0.25rem', lineHeight: 1.4 }}>
+                  <div className="bp-shap-desc">
                     {item.business_interpretation || 'Contributed downward pressure, identifying an operational hurdle.'}
                   </div>
                 </div>
@@ -188,22 +188,22 @@ export default function PlanSection02Feasibility({ profile }) {
 
       {/* 2.4 Evidence-Based Key Insights */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.75rem' }}>
-        <div style={{ background: 'rgba(15, 23, 42, 0.75)', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-          <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#34d399', fontWeight: 700, marginBottom: '0.35rem' }}>
+        <div className="bp-insights-box positive">
+          <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#059669', fontWeight: 700, marginBottom: '0.35rem' }}>
             Key Strengths Identified
           </div>
-          <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.8rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          <ul className="bp-insights-list">
             {(insights.strengths || []).map((s, idx) => (
               <li key={idx}>{s}</li>
             ))}
           </ul>
         </div>
 
-        <div style={{ background: 'rgba(15, 23, 42, 0.75)', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-          <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#fbbf24', fontWeight: 700, marginBottom: '0.35rem' }}>
+        <div className="bp-insights-box negative">
+          <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#d97706', fontWeight: 700, marginBottom: '0.35rem' }}>
             Core Operational Constraints
           </div>
-          <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.8rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          <ul className="bp-insights-list">
             {(insights.constraints || []).map((c, idx) => (
               <li key={idx}>{c}</li>
             ))}

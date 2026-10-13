@@ -67,10 +67,10 @@ export default function PlanHighlightsSidebar({
           {/* Strategy */}
           <div className="bp-sidebar-item">
             <span className="bp-sidebar-item-label">Guiding Strategy</span>
-            <div className="bp-sidebar-item-value" style={{ fontSize: '0.88rem', color: isAdopted ? '#34d399' : '#ffffff', lineHeight: 1.35 }}>
+            <div className={`bp-sidebar-item-value bp-sidebar-strategy-val ${isAdopted ? 'adopted' : ''}`} style={{ fontSize: '0.88rem', lineHeight: 1.35 }}>
               {activeStrategy}
               {isAdopted && (
-                <div style={{ fontSize: '0.68rem', color: '#34d399', fontWeight: 600, marginTop: '0.15rem' }}>
+                <div style={{ fontSize: '0.68rem', color: '#059669', fontWeight: 600, marginTop: '0.15rem' }}>
                   ✓ Selected by Entrepreneur
                 </div>
               )}

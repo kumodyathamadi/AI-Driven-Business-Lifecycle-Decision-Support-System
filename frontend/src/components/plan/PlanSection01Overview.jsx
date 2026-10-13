@@ -83,41 +83,41 @@ export default function PlanSection01Overview({ profile }) {
         </div>
         
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '0.75rem' }}>
-          <div style={{ background: 'rgba(15, 23, 42, 0.7)', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-            <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase' }}>Business Name</span>
-            <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#ffffff', marginTop: '0.15rem' }}>
+          <div className="bp-identity-tile">
+            <span className="bp-identity-label">Business Name</span>
+            <div className="bp-identity-val">
               {summary.business_name}
             </div>
           </div>
 
-          <div style={{ background: 'rgba(15, 23, 42, 0.7)', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-            <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase' }}>Category & Stage</span>
-            <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#60a5fa', marginTop: '0.15rem' }}>
+          <div className="bp-identity-tile">
+            <span className="bp-identity-label">Category & Stage</span>
+            <div className="bp-identity-val val-blue">
               {summary.business_category} • {summary.business_stage}
             </div>
           </div>
 
-          <div style={{ background: 'rgba(15, 23, 42, 0.7)', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-            <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase' }}>Operating Location</span>
-            <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#34d399', marginTop: '0.15rem' }}>
+          <div className="bp-identity-tile">
+            <span className="bp-identity-label">Operating Location</span>
+            <div className="bp-identity-val val-emerald">
               {summary.district}, {summary.province} Province
             </div>
           </div>
 
-          <div style={{ background: 'rgba(15, 23, 42, 0.7)', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-            <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase' }}>Operating Model</span>
-            <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#cbd5e1', marginTop: '0.15rem' }}>
+          <div className="bp-identity-tile">
+            <span className="bp-identity-label">Operating Model</span>
+            <div className="bp-identity-val">
               {summary.business_model}
             </div>
           </div>
         </div>
 
         {summary.business_description !== 'Information not provided' && (
-          <div style={{ marginTop: '0.75rem', padding: '0.65rem 0.85rem', background: 'rgba(15, 23, 42, 0.8)', borderRadius: '6px', borderLeft: '3px solid #38bdf8' }}>
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8', textTransform: 'uppercase', marginBottom: '0.2rem' }}>
+          <div className="bp-desc-box">
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0284c7', textTransform: 'uppercase', marginBottom: '0.2rem' }}>
               Recorded Entrepreneur Description / Objectives:
             </div>
-            <p style={{ fontSize: '0.82rem', color: '#cbd5e1', margin: 0, lineHeight: 1.5 }}>
+            <p className="bp-desc-text">
               {summary.business_description}
             </p>
           </div>
@@ -139,18 +139,18 @@ export default function PlanSection01Overview({ profile }) {
           <div className="bp-ops-tile-desc">
             Catchment: {market.target_market}. Target customer profile: {market.customer_profile}.
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#94a3b8', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '0.35rem' }}>
-            Target: <strong style={{ color: '#ffffff' }}>{formatCustomersPerDay(market.expected_customers_per_day)}</strong> @ <strong style={{ color: '#34d399' }}>{formatCurrency(market.expected_selling_price_lkr)}</strong>
+          <div style={{ fontSize: '0.75rem', color: '#64748b', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem' }}>
+            Target: <strong className="bp-meta-strong">{formatCustomersPerDay(market.expected_customers_per_day)}</strong> @ <strong style={{ color: '#059669' }}>{formatCurrency(market.expected_selling_price_lkr)}</strong>
           </div>
         </div>
 
         {/* Tile 2: Competitive Positioning */}
         <div className="bp-ops-tile">
           <div className="bp-ops-tile-title">
-            <Users size={14} style={{ color: '#f59e0b' }} />
+            <Users size={14} style={{ color: '#d97706' }} />
             <span>Competitive Landscape</span>
           </div>
-          <div className="bp-ops-tile-val" style={{ color: '#fbbf24' }}>
+          <div className="bp-ops-tile-val" style={{ color: '#d97706' }}>
             {competition.competition_level} Competition
           </div>
           <div className="bp-ops-tile-desc">
@@ -158,25 +158,25 @@ export default function PlanSection01Overview({ profile }) {
               ? `${competition.competitor_count_nearby} direct competitors mapped in local radius.`
               : 'Direct competitor count not specifically recorded.'}
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#94a3b8', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '0.35rem' }}>
-            Positioning: <strong style={{ color: '#cbd5e1' }}>{competition.competitive_positioning}</strong>
+          <div style={{ fontSize: '0.75rem', color: '#64748b', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem' }}>
+            Positioning: <strong className="bp-meta-strong">{competition.competitive_positioning}</strong>
           </div>
         </div>
 
         {/* Tile 3: Location Dynamics */}
         <div className="bp-ops-tile">
           <div className="bp-ops-tile-title">
-            <MapPin size={14} style={{ color: '#34d399' }} />
+            <MapPin size={14} style={{ color: '#059669' }} />
             <span>Location Dynamics</span>
           </div>
-          <div className="bp-ops-tile-val" style={{ color: '#34d399' }}>
+          <div className="bp-ops-tile-val" style={{ color: '#059669' }}>
             Suitability: {location.location_suitability_score}
           </div>
           <div className="bp-ops-tile-desc">
             Type: {location.location_type}. Situated in {location.district}, {location.province} Province.
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#94a3b8', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '0.35rem' }}>
-            Factors: <strong style={{ color: '#cbd5e1' }}>{location.location_considerations}</strong>
+          <div style={{ fontSize: '0.75rem', color: '#64748b', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem' }}>
+            Factors: <strong className="bp-meta-strong">{location.location_considerations}</strong>
           </div>
         </div>
 

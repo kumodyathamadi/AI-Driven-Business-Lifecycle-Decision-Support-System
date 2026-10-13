@@ -119,15 +119,15 @@ export default function PlanSection05ScenariosRoadmap({ profile }) {
           </span>
         </div>
 
-        <p style={{ fontSize: '0.84rem', color: '#cbd5e1', lineHeight: 1.5, margin: '0 0 0.85rem 0' }}>
+        <p className="bp-narrative-text" style={{ fontSize: '0.84rem', lineHeight: 1.5, margin: '0 0 0.85rem 0' }}>
           The following scenarios were simulated by perturbing specific operational variables through the validated Random Forest classifier to measure feasibility probability shifts.
         </p>
 
         {scenarios.length > 0 ? (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ background: 'rgba(15, 23, 42, 0.9)', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', color: '#94a3b8' }}>
+            <table className="bp-whatif-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
+              <thead className="bp-whatif-head">
+                <tr className="bp-whatif-head-row">
                   <th style={{ padding: '0.55rem 0.65rem', fontWeight: 700 }}>Scenario</th>
                   <th style={{ padding: '0.55rem 0.65rem', fontWeight: 700 }}>Modification</th>
                   <th style={{ padding: '0.55rem 0.65rem', fontWeight: 700 }}>Predicted Label</th>
@@ -143,30 +143,22 @@ export default function PlanSection05ScenariosRoadmap({ profile }) {
                   const deltaStr = `${isPositive ? '+' : ''}${(deltaNum * 100).toFixed(1)}%`;
 
                   return (
-                    <tr key={idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', background: idx % 2 === 0 ? 'rgba(15, 23, 42, 0.4)' : 'transparent' }}>
-                      <td style={{ padding: '0.65rem', fontWeight: 700, color: '#ffffff' }}>
+                    <tr key={idx} className={`bp-whatif-row ${idx % 2 === 0 ? 'even' : 'odd'}`}>
+                      <td className="bp-whatif-title" style={{ padding: '0.65rem', fontWeight: 700 }}>
                         {sc.title || `Scenario ${idx + 1}`}
                       </td>
-                      <td style={{ padding: '0.65rem', color: '#cbd5e1', fontFamily: 'ui-monospace, monospace', fontSize: '0.76rem' }}>
+                      <td className="bp-whatif-mods" style={{ padding: '0.65rem', fontFamily: 'ui-monospace, monospace', fontSize: '0.76rem' }}>
                         {sc.modifications ? JSON.stringify(sc.modifications).replace(/[{}"']/g, '').replace(/,/g, ', ') : 'Simulated shift'}
                       </td>
                       <td style={{ padding: '0.65rem' }}>
-                        <span style={{
-                          padding: '0.2rem 0.5rem',
-                          borderRadius: '4px',
-                          fontSize: '0.74rem',
-                          fontWeight: 700,
-                          background: sc.new_prediction === 'Feasible' ? 'rgba(34, 197, 94, 0.15)' : sc.new_prediction === 'Infeasible' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(234, 179, 8, 0.15)',
-                          color: sc.new_prediction === 'Feasible' ? '#4ade80' : sc.new_prediction === 'Infeasible' ? '#f87171' : '#fde047',
-                          border: `1px solid ${sc.new_prediction === 'Feasible' ? 'rgba(34, 197, 94, 0.3)' : sc.new_prediction === 'Infeasible' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(234, 179, 8, 0.3)'}`
-                        }}>
+                        <span className={`bp-whatif-badge ${sc.new_prediction === 'Feasible' ? 'feasible' : sc.new_prediction === 'Infeasible' ? 'infeasible' : 'conditional'}`}>
                           {sc.new_prediction || 'Conditionally Feasible'}
                         </span>
                       </td>
-                      <td style={{ padding: '0.65rem', fontWeight: 700, color: isPositive ? '#34d399' : deltaNum < 0 ? '#f87171' : '#94a3b8' }}>
+                      <td className={`bp-whatif-delta ${isPositive ? 'positive' : deltaNum < 0 ? 'negative' : 'neutral'}`} style={{ padding: '0.65rem', fontWeight: 700 }}>
                         {deltaStr}
                       </td>
-                      <td style={{ padding: '0.65rem', color: '#94a3b8', fontSize: '0.76rem' }}>
+                      <td className="bp-whatif-impact" style={{ padding: '0.65rem', fontSize: '0.76rem' }}>
                         {sc.impact_summary || sc.rationale || 'Probability shift observed.'}
                       </td>
                     </tr>
@@ -176,46 +168,33 @@ export default function PlanSection05ScenariosRoadmap({ profile }) {
             </table>
           </div>
         ) : (
-          <div style={{ padding: '0.75rem', background: 'rgba(15, 23, 42, 0.6)', borderRadius: '6px', fontSize: '0.8rem', color: '#94a3b8' }}>
+          <div className="bp-whatif-empty">
             Baseline sensitivity simulations active. Detailed What-If scenarios available via the Scenario Explorer tab.
           </div>
         )}
       </div>
 
       {/* 5.3 Counterfactual Boundary Analysis */}
-      <div style={{
-        background: 'rgba(15, 23, 42, 0.75)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '9px',
-        padding: '1rem 1.25rem'
-      }}>
+      <div className="bp-counterfactual-card">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem', flexWrap: 'wrap', gap: '0.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <GitBranch size={15} style={{ color: '#38bdf8' }} />
-            <span style={{ fontSize: '0.74rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: '#38bdf8' }}>
+            <GitBranch size={15} style={{ color: '#0284c7' }} />
+            <span className="bp-counterfactual-title">
               5.3 Counterfactual Boundary Search
             </span>
           </div>
-          <span style={{
-            fontSize: '0.72rem',
-            padding: '0.2rem 0.55rem',
-            borderRadius: '4px',
-            background: cf.counterfactual_found ? 'rgba(34, 197, 94, 0.15)' : 'rgba(234, 179, 8, 0.15)',
-            color: cf.counterfactual_found ? '#4ade80' : '#fde047',
-            border: `1px solid ${cf.counterfactual_found ? 'rgba(34, 197, 94, 0.3)' : 'rgba(234, 179, 8, 0.3)'}`,
-            fontWeight: 700
-          }}>
+          <span className={`bp-counterfactual-badge ${cf.counterfactual_found ? 'found' : 'unfound'}`}>
             {cf.counterfactual_found ? 'Target Condition Found' : 'Multi-Factor Constraint'}
           </span>
         </div>
 
-        <p style={{ fontSize: '0.84rem', color: '#cbd5e1', lineHeight: 1.55, margin: 0 }}>
+        <p className="bp-counterfactual-desc">
           {cf.counterfactual_found ? (
             <>
               Single-variable empirical boundary search identifies that an available capital allocation of{' '}
-              <strong style={{ color: '#38bdf8' }}>{formatCurrency(cf.required_capital_lkr)}</strong> (additional{' '}
-              <strong style={{ color: '#34d399' }}>{formatCurrency(cf.additional_capital_needed_lkr)}</strong>) shifts the decision model into{' '}
-              <strong style={{ color: '#4ade80' }}>{cf.target_outcome}</strong> feasibility.
+              <strong className="bp-cf-capital">{formatCurrency(cf.required_capital_lkr)}</strong> (additional{' '}
+              <strong className="bp-cf-additional">{formatCurrency(cf.additional_capital_needed_lkr)}</strong>) shifts the decision model into{' '}
+              <strong className="bp-cf-outcome">{cf.target_outcome}</strong> feasibility.
             </>
           ) : (
             <>
@@ -224,8 +203,8 @@ export default function PlanSection05ScenariosRoadmap({ profile }) {
           )}
         </p>
 
-        <div style={{ marginTop: '0.65rem', padding: '0.6rem 0.85rem', background: 'rgba(2, 6, 23, 0.7)', borderRadius: '6px', fontSize: '0.76rem', color: '#94a3b8', borderLeft: '3px solid #38bdf8' }}>
-          <strong>Research Caveat:</strong> Counterfactual analysis computes minimal single-feature perturbations against the trained model decision boundary; it does not constitute a guaranteed commercial optimum.
+        <div className="bp-caveat-box">
+          <strong className="bp-caveat-title">Research Caveat:</strong> Counterfactual analysis computes minimal single-feature perturbations against the trained model decision boundary; it does not constitute a guaranteed commercial optimum.
         </div>
       </div>
 
@@ -338,9 +317,9 @@ export default function PlanSection05ScenariosRoadmap({ profile }) {
         </div>
 
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ background: 'rgba(15, 23, 42, 0.9)', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', color: '#94a3b8' }}>
+          <table className="bp-kpi-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
+            <thead className="bp-kpi-head">
+              <tr className="bp-kpi-head-row">
                 <th style={{ padding: '0.55rem 0.65rem', fontWeight: 700 }}>KPI Metric</th>
                 <th style={{ padding: '0.55rem 0.65rem', fontWeight: 700 }}>Category</th>
                 <th style={{ padding: '0.55rem 0.65rem', fontWeight: 700 }}>Operational Target</th>
@@ -349,19 +328,19 @@ export default function PlanSection05ScenariosRoadmap({ profile }) {
             </thead>
             <tbody>
               {kpis.map((kpi, idx) => (
-                <tr key={idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', background: idx % 2 === 0 ? 'rgba(15, 23, 42, 0.4)' : 'transparent' }}>
-                  <td style={{ padding: '0.65rem', fontWeight: 700, color: '#ffffff' }}>
+                <tr key={idx} className={`bp-kpi-row ${idx % 2 === 0 ? 'even' : 'odd'}`}>
+                  <td className="bp-kpi-name" style={{ padding: '0.65rem', fontWeight: 700 }}>
                     {kpi.kpi_name}
                   </td>
-                  <td style={{ padding: '0.65rem', color: '#94a3b8' }}>
-                    <span style={{ fontSize: '0.72rem', background: 'rgba(255, 255, 255, 0.05)', padding: '0.15rem 0.45rem', borderRadius: '4px' }}>
+                  <td style={{ padding: '0.65rem' }}>
+                    <span className="bp-kpi-badge">
                       {kpi.type}
                     </span>
                   </td>
-                  <td style={{ padding: '0.65rem', fontWeight: 700, color: '#34d399' }}>
+                  <td className="bp-kpi-target" style={{ padding: '0.65rem', fontWeight: 700 }}>
                     {kpi.target}
                   </td>
-                  <td style={{ padding: '0.65rem', color: '#cbd5e1' }}>
+                  <td className="bp-kpi-freq" style={{ padding: '0.65rem' }}>
                     {kpi.frequency}
                   </td>
                 </tr>
@@ -374,37 +353,29 @@ export default function PlanSection05ScenariosRoadmap({ profile }) {
       {/* 5.6 Business Constraints & Mitigation Considerations (Research Boundary: NOT Component 4 GNN risk prediction) */}
       <div className="bp-narrative-card">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <div style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#fbbf24', fontWeight: 700 }}>
+          <div style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#d97706', fontWeight: 700 }}>
             5.6 Business Constraints & Mitigation Considerations
           </div>
-          <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
             Component 1 Operational Hurdles (Non-GNN)
           </span>
         </div>
 
-        <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: '0 0 0.75rem 0', lineHeight: 1.45 }}>
+        <p className="bp-narrative-text" style={{ fontSize: '0.82rem', margin: '0 0 0.75rem 0', lineHeight: 1.45 }}>
           Identified operational bottlenecks and practical management actions tailored to the entrepreneur's operating constraints:
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
           {constraints.map((item, idx) => (
-            <div key={idx} style={{
-              background: 'rgba(15, 23, 42, 0.75)',
-              padding: '0.75rem 0.95rem',
-              borderRadius: '6px',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.25rem'
-            }}>
+            <div key={idx} className="bp-constraint-card">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <AlertTriangle size={13} style={{ color: '#fbbf24', flexShrink: 0 }} />
-                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#fde047' }}>
+                <AlertTriangle size={13} style={{ color: '#d97706', flexShrink: 0 }} />
+                <span className="bp-constraint-name">
                   {item.constraint}
                 </span>
               </div>
-              <div style={{ fontSize: '0.8rem', color: '#cbd5e1', paddingLeft: '1.25rem', lineHeight: 1.45 }}>
-                <strong style={{ color: '#38bdf8' }}>Mitigation:</strong> {item.mitigation}
+              <div className="bp-constraint-desc">
+                <strong className="bp-constraint-mitigation-tag">Mitigation:</strong> {item.mitigation}
               </div>
             </div>
           ))}
@@ -412,82 +383,66 @@ export default function PlanSection05ScenariosRoadmap({ profile }) {
       </div>
 
       {/* 5.7 Final AI Recommendation Synthesis Box */}
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85))',
-        border: '1px solid rgba(59, 130, 246, 0.4)',
-        borderRadius: '12px',
-        padding: '1.5rem',
-        boxShadow: '0 12px 30px -8px rgba(0, 0, 0, 0.5)',
-        position: 'relative',
-        overflow: 'hidden'
-      }}>
+      <div className="bp-final-synthesis-card">
         <div style={{
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
           height: '3px',
-          background: 'linear-gradient(90deg, #38bdf8, #818cf8, #34d399)'
+          background: 'linear-gradient(90deg, #0284c7, #6366f1, #059669)'
         }} />
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <FileCheck size={20} style={{ color: '#38bdf8' }} />
+            <FileCheck size={20} style={{ color: '#0284c7' }} />
             <div>
-              <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#94a3b8', fontWeight: 700 }}>
+              <span className="bp-synthesis-sub">
                 Synthesized Decision Outcome
               </span>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+              <h3 className="bp-synthesis-title">
                 Final AI Recommendation & Operational Summary
               </h3>
             </div>
           </div>
 
-          <span style={{
-            padding: '0.3rem 0.75rem',
-            borderRadius: '20px',
-            fontSize: '0.78rem',
-            fontWeight: 800,
-            background: 'rgba(56, 189, 248, 0.15)',
-            color: '#38bdf8',
-            border: '1px solid rgba(56, 189, 248, 0.3)'
-          }}>
+          <span className="bp-synthesis-badge">
             AI Decision Support Synthesis
           </span>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem' }}>
-          <div style={{ background: 'rgba(2, 6, 23, 0.6)', padding: '0.75rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-            <span style={{ fontSize: '0.68rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: 700 }}>AI Feasibility Verdict</span>
-            <div style={{ fontSize: '0.98rem', fontWeight: 800, color: '#38bdf8', marginTop: '0.2rem' }}>
+          <div className="bp-synthesis-tile">
+            <span className="bp-synthesis-tile-label">AI Feasibility Verdict</span>
+            <div className="bp-synthesis-tile-val val-blue">
               {finalSummary.ai_feasibility_verdict} ({((finalSummary.ai_confidence_score || 0.65) * 100).toFixed(1)}%)
             </div>
           </div>
 
-          <div style={{ background: 'rgba(2, 6, 23, 0.6)', padding: '0.75rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-            <span style={{ fontSize: '0.68rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: 700 }}>AI Recommended Strategy</span>
-            <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#a5b4fc', marginTop: '0.2rem' }}>
+          <div className="bp-synthesis-tile">
+            <span className="bp-synthesis-tile-label">AI Recommended Strategy</span>
+            <div className="bp-synthesis-tile-val val-indigo">
               {finalSummary.ai_recommended_strategy}
             </div>
           </div>
 
-          <div style={{ background: 'rgba(2, 6, 23, 0.6)', padding: '0.75rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-            <span style={{ fontSize: '0.68rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: 700 }}>Entrepreneur Selected Strategy</span>
-            <div style={{ fontSize: '0.92rem', fontWeight: 800, color: finalSummary.is_user_selected ? '#34d399' : '#cbd5e1', marginTop: '0.2rem' }}>
+          <div className="bp-synthesis-tile">
+            <span className="bp-synthesis-tile-label">Entrepreneur Selected Strategy</span>
+            <div className={`bp-synthesis-tile-val ${finalSummary.is_user_selected ? 'val-emerald' : 'val-neutral'}`}>
               {finalSummary.entrepreneur_selected_strategy} {finalSummary.is_user_selected && '(Adopted)'}
             </div>
           </div>
 
-          <div style={{ background: 'rgba(2, 6, 23, 0.6)', padding: '0.75rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-            <span style={{ fontSize: '0.68rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: 700 }}>Immediate Priority Action</span>
-            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ffffff', marginTop: '0.2rem', lineHeight: 1.35 }}>
+          <div className="bp-synthesis-tile">
+            <span className="bp-synthesis-tile-label">Immediate Priority Action</span>
+            <div className="bp-synthesis-tile-val highlight" style={{ fontSize: '0.85rem', lineHeight: 1.35 }}>
               {finalSummary.recommended_immediate_next_step}
             </div>
           </div>
         </div>
 
-        <div style={{ marginTop: '0.95rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', fontSize: '0.8rem', color: '#cbd5e1', lineHeight: 1.5 }}>
-          <strong style={{ color: '#34d399' }}>Core Strength:</strong> {finalSummary.main_positive_strength} | <strong style={{ color: '#fbbf24' }}>Main Constraint:</strong> {finalSummary.main_operational_constraint} | <strong style={{ color: '#38bdf8' }}>Scenario Insight:</strong> {finalSummary.key_scenario_insight}
+        <div className="bp-synthesis-footer">
+          <strong className="val-emerald">Core Strength:</strong> {finalSummary.main_positive_strength} | <strong className="val-amber">Main Constraint:</strong> {finalSummary.main_operational_constraint} | <strong className="val-blue">Scenario Insight:</strong> {finalSummary.key_scenario_insight}
         </div>
       </div>
 

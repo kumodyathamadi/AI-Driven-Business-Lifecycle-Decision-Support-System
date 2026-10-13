@@ -68,36 +68,36 @@ export default function PlanSection03Recommendations({ profile }) {
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center',
-            color: isUserAdopted ? '#34d399' : '#60a5fa'
+            color: isUserAdopted ? '#059669' : '#2563eb'
           }}>
             {isUserAdopted ? <Check size={20} /> : <Award size={20} />}
           </div>
           <div>
-            <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px', color: isUserAdopted ? '#34d399' : '#a5b4fc' }}>
+            <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px', color: isUserAdopted ? '#059669' : '#2563eb' }}>
               {isUserAdopted ? 'Entrepreneur Selected Operational Strategy' : 'AI Top-Ranked Strategy Recommendation'}
             </div>
-            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff' }}>
+            <div className="bp-strategy-selected-title" style={{ fontSize: '1.05rem', fontWeight: 800 }}>
               {hitl.selected_strategy_name}
             </div>
           </div>
         </div>
 
-        <div style={{ fontSize: '0.8rem', color: isUserAdopted ? '#a7f3d0' : '#cbd5e1', maxWidth: '420px', lineHeight: 1.45 }}>
+        <div className="bp-strategy-alignment-desc" style={{ fontSize: '0.8rem', maxWidth: '420px', lineHeight: 1.45 }}>
           {hitl.alignment_status}
         </div>
       </div>
 
       {/* 3.3 TOPSIS Strategy Ranking Table */}
       <div className="bp-narrative-card">
-        <div style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#60a5fa', fontWeight: 700, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <div style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#0284c7', fontWeight: 700, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <Award size={15} />
           <span>3.3 TOPSIS Multi-Criteria Decision Evaluation & Strategy Ranking</span>
         </div>
 
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+          <table className="bp-topsis-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', textAlign: 'left', color: '#94a3b8' }}>
+              <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: '#64748b' }}>
                 <th style={{ padding: '0.5rem', width: '50px' }}>Rank</th>
                 <th style={{ padding: '0.5rem' }}>Strategy Name</th>
                 <th style={{ padding: '0.5rem' }}>Focus Area</th>
@@ -114,34 +114,34 @@ export default function PlanSection03Recommendations({ profile }) {
                 return (
                   <tr 
                     key={idx}
+                    className={`bp-topsis-row ${isThisActive ? 'active-strat' : ''}`}
                     style={{ 
-                      borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
-                      background: isThisActive ? 'rgba(16, 185, 129, 0.08)' : 'transparent',
+                      borderBottom: '1px solid var(--border-color)',
                       transition: 'background 0.2s ease'
                     }}
                   >
-                    <td style={{ padding: '0.65rem 0.5rem', fontWeight: 700, color: isAiTop ? '#38bdf8' : '#64748b' }}>
+                    <td style={{ padding: '0.65rem 0.5rem', fontWeight: 700, color: isAiTop ? '#0284c7' : '#64748b' }}>
                       #{strat.rank || idx + 1}
                     </td>
-                    <td style={{ padding: '0.65rem 0.5rem', fontWeight: 700, color: '#ffffff' }}>
+                    <td className="bp-topsis-strat-name" style={{ padding: '0.65rem 0.5rem', fontWeight: 700 }}>
                       {strat.strategy_name}
                     </td>
-                    <td style={{ padding: '0.65rem 0.5rem', color: '#cbd5e1' }}>
+                    <td className="bp-topsis-focus" style={{ padding: '0.65rem 0.5rem' }}>
                       {strat.strategic_focus || 'Operational Growth'}
                     </td>
-                    <td style={{ padding: '0.65rem 0.5rem', textAlign: 'right', color: '#38bdf8' }}>
+                    <td style={{ padding: '0.65rem 0.5rem', textAlign: 'right', color: '#0284c7', fontWeight: 600 }}>
                       {formatCurrency(strat.estimated_capital_required_lkr)}
                     </td>
-                    <td style={{ padding: '0.65rem 0.5rem', textAlign: 'right', fontWeight: 700, color: '#a5b4fc', fontFamily: 'monospace' }}>
+                    <td style={{ padding: '0.65rem 0.5rem', textAlign: 'right', fontWeight: 700, color: '#4f46e5', fontFamily: 'monospace' }}>
                       {strat.topsis_score || 'N/A'}
                     </td>
                     <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>
                       {isThisActive ? (
-                        <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.55rem', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', fontWeight: 700 }}>
+                        <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.55rem', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.15)', color: '#059669', fontWeight: 700, border: '1px solid rgba(16, 185, 129, 0.3)' }}>
                           Active Plan
                         </span>
                       ) : isAiTop ? (
-                        <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.55rem', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', fontWeight: 700 }}>
+                        <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.55rem', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.15)', color: '#2563eb', fontWeight: 700, border: '1px solid rgba(59, 130, 246, 0.3)' }}>
                           AI #1
                         </span>
                       ) : (
@@ -159,18 +159,18 @@ export default function PlanSection03Recommendations({ profile }) {
       </div>
 
       {/* 3.2 TOPSIS Criteria & Weights Table */}
-      <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '10px', padding: '1rem' }}>
-        <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#94a3b8', fontWeight: 700, marginBottom: '0.5rem' }}>
+      <div className="bp-criteria-container">
+        <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#64748b', fontWeight: 700, marginBottom: '0.5rem' }}>
           3.2 Research Evaluation Criteria & Vector Normalization Weights
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.65rem' }}>
           {criteriaWeights.map((cw, idx) => (
-            <div key={idx} style={{ background: 'rgba(15, 23, 42, 0.8)', padding: '0.65rem 0.75rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.04)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff' }}>
+            <div key={idx} className="bp-criteria-card">
+              <div className="bp-criteria-card-head">
                 <span>{cw.criterion}</span>
-                <span style={{ color: '#38bdf8' }}>{cw.weight}</span>
+                <span style={{ color: '#0284c7' }}>{cw.weight}</span>
               </div>
-              <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.2rem', lineHeight: 1.35 }}>
+              <div className="bp-criteria-card-desc">
                 {cw.description}
               </div>
             </div>
