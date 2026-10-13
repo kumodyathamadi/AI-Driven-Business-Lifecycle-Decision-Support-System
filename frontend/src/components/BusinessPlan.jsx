@@ -5,7 +5,6 @@ import { useToast } from './common/Toast';
 
 import './plan/business_plan.css';
 import PlanHeader from './plan/PlanHeader';
-import PlanCoverUploader from './plan/PlanCoverUploader';
 import PlanSnapshot from './plan/PlanSnapshot';
 import PlanSection01Overview from './plan/PlanSection01Overview';
 import PlanSection02Feasibility from './plan/PlanSection02Feasibility';
@@ -19,14 +18,6 @@ export default function BusinessPlan({ profile: propProfile }) {
   const profile = propProfile || ctx?.profile;
   const toast = useToast();
   
-  const [coverImage, setCoverImage] = useState({
-    dataUrl: 'default',
-    previewUrl: '/assets/sme360_official_cover.png',
-    name: 'SME360_Official_Cover_2026.png',
-    formattedSize: '245 KB',
-    type: 'image/png',
-    isOfficial: true
-  });
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadingDocx, setDownloadingDocx] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -45,7 +36,8 @@ export default function BusinessPlan({ profile: propProfile }) {
   const handleDownloadPdf = async () => {
     setDownloadingPdf(true);
     try {
-      const payload = coverImage ? { ...profile, cover_image: coverImage.dataUrl } : { ...profile, cover_image: null };
+      // Keep the unique official cover page provided for exported documents
+      const payload = { ...profile, cover_image: 'default' };
       await downloadBusinessPlanPdf(payload);
       if (toast?.success) toast.success('PDF plan generated and downloaded successfully!');
       else if (toast?.showToast) toast.showToast('PDF plan generated and downloaded successfully!', 'success');
@@ -60,7 +52,8 @@ export default function BusinessPlan({ profile: propProfile }) {
   const handleDownloadDocx = async () => {
     setDownloadingDocx(true);
     try {
-      const payload = coverImage ? { ...profile, cover_image: coverImage.dataUrl } : { ...profile, cover_image: null };
+      // Keep the unique official cover page provided for exported documents
+      const payload = { ...profile, cover_image: 'default' };
       await downloadBusinessPlanDocx(payload);
       if (toast?.success) toast.success('Word document (.docx) exported successfully!');
       else if (toast?.showToast) toast.showToast('Word document (.docx) exported successfully!', 'success');
@@ -96,17 +89,10 @@ export default function BusinessPlan({ profile: propProfile }) {
         downloadingPdf={downloadingPdf}
         downloadingDocx={downloadingDocx}
         copiedLink={copiedLink}
-        coverImage={coverImage}
         onDownloadPdf={handleDownloadPdf}
         onDownloadDocx={handleDownloadDocx}
         onShareLink={handleShareLink}
         onPrint={handlePrint}
-      />
-
-      {/* Cover Page Configuration (Custom Page 1 Cover) */}
-      <PlanCoverUploader
-        coverImage={coverImage}
-        onCoverImageChange={setCoverImage}
       />
 
       {/* 2. Executive Summary — "Business Plan at a Glance" */}
@@ -158,7 +144,6 @@ export default function BusinessPlan({ profile: propProfile }) {
           downloadingPdf={downloadingPdf}
           downloadingDocx={downloadingDocx}
           copiedLink={copiedLink}
-          coverImage={coverImage}
           onDownloadPdf={handleDownloadPdf}
           onDownloadDocx={handleDownloadDocx}
           onShareLink={handleShareLink}
