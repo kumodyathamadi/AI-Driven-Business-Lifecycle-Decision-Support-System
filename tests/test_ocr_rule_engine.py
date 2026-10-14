@@ -137,9 +137,31 @@ def test_end_to_end_integrated_pipeline():
     assert pipeline_res.final_pipeline_decision == "AUTO_APPROVED"
     print("PASS: test_end_to_end_integrated_pipeline (OCR -> Tax Cage A -> Fraud PASS -> AUTO_APPROVED)")
 
+
+def test_real_scanned_pdf_3425():
+    sample_scanned = r"C:\Users\dhanu\Downloads\06\06\3425 SFH.pdf"
+    if not os.path.exists(sample_scanned):
+        print(f"Skipping {sample_scanned} (file not found)")
+        return
+    with open(sample_scanned, "rb") as f:
+        pdf_bytes = f.read()
+    res = extract_amounts_from_pdf_bytes(pdf_bytes)
+    assert res.decision == "AUTO_PASS"
+    assert res.confidence_score >= 85.0
+    amounts = res.extracted_amounts
+    assert amounts.invoice_number == "3425"
+    assert amounts.total_amount == 3399.5
+    assert amounts.sub_total == 3399.5
+    assert amounts.currency == "EUR"
+    assert amounts.tax_category == "Zero-Rated"
+    assert amounts.is_math_valid == True
+    print("PASS: test_real_scanned_pdf_3425 (3,399.50 EUR Export Zero-Rated Scanned PDF Auto-Passed)")
+
+
 if __name__ == "__main__":
     test_real_pdf_inv_0097()
     test_real_pdf_inv_0168()
+    test_real_scanned_pdf_3425()
     test_standard_18_vat_with_heavy_decoys()
     test_math_mismatch_routes_to_review()
     test_end_to_end_integrated_pipeline()

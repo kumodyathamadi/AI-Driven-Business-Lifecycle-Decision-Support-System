@@ -162,6 +162,23 @@ def test_pipeline_api():
     assert data["fraud_assessment"]["decision"] == "PASS"
     print("PASS: /api/v1/pipeline/process-transaction")
 
+def test_upload_pdf_scanned():
+    import os
+    pdf_path = r"C:\Users\dhanu\Downloads\06\06\3425 SFH.pdf"
+    if os.path.exists(pdf_path):
+        with open(pdf_path, "rb") as f:
+            files = {"file": ("3425 SFH.pdf", f, "application/pdf")}
+            res = client.post("/api/v1/ocr/upload-pdf", files=files)
+        assert res.status_code == 200
+        data = res.json()
+        assert data["decision"] == "AUTO_PASS"
+        assert data["extracted_amounts"]["invoice_number"] == "3425"
+        assert data["extracted_amounts"]["total_amount"] == 3399.5
+        assert data["extracted_amounts"]["currency"] == "EUR"
+        assert data["extracted_amounts"]["tax_category"] == "Zero-Rated"
+        assert data["extracted_amounts"]["is_math_valid"] == True
+        print("PASS: /api/v1/ocr/upload-pdf (Scanned PDF 3425 SFH.pdf)")
+
 if __name__ == "__main__":
     test_health()
     test_process_invoice_legacy()
@@ -169,5 +186,6 @@ if __name__ == "__main__":
     test_fraud_check_api()
     test_ocr_api()
     test_pipeline_api()
+    test_upload_pdf_scanned()
     print("\nALL FASTAPI INTEGRATION TESTS PASSED SUCCESSFULLY!")
 

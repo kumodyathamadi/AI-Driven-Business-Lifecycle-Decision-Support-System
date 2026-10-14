@@ -1,6 +1,9 @@
 # component3_backend/ocr_extractor.py
+import os
 import io
 import re
+import tempfile
+import subprocess
 from datetime import datetime, date
 from typing import Dict, Any, Optional
 from pypdf import PdfReader
@@ -19,6 +22,51 @@ from tax_engine import categorize_and_calculate_tax
 from anomaly_detector import evaluate_transaction_risk, FraudCheckRequest
 
 _extractor_instance = ContextAwareAmountExtractor()
+
+def parse_date_robust(date_str: Optional[str]) -> date:
+    """Parses various date string formats to a standard date object."""
+    if not date_str:
+        return date.today()
+    clean = re.sub(r'\s+', ' ', date_str.strip())
+    clean_no_space = clean.replace(' /', '/').replace('/ ', '/')
+    for fmt in ["%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y", "%m/%d/%Y", "%Y/%m/%d", "%d %b %Y", "%d %B %Y"]:
+        try:
+            return datetime.strptime(clean_no_space, fmt).date()
+        except ValueError:
+            pass
+    return date.today()
+
+def perform_windows_ocr(pdf_reader: PdfReader) -> str:
+    """
+    Extracts high-resolution scanned page images from PDF and applies Windows Native OCR.
+    """
+    all_lines = []
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    ps1_path = os.path.join(base_dir, "run_ocr.ps1")
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        for p_idx, page in enumerate(pdf_reader.pages):
+            for i_idx, img in enumerate(page.images):
+                img_path = os.path.join(tmpdir, f"page_{p_idx}_img_{i_idx}.png")
+                with open(img_path, "wb") as f:
+                    f.write(img.data)
+                
+                try:
+                    res = subprocess.run(
+                        ["powershell", "-ExecutionPolicy", "Bypass", "-File", ps1_path, "-ImagePath", img_path],
+                        capture_output=True,
+                        text=True,
+                        encoding="utf-8",
+                        errors="replace",
+                        timeout=30
+                    )
+                    if res.returncode == 0 and res.stdout:
+                        lines = [l.strip() for l in res.stdout.splitlines() if l.strip()]
+                        all_lines.extend(lines)
+                except Exception as e:
+                    print(f"Error running Windows OCR on page {p_idx}: {e}")
+                    
+    return "\n".join(all_lines)
 
 def extract_amounts_from_text(document_text: str) -> OCRExtractionResponse:
     raw_res = _extractor_instance.extract(document_text)
@@ -56,7 +104,14 @@ def extract_amounts_from_pdf_bytes(pdf_bytes: bytes) -> OCRExtractionResponse:
         page_text = page.extract_text()
         if page_text:
             extracted_text_chunks.append(page_text)
-    full_text = "\n".join(extracted_text_chunks)
+    full_text = "\n".join(extracted_text_chunks).strip()
+    
+    # If the PDF is a scanned document with no programmatic text stream, fallback to Windows Native OCR
+    if len(full_text) < 30:
+        ocr_text = perform_windows_ocr(reader)
+        if ocr_text:
+            full_text = ocr_text
+
     return extract_amounts_from_text(full_text)
 
 
@@ -71,10 +126,7 @@ def run_integrated_pipeline(req: IntegratedPipelineRequest) -> IntegratedPipelin
             fraud_assessment=None,
             final_pipeline_decision="HELD_FOR_REVIEW"
         )
-    try:
-        parsed_date = datetime.strptime(amounts.invoice_date, "%Y-%m-%d").date()
-    except Exception:
-        parsed_date = date.today()
+    parsed_date = parse_date_robust(amounts.invoice_date)
     invoice_obj = InvoiceData(
         invoice_number=amounts.invoice_number,
         date_of_supply=parsed_date,
