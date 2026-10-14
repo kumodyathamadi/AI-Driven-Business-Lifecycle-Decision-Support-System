@@ -2,6 +2,10 @@
 
 ## Component 2 — AI-Based Business Registration & Regulatory Compliance
 
+The implementation guide for the current profile schema, evaluation endpoint,
+local retrieval, evidence limitations, sample requests, and tests is
+[documentation/Component_2_Implementation_Guide.md](documentation/Component_2_Implementation_Guide.md).
+
 ### Overview
 
 Component 2 provides **deterministic, source-grounded regulatory compliance analysis**

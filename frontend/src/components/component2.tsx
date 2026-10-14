@@ -10,13 +10,21 @@ export interface ObligationResult {
   obligation_id: string;
   title: string;
   status: ApplicabilityStatus;
+  classification: 'Mandatory' | 'Conditional' | 'Not Applicable';
+  priority: 'high' | 'review' | 'none';
   triggering_facts: Record<string, unknown>;
   missing_facts: string[];
   authority: string;
+  explanation: string;
+  action: string;
+  registration_steps: string[];
+  next_action: string;
   source_id: string;
   source_paragraph: string;
   source_text: string;
   documents_needed: string[];
+  documents_notice: string;
+  has_verified_source: boolean;
 }
 
 export interface FollowUpQuestion {
@@ -38,6 +46,14 @@ export interface ComplianceAnalysisResponse {
   summary: AnalysisSummary;
   obligations: ObligationResult[];
   follow_up_questions: FollowUpQuestion[];
+  evaluation_id: string;
+  retrieval_mode: string;
+  business_context: Record<string, unknown>;
+  profile_validation: {
+    complete: boolean;
+    missing_required_fields: string[];
+    note: string;
+  };
   disclaimer: string;
 }
 
@@ -57,13 +73,16 @@ export interface BusinessProfileForm {
   uses_chemicals_or_cosmetics?: boolean | null;
   handles_waste_oil_or_batteries?: boolean | null;
   turnover_band?: string | null;
+  location?: string | null;
+  products_services?: string[];
+  business_size?: string | null;
 }
 
 // ---------------------------------------------------------------------------
 // Constants & Metadata
 // ---------------------------------------------------------------------------
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 const STATUS_CONFIG: Record<
   ApplicabilityStatus,
@@ -78,7 +97,7 @@ const STATUS_CONFIG: Record<
     icon: 'fa-circle-check',
   },
   UNKNOWN: {
-    label: 'Unknown (Missing Facts)',
+    label: 'Conditional / Needs Review',
     color: 'text-amber-800',
     bg: 'bg-amber-50/70',
     border: 'border-amber-200',
@@ -127,6 +146,9 @@ const SAMPLE_PROFILES: Record<string, BusinessProfileForm> = {
     is_manufacturing: false,
     is_importing: false,
     turnover_band: '1m_10m',
+    location: 'Colombo',
+    products_services: ['Prepared food', 'Bakery products'],
+    business_size: 'small',
   },
   conditional_case: {
     business_type: 'vehicle_parts',
@@ -140,6 +162,9 @@ const SAMPLE_PROFILES: Record<string, BusinessProfileForm> = {
     is_importing: false,
     handles_waste_oil_or_batteries: true,
     turnover_band: '10m_50m',
+    location: 'Colombo',
+    products_services: ['Vehicle parts retail'],
+    business_size: 'small',
   },
   missing_info_case: {
     business_type: 'food',
@@ -154,6 +179,9 @@ const SAMPLE_PROFILES: Record<string, BusinessProfileForm> = {
     is_manufacturing: null,
     is_importing: null,
     turnover_band: null,
+    location: null,
+    products_services: [],
+    business_size: null,
   },
 };
 
@@ -166,24 +194,15 @@ async function analyseComplianceAPI(profile: BusinessProfileForm): Promise<Compl
     Object.entries(profile).map(([k, v]) => [k, v === undefined ? null : v])
   );
 
-  const res = await fetch(`${API_BASE}/api/analyse`, {
+  const res = await fetch(`${API_BASE}/api/v1/component2/evaluate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
 
   if (!res.ok) {
-    // Fallback to /api/analyze if needed
-    const fallbackRes = await fetch(`${API_BASE}/api/analyze`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (!fallbackRes.ok) {
-      const err = await fallbackRes.json().catch(() => ({ detail: fallbackRes.statusText }));
-      throw new Error(err.detail || 'Failed to analyze compliance profile');
-    }
-    return fallbackRes.json();
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Failed to analyze compliance profile');
   }
 
   return res.json();
@@ -293,6 +312,10 @@ function ObligationCard({
           <p className="text-xs text-slate-500 mt-0.5">
             <span className="font-semibold text-slate-700">{obl.authority}</span> &middot; ID: <span className="font-mono">{obl.obligation_id}</span>
           </p>
+          <p className="text-[11px] text-slate-500 mt-1">
+            Classification: <span className="font-semibold">{obl.classification}</span>
+            {' · '}Priority: <span className="font-semibold">{obl.priority}</span>
+          </p>
         </div>
         <StatusBadge status={obl.status} />
         <i
@@ -351,7 +374,20 @@ function ObligationCard({
             <p className="text-xs text-slate-800 mt-1 leading-relaxed bg-slate-50 p-2.5 rounded-lg border border-slate-200">
               {obl.action || 'Comply with designated registration procedure.'}
             </p>
+            <p className="text-xs text-slate-600 mt-2">{obl.explanation}</p>
+            <p className="text-xs font-semibold text-blue-800 mt-2">Next action: {obl.next_action}</p>
           </div>
+
+          {obl.registration_steps.length > 0 && (
+            <div>
+              <p className="font-semibold text-slate-500 uppercase tracking-wide text-[11px] mb-1.5">
+                Registration Guidance
+              </p>
+              <ol className="list-decimal pl-5 space-y-1 text-slate-700">
+                {obl.registration_steps.map((step, index) => <li key={index}>{step}</li>)}
+              </ol>
+            </div>
+          )}
 
           {/* Documents Needed */}
           {obl.documents_needed && obl.documents_needed.length > 0 && (
@@ -372,20 +408,34 @@ function ObligationCard({
               </ul>
             </div>
           )}
+          {obl.documents_notice && (
+            <p className="text-xs text-amber-800 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
+              {obl.documents_notice}
+            </p>
+          )}
 
           {/* Statutory Source Citation & Excerpt */}
           <div className="border-t border-slate-100 pt-3 space-y-1.5">
             <div className="flex items-center justify-between">
               <p className="font-semibold text-slate-500 uppercase tracking-wide text-[11px]">
-                Statutory Source Citation
+                Rulebook Source Reference
               </p>
               <span className="font-mono text-[11px] text-slate-500">
                 {obl.source_id} &middot; {obl.source_paragraph}
               </span>
             </div>
-            <blockquote className="border-l-2 border-blue-500 bg-blue-50/40 p-2.5 rounded-r-lg text-slate-700 italic leading-relaxed text-xs">
-              &ldquo;{obl.source_text}&rdquo;
-            </blockquote>
+            <p className="text-[11px] text-amber-800">
+              Evidence status: {obl.has_verified_source ? 'verified' : 'draft / not independently verified'}
+            </p>
+            {obl.source_text ? (
+              <blockquote className="border-l-2 border-blue-500 bg-blue-50/40 p-2.5 rounded-r-lg text-slate-700 italic leading-relaxed text-xs">
+                &ldquo;{obl.source_text}&rdquo;
+              </blockquote>
+            ) : (
+              <p className="text-xs text-slate-500">
+                No matching source excerpt is available in the local corpus.
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -414,6 +464,9 @@ export const RegistrationComplianceDashboard: React.FC = () => {
     uses_chemicals_or_cosmetics: null,
     handles_waste_oil_or_batteries: null,
     turnover_band: null,
+    location: null,
+    products_services: [],
+    business_size: null,
   });
 
   const [result, setResult] = useState<ComplianceAnalysisResponse | null>(null);
@@ -550,6 +603,48 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                 <option value="clothing">Clothing &amp; Textile Retail</option>
                 <option value="salon">Beauty Salon &amp; Hair Care</option>
                 <option value="vehicle_parts">Vehicle Spare Parts Retail</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Business Location</label>
+              <input
+                type="text"
+                value={profile.location || ''}
+                onChange={(e) => setField('location', e.target.value || null)}
+                placeholder="Town or business area"
+                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Products / Services</label>
+              <input
+                type="text"
+                value={(profile.products_services || []).join(', ')}
+                onChange={(e) =>
+                  setField(
+                    'products_services',
+                    e.target.value.split(',').map((value) => value.trim()).filter(Boolean)
+                  )
+                }
+                placeholder="Comma-separated products or services"
+                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Business Size</label>
+              <select
+                value={profile.business_size || ''}
+                onChange={(e) => setField('business_size', e.target.value || null)}
+                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Unknown --</option>
+                <option value="micro">Micro</option>
+                <option value="small">Small</option>
+                <option value="medium">Medium</option>
+                <option value="large">Large</option>
               </select>
             </div>
 
@@ -817,6 +912,16 @@ export const RegistrationComplianceDashboard: React.FC = () => {
         {/* Results Section */}
         {result && (
           <div className="space-y-6">
+            <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-600">
+              <span className="font-semibold">Evaluation {result.evaluation_id}</span>
+              {' · '}Retrieval: <span className="font-semibold">{result.retrieval_mode}</span>
+              {!result.profile_validation.complete && (
+                <p className="mt-1 text-amber-800">
+                  Profile is incomplete. Add: {result.profile_validation.missing_required_fields.join(', ')}.
+                </p>
+              )}
+            </div>
+
             {/* Summary Counters */}
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-center">
@@ -825,7 +930,7 @@ export const RegistrationComplianceDashboard: React.FC = () => {
               </div>
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
                 <span className="text-2xl font-black text-amber-800">{result.summary.unknown}</span>
-                <p className="text-xs font-bold text-amber-700 mt-0.5">Unknown (Missing)</p>
+                <p className="text-xs font-bold text-amber-700 mt-0.5">Conditional / Review</p>
               </div>
               <div className="bg-slate-100 border border-slate-200 rounded-2xl p-4 text-center">
                 <span className="text-2xl font-black text-slate-700">{result.summary.not_applicable}</span>
@@ -857,7 +962,7 @@ export const RegistrationComplianceDashboard: React.FC = () => {
               <div className="space-y-3">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-amber-800 flex items-center gap-2">
                   <i className="fa-solid fa-circle-question text-amber-600" />
-                  Unknown &mdash; Missing Facts Needed ({unknownList.length})
+                  Conditional &mdash; Missing Facts or Evidence Review ({unknownList.length})
                 </h3>
                 <div className="space-y-3">
                   {unknownList.map((obl) => (

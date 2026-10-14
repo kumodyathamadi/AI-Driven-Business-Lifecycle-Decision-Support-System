@@ -133,6 +133,10 @@ class ObligationRule(BaseModel):
     authority: str
     jurisdiction: str
     required_action: str
+    required_documents: List[str] = Field(
+        default_factory=list,
+        description="Checklist items reviewed for this obligation; empty when not established.",
+    )
     applies_if: Dict[str, Any] = Field(default_factory=dict)
     exceptions: List[ExceptionDef] = Field(default_factory=list)
     evidence: EvidenceRef

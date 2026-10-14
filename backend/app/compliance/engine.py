@@ -258,6 +258,50 @@ def analyze_compliance(profile: BusinessProfile) -> ComplianceAnalysisResponse:
 
     obligations = get_obligations()
     results: List[ObligationResult] = []
+    covered_business_types = {
+        value.lower()
+        for rule in obligations
+        for value in rule.applies_if.get("business_type", [])
+    }
+    unsupported_business_type = (
+        profile.business_type is not None
+        and profile.business_type.lower() not in covered_business_types
+    )
+    business_type_reason = (
+        f"Business type '{profile.business_type}' is not covered by the current "
+        "rulebook; no absence of obligations should be inferred."
+        if unsupported_business_type
+        else None
+    )
+    if unsupported_business_type:
+        result = ObligationResult(
+            id="SCOPE-001",
+            name="Sector-specific requirements not assessed",
+            status=ApplicabilityStatus.NOT_COVERED,
+            reason=business_type_reason,
+            trigger_facts={"business_type": profile.business_type},
+            missing_facts=[],
+            authority="Relevant Sri Lankan national and local authorities",
+            jurisdiction=profile.jurisdiction or profile.local_authority or "Sri Lanka",
+            required_action=(
+                "Consult the relevant authorities; the current obligation rulebook "
+                "does not cover this business sector."
+            ),
+            reviewer_status=ReviewerStatus.DRAFT,
+            has_verified_source=False,
+            evidence=[],
+            caveat=(
+                "This business type is not covered by the current rulebook. "
+                "No conclusion about its legal obligations can be drawn."
+            ),
+        )
+        summary = {status.value: 0 for status in ApplicabilityStatus}
+        summary[result.status.value] = 1
+        return ComplianceAnalysisResponse(
+            business_profile=profile,
+            summary=summary,
+            obligations=[result],
+        )
 
     for rule in obligations:
         if not in_scope and rule.jurisdiction != "Sri Lanka (National)":
