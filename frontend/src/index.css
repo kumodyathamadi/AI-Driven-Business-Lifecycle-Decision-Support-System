@@ -1452,6 +1452,48 @@ body {
   color: #cbd5e1;
 }
 
+.tab-pill-blue {
+  background: rgba(59, 130, 246, 0.22);
+  color: #60a5fa;
+}
+
+/* ==========================================================================
+   Workspace Scroll Section & Tab Navigation Enhancements
+   ========================================================================== */
+
+.workspace-scroll-section {
+  scroll-margin-top: 150px;
+}
+
+@keyframes drawerSlideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Responsive Tab Bar:
+   On small screens show icons only, with the label visible just for the active tab */
+@media (max-width: 640px) {
+  .template-subnav-bar-grid {
+    gap: 0.25rem !important;
+  }
+  .template-tab-link:not(.active) .tab-label-text {
+    display: none !important;
+  }
+  .template-tab-link.active .tab-label-text {
+    display: inline !important;
+  }
+  .template-tab-link {
+    padding: 0.5rem 0.35rem !important;
+    justify-content: center !important;
+  }
+}
+
 /* ==========================================================================
    Dashboard Overview Sections
    ========================================================================== */

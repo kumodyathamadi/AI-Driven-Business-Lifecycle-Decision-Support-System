@@ -11,6 +11,8 @@ import RecommendationsView from './components/RecommendationsView';
 import TopsisTable from './components/TopsisTable';
 import WhatIfSimulator from './components/WhatIfSimulator';
 import BusinessPlan from './components/BusinessPlan';
+import AnalysisPage from './components/workspace/AnalysisPage';
+import StrategiesPage from './components/workspace/StrategiesPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import NotFoundPage from './components/NotFoundPage';
 import { AuthProvider } from './context/AuthContext';
@@ -73,13 +75,17 @@ export default function App() {
                     path="/businesses/:id" 
                     element={<WorkspaceLayout onProfileLoaded={(p) => setActiveProfile(p)} />}
                   >
-                    <Route index element={<BusinessOverview />} />
-                    <Route path="feasibility" element={<FeasibilityCard />} />
-                    <Route path="insights" element={<ShapExplanation />} />
-                    <Route path="recommendations" element={<RecommendationsView />} />
-                    <Route path="options" element={<Navigate to="../recommendations" replace />} />
+                    <Route index element={<AnalysisPage initialSection="overview" />} />
+                    <Route path="analysis" element={<AnalysisPage initialSection="overview" />} />
+                    <Route path="overview" element={<AnalysisPage initialSection="overview" />} />
+                    <Route path="feasibility" element={<AnalysisPage initialSection="feasibility" />} />
+                    <Route path="insights" element={<AnalysisPage initialSection="key-insights" />} />
+                    <Route path="strategies" element={<StrategiesPage initialSection="recommendations" />} />
+                    <Route path="recommendations" element={<StrategiesPage initialSection="recommendations" />} />
+                    <Route path="options" element={<StrategiesPage initialSection="options" />} />
                     <Route path="scenarios" element={<WhatIfSimulator />} />
                     <Route path="plan" element={<BusinessPlan />} />
+                    <Route path="profile" element={<Navigate to="../" replace />} />
                   </Route>
 
                   {/* 404 Catch-All Page */}

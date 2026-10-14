@@ -266,12 +266,13 @@ export default function RecommendationsView({ profile: propProfile }) {
       )}
 
       {/* Section 1: Evaluated Strategic Options (Ranked Order) */}
-      <div>
+      <div id="recommendations" className="workspace-scroll-section" style={{ scrollMarginTop: '150px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
           <div>
-            <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+            <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, flexWrap: 'wrap' }}>
               <Layers size={18} style={{ color: '#60a5fa' }} />
-              Evaluated Strategic Pathways (TOPSIS Ranked)
+              <span>Evaluated Strategic Pathways</span>
+              <span className="tab-pill-badge tab-pill-blue" style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem' }}>TOPSIS</span>
             </h4>
             <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '0.2rem 0 0 0' }}>
               Review evaluated candidate pathways below. Click <strong>Adopt This Strategy</strong> to adapt your business plan, or <strong>Simulate in What-If</strong> to test parameters.
@@ -304,11 +305,11 @@ export default function RecommendationsView({ profile: propProfile }) {
       </div>
 
       {/* Section 2: Decision Matrix Evaluation Criteria & Weights */}
-      <div className="glass-card">
+      <div id="options" className="glass-card workspace-scroll-section" style={{ scrollMarginTop: '150px' }}>
         <div style={{ marginBottom: '1rem' }}>
           <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
             <BarChart2 size={18} style={{ color: '#c084fc' }} />
-            Decision Matrix Evaluation Criteria & Model Weights
+            <span>Decision Matrix Evaluation Criteria & Model Weights</span>
           </h4>
           <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: '0.2rem 0 0 0' }}>
             The TOPSIS multi-criteria algorithm evaluates each operational pathway across these weighted objectives:

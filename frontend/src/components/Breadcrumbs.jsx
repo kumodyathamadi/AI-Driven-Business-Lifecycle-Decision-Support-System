@@ -30,6 +30,8 @@ export default function Breadcrumbs({ activeProfile }) {
       if (parts.length >= 3) {
         const sub = parts[2];
         const labels = {
+          analysis: 'Analysis',
+          strategies: 'Strategies',
           feasibility: 'Feasibility Assessment',
           insights: 'Key Insights',
           recommendations: 'Recommendations & Options',

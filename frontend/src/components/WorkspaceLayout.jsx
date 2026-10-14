@@ -6,13 +6,16 @@ import BusinessNotFound from './BusinessNotFound';
 import { formatCurrency, formatCustomersPerDay, formatText } from '../utils/formatters';
 import StatusBadge from './overview/StatusBadge';
 import WorkspaceTabBar from './workspace/WorkspaceTabBar';
+import ProfileViewer from './ProfileViewer';
 import {
   Building2,
   FileText,
   Share2,
   Download,
   Check,
-  ChevronDown
+  ChevronDown,
+  UserCheck,
+  X
 } from 'lucide-react';
 
 export default function WorkspaceLayout({ onProfileLoaded }) {
@@ -27,6 +30,7 @@ export default function WorkspaceLayout({ onProfileLoaded }) {
   const [errorMessage, setErrorMessage] = useState('');
   const [copied, setCopied] = useState(false);
   const [showSwitcherDropdown, setShowSwitcherDropdown] = useState(false);
+  const [showProfileDrawer, setShowProfileDrawer] = useState(false);
 
   const dropdownRef = useRef(null);
 
@@ -80,6 +84,25 @@ export default function WorkspaceLayout({ onProfileLoaded }) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Handle escape key and body scroll lock for Business Profile drawer
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && showProfileDrawer) {
+        setShowProfileDrawer(false);
+      }
+    };
+    if (showProfileDrawer) {
+      document.body.style.overflow = 'hidden';
+      window.addEventListener('keydown', handleKeyDown);
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showProfileDrawer]);
 
   const handleShare = () => {
     try {
@@ -151,6 +174,29 @@ export default function WorkspaceLayout({ onProfileLoaded }) {
               <span className="template-badge-pill badge-pill-slate">
                 {districtName} District
               </span>
+
+              {/* Business Profile Drawer Trigger Button */}
+              <button
+                type="button"
+                onClick={() => setShowProfileDrawer(true)}
+                className="btn-template-plan btn-profile-drawer-toggle"
+                style={{
+                  padding: '0.2rem 0.65rem',
+                  fontSize: '0.72rem',
+                  borderRadius: '9999px',
+                  boxShadow: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  background: 'rgba(56, 189, 248, 0.12)',
+                  borderColor: 'rgba(56, 189, 248, 0.35)',
+                  color: '#38bdf8'
+                }}
+                aria-label="Open Business Profile drawer"
+              >
+                <UserCheck size={12} style={{ color: '#38bdf8' }} aria-hidden="true" />
+                <span>Business Profile</span>
+              </button>
 
               {/* Distinct "Switch Analysis" Dropdown Control */}
               {availableBusinesses.length > 1 && (
@@ -294,6 +340,84 @@ export default function WorkspaceLayout({ onProfileLoaded }) {
       <main id="workspace-content">
         <Outlet context={{ profile, setProfile, reloadRecord: () => loadRecord(id) }} />
       </main>
+
+      {/* Business Profile Slide-over Drawer Modal */}
+      {showProfileDrawer && (
+        <div
+          className="business-profile-drawer-overlay"
+          onClick={() => setShowProfileDrawer(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.72)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
+            zIndex: 1000,
+            display: 'flex',
+            justifyContent: 'flex-end',
+            animation: 'fadeIn 0.2s ease-out'
+          }}
+        >
+          <div
+            className="business-profile-drawer-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '680px',
+              height: '100%',
+              background: '#0b1329',
+              borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '-10px 0 35px rgba(0, 0, 0, 0.8)',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              animation: 'drawerSlideIn 0.25s ease-out'
+            }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Business Profile"
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1.1rem 1.4rem',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(15, 23, 42, 0.9)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(56, 189, 248, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#38bdf8' }}>
+                  <UserCheck size={18} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                    Business Profile & Specifications
+                  </h2>
+                  <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0.1rem 0 0 0' }}>
+                    {businessName ? businessName : 'Input Profile Parameters'}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowProfileDrawer(false)}
+                className="btn-template-icon-square"
+                style={{ width: '32px', height: '32px', borderRadius: '8px' }}
+                aria-label="Close Business Profile"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', padding: '1.4rem' }}>
+              <ProfileViewer profile={profile} />
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

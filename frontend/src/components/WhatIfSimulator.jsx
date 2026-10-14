@@ -194,9 +194,10 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
       
       {/* Header */}
       <div>
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
           <Sliders size={22} style={{ color: '#60a5fa' }} />
-          Scenario Explorer & Live What-If Simulator
+          <span>Scenario Explorer & Live What-If Simulator</span>
+          <span className="tab-pill-badge tab-pill-purple" style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem' }}>Interactive</span>
         </h3>
         <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginTop: '0.25rem' }}>
           Adjust financial capital, unit pricing, and customer demand with live interactive sliders. Evaluate real-time ML re-scoring against {currentInput?.business_name ? currentInput.business_name : 'your baseline project'}.
