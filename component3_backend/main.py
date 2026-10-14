@@ -1,6 +1,6 @@
 # component3_backend/main.py
 from typing import List, Dict, Any
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, UploadFile, File
 from fastapi.responses import Response
 from schemas import (
     InvoiceData,
@@ -9,7 +9,11 @@ from schemas import (
     FraudCheckRequest,
     FraudRiskAssessment,
     ReviewActionRequest,
-    ReviewActionResponse
+    ReviewActionResponse,
+    OCRExtractionRequest,
+    OCRExtractionResponse,
+    IntegratedPipelineRequest,
+    IntegratedPipelineResponse
 )
 from tax_engine import (
     categorize_and_calculate_tax,
@@ -21,11 +25,16 @@ from anomaly_detector import (
     get_review_queue_items,
     handle_review_action
 )
+from ocr_extractor import (
+    extract_amounts_from_text,
+    extract_amounts_from_pdf_bytes,
+    run_integrated_pipeline
+)
 
 app = FastAPI(
     title="AI-Based Financial Monitoring & Tax Compliance API",
-    description="Undergraduate Research Project J26-IT-362 - Component 3: Tax Engine, RAMIS Schedule 7, and Operational Fraud Anomaly Detection",
-    version="1.1.0"
+    description="Undergraduate Research Project J26-IT-362 - Component 3: Tax Engine, RAMIS Schedule 7, Anomaly Detection, and 6-Step OCR Amount Extraction",
+    version="1.2.0"
 )
 
 @app.get("/health")
@@ -35,7 +44,7 @@ async def health_check():
 
 
 # -------------------------------------------------------------
-# Single Invoice Processing (Backward compatible + New Tax Route)
+# Single & Batch Invoice Tax Processing
 # -------------------------------------------------------------
 @app.post("/api/v1/process-invoice", status_code=status.HTTP_200_OK)
 @app.post("/api/v1/tax/process-invoice", status_code=status.HTTP_200_OK)
@@ -55,9 +64,6 @@ async def process_invoice_endpoint(invoice: InvoiceData):
         )
 
 
-# -------------------------------------------------------------
-# Batch Processing & Form 2540 Summary
-# -------------------------------------------------------------
 @app.post("/api/v1/tax/batch-process", response_model=BatchTaxProcessResponse, status_code=status.HTTP_200_OK)
 async def batch_process_endpoint(batch_request: Schedule7BatchRequest):
     try:
@@ -69,9 +75,6 @@ async def batch_process_endpoint(batch_request: Schedule7BatchRequest):
         )
 
 
-# -------------------------------------------------------------
-# IRD RAMIS VAT Schedule 7 CSV Export
-# -------------------------------------------------------------
 @app.post("/api/v1/tax/export-schedule7-csv", status_code=status.HTTP_200_OK)
 async def export_schedule7_csv_endpoint(batch_request: Schedule7BatchRequest):
     try:
@@ -119,4 +122,46 @@ async def submit_review_action_endpoint(action_req: ReviewActionRequest):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Failed to submit review action: {str(e)}"
+        )
+
+
+# =============================================================
+# Component 3: 6-Step Context-Aware OCR Amount Extraction Routes
+# =============================================================
+@app.post("/api/v1/ocr/extract-amounts", response_model=OCRExtractionResponse, status_code=status.HTTP_200_OK)
+async def extract_amounts_text_endpoint(req: OCRExtractionRequest):
+    try:
+        return extract_amounts_from_text(req.document_text)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"OCR extraction failed: {str(e)}"
+        )
+
+
+@app.post("/api/v1/ocr/upload-pdf", response_model=OCRExtractionResponse, status_code=status.HTTP_200_OK)
+async def upload_invoice_pdf_endpoint(file: UploadFile = File(...)):
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded file must be a PDF document."
+        )
+    try:
+        pdf_bytes = await file.read()
+        return extract_amounts_from_pdf_bytes(pdf_bytes)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Failed to process PDF invoice: {str(e)}"
+        )
+
+
+@app.post("/api/v1/pipeline/process-transaction", response_model=IntegratedPipelineResponse, status_code=status.HTTP_200_OK)
+async def pipeline_process_transaction_endpoint(req: IntegratedPipelineRequest):
+    try:
+        return run_integrated_pipeline(req)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Integrated pipeline execution failed: {str(e)}"
         )

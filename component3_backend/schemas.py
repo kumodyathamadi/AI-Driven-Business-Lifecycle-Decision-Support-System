@@ -1,6 +1,6 @@
 # component3_backend/schemas.py
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import date, datetime
 
 class InvoiceData(BaseModel):
@@ -131,3 +131,57 @@ class ReviewActionResponse(BaseModel):
     action_taken: str
     reviewer_notes: Optional[str]
     resolved_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+# =========================================================================
+# Component 3: Context-Aware Document OCR Amount Extraction Schemas
+# =========================================================================
+
+class OCRExtractionRequest(BaseModel):
+    document_text: str = Field(..., description="Raw text or OCR string output from scanned receipt/invoice")
+    document_id: Optional[str] = Field("DOC-001", description="Document reference ID")
+    file_type: Optional[str] = Field("text", description="File type: 'text', 'pdf', or 'image'")
+
+
+class ExtractedAmountDetails(BaseModel):
+    sub_total: float = Field(..., description="Extracted net base amount")
+    tax_amount: float = Field(..., description="Extracted tax / VAT amount")
+    total_amount: float = Field(..., description="Extracted final total payable amount")
+    currency: str = Field("LKR", description="Currency symbol / code")
+    tax_category: str = Field("Standard", description="Detected tax category (Standard 18%, Zero-Rated, Exempt)")
+    invoice_number: str = Field(..., description="Extracted or detected invoice number")
+    invoice_date: str = Field(..., description="Extracted invoice date")
+    is_math_valid: bool = Field(..., description="Whether Subtotal + Tax == Total")
+    math_difference: float = Field(..., description="Numerical difference in mathematical consistency")
+
+
+class StepLog(BaseModel):
+    step: str
+    details: str
+
+
+class OCRExtractionResponse(BaseModel):
+    status: str = "success"
+    confidence_score: float = Field(..., description="Extraction confidence score (0 to 100%)")
+    decision: str = Field(..., description="'AUTO_PASS' or 'REVIEW_REQUIRED'")
+    routing: str = Field(..., description="Target routing pipeline")
+    extracted_amounts: ExtractedAmountDetails
+    step_logs: List[StepLog]
+    rejected_decoys_count: int
+    sample_decoys: List[Dict[str, Any]]
+
+
+class IntegratedPipelineRequest(BaseModel):
+    document_text: Optional[str] = Field(None, description="Raw OCR invoice text if available")
+    item_id: Optional[str] = Field("ITEM-GEN-01", description="Associated inventory product identifier")
+    quantity_invoiced: Optional[float] = Field(1.0, gt=0.0)
+    stock_depletion_log: Optional[StockDepletionLog] = Field(None, description="Physical inventory deduction entry")
+    transaction_time: Optional[datetime] = Field(None, description="Timestamp of transaction")
+
+
+class IntegratedPipelineResponse(BaseModel):
+    status: str = "success"
+    ocr_result: OCRExtractionResponse
+    tax_result: Optional[TaxCalculationResult] = None
+    fraud_assessment: Optional[FraudRiskAssessment] = None
+    final_pipeline_decision: str  # "AUTO_APPROVED" or "HELD_FOR_REVIEW"

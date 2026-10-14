@@ -2,8 +2,9 @@
 import sys
 import os
 from typing import List, Dict, Any
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, UploadFile, File
 from fastapi.responses import Response
+
 
 # Ensure root path is accessible
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
@@ -15,7 +16,11 @@ from backend.schemas import (
     FraudCheckRequest,
     FraudRiskAssessment,
     ReviewActionRequest,
-    ReviewActionResponse
+    ReviewActionResponse,
+    OCRExtractionRequest,
+    OCRExtractionResponse,
+    IntegratedPipelineRequest,
+    IntegratedPipelineResponse
 )
 from backend.services.tax_engine import (
     categorize_and_calculate_tax,
@@ -27,6 +32,12 @@ from backend.services.anomaly_detector import (
     get_review_queue_items,
     handle_review_action
 )
+from backend.services.ocr_extractor import (
+    extract_amounts_from_text,
+    extract_amounts_from_pdf_bytes,
+    run_integrated_pipeline
+)
+
 
 router = APIRouter(tags=["Component 3: Financial Monitoring & Tax Compliance"])
 
@@ -154,3 +165,65 @@ def submit_review_decision(action_req: ReviewActionRequest):
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Failed to submit review action: {str(e)}"
         )
+
+
+# =============================================================
+# Component 3: 6-Step Context-Aware OCR Amount Extraction Routes
+# =============================================================
+
+@router.post("/api/financial/ocr/extract-amounts", response_model=OCRExtractionResponse, status_code=status.HTTP_200_OK)
+@router.post("/api/v1/ocr/extract-amounts", response_model=OCRExtractionResponse, status_code=status.HTTP_200_OK)
+def extract_invoice_amounts_text(req: OCRExtractionRequest):
+    """
+    Component 3: Executes the 6-Step Context-Aware Amount Extraction Engine on OCR raw text.
+    Rejects decoys (TINs, dates, phone numbers) and validates Subtotal + Tax = Total.
+    """
+    try:
+        return extract_amounts_from_text(req.document_text)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"OCR extraction failed: {str(e)}"
+        )
+
+
+@router.post("/api/financial/ocr/upload-pdf", response_model=OCRExtractionResponse, status_code=status.HTTP_200_OK)
+@router.post("/api/v1/ocr/upload-pdf", response_model=OCRExtractionResponse, status_code=status.HTTP_200_OK)
+async def upload_invoice_pdf(file: UploadFile = File(...)):
+    """
+    Component 3: Accepts a scanned or digital PDF tax invoice/receipt, extracts layout text,
+    and runs the 6-Step Context-Aware Amount Extraction Engine.
+    """
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded file must be a PDF document."
+        )
+    try:
+        pdf_bytes = await file.read()
+        return extract_amounts_from_pdf_bytes(pdf_bytes)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Failed to process PDF invoice: {str(e)}"
+        )
+
+
+@router.post("/api/financial/pipeline/process-transaction", response_model=IntegratedPipelineResponse, status_code=status.HTTP_200_OK)
+@router.post("/api/v1/pipeline/process-transaction", response_model=IntegratedPipelineResponse, status_code=status.HTTP_200_OK)
+def run_end_to_end_pipeline(req: IntegratedPipelineRequest):
+    """
+    Component 3: Unified End-to-End Execution Pipeline:
+      1. Context-aware OCR amount extraction with decoy rejection & math check.
+      2. If passed -> Sri Lankan RAMIS tax classification (Cage A, D, E) & LKR conversion.
+      3. If passed -> Cross-referencing against physical stock depletion via Isolation Forest.
+      4. Auto-approval vs. routing to Human Review Queue.
+    """
+    try:
+        return run_integrated_pipeline(req)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"End-to-End Pipeline failed: {str(e)}"
+        )
+

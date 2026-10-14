@@ -113,9 +113,61 @@ def test_fraud_check_api():
     assert act_res.json()["action_taken"] == "reject"
     print("PASS: /api/v1/fraud/review-action")
 
+def test_ocr_api():
+    sample_ocr = """
+    COLOMBO HARDWARE & BUILDING SUPPLIES
+    TIN: 102938475 | Phone: +94 11 2345678
+    Invoice: INV-2025-001
+    Date: 2025-06-25
+
+    Subtotal: 80,000.00
+    VAT (18%): 14,400.00
+    Total Amount: 94,400.00
+    """
+    res = client.post("/api/v1/ocr/extract-amounts", json={"document_text": sample_ocr})
+    assert res.status_code == 200
+    data = res.json()
+    assert data["decision"] == "AUTO_PASS"
+    assert data["extracted_amounts"]["total_amount"] == 94400.0
+    assert data["extracted_amounts"]["is_math_valid"] == True
+    print("PASS: /api/v1/ocr/extract-amounts")
+
+def test_pipeline_api():
+    sample_ocr = """
+    LANKA STEEL DISTRIBUTORS
+    Invoice: INV-PIPE-01
+    Date: 2025-06-25
+    Subtotal: 100,000.00
+    VAT: 18,000.00
+    Total Payable: 118,000.00
+    """
+    payload = {
+        "document_text": sample_ocr,
+        "item_id": "STEEL-BAR-12MM",
+        "quantity_invoiced": 10.0,
+        "stock_depletion_log": {
+            "item_id": "STEEL-BAR-12MM",
+            "quantity_depleted": 10.0,
+            "unit_cost": 9500.0,
+            "depletion_timestamp": "2025-06-25T10:00:00"
+        },
+        "transaction_time": "2025-06-25T10:30:00"
+    }
+    res = client.post("/api/v1/pipeline/process-transaction", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "success"
+    assert data["final_pipeline_decision"] == "AUTO_APPROVED"
+    assert data["tax_result"]["schedule_7_cage"] == "Cage A"
+    assert data["fraud_assessment"]["decision"] == "PASS"
+    print("PASS: /api/v1/pipeline/process-transaction")
+
 if __name__ == "__main__":
     test_health()
     test_process_invoice_legacy()
     test_export_csv()
     test_fraud_check_api()
+    test_ocr_api()
+    test_pipeline_api()
     print("\nALL FASTAPI INTEGRATION TESTS PASSED SUCCESSFULLY!")
+
