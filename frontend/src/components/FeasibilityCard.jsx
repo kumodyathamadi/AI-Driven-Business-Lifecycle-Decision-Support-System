@@ -4,13 +4,12 @@ import { CheckCircle2, AlertTriangle, XCircle, Award, TrendingUp, AlertOctagon, 
 import ProbabilityChart from './ProbabilityChart';
 import { resolveDriverValue } from '../utils/formatters';
 
-export default function FeasibilityCard({ feasibilityData: propFeas, executiveSummary: propSummary }) {
+export default function FeasibilityCard({ feasibilityData: propFeas }) {
   const ctx = useOutletContext();
   const navigate = useNavigate();
   const { id } = useParams();
 
   const feasibilityData = propFeas || ctx?.profile?.feasibility_analysis;
-  const executiveSummary = propSummary || ctx?.profile?.personalized_business_plan?.executive_overview?.business_summary;
   const explainability = ctx?.profile?.explainability || {};
   const positiveDrivers = explainability.positive_drivers || [];
   const negativeDrivers = explainability.negative_drivers || [];
@@ -151,17 +150,6 @@ export default function FeasibilityCard({ feasibilityData: propFeas, executiveSu
         </div>
       )}
 
-      {/* Executive Summary */}
-      {executiveSummary && (
-        <div className="glass-card">
-          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#3b82f6', marginBottom: '0.5rem' }}>
-            Executive Feasibility Summary
-          </h3>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
-            {executiveSummary}
-          </p>
-        </div>
-      )}
     </div>
   );
 }

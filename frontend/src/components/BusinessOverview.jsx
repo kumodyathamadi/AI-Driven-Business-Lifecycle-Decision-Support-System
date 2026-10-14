@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
+import { useOutletContext, useParams } from 'react-router-dom';
 import {
   ShieldCheck,
-  RefreshCw,
   X
 } from 'lucide-react';
 import {
@@ -20,12 +19,10 @@ import {
   ExtraCapitalKpiCard
 } from './overview/KpiCard';
 import InsightCard from './overview/InsightCard';
-import StrategyCard from './overview/StrategyCard';
 import OverviewSkeleton from './overview/OverviewSkeleton';
 
 export default function BusinessOverview({ profile: propProfile }) {
   const outletCtx = useOutletContext();
-  const navigate = useNavigate();
   const { id } = useParams();
 
   const [showChecklistModal, setShowChecklistModal] = useState(false);
@@ -72,14 +69,7 @@ export default function BusinessOverview({ profile: propProfile }) {
   const staffEst = Math.round(monthlyBudget * 0.44);
   const extraCapitalNeeded = Math.round(monthlyBudget * 1.56);
 
-  // Strategy data
-  const topsisRanking = strategic_recommendations.topsis_ranking || {};
-  const rankedStrategies = topsisRanking.ranked_strategies || strategic_recommendations.candidate_strategies || [];
-  const topStrategy = rankedStrategies[0] || {
-    strategy_name: 'Tiered Membership & Premium Upsell',
-    operational_approach: 'maximizing customer retention while easing early cash flow pressure through upfront quarterly subscriptions',
-    topsis_score: topsisRanking.top_topsis_score || 0.70
-  };
+
 
   // SHAP drivers
   const posDrivers = explainability.positive_drivers || [];
@@ -157,54 +147,7 @@ export default function BusinessOverview({ profile: propProfile }) {
         />
       </section>
 
-      {/* 4. RECOMMENDED STRATEGY CARD (TITLE, ONE-SENTENCE SUMMARY, RANK #1, 70/100 TOPSIS SCORE, 4 CHIPS) */}
-      <section aria-label="Recommended Strategic Direction">
-        <StrategyCard
-          businessId={id}
-          topStrategy={topStrategy}
-          topsisRanking={topsisRanking}
-        />
-      </section>
 
-      {/* 5. GOVERNANCE & TRUST FOOTER (SUBTLE, CLEAN) */}
-      <footer style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '0.75rem 0.25rem',
-        fontSize: '0.75rem',
-        color: '#64748b',
-        borderTop: '1px solid var(--border-color)',
-        flexWrap: 'wrap',
-        gap: '0.75rem'
-      }}>
-        <div>
-          <span>Model: CBSL SME Guidelines v2025 • Engine v2.4 (XGBoost + SHAP TreeExplainer)</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard?action=new')}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: '#818cf8',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              padding: 0
-            }}
-          >
-            <RefreshCw size={12} />
-            <span>Re-run analysis</span>
-          </button>
-          <span>•</span>
-          <span>AI-generated estimate to support decision-making; not financial advice.</span>
-        </div>
-      </footer>
 
       {/* PRUDENTIAL CHECKLIST MODAL (PROGRESSIVE DISCLOSURE) */}
       {showChecklistModal && (

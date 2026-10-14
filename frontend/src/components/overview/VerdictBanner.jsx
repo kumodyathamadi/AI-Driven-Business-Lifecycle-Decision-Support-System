@@ -115,9 +115,6 @@ export default function VerdictBanner({
               <StatusIcon size={12} aria-hidden="true" />
               <span>{predictedLabel.toUpperCase()}</span>
             </span>
-            <span className="verdict-eyebrow-meta">
-              CBSL Guidelines v2025 • Assessed {fullAssessedDate}
-            </span>
           </div>
 
           <h2 className="verdict-single-headline">
