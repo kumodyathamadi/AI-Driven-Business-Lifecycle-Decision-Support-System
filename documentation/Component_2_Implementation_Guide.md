@@ -26,9 +26,10 @@ React profile form
 | `backend/app/compliance/engine.py` | Applies the YAML rulebook deterministically. An unknown fact is not coerced to false; business sectors outside the current rulebook are marked `not_covered`. |
 | `backend/app/compliance/rulebook_loader.py` | Loads and validates `data/compliance/rulebook/obligations.yaml`. |
 | `backend/app/compliance/source_registry.py` | Resolves source identifiers to registered metadata. |
-| `backend/app/compliance/retrieval.py` | Chunks local `sources/*.txt`, indexes and queries a local Chroma collection using SentenceTransformers, and identifies draft/placeholders in every returned excerpt. When either package is unavailable, provides explicitly labeled keyword retrieval instead. |
+| `backend/app/compliance/retrieval.py` | Recursively chunks local `sources/**/*.txt`, indexes and queries a local Chroma collection using SentenceTransformers, and searches ingested PDF/TXT excerpts with preserved page or paragraph references. When vector packages are unavailable, provides explicitly labeled keyword retrieval instead. |
+| `backend/app/compliance/legal_sources.py` | Ingests PDFs and UTF-8/legacy-encoded TXT files, deduplicates by SHA-256, stores extracted text separately, and records processing and verification metadata. |
 | `backend/app/compliance/guidance.py` | Maps rule results to Mandatory / Conditional / Not Applicable, builds explanations and next steps, and refuses to invent document checklists or cite excerpts from a different source than the rule. |
-| `backend/app/api/component2_routes.py` | Exposes the evaluation API, profile completeness and follow-up questions, response assembly, and persistence. |
+| `backend/app/api/component2_routes.py` | Exposes evaluation, legal-source inventory/detail/evidence and ingestion APIs, profile completeness and follow-up questions, response assembly, and persistence. |
 | `backend/models.py` | Defines `ComplianceEvaluationRecord`; stored profile/result JSON excludes business names and personal identifiers. |
 | `alembic/versions/2026_10_14_0002_component2_evaluation_records.py` | Adds the PostgreSQL/SQLite-compatible evaluation-history table. |
 
@@ -91,21 +92,27 @@ current rules do not use them as applicability triggers.
   validates the profile, returns classified obligations and guidance, and
   stores an evaluation record. `retrieval_mode` indicates
   `chroma_sentence_transformers` or `lexical_fallback`.
+- `GET /compliance/obligations` returns the existing YAML rulebook; the
+  deterministic evaluator only uses its declared profile conditions.
 - The response contains the normalized `business_context`, a completeness
   report, summary counts, source-linked obligation results, guidance, an
   evaluation identifier, deterministic priority labels, profile-matched
-  `source_discovery` excerpts from the ingested PDFs, and a
+  `source_discovery` excerpts from ingested PDFs and TXT files, and a
   legal-advice/evidence-quality disclaimer. Priority is a review ordering hint,
   not a statutory deadline or legal risk score.
 - The `compliance_evaluation_records` table stores `id`, `business_context`
   (JSON/JSONB), `result` (JSON/JSONB), `retrieval_mode`, and `created_at`.
 - The UI uses `VITE_API_BASE_URL` to select the API origin; it defaults to
   `http://localhost:8000`.
-- `GET /api/v1/component2/sources` lists the ingested PDF source inventory,
-  including checksums, page counts, extraction status, and verification status.
+- `GET /api/v1/component2/sources` lists the ingested legal-source inventory,
+  including checksums, file types, page/section references, extraction status,
+  and verification status. `GET /api/v1/component2/sources/{source_id}` returns
+  one source record; `GET /api/v1/component2/sources/{source_id}/evidence?query=...`
+  searches its extracted excerpts without exposing a filesystem path input.
 - `POST /api/v1/component2/sources/ingest` recursively processes PDFs from
-  `data/compliance/raw/Component2_Legal_Sources/`. Original files are read-only;
-  extracted page text is stored separately in
+  `data/compliance/raw/Component2_Legal_Sources/` and PDFs/TXT files under
+  `sources/`. Use `?force=true` to re-extract unchanged files. Original files
+  are read-only; extracted text is stored separately in
   `data/compliance/processed/legal_sources/`, with metadata in
   `data/compliance/legal_source_inventory.json`.
 
@@ -115,14 +122,18 @@ Run the same idempotent ingestion locally from the repository root:
 python scripts/compliance/ingest_legal_sources.py
 ```
 
+Add `--force` to re-extract unchanged files after changing extraction logic.
+
 Install `backend/requirements.txt` first to enable PyMuPDF extraction. Pages
 with no extractable text are flagged as `empty_or_scanned` and recommend OCR;
-OCR is not performed by this prototype. Every imported archive record starts
-as `needs_verification`. Filename-derived titles, extracted text, and checksums
-do not establish a source's authority, legal status, or applicability.
-PDF page excerpts are found with local lexical retrieval and returned as
-discovery evidence only. They are not converted into or used to classify
-obligations automatically.
+OCR is not performed by this prototype. TXT files are decoded with UTF-8 first
+and fall back to Windows-1252/Latin-1; extracted paragraphs retain detectable
+section references and paragraph numbers. Empty and unreadable files are
+recorded with a processing status rather than treated as legal evidence. Every
+imported archive record starts as `needs_verification`. Filename-derived
+titles, extracted text, and checksums do not establish a source's authority,
+legal status, or applicability. Extracted excerpts are discovery evidence only;
+they are not converted into or used to classify obligations automatically.
 
 To apply the database migration in a deployed environment:
 
@@ -131,6 +142,15 @@ alembic upgrade head
 ```
 
 ## Retrieval and evidence controls
+
+Classification labels are evidence-aware:
+
+| Label | Meaning |
+| --- | --- |
+| `Mandatory` | The rule engine finds the obligation applicable and the rule has a verified source. |
+| `Conditional` | A verified rule may apply, but relevant profile conditions remain unresolved. |
+| `Not Applicable` | The verified rule engine determines that its applicability conditions are false for this profile. |
+| `Needs Verification` | The source, provision, legal status, applicability, or jurisdiction is unverified or not covered. |
 
 Install `backend/requirements.txt` to enable the local vector path. The first
 vector query downloads/loads `sentence-transformers/all-MiniLM-L6-v2` into the
@@ -154,7 +174,7 @@ Sample API payloads are in `data/compliance/profiles/`:
 Run the focused tests from the repository root:
 
 ```powershell
-pytest tests/compliance/test_component2_api.py tests/compliance/test_engine.py
+pytest tests/compliance/test_legal_sources.py tests/compliance/test_component2_api.py tests/compliance/test_engine.py
 ```
 
 The test cases cover alias normalization, range validation, missing profile

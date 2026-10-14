@@ -1,6 +1,7 @@
 {
   "source_id": "SL-C2-PDF-04f41658d79bb9daaf95",
   "file_checksum": "04f41658d79bb9daaf958a60aa1e7ee61b62f3683f6384b839bf4878b5d5670a",
+  "file_type": "pdf",
   "verification_status": "needs_verification",
   "pages": [
     {
@@ -947,5 +948,6 @@
       "page_number": 236,
       "text": "Government Process Re- Engineering (GPR) Assignment \nfor Department of Motor Traffic, e-Motoring Project. \nConfidential Final Report \n \n         \n \n236/ 236"
     }
-  ]
+  ],
+  "segments": []
 }

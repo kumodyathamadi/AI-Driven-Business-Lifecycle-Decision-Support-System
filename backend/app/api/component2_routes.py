@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -14,6 +14,7 @@ from backend.app.compliance.engine import analyze_compliance
 from backend.app.compliance.guidance import build_obligation_output, build_guidance
 from backend.app.compliance.legal_sources import (
     LegalSourceIngestionResult,
+    LegalSourceMetadata,
     LegalSourceInventory,
     PdfExtractionUnavailable,
     get_legal_source_inventory,
@@ -50,6 +51,10 @@ class Component2EvidenceSource(BaseModel):
     contains_placeholder: bool
     verification_status: Optional[str] = None
     title_is_filename_guess: bool = False
+    section_reference: Optional[str] = None
+    paragraph_number: Optional[int] = None
+    file_type: Optional[str] = None
+    source_file: Optional[str] = None
 
 
 class Component2Obligation(BaseModel):
@@ -100,7 +105,7 @@ class Component2EvaluationResponse(BaseModel):
     obligations: List[Component2Obligation]
     guidance: List[Component2Obligation]
     source_discovery: List[Component2EvidenceSource] = Field(default_factory=list)
-    source_discovery_mode: str = "lexical_pdf_candidates"
+    source_discovery_mode: str = "lexical_legal_source_candidates"
     follow_up_questions: List[Dict[str, Any]]
     retrieval_mode: str
     disclaimer: str = (
@@ -111,9 +116,13 @@ class Component2EvaluationResponse(BaseModel):
     )
 
 
-@router.get("/sources", response_model=LegalSourceInventory)
+@router.get(
+    "/sources",
+    response_model=LegalSourceInventory,
+    response_model_exclude={"sources": {"__all__": {"processed_text_path"}}},
+)
 def list_legal_source_inventory() -> LegalSourceInventory:
-    """List discovered legal PDFs and their extraction/verification state."""
+    """List discovered legal sources and their extraction/verification state."""
     try:
         return get_legal_source_inventory()
     except (OSError, ValueError) as exc:
@@ -124,11 +133,20 @@ def list_legal_source_inventory() -> LegalSourceInventory:
         ) from exc
 
 
-@router.post("/sources/ingest", response_model=LegalSourceIngestionResult)
-def ingest_legal_source_documents() -> LegalSourceIngestionResult:
-    """Ingest PDFs from the configured raw-source directory; originals are read-only."""
+@router.post(
+    "/sources/ingest",
+    response_model=LegalSourceIngestionResult,
+    response_model_exclude={"sources": {"__all__": {"processed_text_path"}}},
+)
+def ingest_legal_source_documents(
+    force: bool = Query(
+        default=False,
+        description="Re-extract unchanged files when true.",
+    ),
+) -> LegalSourceIngestionResult:
+    """Ingest configured PDF and TXT sources; originals are read-only."""
     try:
-        return ingest_legal_sources()
+        return ingest_legal_sources(force=force)
     except PdfExtractionUnavailable as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except (OSError, ValueError) as exc:
@@ -137,6 +155,54 @@ def ingest_legal_source_documents() -> LegalSourceIngestionResult:
             status_code=503,
             detail="Legal-source ingestion failed; inspect the server log for details.",
         ) from exc
+
+
+@router.get(
+    "/sources/{source_id}",
+    response_model=LegalSourceMetadata,
+    response_model_exclude={"processed_text_path"},
+)
+def get_legal_source(source_id: str) -> LegalSourceMetadata:
+    """Return metadata and processing state for one inventoried source."""
+    try:
+        source = next(
+            (
+                item
+                for item in get_legal_source_inventory().sources
+                if item.source_id == source_id
+            ),
+            None,
+        )
+    except (OSError, ValueError) as exc:
+        logger.exception("Could not read Component 2 legal-source inventory")
+        raise HTTPException(
+            status_code=503,
+            detail="The legal-source inventory could not be read.",
+        ) from exc
+    if source is None:
+        raise HTTPException(status_code=404, detail="Legal source not found.")
+    return source
+
+
+@router.get("/sources/{source_id}/evidence")
+def get_legal_source_evidence(
+    source_id: str,
+    query: str = Query(min_length=1, max_length=500),
+    limit: int = Query(default=5, ge=1, le=10),
+) -> Dict[str, Any]:
+    """Search extracted excerpts from one known source without opening file paths."""
+    get_legal_source(source_id)
+    try:
+        result = retrieve_legal_candidates(query, top_k=limit, source_id=source_id)
+    except (FileNotFoundError, RuntimeError) as exc:
+        logger.exception("Could not retrieve evidence for source %s", source_id)
+        raise HTTPException(
+            status_code=503,
+            detail="Evidence for this legal source is unavailable.",
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return result
 
 
 @router.post("/evaluate", response_model=Component2EvaluationResponse)
@@ -224,7 +290,11 @@ def evaluate_compliance(
             "url": item["metadata"]["url"] or None,
             "effective_date": item["metadata"]["effective_date"] or None,
             "retrieval_score": item["score"],
-            "page": item["metadata"]["page"],
+            "page": item["metadata"].get("page"),
+            "section_reference": item["metadata"].get("section_reference"),
+            "paragraph_number": item["metadata"].get("paragraph_number"),
+            "file_type": item["metadata"].get("file_type"),
+            "source_file": item["metadata"].get("corpus_file"),
             "reviewer_status": item["metadata"]["reviewer_status"],
             "contains_placeholder": item["metadata"]["contains_placeholder"],
             "verification_status": item["metadata"]["verification_status"],
@@ -276,7 +346,7 @@ def evaluate_compliance(
         "guidance": guidance_outputs,
         "source_discovery": source_discovery,
         "source_discovery_mode": candidate_result.get(
-            "mode", "lexical_pdf_candidates"
+            "mode", "lexical_legal_source_candidates"
         ),
         "follow_up_questions": generate_follow_up_questions(missing_facts),
         "retrieval_mode": (

@@ -30,8 +30,14 @@ _indexed_corpus_signature: str | None = None
 
 def _source_chunks() -> List[Tuple[str, str, Dict[str, Any]]]:
     chunks: List[Tuple[str, str, Dict[str, Any]]] = []
-    for source_path in sorted(_CORPUS_DIR.glob("*.txt")):
-        content = source_path.read_text(encoding="utf-8").strip()
+    for source_path in sorted(_CORPUS_DIR.rglob("*.txt")):
+        try:
+            content = source_path.read_text(encoding="utf-8").strip()
+        except UnicodeDecodeError:
+            content = source_path.read_text(encoding="cp1252").strip()
+        except OSError:
+            logger.exception("Could not read text source %s", source_path)
+            continue
         if not content:
             continue
         source_id = _SOURCE_IDS.get(source_path.stem, f"UNREGISTERED-{source_path.stem}")
@@ -63,7 +69,8 @@ def _source_chunks() -> List[Tuple[str, str, Dict[str, Any]]]:
                 "effective_date": source.get("effective_date", ""),
                 "reviewer_status": "draft",
                 "contains_placeholder": "placeholder" in content.lower(),
-                "corpus_file": source_path.name,
+                "corpus_file": source_path.relative_to(_CORPUS_DIR).as_posix(),
+                "file_type": "txt",
             }
             chunks.append((chunk_id, text, metadata))
     return chunks
@@ -87,8 +94,8 @@ def _lexical_search(query: str, top_k: int) -> List[Dict[str, Any]]:
     ]
 
 
-def _legal_pdf_chunks() -> List[Tuple[str, str, Dict[str, Any]]]:
-    """Load page text as unverified discovery evidence, never as obligation rules."""
+def _legal_source_chunks() -> List[Tuple[str, str, Dict[str, Any]]]:
+    """Load extracted legal evidence, retaining its page or text paragraph reference."""
     chunks: List[Tuple[str, str, Dict[str, Any]]] = []
     inventory = get_legal_source_inventory()
     for source in inventory.sources:
@@ -110,15 +117,32 @@ def _legal_pdf_chunks() -> List[Tuple[str, str, Dict[str, Any]]]:
             raise RuntimeError(
                 f"Processed text checksum mismatch for legal source {source.source_id}"
             )
-        for page in document.get("pages", []):
-            text = str(page.get("text") or "").strip()
+        references = [
+            (
+                int(page["page_number"]),
+                None,
+                None,
+                str(page.get("text") or "").strip(),
+            )
+            for page in document.get("pages", [])
+        ]
+        references.extend(
+            (
+                None,
+                segment.get("section_reference"),
+                segment.get("paragraph_number"),
+                str(segment.get("text") or "").strip(),
+            )
+            for segment in document.get("segments", [])
+        )
+        for page_number, section_reference, paragraph_number, text in references:
             if not text:
                 continue
             for index in range(0, len(text), _CHUNK_SIZE):
                 excerpt = text[index : index + _CHUNK_SIZE]
-                page_number = int(page["page_number"])
                 chunk_id = hashlib.sha256(
-                    f"{source.source_id}:{page_number}:{index}:{excerpt}".encode("utf-8")
+                    f"{source.source_id}:{page_number}:{section_reference}:"
+                    f"{paragraph_number}:{index}:{excerpt}".encode("utf-8")
                 ).hexdigest()
                 chunks.append(
                     (
@@ -139,6 +163,9 @@ def _legal_pdf_chunks() -> List[Tuple[str, str, Dict[str, Any]]]:
                             "title_is_filename_guess": source.title_is_filename_guess,
                             "contains_placeholder": "placeholder" in text.lower(),
                             "page": page_number,
+                            "section_reference": section_reference,
+                            "paragraph_number": paragraph_number,
+                            "file_type": source.file_type,
                             "corpus_file": source.source_paths[0],
                         },
                     )
@@ -146,23 +173,29 @@ def _legal_pdf_chunks() -> List[Tuple[str, str, Dict[str, Any]]]:
     return chunks
 
 
-def retrieve_legal_candidates(query: str, top_k: int = 5) -> Dict[str, Any]:
-    """Find relevant extracted PDF excerpts without asserting they establish law."""
+def retrieve_legal_candidates(
+    query: str,
+    top_k: int = 5,
+    source_id: str | None = None,
+) -> Dict[str, Any]:
+    """Find extracted legal excerpts without asserting they establish law."""
     if top_k < 1 or top_k > 10:
         raise ValueError("top_k must be between 1 and 10")
     query_tokens = set(_TOKEN_PATTERN.findall(query.lower()))
     if not query_tokens:
-        return {"mode": "lexical_pdf_candidates", "evidence": []}
+        return {"mode": "lexical_legal_source_candidates", "evidence": []}
 
     ranked: List[Tuple[float, str, Dict[str, Any]]] = []
-    for chunk_id, text, metadata in _legal_pdf_chunks():
+    for chunk_id, text, metadata in _legal_source_chunks():
+        if source_id and metadata["source_id"] != source_id:
+            continue
         text_tokens = set(_TOKEN_PATTERN.findall(text.lower()))
         score = len(query_tokens.intersection(text_tokens)) / len(query_tokens)
         if score:
             ranked.append((score, text, metadata | {"chunk_id": chunk_id}))
     ranked.sort(key=lambda item: (-item[0], item[2]["source_id"], item[2]["page"]))
     return {
-        "mode": "lexical_pdf_candidates",
+        "mode": "lexical_legal_source_candidates",
         "evidence": [
             {"score": score, "text": text, "metadata": metadata}
             for score, text, metadata in ranked[:top_k]

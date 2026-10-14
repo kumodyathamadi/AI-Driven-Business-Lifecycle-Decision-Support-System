@@ -57,10 +57,13 @@ export interface LegalSourceExcerpt {
   authority: string | null;
   excerpt: string;
   url: string | null;
-  page: number;
+  page: number | null;
   retrieval_score: number;
   verification_status: string;
   title_is_filename_guess: boolean;
+  section_reference?: string | null;
+  paragraph_number?: number | null;
+  file_type?: 'pdf' | 'txt' | null;
 }
 
 export interface ComplianceAnalysisResponse {
@@ -1184,7 +1187,14 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                           </span>
                         </div>
                         <p className="mt-1 text-[11px] text-slate-500">
-                          {source.source_id} · page {source.page}
+                          {source.source_id}
+                          {source.page
+                            ? ` · page ${source.page}`
+                            : source.section_reference
+                              ? ` · ${source.section_reference}${source.paragraph_number ? ` · paragraph ${source.paragraph_number}` : ''}`
+                              : source.file_type === 'txt'
+                                ? ' · text excerpt'
+                                : ''}
                           {source.title_is_filename_guess ? ' · title from filename' : ''}
                           {source.authority ? ` · ${source.authority}` : ''}
                         </p>

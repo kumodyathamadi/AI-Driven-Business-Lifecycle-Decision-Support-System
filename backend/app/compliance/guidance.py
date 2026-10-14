@@ -53,6 +53,15 @@ def build_obligation_output(
             "url": item.get("metadata", {}).get("url") or None,
             "effective_date": item.get("metadata", {}).get("effective_date") or None,
             "retrieval_score": item.get("score"),
+            "page": item.get("metadata", {}).get("page"),
+            "section_reference": item.get("metadata", {}).get(
+                "section_reference"
+            ),
+            "paragraph_number": item.get("metadata", {}).get(
+                "paragraph_number"
+            ),
+            "file_type": item.get("metadata", {}).get("file_type"),
+            "source_file": item.get("metadata", {}).get("corpus_file"),
             "reviewer_status": item.get("metadata", {}).get(
                 "reviewer_status", "draft"
             ),

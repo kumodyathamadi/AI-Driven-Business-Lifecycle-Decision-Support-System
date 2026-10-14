@@ -1,6 +1,7 @@
 {
   "source_id": "SL-C2-PDF-72e55308f2f99677e649",
   "file_checksum": "72e55308f2f99677e6491df3fa480dd245d713d924cb6346182e562e59cacfe8",
+  "file_type": "pdf",
   "verification_status": "needs_verification",
   "pages": [
     {
@@ -11,5 +12,6 @@
       "page_number": 2,
       "text": "2\n \n \n \n \n \n                  RUKMAN SENANAYAKE \n                   Minister of Environment And Natural Resources \n \n \n \nColombo, \n10th October, 2003."
     }
-  ]
+  ],
+  "segments": []
 }

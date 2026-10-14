@@ -1,6 +1,7 @@
 {
   "source_id": "SL-C2-PDF-759f7283ca7d87c34b3c",
   "file_checksum": "759f7283ca7d87c34b3c39bc23e4e644cbf764d47bd1767e464f07281a203419",
+  "file_type": "pdf",
   "verification_status": "needs_verification",
   "pages": [
     {
@@ -27,5 +28,6 @@
       "page_number": 6,
       "text": ""
     }
-  ]
+  ],
+  "segments": []
 }

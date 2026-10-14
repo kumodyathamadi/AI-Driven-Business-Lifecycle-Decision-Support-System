@@ -135,7 +135,8 @@ def test_target_sector_profiles_do_not_turn_draft_rules_into_legal_conclusions(
 def test_lexical_fallback_returns_draft_source_chunks(tmp_path: Path, monkeypatch):
     import backend.app.compliance.retrieval as retrieval
 
-    (tmp_path / "sample.txt").write_text(
+    (tmp_path / "food" / "sample.txt").parent.mkdir()
+    (tmp_path / "food" / "sample.txt").write_text(
         "[PLACEHOLDER LEGAL TEXT]\nFood business hygiene requirements.",
         encoding="utf-8",
     )
@@ -145,6 +146,7 @@ def test_lexical_fallback_returns_draft_source_chunks(tmp_path: Path, monkeypatc
     assert len(hits) == 1
     assert hits[0]["metadata"]["reviewer_status"] == "draft"
     assert hits[0]["metadata"]["contains_placeholder"] is True
+    assert hits[0]["metadata"]["corpus_file"] == "food/sample.txt"
 
 
 def test_retriever_uses_disclosed_local_fallback(monkeypatch):
@@ -260,7 +262,7 @@ def test_evaluate_endpoint_returns_guidance_and_persists_evaluation(monkeypatch)
         component2_routes,
         "retrieve_legal_candidates",
         lambda query, top_k: {
-            "mode": "lexical_pdf_candidates",
+            "mode": "lexical_legal_source_candidates",
             "evidence": [
                 {
                     "score": 0.8,

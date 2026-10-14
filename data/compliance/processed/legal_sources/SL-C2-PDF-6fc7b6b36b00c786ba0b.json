@@ -1,6 +1,7 @@
 {
   "source_id": "SL-C2-PDF-6fc7b6b36b00c786ba0b",
   "file_checksum": "6fc7b6b36b00c786ba0b12386e4808a8f6c29fca353f00f72a5407a614d35a6a",
+  "file_type": "pdf",
   "verification_status": "needs_verification",
   "pages": [
     {
@@ -1955,5 +1956,6 @@
       "page_number": 488,
       "text": "460\nCompanies Act, No. 07 of 2007\nAnnual subscription of English Bills and Acts of the Parliament Rs. 885 (Local), Rs. 1,180\n(Foreign), payable to the SUPERINTENDENT, GOVERNM ENT PUBLICATIONS BUREAU, NO. 32, TRANSWORKS\nHOUSE, LOTUS ROAD, COLOMBO 01 before 15th December each year in respect of the year following."
     }
-  ]
+  ],
+  "segments": []
 }

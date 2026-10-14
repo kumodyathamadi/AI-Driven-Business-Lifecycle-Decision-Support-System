@@ -1,6 +1,7 @@
 {
   "source_id": "SL-C2-PDF-a22a1a0e476880c395b6",
   "file_checksum": "a22a1a0e476880c395b65273cf20903e3158ef900a09d155c8c41709cc70e1a1",
+  "file_type": "pdf",
   "verification_status": "needs_verification",
   "pages": [
     {
@@ -127,5 +128,6 @@
       "page_number": 31,
       "text": "30\nCompanies (Amendment) Act, No. 12 of 2025\nEnglish Acts of the Parliament can be purchased at the “PRAKASHANA PIYASA”, DEPARTMENT OF \nGOVERNMENT PRINTING, NO. 118, DR. DANISTER DE SILVA MAWATHA, COLOMBO 8."
     }
-  ]
+  ],
+  "segments": []
 }

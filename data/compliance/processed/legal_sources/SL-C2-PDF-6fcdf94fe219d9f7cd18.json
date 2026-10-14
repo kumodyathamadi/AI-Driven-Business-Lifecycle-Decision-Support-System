@@ -1,6 +1,7 @@
 {
   "source_id": "SL-C2-PDF-6fcdf94fe219d9f7cd18",
   "file_checksum": "6fcdf94fe219d9f7cd18c4790a2c6332568c65eb72846790480e65834012ef46",
+  "file_type": "pdf",
   "verification_status": "needs_verification",
   "pages": [
     {
@@ -263,5 +264,6 @@
       "page_number": 65,
       "text": "64\nPersonal Data Protection Act, No. 9 of 2022\nEnglish Acts of the Parliament can be purchased at the “PRAKASHANA PIYASA”, DEPARTMENT OF\nGOVERNMENT PRINTING, NO. 118, DR. DANISTER DE SILVA MAWATHA, COLOMBO 8."
     }
-  ]
+  ],
+  "segments": []
 }

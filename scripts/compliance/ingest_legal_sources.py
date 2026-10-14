@@ -1,7 +1,8 @@
-"""Ingest the Component 2 PDF source pack into page-preserving processed records."""
+"""Ingest Component 2 PDF and TXT sources into reference-preserving records."""
 
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -15,16 +16,23 @@ from backend.app.compliance.legal_sources import (  # noqa: E402
 )
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Re-extract unchanged files.",
+    )
+    args = parser.parse_args(argv)
     try:
-        result = ingest_legal_sources()
+        result = ingest_legal_sources(force=args.force)
     except (OSError, ValueError, PdfExtractionUnavailable) as exc:
         print(f"Legal-source ingestion failed: {exc}", file=sys.stderr)
         return 1
 
     print(
         "Legal-source ingestion complete: "
-        f"{result.discovered_files} PDFs discovered, "
+        f"{result.discovered_files} files discovered, "
         f"{result.unique_sources} unique sources, "
         f"{result.ingested_sources} extracted, "
         f"{result.skipped_sources} unchanged, "
