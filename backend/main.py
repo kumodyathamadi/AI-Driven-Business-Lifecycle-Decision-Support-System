@@ -29,6 +29,7 @@ from src.prediction.predictor import DEFAULT_MODEL_DIR
 # Component 2: Business registration and regulatory compliance
 from backend.app.api.compliance_routes import router as compliance_router
 from backend.app.api.component2_routes import router as component2_router
+from backend.app.api.analyse_routes import router as analyse_router
 
 # Initialize database tables
 Base.metadata.create_all(bind=engine)
@@ -59,6 +60,7 @@ app.include_router(plan_router)
 # Register Component 2 router
 app.include_router(component2_router)
 app.include_router(compliance_router)
+app.include_router(analyse_router)
 
 
 @app.get(

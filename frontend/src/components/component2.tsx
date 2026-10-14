@@ -1,193 +1,203 @@
 import React, { useState } from 'react';
 
 // ---------------------------------------------------------------------------
-// Types (mirror backend schemas.py)
+// Types & Data Contracts
 // ---------------------------------------------------------------------------
 
-type ApplicabilityStatus = 'applicable' | 'conditional' | 'not_identified' | 'unknown' | 'not_covered';
+export type ApplicabilityStatus = 'APPLICABLE' | 'UNKNOWN' | 'NOT_APPLICABLE';
 
-interface EvidenceChunk {
-  source_id: string;
-  page?: number;
-  quote: string;
-  url?: string;
-  retrieved_date?: string;
-  effective_date?: string;
-  source_title?: string;
-  authority?: string;
-  reviewer_status?: 'draft' | 'verified';
-}
-
-interface ObligationResult {
-  id: string;
-  name: string;
+export interface ObligationResult {
+  obligation_id: string;
+  title: string;
   status: ApplicabilityStatus;
-  reason?: string;
-  trigger_facts: Record<string, unknown>;
+  triggering_facts: Record<string, unknown>;
   missing_facts: string[];
   authority: string;
-  jurisdiction: string;
-  required_action: string;
-  reviewer_status: 'draft' | 'verified';
-  evidence: EvidenceChunk[];
-  has_verified_source: boolean;
-  caveat: string;
+  source_id: string;
+  source_paragraph: string;
+  source_text: string;
+  documents_needed: string[];
 }
 
-interface ComplianceAnalysisResponse {
-  business_profile: BusinessProfileForm;
-  summary: Record<string, number>;
+export interface FollowUpQuestion {
+  fact: string;
+  question_en: string;
+  question_si: string;
+  type: 'boolean' | 'select' | 'number' | 'text';
+  options: (string | boolean | number)[];
+}
+
+export interface AnalysisSummary {
+  total: number;
+  applicable: number;
+  not_applicable: number;
+  unknown: number;
+}
+
+export interface ComplianceAnalysisResponse {
+  summary: AnalysisSummary;
   obligations: ObligationResult[];
-  caveat: string;
+  follow_up_questions: FollowUpQuestion[];
+  disclaimer: string;
 }
 
-interface BusinessProfileForm {
-  business_type?: string;
-  local_authority?: string;
-  handles_food?: boolean;
-  has_physical_premises?: boolean;
-  employee_band?: string;
-  is_manufacturing?: boolean;
-  is_importing?: boolean;
-  legal_form?: string;
-  jurisdiction?: string;
+export interface BusinessProfileForm {
+  business_type?: 'food' | 'clothing' | 'salon' | 'vehicle_parts' | null;
+  local_authority?: string | null;
+  legal_form?: 'sole_proprietorship' | 'partnership' | 'private_limited' | 'other' | null;
+  number_of_employees?: number | null;
+  province?: string | null;
+  handles_food?: boolean | null;
+  has_physical_premises?: boolean | null;
+  is_manufacturing?: boolean | null;
+  is_importing?: boolean | null;
+  // Conditional fields
+  serves_cooked_food?: boolean | null;
+  sells_alcohol?: boolean | null;
+  uses_chemicals_or_cosmetics?: boolean | null;
+  handles_waste_oil_or_batteries?: boolean | null;
+  turnover_band?: string | null;
 }
 
 // ---------------------------------------------------------------------------
-// Constants
+// Constants & Metadata
 // ---------------------------------------------------------------------------
 
 const API_BASE = 'http://localhost:8000';
 
-const STATUS_CONFIG: Record<ApplicabilityStatus, { label: string; color: string; icon: string; bg: string; border: string }> = {
-  applicable: {
+const STATUS_CONFIG: Record<
+  ApplicabilityStatus,
+  { label: string; color: string; bg: string; border: string; icon: string; badge: string }
+> = {
+  APPLICABLE: {
     label: 'Applicable',
-    color: 'text-red-700',
-    bg: 'bg-red-50',
-    border: 'border-red-200',
-    icon: 'fa-circle-exclamation',
+    color: 'text-emerald-800',
+    bg: 'bg-emerald-50/80',
+    border: 'border-emerald-200',
+    badge: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    icon: 'fa-circle-check',
   },
-  conditional: {
-    label: 'Conditional',
-    color: 'text-amber-700',
-    bg: 'bg-amber-50',
+  UNKNOWN: {
+    label: 'Unknown (Missing Facts)',
+    color: 'text-amber-800',
+    bg: 'bg-amber-50/70',
     border: 'border-amber-200',
-    icon: 'fa-triangle-exclamation',
+    badge: 'bg-amber-100 text-amber-800 border-amber-300',
+    icon: 'fa-circle-question',
   },
-  not_identified: {
-    label: 'Not identified for this profile',
+  NOT_APPLICABLE: {
+    label: 'Not Applicable',
     color: 'text-slate-600',
     bg: 'bg-slate-50',
     border: 'border-slate-200',
+    badge: 'bg-slate-100 text-slate-700 border-slate-300',
     icon: 'fa-circle-minus',
   },
-  unknown: {
-    label: 'Unknown',
-    color: 'text-blue-700',
-    bg: 'bg-blue-50',
-    border: 'border-blue-200',
-    icon: 'fa-circle-question',
+};
+
+const FACT_DISPLAY_LABELS: Record<string, string> = {
+  province: 'Province',
+  business_type: 'Business Type',
+  local_authority: 'Local Authority',
+  legal_form: 'Legal Form',
+  number_of_employees: 'Number of Employees',
+  has_physical_premises: 'Physical Premises',
+  handles_food: 'Handles Food',
+  is_manufacturing: 'Manufacturing Operations',
+  is_importing: 'Importing Goods',
+  serves_cooked_food: 'Serves Cooked Food',
+  sells_alcohol: 'Sells Alcohol',
+  uses_chemicals_or_cosmetics: 'Uses Cosmetics/Chemicals',
+  handles_waste_oil_or_batteries: 'Handles Waste Oil/Batteries',
+  turnover_band: 'Turnover Band',
+};
+
+// Real sample profiles matching the 4 business types in Western Province
+const SAMPLE_PROFILES: Record<string, BusinessProfileForm> = {
+  clear_case: {
+    business_type: 'food',
+    province: 'Western Province',
+    local_authority: 'Colombo Municipal Council',
+    legal_form: 'sole_proprietorship',
+    number_of_employees: 4,
+    has_physical_premises: true,
+    handles_food: true,
+    serves_cooked_food: true,
+    sells_alcohol: false,
+    is_manufacturing: false,
+    is_importing: false,
+    turnover_band: '1m_10m',
   },
-  not_covered: {
-    label: 'Not yet covered - contact the authority',
-    color: 'text-purple-700',
-    bg: 'bg-purple-50',
-    border: 'border-purple-200',
-    icon: 'fa-map-pin',
+  conditional_case: {
+    business_type: 'vehicle_parts',
+    province: 'Western Province',
+    local_authority: 'Colombo Municipal Council',
+    legal_form: 'partnership',
+    number_of_employees: 6,
+    has_physical_premises: true,
+    handles_food: false,
+    is_manufacturing: false,
+    is_importing: false,
+    handles_waste_oil_or_batteries: true,
+    turnover_band: '10m_50m',
+  },
+  missing_info_case: {
+    business_type: 'food',
+    province: 'Western Province',
+    local_authority: 'Colombo Municipal Council',
+    legal_form: null,
+    number_of_employees: null,
+    has_physical_premises: null,
+    handles_food: null,
+    serves_cooked_food: null,
+    sells_alcohol: null,
+    is_manufacturing: null,
+    is_importing: null,
+    turnover_band: null,
   },
 };
 
-const FACT_METADATA: Record<string, { label: string; type: 'boolean' | 'select'; options?: { label: string; value: string }[] }> = {
-  business_type: {
-    label: 'Business Type',
-    type: 'select',
-    options: [
-      { label: 'Bakery', value: 'bakery' },
-      { label: 'Cake Shop', value: 'cake_shop' },
-      { label: 'Sweets Shop', value: 'sweets_shop' },
-      { label: 'Restaurant', value: 'restaurant' },
-      { label: 'Other Food Business', value: 'food_business' },
-      { label: 'Clothing Retail', value: 'clothing_retail' },
-      { label: 'Beauty Salon', value: 'beauty_salon' },
-      { label: 'Vehicle Parts Retail', value: 'vehicle_parts_retail' },
-    ],
-  },
-  local_authority: {
-    label: 'Local Authority',
-    type: 'select',
-    options: [
-      { label: 'Colombo Municipal Council', value: 'Colombo Municipal Council' },
-      { label: 'Kotte Municipal Council', value: 'Kotte Municipal Council' },
-      { label: 'Dehiwala-Mount Lavinia MC', value: 'Dehiwala-Mount Lavinia Municipal Council' },
-      { label: 'Kandy Municipal Council', value: 'Kandy Municipal Council' },
-    ],
-  },
-  legal_form: {
-    label: 'Legal Form',
-    type: 'select',
-    options: [
-      { label: 'Sole Proprietorship', value: 'sole_proprietorship' },
-      { label: 'Partnership', value: 'partnership' },
-      { label: 'Private Limited Company', value: 'private_limited' },
-    ],
-  },
-  employee_band: {
-    label: 'Number of Employees',
-    type: 'select',
-    options: [
-      { label: '0 (Owner only)', value: '0' },
-      { label: '1–9 (Micro)', value: '1_9' },
-      { label: '10–49 (Small)', value: '10_49' },
-      { label: '50+ (Medium)', value: '50_plus' },
-    ],
-  },
-  jurisdiction: {
-    label: 'Province',
-    type: 'select',
-    options: [
-      { label: 'Western Province', value: 'Western Province' },
-      { label: 'Central Province', value: 'Central Province' },
-      { label: 'Southern Province', value: 'Southern Province' },
-      { label: 'Northern Province', value: 'Northern Province' },
-    ],
-  },
-  handles_food: { label: 'Handles Food', type: 'boolean' },
-  has_physical_premises: { label: 'Physical Premises', type: 'boolean' },
-  is_manufacturing: { label: 'Manufacturing', type: 'boolean' },
-  is_importing: { label: 'Importing Goods', type: 'boolean' },
-};
-
 // ---------------------------------------------------------------------------
-// Helper: POST to compliance engine
+// API Helper
 // ---------------------------------------------------------------------------
 
-async function fetchCompliance(profile: BusinessProfileForm): Promise<ComplianceAnalysisResponse> {
-  const body = Object.fromEntries(
-    Object.entries(profile).filter(([, v]) => v !== undefined && v !== '' && v !== 'unknown')
+async function analyseComplianceAPI(profile: BusinessProfileForm): Promise<ComplianceAnalysisResponse> {
+  const payload = Object.fromEntries(
+    Object.entries(profile).map(([k, v]) => [k, v === undefined ? null : v])
   );
-  const res = await fetch(`${API_BASE}/compliance/analyze`, {
+
+  const res = await fetch(`${API_BASE}/api/analyse`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify(payload),
   });
+
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail || 'Server error');
+    // Fallback to /api/analyze if needed
+    const fallbackRes = await fetch(`${API_BASE}/api/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!fallbackRes.ok) {
+      const err = await fallbackRes.json().catch(() => ({ detail: fallbackRes.statusText }));
+      throw new Error(err.detail || 'Failed to analyze compliance profile');
+    }
+    return fallbackRes.json();
   }
+
   return res.json();
 }
 
 // ---------------------------------------------------------------------------
-// Sub-components
+// Sub-components: Badges, Controls, Cards
 // ---------------------------------------------------------------------------
 
 function StatusBadge({ status }: { status: ApplicabilityStatus }) {
-  const cfg = STATUS_CONFIG[status];
+  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.UNKNOWN;
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
-        cfg.color
-      } ${cfg.bg} border ${cfg.border}`}
+      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${cfg.badge}`}
     >
       <i className={`fa-solid ${cfg.icon} text-xs`} />
       {cfg.label}
@@ -195,230 +205,135 @@ function StatusBadge({ status }: { status: ApplicabilityStatus }) {
   );
 }
 
-function ReviewerBadge({ status }: { status: 'draft' | 'verified' }) {
-  if (status === 'verified') {
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-green-100 text-green-700 border border-green-200">
-        <i className="fa-solid fa-circle-check text-[9px]" /> Verified
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-700 border border-amber-200">
-      <i className="fa-solid fa-pen-ruler text-[9px]" /> Draft Review
-    </span>
-  );
-}
-
-function FollowUpQuestion({
+function InlineAnswerControl({
   factKey,
   onAnswer,
 }: {
   factKey: string;
   onAnswer: (key: keyof BusinessProfileForm, value: unknown) => void;
 }) {
-  const meta = FACT_METADATA[factKey];
-  if (!meta) return null;
+  const label = FACT_DISPLAY_LABELS[factKey] || factKey;
+
+  // Decide if boolean or selection
+  const isSelect = factKey === 'turnover_band' || factKey === 'legal_form' || factKey === 'local_authority' || factKey === 'business_type';
 
   return (
-    <div className="bg-blue-50/70 border border-blue-200 rounded-lg p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
-      <span className="font-medium text-blue-900 flex items-center gap-1.5">
-        <i className="fa-solid fa-circle-question text-blue-500" />
-        {meta.label}?
+    <div className="bg-amber-100/60 border border-amber-300/80 rounded-lg p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+      <span className="font-semibold text-amber-900 flex items-center gap-1.5">
+        <i className="fa-solid fa-circle-question text-amber-600" />
+        {label}?
       </span>
-      {meta.type === 'boolean' ? (
+
+      {!isSelect ? (
         <div className="flex items-center gap-1.5">
           <button
+            type="button"
             onClick={() => onAnswer(factKey as keyof BusinessProfileForm, true)}
-            className="px-2.5 py-1 bg-white hover:bg-green-50 text-green-700 font-semibold border border-green-300 rounded shadow-xs transition-colors"
+            className="px-2.5 py-1 bg-white hover:bg-emerald-50 text-emerald-700 font-semibold border border-emerald-300 rounded shadow-xs transition-colors"
           >
             Yes
           </button>
           <button
+            type="button"
             onClick={() => onAnswer(factKey as keyof BusinessProfileForm, false)}
-            className="px-2.5 py-1 bg-white hover:bg-red-50 text-red-700 font-semibold border border-red-300 rounded shadow-xs transition-colors"
+            className="px-2.5 py-1 bg-white hover:bg-rose-50 text-rose-700 font-semibold border border-rose-300 rounded shadow-xs transition-colors"
           >
             No
           </button>
         </div>
-      ) : (
+      ) : factKey === 'turnover_band' ? (
         <select
-          onChange={(e) => onAnswer(factKey as keyof BusinessProfileForm, e.target.value)}
+          onChange={(e) => onAnswer('turnover_band', e.target.value)}
           defaultValue=""
-          className="border border-blue-300 bg-white rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="border border-amber-300 bg-white rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
         >
-          <option value="" disabled>Select {meta.label}...</option>
-          {meta.options?.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
+          <option value="" disabled>Select band...</option>
+          <option value="under_1m">Under LKR 1 Million</option>
+          <option value="1m_10m">LKR 1M – 10M</option>
+          <option value="10m_50m">LKR 10M – 50M</option>
+          <option value="over_50m">Over LKR 50 Million</option>
         </select>
-      )}
-    </div>
-  );
-}
-
-function EvidencePanel({
-  chunks,
-  hasVerifiedSource,
-  reviewerStatus,
-}: {
-  chunks: EvidenceChunk[];
-  hasVerifiedSource: boolean;
-  reviewerStatus: 'draft' | 'verified';
-}) {
-  return (
-    <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-          Source Documentation &amp; Grounding
-        </p>
-        <ReviewerBadge status={reviewerStatus} />
-      </div>
-
-      {!hasVerifiedSource && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 flex items-start gap-2 text-xs text-amber-800">
-          <i className="fa-solid fa-triangle-exclamation text-amber-600 mt-0.5" />
-          <div>
-            <strong>No verified source quote yet:</strong> This regulatory requirement is based on draft legal indexing. Do not consider this quote definitive until verified by counsel.
-          </div>
-        </div>
-      )}
-
-      {chunks.map((c, i) => (
-        <div key={i} className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs space-y-1.5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <span className="font-semibold text-slate-900">{c.source_title || c.source_id}</span>
-              {c.page && <span className="ml-2 text-slate-500 font-mono">p. {c.page}</span>}
-            </div>
-            {c.url && (
-              <a
-                href={c.url}
-                target="_blank"
-                rel="noreferrer"
-                className="text-blue-600 hover:underline flex items-center gap-1 font-medium"
-              >
-                <i className="fa-solid fa-arrow-up-right-from-square text-[10px]" />
-                Official Source
-              </a>
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-4 text-[11px] text-slate-500">
-            <span><strong>Source ID:</strong> <span className="font-mono">{c.source_id}</span></span>
-            {c.effective_date && <span><strong>Effective From:</strong> {c.effective_date}</span>}
-            {c.retrieved_date && <span><strong>Retrieved:</strong> {c.retrieved_date}</span>}
-          </div>
-
-          {c.quote ? (
-            <blockquote className="border-l-2 border-blue-400 bg-white p-2 rounded text-slate-700 italic leading-relaxed text-xs">
-              &ldquo;{c.quote}&rdquo;
-            </blockquote>
-          ) : (
-            <p className="text-slate-400 italic text-[11px]">
-              No verbatim quote recorded in draft catalog.
-            </p>
-          )}
-        </div>
-      ))}
+      ) : factKey === 'legal_form' ? (
+        <select
+          onChange={(e) => onAnswer('legal_form', e.target.value)}
+          defaultValue=""
+          className="border border-amber-300 bg-white rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
+        >
+          <option value="" disabled>Select legal form...</option>
+          <option value="sole_proprietorship">Sole Proprietorship</option>
+          <option value="partnership">Partnership</option>
+          <option value="private_limited">Private Limited</option>
+        </select>
+      ) : null}
     </div>
   );
 }
 
 function ObligationCard({
   obl,
-  previousStatus,
   onAnswerMissingFact,
 }: {
   obl: ObligationResult;
-  previousStatus?: ApplicabilityStatus;
   onAnswerMissingFact: (key: keyof BusinessProfileForm, value: unknown) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const cfg = STATUS_CONFIG[obl.status];
-  const hasStatusChanged = previousStatus && previousStatus !== obl.status;
+  const [expanded, setExpanded] = useState(obl.status === 'APPLICABLE' || obl.status === 'UNKNOWN');
+  const cfg = STATUS_CONFIG[obl.status] || STATUS_CONFIG.UNKNOWN;
 
   return (
-    <div className={`border ${cfg.border} rounded-xl overflow-hidden bg-white shadow-xs transition-all`}>
-      {/* Header row */}
+    <div className={`border ${cfg.border} rounded-2xl overflow-hidden bg-white shadow-xs transition-all`}>
+      {/* Header */}
       <button
-        onClick={() => setExpanded((e) => !e)}
-        className={`w-full flex items-center gap-3 px-4 py-3.5 ${cfg.bg} text-left hover:brightness-95 transition-all`}
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className={`w-full flex items-center gap-3 px-5 py-4 ${cfg.bg} text-left hover:brightness-95 transition-all`}
       >
-        <i className={`fa-solid ${cfg.icon} ${cfg.color} text-base`} />
+        <i className={`fa-solid ${cfg.icon} ${cfg.color} text-lg`} />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <p className={`text-sm font-bold ${cfg.color} truncate`}>{obl.name}</p>
-            {hasStatusChanged && (
-              <span className="text-[10px] font-semibold bg-white px-2 py-0.5 rounded-full border border-blue-300 text-blue-700">
-                {STATUS_CONFIG[previousStatus].label} &rarr; {STATUS_CONFIG[obl.status].label}
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-slate-500">{obl.authority} &middot; {obl.jurisdiction}</p>
+          <p className="text-sm font-bold text-slate-900 truncate">{obl.title}</p>
+          <p className="text-xs text-slate-500 mt-0.5">
+            <span className="font-semibold text-slate-700">{obl.authority}</span> &middot; ID: <span className="font-mono">{obl.obligation_id}</span>
+          </p>
         </div>
         <StatusBadge status={obl.status} />
         <i
-          className={`fa-solid ${
-            expanded ? 'fa-chevron-up' : 'fa-chevron-down'
-          } text-slate-400 text-xs ml-1`}
+          className={`fa-solid ${expanded ? 'fa-chevron-up' : 'fa-chevron-down'} text-slate-400 text-xs ml-2`}
         />
       </button>
 
-      {/* Expanded body */}
+      {/* Expanded details */}
       {expanded && (
-        <div className="px-5 py-4 bg-white space-y-3.5 text-xs">
-          {/* Reason if not_identified or not_covered */}
-          {obl.reason && (
-            <div className="p-2.5 rounded-lg bg-slate-100 text-slate-700 flex items-start gap-2">
-              <i className="fa-solid fa-circle-info text-slate-500 mt-0.5" />
-              <div>
-                <strong>Evaluation Reason:</strong> {obl.reason}
+        <div className="px-5 py-4 bg-white space-y-4 text-xs border-t border-slate-100">
+          {/* Why it applies / Triggering facts */}
+          <div>
+            <p className="font-semibold text-slate-500 uppercase tracking-wide text-[11px] mb-1.5">
+              {obl.status === 'APPLICABLE' ? 'Why It Applies (Triggering Facts)' : 'Evaluated Facts'}
+            </p>
+            {Object.keys(obl.triggering_facts).length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {Object.entries(obl.triggering_facts).map(([k, v]) => (
+                  <span
+                    key={k}
+                    className="px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-100 text-slate-800 border border-slate-200"
+                  >
+                    <strong>{FACT_DISPLAY_LABELS[k] || k}:</strong> {String(v)}
+                  </span>
+                ))}
               </div>
-            </div>
-          )}
-
-          {/* Trigger Facts */}
-          <div>
-            <p className="font-semibold text-slate-500 uppercase tracking-wide text-[11px] mb-1">
-              Trigger Facts Evaluated
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {Object.entries(obl.trigger_facts).map(([k, v]) => (
-                <span
-                  key={k}
-                  className={`px-2 py-0.5 rounded text-[11px] font-medium border ${
-                    v === true
-                      ? 'bg-green-50 text-green-700 border-green-200'
-                      : v === false
-                      ? 'bg-red-50 text-red-700 border-red-200'
-                      : 'bg-slate-50 text-slate-600 border-slate-200'
-                  }`}
-                >
-                  {k} = {String(v)}
-                </span>
-              ))}
-            </div>
+            ) : (
+              <p className="text-slate-400 italic">No positive triggering facts evaluated.</p>
+            )}
           </div>
 
-          {/* Required Action */}
-          <div>
-            <p className="font-semibold text-slate-500 uppercase tracking-wide text-[11px]">
-              Required Action
-            </p>
-            <p className="text-sm text-slate-800 mt-1 leading-relaxed">{obl.required_action}</p>
-          </div>
-
-          {/* Follow-up Questions for Unknowns */}
+          {/* Missing Facts & Inline Controls */}
           {obl.missing_facts.length > 0 && (
-            <div className="space-y-2 p-3 bg-blue-50/40 rounded-xl border border-blue-100">
-              <p className="font-semibold text-blue-900 text-xs flex items-center gap-1.5">
-                <i className="fa-solid fa-bolt text-blue-600" />
-                Provide missing facts to resolve this obligation:
+            <div className="p-3.5 bg-amber-50/60 rounded-xl border border-amber-200 space-y-2">
+              <p className="font-semibold text-amber-900 text-xs flex items-center gap-1.5">
+                <i className="fa-solid fa-bolt text-amber-600" />
+                Missing Facts &mdash; Answer inline to re-evaluate:
               </p>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {obl.missing_facts.map((factKey) => (
-                  <FollowUpQuestion
+                  <InlineAnswerControl
                     key={factKey}
                     factKey={factKey}
                     onAnswer={onAnswerMissingFact}
@@ -428,459 +343,559 @@ function ObligationCard({
             </div>
           )}
 
-          {/* Evidence and Legal Documentation Panel */}
-          <EvidencePanel
-            chunks={obl.evidence}
-            hasVerifiedSource={obl.has_verified_source}
-            reviewerStatus={obl.reviewer_status}
-          />
+          {/* Required Action */}
+          <div>
+            <p className="font-semibold text-slate-500 uppercase tracking-wide text-[11px]">
+              Required Statutory Action
+            </p>
+            <p className="text-xs text-slate-800 mt-1 leading-relaxed bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+              {obl.action || 'Comply with designated registration procedure.'}
+            </p>
+          </div>
 
-          <p className="text-[11px] text-slate-400 pt-2 border-t border-slate-100">{obl.caveat}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SummaryBadge({ label, count, colorClass }: { label: string; count: number; colorClass: string }) {
-  return (
-    <div className={`flex flex-col items-center px-4 py-2 rounded-xl ${colorClass}`}>
-      <span className="text-2xl font-bold">{count}</span>
-      <span className="text-xs font-medium opacity-80">{label}</span>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Profile Form
-// ---------------------------------------------------------------------------
-
-function ProfileForm({
-  profile,
-  onChange,
-  onSubmit,
-  loading,
-  onLoadSample,
-}: {
-  profile: BusinessProfileForm;
-  onChange: (p: BusinessProfileForm) => void;
-  onSubmit: () => void;
-  loading: boolean;
-  onLoadSample: (id: string) => void;
-}) {
-  const set = (key: keyof BusinessProfileForm, value: unknown) =>
-    onChange({ ...profile, [key]: value === '' ? undefined : value });
-
-  return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
-        <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-          <i className="fa-solid fa-building text-blue-600" />
-          Business Profile
-        </h2>
-        
-        {/* Sample Profile Demo Buttons */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-500">Load sample:</span>
-          <button
-            type="button"
-            onClick={() => onLoadSample('clear_case')}
-            className="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 transition-colors"
-          >
-            Clear Case
-          </button>
-          <button
-            type="button"
-            onClick={() => onLoadSample('conditional_case')}
-            className="px-2.5 py-1 bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 transition-colors"
-          >
-            Conditional Case
-          </button>
-          <button
-            type="button"
-            onClick={() => onLoadSample('missing_info_case')}
-            className="px-2.5 py-1 bg-slate-100 hover:bg-purple-50 hover:text-purple-700 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 transition-colors"
-          >
-            Missing Info
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {/* Business Type */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Business Type</label>
-          <select
-            value={profile.business_type || ''}
-            onChange={(e) => set('business_type', e.target.value)}
-            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-          >
-            <option value="">-- Unknown --</option>
-            <option value="bakery">Bakery</option>
-            <option value="cake_shop">Cake Shop</option>
-            <option value="sweets_shop">Sweets Shop</option>
-            <option value="restaurant">Restaurant</option>
-            <option value="food_business">Other Food Business</option>
-            <option value="clothing_retail">Clothing Retail</option>
-            <option value="beauty_salon">Beauty Salon</option>
-            <option value="vehicle_parts_retail">Vehicle Parts Retail</option>
-          </select>
-        </div>
-
-        {/* Local Authority */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Local Authority</label>
-          <select
-            value={profile.local_authority || ''}
-            onChange={(e) => set('local_authority', e.target.value)}
-            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-          >
-            <option value="">-- Unknown --</option>
-            <option value="Colombo Municipal Council">Colombo Municipal Council</option>
-            <option value="Kotte Municipal Council">Kotte Municipal Council</option>
-            <option value="Dehiwala-Mount Lavinia Municipal Council">Dehiwala-Mount Lavinia MC</option>
-            <option value="Kandy Municipal Council">Kandy Municipal Council (Out of scope demo)</option>
-          </select>
-        </div>
-
-        {/* Legal Form */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Legal Form</label>
-          <select
-            value={profile.legal_form || ''}
-            onChange={(e) => set('legal_form', e.target.value)}
-            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-          >
-            <option value="">-- Unknown --</option>
-            <option value="sole_proprietorship">Sole Proprietorship</option>
-            <option value="partnership">Partnership</option>
-            <option value="private_limited">Private Limited Company</option>
-          </select>
-        </div>
-
-        {/* Employee Band */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Number of Employees</label>
-          <select
-            value={profile.employee_band || ''}
-            onChange={(e) => set('employee_band', e.target.value)}
-            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-          >
-            <option value="">-- Unknown --</option>
-            <option value="0">0 (Owner only)</option>
-            <option value="1_9">1–9 (Micro)</option>
-            <option value="10_49">10–49 (Small)</option>
-            <option value="50_plus">50+ (Medium)</option>
-          </select>
-        </div>
-
-        {/* Jurisdiction */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Province</label>
-          <select
-            value={profile.jurisdiction || ''}
-            onChange={(e) => set('jurisdiction', e.target.value)}
-            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-          >
-            <option value="">-- Unknown --</option>
-            <option value="Western Province">Western Province</option>
-            <option value="Central Province">Central Province (Out of scope demo)</option>
-            <option value="Southern Province">Southern Province</option>
-            <option value="Northern Province">Northern Province</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Boolean toggles */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {([
-          { key: 'handles_food', label: 'Handles Food' },
-          { key: 'has_physical_premises', label: 'Physical Premises' },
-          { key: 'is_manufacturing', label: 'Manufacturing' },
-          { key: 'is_importing', label: 'Importing Goods' },
-        ] as const).map(({ key, label }) => {
-          const val = profile[key];
-          return (
-            <div key={key} className="border border-slate-200 rounded-xl p-2.5">
-              <p className="text-xs font-semibold text-slate-600 mb-2">{label}</p>
-              <div className="flex gap-1.5">
-                {([true, false] as const).map((v) => (
-                  <button
-                    key={String(v)}
-                    type="button"
-                    onClick={() => set(key, val === v ? undefined : v)}
-                    className={`flex-1 text-xs py-1 rounded-lg font-semibold transition-colors ${
-                      val === v
-                        ? v
-                          ? 'bg-green-100 text-green-700 border border-green-300'
-                          : 'bg-red-100 text-red-700 border border-red-300'
-                        : 'bg-slate-100 text-slate-500 border border-transparent hover:border-slate-300'
-                    }`}
+          {/* Documents Needed */}
+          {obl.documents_needed && obl.documents_needed.length > 0 && (
+            <div>
+              <p className="font-semibold text-slate-500 uppercase tracking-wide text-[11px] mb-1.5">
+                Required Application Documents
+              </p>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                {obl.documents_needed.map((doc, i) => (
+                  <li
+                    key={i}
+                    className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg border border-slate-100 text-slate-700"
                   >
-                    {v ? 'Yes' : 'No'}
-                  </button>
+                    <i className="fa-solid fa-file-lines text-blue-500 text-xs shrink-0" />
+                    <span>{doc}</span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
-          );
-        })}
-      </div>
+          )}
 
-      <button
-        onClick={onSubmit}
-        disabled={loading}
-        className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-semibold rounded-xl shadow transition-all flex items-center justify-center gap-2"
-      >
-        {loading ? (
-          <>
-            <i className="fa-solid fa-spinner fa-spin" />
-            Analysing&hellip;
-          </>
-        ) : (
-          <>
-            <i className="fa-solid fa-shield-halved" />
-            Analyse Compliance
-          </>
-        )}
-      </button>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Results Panel
-// ---------------------------------------------------------------------------
-
-function ResultsPanel({
-  result,
-  previousResults,
-  onAnswerMissingFact,
-  onExportChecklist,
-}: {
-  result: ComplianceAnalysisResponse;
-  previousResults?: Record<string, ApplicabilityStatus>;
-  onAnswerMissingFact: (key: keyof BusinessProfileForm, value: unknown) => void;
-  onExportChecklist: () => void;
-}) {
-  const groups: Record<ApplicabilityStatus, ObligationResult[]> = {
-    applicable: result.obligations.filter((o) => o.status === 'applicable'),
-    conditional: result.obligations.filter((o) => o.status === 'conditional'),
-    unknown: result.obligations.filter((o) => o.status === 'unknown'),
-    not_identified: result.obligations.filter((o) => o.status === 'not_identified'),
-    not_covered: result.obligations.filter((o) => o.status === 'not_covered'),
-  };
-
-  // Compute Missing Facts that would resolve the most obligations
-  const factFrequency: Record<string, number> = {};
-  result.obligations
-    .filter((o) => o.status === 'unknown')
-    .forEach((o) => {
-      o.missing_facts.forEach((f) => {
-        factFrequency[f] = (factFrequency[f] || 0) + 1;
-      });
-    });
-
-  const sortedMissingFacts = Object.entries(factFrequency).sort((a, b) => b[1] - a[1]);
-
-  return (
-    <div className="space-y-4">
-      {/* Summary row + Export Checklist */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
-          <SummaryBadge label="Applicable" count={result.summary.applicable || 0} colorClass="bg-red-50 text-red-700 border border-red-200" />
-          <SummaryBadge label="Conditional" count={result.summary.conditional || 0} colorClass="bg-amber-50 text-amber-700 border border-amber-200" />
-          <SummaryBadge label="Unknown" count={result.summary.unknown || 0} colorClass="bg-blue-50 text-blue-700 border border-blue-200" />
-          <SummaryBadge label="Not Identified" count={result.summary.not_identified || 0} colorClass="bg-slate-50 text-slate-600 border border-slate-200" />
-          {result.summary.not_covered ? (
-            <SummaryBadge label="Not Covered" count={result.summary.not_covered} colorClass="bg-purple-50 text-purple-700 border border-purple-200" />
-          ) : null}
-        </div>
-
-        <button
-          onClick={onExportChecklist}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors"
-        >
-          <i className="fa-solid fa-print" />
-          Export Checklist (Print / PDF)
-        </button>
-      </div>
-
-      {/* Task 4: Unknown - why? summary banner */}
-      {sortedMissingFacts.length > 0 && (
-        <div className="p-4 bg-blue-50/80 border border-blue-200 rounded-2xl space-y-2">
-          <div className="flex items-center gap-2 text-blue-900 font-bold text-sm">
-            <i className="fa-solid fa-lightbulb text-amber-500" />
-            Unknown &mdash; Why? (High Impact Missing Facts)
-          </div>
-          <p className="text-xs text-blue-800">
-            Answering these questions will immediately resolve the most pending regulatory obligations:
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-            {sortedMissingFacts.slice(0, 4).map(([fKey, count]) => (
-              <div key={fKey} className="flex flex-col gap-1">
-                <span className="text-[11px] font-semibold text-blue-700">
-                  Resolves {count} obligation{count > 1 ? 's' : ''}:
-                </span>
-                <FollowUpQuestion factKey={fKey} onAnswer={onAnswerMissingFact} />
-              </div>
-            ))}
+          {/* Statutory Source Citation & Excerpt */}
+          <div className="border-t border-slate-100 pt-3 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-slate-500 uppercase tracking-wide text-[11px]">
+                Statutory Source Citation
+              </p>
+              <span className="font-mono text-[11px] text-slate-500">
+                {obl.source_id} &middot; {obl.source_paragraph}
+              </span>
+            </div>
+            <blockquote className="border-l-2 border-blue-500 bg-blue-50/40 p-2.5 rounded-r-lg text-slate-700 italic leading-relaxed text-xs">
+              &ldquo;{obl.source_text}&rdquo;
+            </blockquote>
           </div>
         </div>
       )}
-
-      {/* Grouped obligation cards */}
-      {((['applicable', 'conditional', 'unknown', 'not_identified', 'not_covered'] as ApplicabilityStatus[]).map((status) => (
-        groups[status].length > 0 && (
-          <div key={status}>
-            <h3 className={`text-xs font-bold uppercase tracking-wider mb-2 ${STATUS_CONFIG[status].color}`}>
-              <i className={`fa-solid ${STATUS_CONFIG[status].icon} mr-1.5`} />
-              {STATUS_CONFIG[status].label} ({groups[status].length})
-            </h3>
-            <div className="space-y-2.5">
-              {groups[status].map((obl) => (
-                <ObligationCard
-                  key={obl.id}
-                  obl={obl}
-                  previousStatus={previousResults ? previousResults[obl.id] : undefined}
-                  onAnswerMissingFact={onAnswerMissingFact}
-                />
-              ))}
-            </div>
-          </div>
-        )
-      )))}
-
-      {/* Caveat */}
-      <div className="p-3.5 bg-yellow-50 border border-yellow-200 rounded-xl">
-        <p className="text-xs text-yellow-800 flex items-start gap-2">
-          <i className="fa-solid fa-scale-balanced text-yellow-600 mt-0.5" />
-          <span>{result.caveat}</span>
-        </p>
-      </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Main Dashboard
+// Main Dashboard Component
 // ---------------------------------------------------------------------------
 
 export const RegistrationComplianceDashboard: React.FC = () => {
-  const [profile, setProfile] = useState<BusinessProfileForm>({});
+  // Every field defaults to null/undefined (Unknown)
+  const [profile, setProfile] = useState<BusinessProfileForm>({
+    business_type: null,
+    local_authority: null,
+    legal_form: null,
+    number_of_employees: null,
+    province: 'Western Province', // Fixed scope
+    handles_food: null,
+    has_physical_premises: null,
+    is_manufacturing: null,
+    is_importing: null,
+    serves_cooked_food: null,
+    sells_alcohol: null,
+    uses_chemicals_or_cosmetics: null,
+    handles_waste_oil_or_batteries: null,
+    turnover_band: null,
+  });
+
   const [result, setResult] = useState<ComplianceAnalysisResponse | null>(null);
-  const [previousStatuses, setPreviousStatuses] = useState<Record<string, ApplicabilityStatus>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const executeAnalysis = async (profToAnalyze: BusinessProfileForm) => {
+  const setField = (key: keyof BusinessProfileForm, value: unknown) => {
+    setProfile((prev) => ({
+      ...prev,
+      [key]: value === '' || value === 'unknown' ? null : value,
+    }));
+  };
+
+  const runAnalysis = async (profToAnalyze: BusinessProfileForm = profile) => {
     setLoading(true);
     setError(null);
     try {
-      if (result) {
-        const prevMap: Record<string, ApplicabilityStatus> = {};
-        result.obligations.forEach((o) => {
-          prevMap[o.id] = o.status;
-        });
-        setPreviousStatuses(prevMap);
-      }
-      const data = await fetchCompliance(profToAnalyze);
+      const data = await analyseComplianceAPI(profToAnalyze);
       setResult(data);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAnalyse = () => {
-    executeAnalysis(profile);
-  };
-
-  const handleAnswerMissingFact = (key: keyof BusinessProfileForm, value: unknown) => {
-    const updatedProfile = { ...profile, [key]: value };
-    setProfile(updatedProfile);
-    executeAnalysis(updatedProfile);
-  };
-
-  const handleLoadSample = async (sampleId: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await fetch(`${API_BASE}/compliance/sample-profiles/${sampleId}`);
-      if (!res.ok) throw new Error(`Failed to load sample ${sampleId}`);
-      const sampleData = await res.json();
-      setProfile(sampleData);
-      const analysisData = await fetchCompliance(sampleData);
-      setResult(analysisData);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error loading sample profile');
+      setError(err instanceof Error ? err.message : 'Error evaluating compliance');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleExportChecklist = () => {
-    window.print();
+  const handleInlineAnswer = (key: keyof BusinessProfileForm, value: unknown) => {
+    const updated = { ...profile, [key]: value };
+    setProfile(updated);
+    runAnalysis(updated);
   };
+
+  const handleLoadSample = (sampleId: 'clear_case' | 'conditional_case' | 'missing_info_case') => {
+    const sample = SAMPLE_PROFILES[sampleId];
+    if (sample) {
+      setProfile(sample);
+      runAnalysis(sample);
+    }
+  };
+
+  // Group obligations
+  const applicableList = result?.obligations.filter((o) => o.status === 'APPLICABLE') || [];
+  const unknownList = result?.obligations.filter((o) => o.status === 'UNKNOWN') || [];
+  const notApplicableList = result?.obligations.filter((o) => o.status === 'NOT_APPLICABLE') || [];
 
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-auto bg-slate-100">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-xs print:static">
+    <div className="flex-1 flex flex-col h-screen overflow-auto bg-slate-100 font-sans">
+      {/* Top Header */}
+      <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-20 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center">
-            <i className="fa-solid fa-shield-halved text-white text-sm" />
+          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-sm">
+            <i className="fa-solid fa-scale-balanced text-lg" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-900">Business Registration &amp; Regulatory Compliance</h1>
-            <p className="text-xs text-slate-500">Component 2 — AI-Driven Business Lifecycle Decision Support System &middot; Colombo District, Sri Lanka</p>
+            <h1 className="text-base font-bold text-slate-900">
+              Legal &amp; Regulatory Requirement Identification
+            </h1>
+            <p className="text-xs text-slate-500">
+              Component 2 &mdash; AI-Driven Business Lifecycle Decision Support System &middot;{' '}
+              <span className="font-semibold text-blue-600">Western Province</span>, Sri Lanka
+            </p>
           </div>
         </div>
       </header>
 
       <main className="flex-1 p-6 max-w-4xl mx-auto w-full space-y-6">
-        {/* Task 2: Revised Banner */}
-        <div className="bg-blue-600 rounded-2xl p-4 text-white shadow-xs">
+        {/* Guidance disclaimer banner */}
+        <div className="bg-gradient-to-r from-blue-700 to-indigo-700 rounded-2xl p-4 text-white shadow-md">
           <div className="flex items-start gap-3">
-            <i className="fa-solid fa-circle-info text-blue-200 mt-0.5" />
+            <i className="fa-solid fa-shield-halved text-blue-200 text-lg mt-0.5" />
             <div>
-              <p className="text-sm font-semibold">Regulatory Compliance Guidance Engine</p>
-              <p className="text-xs text-blue-100 mt-0.5">
-                Rule-based guidance with AI-phrased explanations. Not legal advice. Verify with the authority or a licensed practitioner.
+              <p className="text-sm font-bold tracking-tight">Regulatory Guidance &mdash; Not Legal Advice</p>
+              <p className="text-xs text-blue-100 mt-0.5 leading-relaxed">
+                Applicability decisions are generated 100% deterministically by a Three-Valued Kleene Logic Rule Engine,
+                never by an LLM. Results provide preliminary guidance for NEW BUSINESS REGISTRATION in Western Province.
+                Verify all statutory permits with the relevant authority.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Profile form */}
-        <div className="print:hidden">
-          <ProfileForm
-            profile={profile}
-            onChange={setProfile}
-            onSubmit={handleAnalyse}
-            loading={loading}
-            onLoadSample={handleLoadSample}
-          />
+        {/* Form Container */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <i className="fa-solid fa-sliders text-blue-600" />
+                Business Intake Profile
+              </h2>
+              <p className="text-xs text-slate-500">Every field defaults to Unknown (null) until specified.</p>
+            </div>
+
+            {/* Real Sample Profile Buttons */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-500">Load sample:</span>
+              <button
+                type="button"
+                onClick={() => handleLoadSample('clear_case')}
+                className="px-2.5 py-1.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition-colors"
+              >
+                Clear Case
+              </button>
+              <button
+                type="button"
+                onClick={() => handleLoadSample('conditional_case')}
+                className="px-2.5 py-1.5 bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition-colors"
+              >
+                Conditional Case
+              </button>
+              <button
+                type="button"
+                onClick={() => handleLoadSample('missing_info_case')}
+                className="px-2.5 py-1.5 bg-slate-100 hover:bg-purple-50 hover:text-purple-700 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition-colors"
+              >
+                Missing Info
+              </button>
+            </div>
+          </div>
+
+          {/* Form Fields Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Business Type (Scope: 4 types) */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Business Type (Sector)
+              </label>
+              <select
+                value={profile.business_type || ''}
+                onChange={(e) => setField('business_type', e.target.value || null)}
+                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Unknown (null) --</option>
+                <option value="food">Food &amp; Catering (Bakery / Restaurant / Sweets)</option>
+                <option value="clothing">Clothing &amp; Textile Retail</option>
+                <option value="salon">Beauty Salon &amp; Hair Care</option>
+                <option value="vehicle_parts">Vehicle Spare Parts Retail</option>
+              </select>
+            </div>
+
+            {/* Local Authority */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Local Authority</label>
+              <select
+                value={profile.local_authority || ''}
+                onChange={(e) => setField('local_authority', e.target.value || null)}
+                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Unknown (null) --</option>
+                <option value="Colombo Municipal Council">Colombo Municipal Council</option>
+                <option value="Sri Jayawardenepura Kotte Municipal Council">Kotte Municipal Council</option>
+                <option value="Dehiwala-Mount Lavinia Municipal Council">Dehiwala-Mount Lavinia MC</option>
+                <option value="Moratuwa Municipal Council">Moratuwa Municipal Council</option>
+              </select>
+            </div>
+
+            {/* Legal Form */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Legal Form</label>
+              <select
+                value={profile.legal_form || ''}
+                onChange={(e) => setField('legal_form', e.target.value || null)}
+                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Unknown (null) --</option>
+                <option value="sole_proprietorship">Sole Proprietorship</option>
+                <option value="partnership">Partnership</option>
+                <option value="private_limited">Private Limited Company</option>
+                <option value="other">Other Legal Form</option>
+              </select>
+            </div>
+
+            {/* Number of Employees */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Number of Employees (Staff)
+              </label>
+              <input
+                type="number"
+                min="0"
+                placeholder="-- Unknown (null) --"
+                value={profile.number_of_employees !== null && profile.number_of_employees !== undefined ? profile.number_of_employees : ''}
+                onChange={(e) => setField('number_of_employees', e.target.value === '' ? null : parseInt(e.target.value, 10))}
+                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Province (Fixed Scope: Western Province) */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Province (Scope)</label>
+              <select
+                value={profile.province || ''}
+                onChange={(e) => setField('province', e.target.value || null)}
+                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="Western Province">Western Province</option>
+                <option value="">-- Unknown (null) --</option>
+              </select>
+            </div>
+
+            {/* Turnover Band (All business types) */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Annual Turnover Band (All Businesses)
+              </label>
+              <select
+                value={profile.turnover_band || ''}
+                onChange={(e) => setField('turnover_band', e.target.value || null)}
+                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Unknown (null) --</option>
+                <option value="under_1m">Under LKR 1 Million</option>
+                <option value="1m_10m">LKR 1M – 10M</option>
+                <option value="10m_50m">LKR 10M – 50M</option>
+                <option value="over_50m">Over LKR 50 Million</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Standard Yes/No Toggles */}
+          <div>
+            <p className="text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
+              Operational Attributes (Defaults to Unknown / null)
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {([
+                { key: 'handles_food', label: 'Handles Food' },
+                { key: 'has_physical_premises', label: 'Physical Premises' },
+                { key: 'is_manufacturing', label: 'Manufacturing' },
+                { key: 'is_importing', label: 'Importing Goods' },
+              ] as const).map(({ key, label }) => {
+                const val = profile[key];
+                return (
+                  <div key={key} className="border border-slate-200 rounded-xl p-2.5 bg-slate-50/50">
+                    <p className="text-xs font-semibold text-slate-700 mb-1.5">{label}</p>
+                    <div className="flex gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setField(key, val === true ? null : true)}
+                        className={`flex-1 text-xs py-1 rounded-lg font-semibold border transition-all ${
+                          val === true
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        Yes
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setField(key, val === false ? null : false)}
+                        className={`flex-1 text-xs py-1 rounded-lg font-semibold border transition-all ${
+                          val === false
+                            ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
+                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        No
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Conditional Fields depending on business_type */}
+          {profile.business_type === 'food' && (
+            <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl space-y-2">
+              <p className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                <i className="fa-solid fa-utensils text-blue-600" />
+                Extra Questions for Food Businesses:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="border border-blue-200 bg-white rounded-lg p-2.5">
+                  <p className="text-xs font-semibold text-slate-700 mb-1.5">Serves Cooked Food on Premises?</p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setField('serves_cooked_food', profile.serves_cooked_food === true ? null : true)}
+                      className={`flex-1 text-xs py-1 rounded font-semibold border ${profile.serves_cooked_food === true ? 'bg-emerald-600 text-white' : 'bg-slate-50 text-slate-600'}`}
+                    >
+                      Yes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setField('serves_cooked_food', profile.serves_cooked_food === false ? null : false)}
+                      className={`flex-1 text-xs py-1 rounded font-semibold border ${profile.serves_cooked_food === false ? 'bg-rose-600 text-white' : 'bg-slate-50 text-slate-600'}`}
+                    >
+                      No
+                    </button>
+                  </div>
+                </div>
+
+                <div className="border border-blue-200 bg-white rounded-lg p-2.5">
+                  <p className="text-xs font-semibold text-slate-700 mb-1.5">Sells / Serves Alcohol?</p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setField('sells_alcohol', profile.sells_alcohol === true ? null : true)}
+                      className={`flex-1 text-xs py-1 rounded font-semibold border ${profile.sells_alcohol === true ? 'bg-emerald-600 text-white' : 'bg-slate-50 text-slate-600'}`}
+                    >
+                      Yes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setField('sells_alcohol', profile.sells_alcohol === false ? null : false)}
+                      className={`flex-1 text-xs py-1 rounded font-semibold border ${profile.sells_alcohol === false ? 'bg-rose-600 text-white' : 'bg-slate-50 text-slate-600'}`}
+                    >
+                      No
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {profile.business_type === 'salon' && (
+            <div className="p-3.5 bg-purple-50/70 border border-purple-200 rounded-xl space-y-2">
+              <p className="text-xs font-bold text-purple-900 flex items-center gap-1.5">
+                <i className="fa-solid fa-scissors text-purple-600" />
+                Extra Questions for Beauty Salon Businesses:
+              </p>
+              <div className="border border-purple-200 bg-white rounded-lg p-2.5 max-w-md">
+                <p className="text-xs font-semibold text-slate-700 mb-1.5">Uses Chemical Cosmetics / Dyes / Bleaches?</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setField('uses_chemicals_or_cosmetics', profile.uses_chemicals_or_cosmetics === true ? null : true)}
+                    className={`flex-1 text-xs py-1 rounded font-semibold border ${profile.uses_chemicals_or_cosmetics === true ? 'bg-emerald-600 text-white' : 'bg-slate-50 text-slate-600'}`}
+                  >
+                    Yes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setField('uses_chemicals_or_cosmetics', profile.uses_chemicals_or_cosmetics === false ? null : false)}
+                    className={`flex-1 text-xs py-1 rounded font-semibold border ${profile.uses_chemicals_or_cosmetics === false ? 'bg-rose-600 text-white' : 'bg-slate-50 text-slate-600'}`}
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {profile.business_type === 'vehicle_parts' && (
+            <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl space-y-2">
+              <p className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                <i className="fa-solid fa-wrench text-amber-600" />
+                Extra Questions for Vehicle Parts Businesses:
+              </p>
+              <div className="border border-amber-200 bg-white rounded-lg p-2.5 max-w-md">
+                <p className="text-xs font-semibold text-slate-700 mb-1.5">Handles Waste Mineral Oil or Used Lead Batteries?</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setField('handles_waste_oil_or_batteries', profile.handles_waste_oil_or_batteries === true ? null : true)}
+                    className={`flex-1 text-xs py-1 rounded font-semibold border ${profile.handles_waste_oil_or_batteries === true ? 'bg-emerald-600 text-white' : 'bg-slate-50 text-slate-600'}`}
+                  >
+                    Yes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setField('handles_waste_oil_or_batteries', profile.handles_waste_oil_or_batteries === false ? null : false)}
+                    className={`flex-1 text-xs py-1 rounded font-semibold border ${profile.handles_waste_oil_or_batteries === false ? 'bg-rose-600 text-white' : 'bg-slate-50 text-slate-600'}`}
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Action Button */}
+          <button
+            type="button"
+            onClick={() => runAnalysis(profile)}
+            disabled={loading}
+            className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <i className="fa-solid fa-spinner fa-spin" />
+                Evaluating Deterministic Rules&hellip;
+              </>
+            ) : (
+              <>
+                <i className="fa-solid fa-bolt" />
+                Analyse Compliance
+              </>
+            )}
+          </button>
         </div>
 
-        {/* Error */}
+        {/* Error Notification */}
         {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
-            <p className="text-sm text-red-700">
-              <i className="fa-solid fa-triangle-exclamation mr-2" />
-              {error}
-            </p>
+          <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
+            <i className="fa-solid fa-triangle-exclamation text-red-500" />
+            <span>{error}</span>
           </div>
         )}
 
-        {/* Results */}
+        {/* Results Section */}
         {result && (
-          <ResultsPanel
-            result={result}
-            previousResults={previousStatuses}
-            onAnswerMissingFact={handleAnswerMissingFact}
-            onExportChecklist={handleExportChecklist}
-          />
+          <div className="space-y-6">
+            {/* Summary Counters */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-center">
+                <span className="text-2xl font-black text-emerald-800">{result.summary.applicable}</span>
+                <p className="text-xs font-bold text-emerald-700 mt-0.5">Applicable</p>
+              </div>
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
+                <span className="text-2xl font-black text-amber-800">{result.summary.unknown}</span>
+                <p className="text-xs font-bold text-amber-700 mt-0.5">Unknown (Missing)</p>
+              </div>
+              <div className="bg-slate-100 border border-slate-200 rounded-2xl p-4 text-center">
+                <span className="text-2xl font-black text-slate-700">{result.summary.not_applicable}</span>
+                <p className="text-xs font-bold text-slate-600 mt-0.5">Not Applicable</p>
+              </div>
+            </div>
+
+            {/* Group 1: Applicable Cards */}
+            {applicableList.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-2">
+                  <i className="fa-solid fa-circle-check text-emerald-600" />
+                  Applicable Obligations ({applicableList.length})
+                </h3>
+                <div className="space-y-3">
+                  {applicableList.map((obl) => (
+                    <ObligationCard
+                      key={obl.obligation_id}
+                      obl={obl}
+                      onAnswerMissingFact={handleInlineAnswer}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Group 2: Unknown Cards */}
+            {unknownList.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-800 flex items-center gap-2">
+                  <i className="fa-solid fa-circle-question text-amber-600" />
+                  Unknown &mdash; Missing Facts Needed ({unknownList.length})
+                </h3>
+                <div className="space-y-3">
+                  {unknownList.map((obl) => (
+                    <ObligationCard
+                      key={obl.obligation_id}
+                      obl={obl}
+                      onAnswerMissingFact={handleInlineAnswer}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Group 3: Not Applicable Cards */}
+            {notApplicableList.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-2">
+                  <i className="fa-solid fa-circle-minus text-slate-500" />
+                  Not Applicable ({notApplicableList.length})
+                </h3>
+                <div className="space-y-3">
+                  {notApplicableList.map((obl) => (
+                    <ObligationCard
+                      key={obl.obligation_id}
+                      obl={obl}
+                      onAnswerMissingFact={handleInlineAnswer}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Persistent Disclaimer */}
+            <div className="p-3 bg-yellow-50/80 border border-yellow-200 rounded-xl text-[11px] text-yellow-900 flex items-center gap-2">
+              <i className="fa-solid fa-scale-balanced text-yellow-600 shrink-0" />
+              <span>{result.disclaimer}</span>
+            </div>
+          </div>
         )}
       </main>
     </div>
