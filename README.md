@@ -23,7 +23,6 @@ Form / NLP Intake ──> FastAPI Backend ──> Preprocessor ──> Random Fo
 - **Frontend**: React 18, Vite, React Router v6, Recharts, Lucide Icons, Vanilla Dark Glassmorphism CSS.
 - **Backend**: FastAPI (Python 3.10+ / 3.14), SQLAlchemy, Pydantic, Scikit-Learn, SHAP, ReportLab, python-docx.
 - **Database**: SQLite (default local development: `data/component_1.db`) with graceful fallback and auto-migrations; compatible with PostgreSQL.
-- **Authentication**: JWT Bearer tokens with PBKDF2-HMAC-SHA256 hashed password verification and user data isolation.
 
 ---
 
@@ -54,11 +53,6 @@ npm run dev
 ```
 *The web interface will be accessible at `http://localhost:3000`.*
 
-### 4. Default Demo Credentials
-- **Email**: `demo@sme360.ai`
-- **Password**: `password123`
-*(Alternatively, use the "Fill Demo Credentials" button on `/login` or register a new user account).*
-
 ---
 
 ## How to Run Tests
@@ -72,10 +66,7 @@ python tests/test_data_correctness.py
 # 2. Run API End-to-End Suite (Intake, Analysis, Soft Delete & Restore, Audit Logs, PDF/DOCX):
 python tests/test_api.py
 
-# 3. Run Authentication & User Isolation Suite (PBKDF2 Hashing, JWT Tokens, Route Protection):
-python tests/test_auth.py
-
-# 4. Verify Frontend Production Bundle Build:
+# 3. Verify Frontend Production Bundle Build:
 cd frontend
 npm run build
 ```

@@ -11,8 +11,7 @@ from sqlalchemy import func, or_
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from backend.database import get_db
-from backend.models import AnalysisRecord, User, AnalysisAuditLog
-from backend.auth_utils import get_optional_user
+from backend.models import AnalysisRecord, AnalysisAuditLog
 from backend.schemas import BusinessAnalysisRequest, PaginatedRecordsResponse, AnalysisRecordSummary, AdoptStrategyPayload
 from sqlalchemy.orm.attributes import flag_modified
 from src.orchestrator import analyze_business
@@ -72,7 +71,6 @@ def serialize_analysis_record(rec: AnalysisRecord) -> Dict[str, Any]:
 @router.post("/analyze", response_model=Dict[str, Any], status_code=status.HTTP_200_OK)
 def analyze_sme_business(
     payload: BusinessAnalysisRequest,
-    current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -102,7 +100,7 @@ def analyze_sme_business(
 
         record = AnalysisRecord(
             id=record_id,
-            user_id=current_user.id if current_user else None,
+            user_id=None,
             business_name=b_name,
             business_stage=canonical_stage,
             business_category=canonical_category,
@@ -118,8 +116,8 @@ def analyze_sme_business(
 
         # Log audit trail event for creation
         audit_entry = AnalysisAuditLog(
-            user_id=current_user.id if current_user else None,
-            user_email=current_user.email if current_user else "demo@sme360.ai",
+            user_id=None,
+            user_email="analyst@sme360.ai",
             record_id=record_id,
             action="created",
             business_name=b_name,
@@ -258,13 +256,12 @@ def list_analysis_records(
     result: Optional[str] = Query(None, description="Filter by feasibility result ('Feasible', 'Conditionally Feasible', 'Infeasible')"),
     search: Optional[str] = Query(None, description="Search term across category, district, and result"),
     sort: Optional[str] = Query("newest", description="Sort order: 'newest', 'highest_score', 'lowest_score', 'oldest'"),
-    current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
     """
     Lists paginated SME business analysis runs with total counts and numeric attributes.
     Eliminates NaN values by extracting capital and customer counts safely.
-    Filters by authenticated user if logged in, and excludes soft-deleted records.
+    Excludes soft-deleted records.
     """
     eff_limit = page_size if page_size is not None else limit
     offset = (page - 1) * eff_limit
@@ -272,10 +269,6 @@ def list_analysis_records(
     query = db.query(AnalysisRecord).filter(
         or_(AnalysisRecord.is_deleted == False, AnalysisRecord.is_deleted == None)
     )
-
-    # User isolation: If user is authenticated, show their records (or records without owner)
-    if current_user:
-        query = query.filter(or_(AnalysisRecord.user_id == current_user.id, AnalysisRecord.user_id == None))
 
     # Filter by stage
     if stage and stage.strip().lower() != "all":
@@ -336,18 +329,15 @@ def list_analysis_records(
 
 @router.get("/summary", response_model=Dict[str, Any])
 def get_dashboard_summary(
-    current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
     """
-    Returns real aggregate metrics for Dashboard KPIs for authenticated user.
+    Returns real aggregate metrics for Dashboard KPIs.
     Excludes soft-deleted records.
     """
     base_query = db.query(AnalysisRecord).filter(
         or_(AnalysisRecord.is_deleted == False, AnalysisRecord.is_deleted == None)
     )
-    if current_user:
-        base_query = base_query.filter(or_(AnalysisRecord.user_id == current_user.id, AnalysisRecord.user_id == None))
 
     total_count = base_query.count()
     
@@ -363,10 +353,7 @@ def get_dashboard_summary(
         AnalysisRecord.business_category, func.count(AnalysisRecord.id).label("cnt")
     ).filter(
         or_(AnalysisRecord.is_deleted == False, AnalysisRecord.is_deleted == None)
-    )
-    if current_user:
-        top_cat_row = top_cat_row.filter(or_(AnalysisRecord.user_id == current_user.id, AnalysisRecord.user_id == None))
-    top_cat_row = top_cat_row.group_by(AnalysisRecord.business_category).order_by(func.count(AnalysisRecord.id).desc()).first()
+    ).group_by(AnalysisRecord.business_category).order_by(func.count(AnalysisRecord.id).desc()).first()
     top_sector = top_cat_row[0] if top_cat_row else "Not provided"
 
     # Average capital
@@ -406,8 +393,6 @@ def get_dashboard_summary(
     ).filter(
         or_(AnalysisRecord.is_deleted == False, AnalysisRecord.is_deleted == None)
     )
-    if current_user:
-        sector_counts = sector_counts.filter(or_(AnalysisRecord.user_id == current_user.id, AnalysisRecord.user_id == None))
     sector_data = [
         {"category": row[0], "count": row[1]} 
         for row in sector_counts.group_by(AnalysisRecord.business_category).all()
@@ -442,25 +427,16 @@ def get_dashboard_summary(
 @router.get("/record/{record_id}", response_model=Dict[str, Any])
 def get_analysis_record(
     record_id: str,
-    current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
     """
     Retrieves a full structured profile JSON by Analysis Record ID.
-    Enforces user authorization if record is owned by a different user.
     """
     rec = db.query(AnalysisRecord).filter(AnalysisRecord.id == record_id).first()
     if not rec or rec.is_deleted:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Analysis record with ID '{record_id}' not found."
-        )
-
-    # Check ownership if record has an assigned user
-    if current_user and rec.user_id and rec.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorized to view this business analysis."
         )
 
     profile = dict(rec.structured_profile) if isinstance(rec.structured_profile, dict) else {}
@@ -493,7 +469,6 @@ def get_analysis_record(
 @router.delete("/record/{record_id}", response_model=Dict[str, Any])
 def delete_analysis_record(
     record_id: str,
-    current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -506,18 +481,12 @@ def delete_analysis_record(
             detail=f"Analysis record with ID '{record_id}' not found."
         )
 
-    if current_user and rec.user_id and rec.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorized to delete this business analysis."
-        )
-
     rec.is_deleted = True
 
     # Audit log event for deletion
     audit_entry = AnalysisAuditLog(
-        user_id=current_user.id if current_user else None,
-        user_email=current_user.email if current_user else "demo@sme360.ai",
+        user_id=None,
+        user_email="analyst@sme360.ai",
         record_id=record_id,
         action="deleted",
         business_category=rec.business_category,
@@ -534,7 +503,6 @@ def delete_analysis_record(
 @router.post("/record/{record_id}/restore", response_model=Dict[str, Any])
 def restore_analysis_record(
     record_id: str,
-    current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -551,8 +519,8 @@ def restore_analysis_record(
 
     # Audit log event for restoration
     audit_entry = AnalysisAuditLog(
-        user_id=current_user.id if current_user else None,
-        user_email=current_user.email if current_user else "demo@sme360.ai",
+        user_id=None,
+        user_email="analyst@sme360.ai",
         record_id=record_id,
         action="restored",
         business_category=rec.business_category,
@@ -570,7 +538,6 @@ def restore_analysis_record(
 def adopt_strategic_recommendation(
     record_id: str,
     payload: AdoptStrategyPayload,
-    current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -628,8 +595,8 @@ def adopt_strategic_recommendation(
 
     # Add audit log
     audit_entry = AnalysisAuditLog(
-        user_id=current_user.id if current_user else None,
-        user_email=current_user.email if current_user else "demo@sme360.ai",
+        user_id=None,
+        user_email="analyst@sme360.ai",
         record_id=record_id,
         action="strategy_adopted",
         business_category=rec.business_category,
@@ -656,7 +623,6 @@ def adopt_strategic_recommendation(
 def apply_scenario_to_business(
     record_id: str,
     payload: Dict[str, Any],
-    current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -670,13 +636,6 @@ def apply_scenario_to_business(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Analysis record with ID '{record_id}' not found."
-        )
-
-    # Ownership check
-    if current_user and rec.user_id and rec.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorized to modify this business analysis."
         )
 
     try:
@@ -709,8 +668,8 @@ def apply_scenario_to_business(
 
         # Record audit trail event
         audit_entry = AnalysisAuditLog(
-            user_id=current_user.id if current_user else None,
-            user_email=current_user.email if current_user else "demo@sme360.ai",
+            user_id=None,
+            user_email="analyst@sme360.ai",
             record_id=record_id,
             action="scenario_applied",
             business_name=rec.business_name,
@@ -742,21 +701,18 @@ def apply_scenario_to_business(
 @router.get("/audit-logs", tags=["Audit"])
 def get_audit_logs(
     limit: int = 50,
-    current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
     """
     Retrieves chronological audit trail of business analysis creation, rerun, delete, and restore events.
     """
     query = db.query(AnalysisAuditLog)
-    if current_user:
-        query = query.filter(or_(AnalysisAuditLog.user_id == current_user.id, AnalysisAuditLog.user_id == None))
     logs = query.order_by(AnalysisAuditLog.created_at.desc()).limit(limit).all()
     return [
         {
             "id": log.id,
             "user_id": log.user_id,
-            "user_email": log.user_email or "demo@sme360.ai",
+            "user_email": log.user_email or "analyst@sme360.ai",
             "record_id": log.record_id,
             "action": log.action,
             "business_category": log.business_category,

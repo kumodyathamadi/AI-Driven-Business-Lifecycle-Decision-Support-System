@@ -1,18 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { checkHealth } from '../services/api';
-import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import Logo from './Logo';
-import { LogOut, User, Sun, Moon, ChevronDown, Check, Shield } from 'lucide-react';
+import { User, Sun, Moon, ChevronDown, Check, Shield } from 'lucide-react';
 
 export default function Navbar({ currentProfile }) {
   const [apiStatus, setApiStatus] = useState({ online: false, loading: true });
   const { isDarkMode, toggleTheme } = useTheme();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef(null);
-  const { user, isAuthenticated, logout } = useAuth();
-  const navigate = useNavigate();
+  const userName = 'SME Decision Maker';
 
   useEffect(() => {
     async function verifyHealth() {
@@ -38,11 +36,6 @@ export default function Navbar({ currentProfile }) {
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   return (
     <header className="navbar">
@@ -182,7 +175,7 @@ export default function Navbar({ currentProfile }) {
             >
               <User size={13} />
             </div>
-            <span>{user?.full_name || 'SME Decision Maker'}</span>
+            <span>{userName}</span>
             <ChevronDown size={14} style={{ color: isDarkMode ? '#94a3b8' : '#64748b', transform: showProfileMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
           </button>
 
@@ -206,7 +199,7 @@ export default function Navbar({ currentProfile }) {
             >
               <div style={{ padding: '0.5rem 0.65rem', borderBottom: isDarkMode ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #e2e8f0' }}>
                 <div style={{ fontSize: '0.82rem', fontWeight: 700, color: isDarkMode ? '#f8fafc' : '#0f172a' }}>
-                  {user?.full_name || 'SME Decision Maker'}
+                  {userName}
                 </div>
                 <div style={{ fontSize: '0.72rem', color: isDarkMode ? '#64748b' : '#64748b' }}>
                   Enterprise Plan · Active
@@ -240,35 +233,6 @@ export default function Navbar({ currentProfile }) {
                   <Shield size={14} />
                   <span>SaaS Workspace</span>
                 </Link>
-
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.5rem 0.65rem',
-                    fontSize: '0.78rem',
-                    color: '#f87171',
-                    background: 'none',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.15s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
-                >
-                  <LogOut size={14} />
-                  <span>Sign out</span>
-                </button>
               </div>
             </div>
           )}

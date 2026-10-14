@@ -13,9 +13,7 @@ import WhatIfSimulator from './components/WhatIfSimulator';
 import BusinessPlan from './components/BusinessPlan';
 import AnalysisPage from './components/workspace/AnalysisPage';
 import StrategiesPage from './components/workspace/StrategiesPage';
-import ProtectedRoute from './components/ProtectedRoute';
 import NotFoundPage from './components/NotFoundPage';
-import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './components/common/Toast';
 import { LanguageProvider } from './context/LanguageContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -42,26 +40,24 @@ export default function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
-        <AuthProvider>
-          <LanguageProvider>
-            <ToastProvider>
-              <Routes>
+        <LanguageProvider>
+          <ToastProvider>
+            <Routes>
               {/* Redirect /login directly to /dashboard (Login/Register form removed) */}
               <Route path="/login" element={<Navigate to="/dashboard" replace />} />
 
-              {/* SaaS Application Routes */}
-              <Route element={<ProtectedRoute />}>
-                <Route element={<AppLayout activeProfile={activeProfile} />}>
-                  <Route index element={<Navigate to="/dashboard" replace />} />
-                  <Route 
-                    path="/dashboard" 
-                    element={
-                      <Dashboard 
-                        activeProfile={activeProfile} 
-                        onAnalysisComplete={(p) => setActiveProfile(p)} 
-                      />
-                    } 
-                  />
+              {/* Application Routes */}
+              <Route element={<AppLayout activeProfile={activeProfile} />}>
+                <Route index element={<Navigate to="/dashboard" replace />} />
+                <Route 
+                  path="/dashboard" 
+                  element={
+                    <Dashboard 
+                      activeProfile={activeProfile} 
+                      onAnalysisComplete={(p) => setActiveProfile(p)} 
+                    />
+                  } 
+                />
 
                   {/* Redirect removed routes directly to /dashboard */}
                   <Route path="/businesses" element={<Navigate to="/dashboard" replace />} />
@@ -91,12 +87,10 @@ export default function App() {
                   {/* 404 Catch-All Page */}
                   <Route path="*" element={<NotFoundPage />} />
                 </Route>
-              </Route>
             </Routes>
           </ToastProvider>
         </LanguageProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  </BrowserRouter>
-);
+      </ThemeProvider>
+    </BrowserRouter>
+  );
 }
