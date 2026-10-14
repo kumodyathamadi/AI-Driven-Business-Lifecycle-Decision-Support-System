@@ -10,6 +10,7 @@ from backend.database import engine, Base
 from backend.routes.analysis import router as analysis_router
 from backend.routes.intake import router as intake_router
 from backend.routes.business_plan import router as plan_router
+from backend.routes.financial_monitoring import router as financial_router
 from backend.schemas import HealthCheckResponse
 from src.prediction.predictor import DEFAULT_MODEL_DIR
 
@@ -18,8 +19,8 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="SME360 AI Decision Support API",
-    description="SME360 AI REST API for Sri Lankan SME Business Feasibility Prediction, Context-Aware Natural Language AI Intake Assistant, SHAP Attribution, TOPSIS Strategy Ranking, What-If Simulation, and Business Planning.",
-    version="1.2.0"
+    description="SME360 AI REST API for Sri Lankan SME Business Feasibility Prediction, Context-Aware Natural Language AI Intake Assistant, SHAP Attribution, TOPSIS Strategy Ranking, What-If Simulation, Business Planning, and Component 3 Financial Monitoring / Tax Compliance.",
+    version="1.3.0"
 )
 
 # Enable CORS for frontend integration
@@ -35,6 +36,8 @@ app.add_middleware(
 app.include_router(analysis_router)
 app.include_router(intake_router)
 app.include_router(plan_router)
+app.include_router(financial_router)
+
 
 
 @app.get("/api/health", response_model=HealthCheckResponse, tags=["Health"])
