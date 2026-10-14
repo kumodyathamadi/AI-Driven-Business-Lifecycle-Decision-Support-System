@@ -1,6 +1,7 @@
 # backend/routes/financial_monitoring.py
 import sys
 import os
+from typing import List, Dict, Any
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import Response
 
@@ -10,12 +11,21 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 from backend.schemas import (
     InvoiceData,
     Schedule7BatchRequest,
-    BatchTaxProcessResponse
+    BatchTaxProcessResponse,
+    FraudCheckRequest,
+    FraudRiskAssessment,
+    ReviewActionRequest,
+    ReviewActionResponse
 )
 from backend.services.tax_engine import (
     categorize_and_calculate_tax,
     process_batch_invoices,
     generate_schedule7_csv
+)
+from backend.services.anomaly_detector import (
+    evaluate_transaction_risk,
+    get_review_queue_items,
+    handle_review_action
 )
 
 router = APIRouter(tags=["Component 3: Financial Monitoring & Tax Compliance"])
@@ -92,4 +102,55 @@ def export_schedule7_csv(batch_request: Schedule7BatchRequest):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Failed to generate RAMIS Schedule 7 CSV: {str(e)}"
+        )
+
+
+# =============================================================
+# Component 3: Unsupervised Fraud & Anomaly Detection Routes
+# =============================================================
+
+@router.post("/api/financial/fraud/check-transaction", response_model=FraudRiskAssessment, status_code=status.HTTP_200_OK)
+@router.post("/api/v1/fraud/check-transaction", response_model=FraudRiskAssessment, status_code=status.HTTP_200_OK)
+def check_transaction_fraud(request: FraudCheckRequest):
+    """
+    Component 3: Evaluates operational fraud and anomaly risk by cross-referencing
+    invoiced financial revenue directly with physical inventory stock depletion.
+    
+    Returns:
+      - Risk Score (0-100)
+      - Decision (PASS -> Secure Storage, FAIL -> Review Queue)
+      - Contextual Reason Flags (e.g. stock shortfall, unusual hours, duplicate rush)
+    """
+    try:
+        return evaluate_transaction_risk(request)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Fraud evaluation failed: {str(e)}"
+        )
+
+
+@router.get("/api/financial/fraud/review-queue", response_model=List[Dict[str, Any]], status_code=status.HTTP_200_OK)
+@router.get("/api/v1/fraud/review-queue", response_model=List[Dict[str, Any]], status_code=status.HTTP_200_OK)
+def get_fraud_review_queue():
+    """
+    Component 3: Retrieves all flagged high-risk transactions awaiting human-in-the-loop audit.
+    Matches the ClearLedger Fraud Review Queue.
+    """
+    return get_review_queue_items()
+
+
+@router.post("/api/financial/fraud/review-action", response_model=ReviewActionResponse, status_code=status.HTTP_200_OK)
+@router.post("/api/v1/fraud/review-action", response_model=ReviewActionResponse, status_code=status.HTTP_200_OK)
+def submit_review_decision(action_req: ReviewActionRequest):
+    """
+    Component 3: Submits an auditor's decision (Approve as valid, Reject transaction, Correct & resubmit)
+    with audit justification notes for human-in-the-loop resolution.
+    """
+    try:
+        return handle_review_action(action_req)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Failed to submit review action: {str(e)}"
         )

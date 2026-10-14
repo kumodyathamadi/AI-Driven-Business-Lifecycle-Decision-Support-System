@@ -1,0 +1,18 @@
+{
+  "model_type": "IsolationForest",
+  "contamination": 0.04,
+  "n_estimators": 150,
+  "feature_names": [
+    "amount_discrepancy_pct",
+    "quantity_ratio",
+    "unit_price_variance",
+    "time_delta_hours",
+    "is_off_hours",
+    "log_amount_lkr"
+  ],
+  "score_min": -0.21138690324084197,
+  "score_max": 0.23806630921531136,
+  "threshold": -0.575092974125663,
+  "training_samples": 3000,
+  "target_component": "Component 3: AI-Based Financial Monitoring & Anomaly Detection"
+}

@@ -65,8 +65,57 @@ def test_export_csv():
     assert "EXP-102" in csv_text
     print("PASS: /api/v1/tax/export-schedule7-csv")
 
+def test_fraud_check_api():
+    payload = {
+        "transaction_id": "TXN-API-999",
+        "invoice_data": {
+            "invoice_number": "INV-API-999",
+            "date_of_supply": "2025-06-26",
+            "sub_total": 42600.0,
+            "tax_amount": 7668.0,
+            "total_amount": 50268.0,
+            "currency": "LKR"
+        },
+        "item_id": "LOGISTICS-TRIP-KANDY",
+        "quantity_invoiced": 1.0,
+        "stock_depletion_log": {
+            "item_id": "LOGISTICS-TRIP-KANDY",
+            "quantity_depleted": 1.0,
+            "unit_cost": 30870.0,
+            "depletion_timestamp": "2025-06-26T21:00:00"
+        },
+        "transaction_time": "2025-06-26T22:47:00",
+        "is_duplicate_candidate": True,
+        "time_since_prior_transaction_mins": 14.0
+    }
+    res = client.post("/api/v1/fraud/check-transaction", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["decision"] == "FAIL"
+    assert data["risk_score"] >= 80
+    assert data["risk_level"] == "HIGH"
+    print("PASS: /api/v1/fraud/check-transaction")
+
+    # Review queue test
+    q_res = client.get("/api/v1/fraud/review-queue")
+    assert q_res.status_code == 200
+    assert len(q_res.json()) >= 1
+    print("PASS: /api/v1/fraud/review-queue")
+
+    # Review action test
+    act_payload = {
+        "transaction_id": "TXN-API-999",
+        "action": "reject",
+        "reviewer_notes": "Unauthorized freight surcharge."
+    }
+    act_res = client.post("/api/v1/fraud/review-action", json=act_payload)
+    assert act_res.status_code == 200
+    assert act_res.json()["action_taken"] == "reject"
+    print("PASS: /api/v1/fraud/review-action")
+
 if __name__ == "__main__":
     test_health()
     test_process_invoice_legacy()
     test_export_csv()
+    test_fraud_check_api()
     print("\nALL FASTAPI INTEGRATION TESTS PASSED SUCCESSFULLY!")
