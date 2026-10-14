@@ -160,3 +160,68 @@ export const downloadBusinessPlanDocx = async (profile) => {
     throw error;
   }
 };
+
+// =============================================================
+// COMPONENT 3: CLEARLEDGER FINANCIAL, TAX & FRAUD API CLIENT
+// =============================================================
+
+export const uploadInvoicePdf = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await axios.post('http://127.0.0.1:8000/api/v1/ocr/upload-pdf', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60000,
+  });
+  return response.data;
+};
+
+export const extractAmountsFromText = async (documentText) => {
+  const response = await axios.post('http://127.0.0.1:8000/api/v1/ocr/extract-amounts', {
+    document_text: documentText,
+  });
+  return response.data;
+};
+
+export const calculateInvoiceTax = async (invoiceData) => {
+  const response = await axios.post('http://127.0.0.1:8000/api/v1/tax/process-invoice', invoiceData);
+  return response.data;
+};
+
+export const processBatchTax = async (batchRequest) => {
+  const response = await axios.post('http://127.0.0.1:8000/api/v1/tax/batch-process', batchRequest);
+  return response.data;
+};
+
+export const downloadRamisSchedule7Csv = async (batchRequest) => {
+  const response = await axios.post('http://127.0.0.1:8000/api/v1/tax/export-schedule7-csv', batchRequest, {
+    responseType: 'blob',
+  });
+  const blob = new Blob([response.data], { type: 'text/csv' });
+  const filename = `RAMIS_VAT_Schedule_7_${batchRequest.tax_period || 'Export'}.csv`;
+  const link = document.createElement('a');
+  link.href = window.URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+};
+
+export const checkTransactionFraud = async (fraudRequest) => {
+  const response = await axios.post('http://127.0.0.1:8000/api/v1/fraud/check-transaction', fraudRequest);
+  return response.data;
+};
+
+export const fetchFraudReviewQueue = async () => {
+  const response = await axios.get('http://127.0.0.1:8000/api/v1/fraud/review-queue');
+  return response.data;
+};
+
+export const submitFraudReviewAction = async (actionRequest) => {
+  const response = await axios.post('http://127.0.0.1:8000/api/v1/fraud/review-action', actionRequest);
+  return response.data;
+};
+
+export const runIntegratedPipeline = async (pipelineRequest) => {
+  const response = await axios.post('http://127.0.0.1:8000/api/v1/pipeline/process-transaction', pipelineRequest);
+  return response.data;
+};

@@ -14,6 +14,7 @@ import StrategyCard from './components/StrategyCard';
 import WhatIfSimulator from './components/WhatIfSimulator';
 import BusinessPlan from './components/BusinessPlan';
 import ProfileViewer from './components/ProfileViewer';
+import ClearLedgerDashboard from './components/ClearLedgerDashboard';
 import { analyzeBusiness, fetchAnalysisRecordById } from './services/api';
 import { Lightbulb, Sparkles } from 'lucide-react';
 
@@ -99,7 +100,13 @@ export default function App() {
               onStartNew={() => setActiveTab('new_analysis')}
               onViewMyBusinesses={() => setActiveTab('my_businesses')}
               onSelectRecord={handleSelectRecordById}
+              onOpenClearLedger={() => setActiveTab('clearledger')}
             />
+          )}
+
+          {/* Component 3: ClearLedger Financial, Tax & Fraud View */}
+          {activeTab === 'clearledger' && (
+            <ClearLedgerDashboard />
           )}
 
           {/* 2. My Businesses View */}

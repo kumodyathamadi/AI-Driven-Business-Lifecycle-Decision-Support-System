@@ -7,11 +7,12 @@ import {
   AlertTriangle, 
   XCircle, 
   Clock, 
-  Sparkles
+  Sparkles,
+  Scale
 } from 'lucide-react';
 import { fetchAnalysisRecords } from '../services/api';
 
-export default function Dashboard({ activeProfile, onStartNew, onViewMyBusinesses, onSelectRecord }) {
+export default function Dashboard({ activeProfile, onStartNew, onViewMyBusinesses, onSelectRecord, onOpenClearLedger }) {
   const [recentRecords, setRecentRecords] = useState([]);
   const [loadingRecords, setLoadingRecords] = useState(true);
 
@@ -83,6 +84,54 @@ export default function Dashboard({ activeProfile, onStartNew, onViewMyBusinesse
               <span>Start New Analysis</span>
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Component 3: ClearLedger Launch Card */}
+      <div 
+        className="glass-card" 
+        style={{ 
+          background: 'linear-gradient(135deg, rgba(6, 78, 59, 0.25), rgba(15, 23, 42, 0.85))', 
+          border: '1px solid rgba(34, 197, 94, 0.35)',
+          padding: '1.5rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem'
+        }}
+      >
+        <div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(34, 197, 94, 0.15)', border: '1px solid rgba(34, 197, 94, 0.3)', padding: '0.2rem 0.6rem', borderRadius: '20px', fontSize: '0.72rem', color: '#4ade80', fontWeight: 600, marginBottom: '0.4rem' }}>
+            <Scale size={13} /> Component 3: Financial & Tax Engine
+          </div>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff' }}>
+            ClearLedger • RAMIS Tax & Fraud Monitoring
+          </h3>
+          <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+            Upload digital/scanned invoice PDFs, generate Sri Lanka IRD RAMIS Schedule 7 CSVs, and inspect Isolation Forest fraud anomalies.
+          </p>
+        </div>
+
+        <div>
+          <button 
+            onClick={onOpenClearLedger}
+            className="btn btn-primary"
+            style={{ 
+              background: 'linear-gradient(135deg, #10b981, #059669)', 
+              borderColor: '#059669',
+              padding: '0.75rem 1.4rem', 
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <span>Launch ClearLedger</span>
+            <ArrowRight size={16} />
+          </button>
         </div>
       </div>
 

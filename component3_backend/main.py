@@ -31,10 +31,21 @@ from ocr_extractor import (
     run_integrated_pipeline
 )
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(
     title="AI-Based Financial Monitoring & Tax Compliance API",
     description="Undergraduate Research Project J26-IT-362 - Component 3: Tax Engine, RAMIS Schedule 7, Anomaly Detection, and 6-Step OCR Amount Extraction",
     version="1.2.0"
+)
+
+# Enable CORS for React Frontend (Vite runs on port 5173 / localhost)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.get("/health")
