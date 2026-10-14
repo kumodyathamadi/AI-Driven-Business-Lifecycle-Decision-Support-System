@@ -3,9 +3,11 @@
   "n_estimators": 200,
   "random_state": 42,
   "class_weight": "balanced",
+  "scaler_type": "standard",
   "test_metrics": {
     "accuracy": 0.8833333333333333,
     "weighted_f1": 0.8835146189971217,
+    "macro_f1": 0.8747563500479725,
     "roc_auc_ovr": 0.9691091140327162
   },
   "categorical_features": [
@@ -42,5 +44,7 @@
   "num_processed_features": 76,
   "dataset_version": "1.0.0",
   "training_sample_count": 840,
-  "test_sample_count": 180
+  "validation_sample_count": 180,
+  "test_sample_count": 180,
+  "trained_at": "2026-10-14T16:14:19.475558"
 }
