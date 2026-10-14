@@ -82,6 +82,34 @@ export const extractIntakeInformation = async (text, stage = '', goal = '') => {
 };
 
 /**
+ * Sends a message in the conversational intake flow and receives incremental extractions,
+ * conversational reply, and missing field updates.
+ */
+export const sendIntakeChatMessage = async ({
+  message,
+  history = [],
+  business_stage = 'New',
+  business_goal = null,
+  current_extracted_fields = null,
+}) => {
+  try {
+    const response = await apiClient.post('/business/intake/chat', {
+      message,
+      history,
+      business_stage,
+      business_goal,
+      current_extracted_fields,
+    });
+    return response.data;
+  } catch (error) {
+    console.error('AI Intake Chat Error:', error);
+    const errorMessage = error.response?.data?.detail || error.message || 'Conversational intake failed';
+    throw new Error(errorMessage);
+  }
+};
+
+
+/**
  * Executes complete Component 1 End-to-End Business Analysis
  * @param {Object} businessInput Raw SME parameters dictionary
  */

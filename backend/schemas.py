@@ -190,6 +190,29 @@ class IntakeConfigRequest(BaseModel):
     business_category: Optional[str] = Field(default="Grocery / Mini-Mart", examples=["Grocery / Mini-Mart"])
 
 
+class IntakeChatMessage(BaseModel):
+    role: str = Field(..., examples=["user", "assistant"])
+    content: str = Field(..., examples=["I want to start a grocery shop in Homagama."])
+
+
+class IntakeChatRequest(BaseModel):
+    message: str = Field(..., min_length=1, examples=["I want to start a grocery shop in Homagama with 800k capital."])
+    history: Optional[List[IntakeChatMessage]] = Field(default=[], description="Previous conversation turns")
+    business_stage: Optional[str] = Field(default="New", examples=["New", "Existing"])
+    business_goal: Optional[str] = Field(default=None, examples=["Establish New Business", "Open New Branch"])
+    current_extracted_fields: Optional[Dict[str, Any]] = Field(default=None, description="Previously accumulated extracted fields")
+
+
+class IntakeChatResponse(BaseModel):
+    reply: str
+    context: Dict[str, Any]
+    extracted_fields: Dict[str, Any]
+    summary: Dict[str, Any]
+    missing_required_fields: List[str]
+    missing_optional_fields: List[str]
+    ready_for_form: bool
+
+
 class AnalysisRecordSummary(BaseModel):
     id: str
     business_name: Optional[str] = None

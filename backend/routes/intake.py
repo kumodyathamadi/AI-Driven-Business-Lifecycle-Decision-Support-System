@@ -6,8 +6,9 @@ from fastapi import APIRouter, HTTPException, status
 # Ensure root path is accessible
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from backend.schemas import IntakeExtractRequest, IntakeConfigRequest
+from backend.schemas import IntakeExtractRequest, IntakeConfigRequest, IntakeChatRequest, IntakeChatResponse
 from src.intake.extractor import extract_business_info
+from src.intake.conversational_engine import process_conversational_intake
 from src.intake.dynamic_config import get_dynamic_field_config, BUSINESS_STAGES, BUSINESS_GOALS, SUPPORTED_CATEGORIES
 
 router = APIRouter(prefix="/api/business/intake", tags=["AI Business Intake"])
@@ -76,3 +77,38 @@ def extract_intake_information(payload: IntakeExtractRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"AI Information extraction failed: {str(e)}"
         )
+
+
+@router.post("/chat", response_model=IntakeChatResponse, status_code=status.HTTP_200_OK)
+def intake_chat_endpoint(payload: IntakeChatRequest):
+    """
+    Conversational Business Intake Assistant Endpoint:
+    Processes multi-turn natural language dialogue for New Business and Existing Business Growth workflows.
+    Extracts structured business parameters incrementally with field provenance,
+    tracks missing required fields, and provides responsive non-rigid guidance.
+    """
+    try:
+        if not payload.message or not payload.message.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User message cannot be empty."
+            )
+
+        history_list = [{"role": msg.role, "content": msg.content} for msg in (payload.history or [])]
+        result = process_conversational_intake(
+            message=payload.message,
+            history=history_list,
+            business_stage=payload.business_stage or "New",
+            business_goal=payload.business_goal,
+            current_extracted_fields=payload.current_extracted_fields
+        )
+        return result
+
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Conversational intake processing failed: {str(e)}"
+        )
+

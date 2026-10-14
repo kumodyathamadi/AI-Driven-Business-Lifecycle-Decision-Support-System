@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { extractIntakeInformation } from '../services/api';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { sendIntakeChatMessage, extractIntakeInformation } from '../services/api';
 import BusinessForm from './BusinessForm';
 import Logo from './Logo';
 import {
@@ -8,36 +8,29 @@ import {
   ArrowLeft,
   FileEdit,
   Check,
-  Target,
   Building2,
   Loader2,
   AlertTriangle,
   CheckCircle2,
-  HelpCircle,
   MapPin,
   DollarSign,
   Users,
   Award,
-  Sliders,
   Rocket,
   TrendingUp,
-  Layers
+  Layers,
+  Send,
+  Bot,
+  User,
+  Info,
+  ShieldCheck,
+  RotateCcw
 } from 'lucide-react';
-
-import startupImg from '../assets/images/startup_illustration.jpg';
-import expansionImg from '../assets/images/expansion_illustration.jpg';
 
 const SRI_LANKA_DISTRICTS = [
   'Colombo',
   'Gampaha',
   'Kalutara'
-];
-
-const SUPPORTED_CATEGORIES = [
-  'Grocery / Mini-Mart',
-  'Clothing / Garment',
-  'Beauty Salon',
-  'Bakery / Food / Grocery'
 ];
 
 const EMPTY_FORM_STATE = {
@@ -69,72 +62,276 @@ const EMPTY_FORM_STATE = {
   supplier_availability_score: '',
 };
 
-export default function AiIntakeAssistant({ onCompleteIntake, onSwitchToManual, initialStage = null, initialGoal = null, loading = false }) {
-  // intakeStep: 'type_select' | 'expansion_select' | 'describe' | 'form'
-  const [intakeStep, setIntakeStep] = useState(
-    initialStage === 'Existing' ? (initialGoal ? 'describe' : 'expansion_select') : (initialStage === 'New' ? 'describe' : 'type_select')
-  );
+export default function AiIntakeAssistant({ 
+  onCompleteIntake, 
+  onSwitchToManual, 
+  initialStage = null, 
+  initialGoal = null, 
+  loading = false 
+}) {
+  // Steps: 'type_select' | 'expansion_select' | 'chat' | 'form'
+  const [intakeStep, setIntakeStep] = useState(() => {
+    if (initialStage === 'Existing') {
+      return initialGoal ? 'chat' : 'expansion_select';
+    }
+    if (initialStage === 'New') {
+      return 'chat';
+    }
+    return 'type_select';
+  });
 
-  // Context selection
+  // Selected stage & goal
   const [selectedStage, setSelectedStage] = useState(initialStage || 'New');
   const [selectedGoal, setSelectedGoal] = useState(initialGoal || 'Establish New Business');
   const [stageSelectedByUser, setStageSelectedByUser] = useState(Boolean(initialStage));
-  const [inputText, setInputText] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
 
-  // Prefilled Form Data & AI state
+  // Chat conversation state
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isProcessingChat, setIsProcessingChat] = useState(false);
+  const [chatError, setChatError] = useState('');
+
+  // Extracted fields & Form state
   const [prefilledFormData, setPrefilledFormData] = useState(null);
   const [aiFilledKeys, setAiFilledKeys] = useState(new Set());
-  const [extracting, setExtracting] = useState(false);
+  const [userEditedKeys, setUserEditedKeys] = useState(new Set());
+  const [fieldProvenance, setFieldProvenance] = useState({});
+  const [extractedFieldsMeta, setExtractedFieldsMeta] = useState({});
+  const [missingRequiredFields, setMissingRequiredFields] = useState([]);
 
-  const handleSelectStartup = () => {
-    setSelectedStage('New');
+  const messagesEndRef = useRef(null);
+  const latestFormDataRef = useRef(null);
+
+  // Auto-scroll chat to bottom
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  useEffect(() => {
+    if (intakeStep === 'chat') {
+      scrollToBottom();
+    }
+  }, [chatMessages, isProcessingChat, intakeStep]);
+
+  // Initialize Welcome Message when starting Chat
+  const startConversationalIntake = (stage, goal) => {
+    setSelectedStage(stage);
+    setSelectedGoal(goal);
     setStageSelectedByUser(true);
-    setSelectedGoal('Establish New Business');
+    setChatError('');
+
+    let welcomeText = '';
+    if (stage === 'New') {
+      welcomeText = "Hello! I'm your **SME360 AI Business Intake Assistant**.\n\nTell me about the business you want to start in Sri Lanka! You can describe it in your own words:\n• What products or services you plan to offer (e.g. Grocery, Bakery, Garments, or Salon)\n• Where you want to locate it (e.g. Homagama, Negombo, Panadura)\n• Your starting capital and expected monthly budget\n• Any experience, staffing, or customer expectations you have\n\n*Feel free to write in English, Singlish, or mixed phrasing. You can click **Continue to Form** at any time to review and edit your prefilled details.*";
+    } else if (goal === 'Open New Branch') {
+      welcomeText = "Welcome! Let's plan your **Branch Expansion**.\n\nTell me about your existing business and the new branch you are planning:\n• Your current business name and category\n• Target district and location for your new branch\n• Allocated expansion capital and expected monthly operating budget\n• Expected daily footfall and additional staff required\n\n*Describe in natural language, and click **Continue to Form** whenever you are ready.*";
+    } else {
+      welcomeText = "Welcome! Let's plan your **New Product or Service Line** expansion.\n\nTell me about the new offerings you want to add to your current enterprise:\n• The new product or service line you want to introduce\n• Initial inventory investment and supplier availability\n• Target customers and expected price points\n\n*Describe in natural language, and click **Continue to Form** whenever you are ready.*";
+    }
+
+    setChatMessages([
+      {
+        id: 'welcome-msg',
+        role: 'assistant',
+        content: welcomeText,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    ]);
+
+    // Initialize base prefill state
     setPrefilledFormData((prev) => ({
       ...EMPTY_FORM_STATE,
       ...prev,
-      business_stage: 'New',
-      proposed_action: prev?.proposed_action || 'Establish New Business',
+      business_stage: stage,
+      proposed_action: stage === 'Existing'
+        ? (goal === 'Open New Branch' ? 'Expand / Open a New Branch' : 'Introduce a New Product / Service Line')
+        : 'Establish New Business'
     }));
-    setIntakeStep('form');
-    setErrorMsg('');
+
+    setIntakeStep('chat');
   };
 
+  // Handler: Select Start a New Business
+  const handleSelectStartup = () => {
+    startConversationalIntake('New', 'Establish New Business');
+  };
+
+  // Handler: Select Grow an Existing Business -> Go to expansion sub-type
   const handleSelectExpansion = () => {
     setSelectedStage('Existing');
     setStageSelectedByUser(true);
     setIntakeStep('expansion_select');
-    setErrorMsg('');
+    setChatError('');
   };
 
+  // Handler: Select Expansion Goal -> Go to Chat
   const handleSelectExpansionGoal = (goal) => {
-    setSelectedStage('Existing');
-    setSelectedGoal(goal);
-    setPrefilledFormData((prev) => ({
-      ...EMPTY_FORM_STATE,
-      ...prev,
-      business_stage: 'Existing',
-      proposed_action: prev?.proposed_action || (goal === 'Open New Branch' ? 'Expand / Open a New Branch' : 'Introduce a New Product / Service Line'),
-    }));
-    setIntakeStep('form');
-    setErrorMsg('');
+    startConversationalIntake('Existing', goal);
   };
 
-  const latestFormDataRef = useRef(null);
+  // Handler: Send Message in Conversational Intake
+  const handleSendMessage = async (textToSend = null) => {
+    const text = (textToSend || chatInput).trim();
+    if (!text || isProcessingChat) return;
 
-  const handleFormChange = useCallback((updated) => {
-    if (updated) {
-      latestFormDataRef.current = updated;
+    setChatInput('');
+    setChatError('');
+
+    // Add user message to stream
+    const userMsg = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: text,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setChatMessages((prev) => [...prev, userMsg]);
+    setIsProcessingChat(true);
+
+    try {
+      // Build conversation history for API
+      const historyPayload = chatMessages.map((m) => ({
+        role: m.role,
+        content: m.content
+      }));
+
+      const response = await sendIntakeChatMessage({
+        message: text,
+        history: historyPayload,
+        business_stage: selectedStage,
+        business_goal: selectedGoal,
+        current_extracted_fields: extractedFieldsMeta
+      });
+
+      // Append assistant reply
+      const assistantMsg = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: response.reply,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setChatMessages((prev) => [...prev, assistantMsg]);
+
+      // Update extracted state and form prefill
+      if (response.extracted_fields) {
+        setExtractedFieldsMeta(response.extracted_fields);
+
+        const newFilledKeys = new Set(aiFilledKeys);
+        const newProvenance = { ...fieldProvenance };
+        const updatedPrefill = { ...(prefilledFormData || EMPTY_FORM_STATE) };
+
+        Object.entries(response.extracted_fields).forEach(([k, meta]) => {
+          // Rule: Never overwrite user manually edited fields
+          if (userEditedKeys.has(k)) return;
+
+          if (meta.value !== null && meta.value !== undefined && meta.value !== '' && meta.status !== 'hidden') {
+            updatedPrefill[k] = meta.value;
+            newFilledKeys.add(k);
+            newProvenance[k] = meta.provenance || 'explicit';
+          }
+        });
+
+        // Ensure canonical business_stage
+        updatedPrefill.business_stage = selectedStage;
+        if (selectedStage === 'Existing') {
+          updatedPrefill.proposed_action = selectedGoal === 'Open New Branch'
+            ? 'Expand / Open a New Branch'
+            : 'Introduce a New Product / Service Line';
+        }
+
+        setPrefilledFormData(updatedPrefill);
+        setAiFilledKeys(newFilledKeys);
+        setFieldProvenance(newProvenance);
+      }
+
+      if (response.missing_required_fields) {
+        setMissingRequiredFields(response.missing_required_fields);
+      }
+    } catch (err) {
+      console.error('Conversational intake error:', err);
+      const msg = err.message || 'Could not process message. You can try again or jump straight to the form.';
+      setChatError(msg);
+
+      const errorAssistantMsg = {
+        id: `err-${Date.now()}`,
+        role: 'assistant',
+        content: `I encountered an issue connecting to the extraction service: *${msg}*. Don't worry, all previous information is safe! You can continue chatting or click **Continue to Form** below to fill out the form directly.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setChatMessages((prev) => [...prev, errorAssistantMsg]);
+    } finally {
+      setIsProcessingChat(false);
     }
-  }, []);
+  };
 
+  // Keyboard shortcut: Enter to send (Shift+Enter for newline)
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  // Handler: Continue to Form
+  const handleContinueToForm = () => {
+    setIntakeStep('form');
+    setChatError('');
+  };
+
+  // Handler: Manual Switch (bypass chat or form)
+  const handleManualSwitchWithContext = () => {
+    setPrefilledFormData((prev) => {
+      const base = prev || EMPTY_FORM_STATE;
+      return {
+        ...EMPTY_FORM_STATE,
+        ...base,
+        business_stage: selectedStage || 'New',
+        proposed_action: base.proposed_action || (selectedStage === 'Existing'
+          ? (selectedGoal === 'Open New Branch' ? 'Expand / Open a New Branch' : 'Introduce a New Product / Service Line')
+          : 'Establish New Business'),
+      };
+    });
+    setIntakeStep('form');
+  };
+
+  // Track user edits on form so AI extractions never overwrite manual changes
+  const handleFormChange = useCallback((updated) => {
+    if (!updated) return;
+    latestFormDataRef.current = updated;
+
+    // Detect fields edited by user
+    if (prefilledFormData) {
+      Object.keys(updated).forEach((key) => {
+        if (key === 'business_stage') return;
+        const oldVal = prefilledFormData[key];
+        const newVal = updated[key];
+        if (oldVal !== undefined && newVal !== undefined && String(oldVal).trim() !== String(newVal).trim()) {
+          setUserEditedKeys((prev) => new Set(prev).add(key));
+          setAiFilledKeys((prev) => {
+            const next = new Set(prev);
+            next.delete(key);
+            return next;
+          });
+          setFieldProvenance((prev) => ({ ...prev, [key]: 'user_edited' }));
+        }
+      });
+    }
+    setPrefilledFormData((prev) => ({ ...prev, ...updated }));
+  }, [prefilledFormData]);
+
+  // Back Navigation Handler
   const handleBack = useCallback((currentData) => {
     const dataToSave = currentData || latestFormDataRef.current;
     if (dataToSave) {
       setPrefilledFormData((prev) => ({ ...prev, ...dataToSave }));
     }
+
     if (intakeStep === 'form') {
+      // Return to Chat with full context preserved
+      setIntakeStep('chat');
+    } else if (intakeStep === 'chat') {
       if (selectedStage === 'Existing') {
         setIntakeStep('expansion_select');
       } else {
@@ -147,624 +344,816 @@ export default function AiIntakeAssistant({ onCompleteIntake, onSwitchToManual, 
     }
   }, [intakeStep, selectedStage]);
 
-  // Step Describe -> Step Form: Extract & Prefill ALL original form fields
-  const handleExtractAndReview = async () => {
-    if (!inputText || inputText.trim().length < 15) {
-      setErrorMsg("Please provide a description of at least 15 characters (e.g. business sector, district location, and capital).");
-      return;
-    }
-    setErrorMsg('');
-    setExtracting(true);
-
-    try {
-      const data = await extractIntakeInformation(
-        inputText,
-        selectedStage,
-        selectedStage === 'Existing' ? selectedGoal : 'Establish New Business'
-      );
-
-      const prefilled = {
-        business_name: '',
-        business_stage: selectedStage || '',
-        proposed_action: selectedStage === 'Existing'
-          ? (selectedGoal === 'Open New Branch' ? 'Expand / Open a New Branch' : 'Introduce a New Product / Service Line')
-          : '',
-        original_business_description: inputText,
-        business_category: '',
-        business_model: '',
-        district: '',
-        address: '',
-        location_type: '',
-        additional_description: '',
-        marketing_details: '',
-        competitor_information: '',
-        financial_overview: '',
-        available_capital_lkr: '',
-        loan_amount_lkr: '',
-        monthly_budget_lkr: '',
-        initial_inventory_cost_lkr: '',
-        expected_price_lkr: '',
-        expected_customers_per_day: '',
-        competition_level: '',
-        customer_demand_score: '',
-        entrepreneur_experience_years: '',
-        location_suitability_score: '',
-        available_staff_count: '',
-        available_equipment_score: '',
-        required_equipment_score: '',
-        supplier_availability_score: '',
-      };
-
-      const filledKeys = new Set();
-
-      if (data.context && data.context.business_category) {
-        prefilled.business_category = data.context.business_category;
-        filledKeys.add('business_category');
-      }
-
-      if (data.extracted_fields) {
-        Object.entries(data.extracted_fields).forEach(([k, meta]) => {
-          if (meta.value !== null && meta.value !== undefined && meta.value !== '' && meta.status !== 'hidden') {
-            prefilled[k] = meta.value;
-            filledKeys.add(k);
-          }
-        });
-      }
-
-      if (data.extracted_fields?.district?.value) {
-        const rawDist = String(data.extracted_fields.district.value).trim().toLowerCase();
-        const found = SRI_LANKA_DISTRICTS.find(d => {
-          const dl = d.toLowerCase();
-          if (dl === rawDist) return true;
-          if ((rawDist === 'kalutara' || rawDist === 'kaluthara') && (dl === 'kalutara' || dl === 'kaluthara')) return true;
-          return false;
-        });
-        if (found) {
-          prefilled.district = found;
-          filledKeys.add('district');
-        }
-      }
-
-      setPrefilledFormData(prefilled);
-      setAiFilledKeys(filledKeys);
-      setIntakeStep('form');
-    } catch (err) {
-      console.warn("AI extraction fallback to full form:", err);
-      setPrefilledFormData({
-        business_name: '',
-        business_stage: selectedStage || '',
-        proposed_action: selectedStage === 'Existing'
-          ? (selectedGoal === 'Open New Branch' ? 'Expand / Open a New Branch' : 'Introduce a New Product / Service Line')
-          : '',
-        original_business_description: inputText,
-        business_category: '',
-        business_model: '',
-        district: '',
-        address: '',
-        location_type: '',
-        additional_description: '',
-        marketing_details: '',
-        competitor_information: '',
-        financial_overview: '',
-        available_capital_lkr: '',
-        loan_amount_lkr: '',
-        monthly_budget_lkr: '',
-        initial_inventory_cost_lkr: '',
-        expected_price_lkr: '',
-        expected_customers_per_day: '',
-        competition_level: '',
-        customer_demand_score: '',
-        entrepreneur_experience_years: '',
-        location_suitability_score: '',
-        available_staff_count: '',
-        available_equipment_score: '',
-        required_equipment_score: '',
-        supplier_availability_score: '',
-      });
-      setAiFilledKeys(new Set());
-      setIntakeStep('form');
-    } finally {
-      setExtracting(false);
+  // Quick suggestion prompts for user inspiration
+  const getSuggestionPrompts = () => {
+    if (selectedStage === 'New') {
+      return [
+        "Small grocery shop in Homagama with LKR 800,000 capital",
+        "Bakery with 5 years experience, target 50 customers daily",
+        "Clothing boutique with 2 staff and Rs. 1 million budget",
+        "Beauty salon in Panadura with moderate competition"
+      ];
+    } else if (selectedGoal === 'Open New Branch') {
+      return [
+        "Expand our supermarket with a new branch in Gampaha and 2M capital",
+        "Open a second salon in Panadura with 3 staff members",
+        "New clothing boutique branch with LKR 1.5 million budget"
+      ];
+    } else {
+      return [
+        "Introduce organic groceries to our store with 400k inventory",
+        "Add bridal makeup packages with high local customer demand",
+        "Launch custom tailor made shirts line with 500k stock"
+      ];
     }
   };
 
-  const handleManualSwitchWithContext = () => {
-    setPrefilledFormData((prev) => {
-      const base = prev || EMPTY_FORM_STATE;
-      return {
-        ...EMPTY_FORM_STATE,
-        ...base,
-        business_stage: base.business_stage || selectedStage || 'New',
-        proposed_action: base.proposed_action || (selectedStage === 'Existing'
-          ? (selectedGoal === 'Open New Branch' ? 'Expand / Open a New Branch' : 'Introduce a New Product / Service Line')
-          : ''),
-        original_business_description: base.original_business_description || inputText || '',
-      };
-    });
-    setIntakeStep('form');
-  };
+  // Render extracted count
+  const extractedCount = Object.keys(prefilledFormData || {}).filter(
+    (k) => prefilledFormData[k] !== '' && prefilledFormData[k] !== null && prefilledFormData[k] !== undefined && k !== 'business_stage'
+  ).length;
 
   return (
     <>
       <div className="wizard-glass-container">
 
-      {/* Header bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '1.25rem', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '0.85rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-          <Logo variant="compact" height={36} />
-          <div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.3px', margin: 0 }}>
-              AI Business Plan Generator
-            </h2>
-          </div>
-        </div>
-
-        {/* Sleek Step Indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div
-            style={{
-              background: (intakeStep === 'type_select' || intakeStep === 'expansion_select')
-                ? 'linear-gradient(135deg, #0ea5e9, #3b82f6)'
-                : 'rgba(56, 189, 248, 0.2)',
-              color: '#ffffff',
-              padding: '0.35rem 0.9rem',
-              borderRadius: '24px',
-              fontWeight: 700,
-              fontSize: '0.78rem',
-              boxShadow: (intakeStep === 'type_select' || intakeStep === 'expansion_select')
-                ? '0 0 18px rgba(14, 165, 233, 0.55)'
-                : 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem'
-            }}
-          >
-            <span>1. Business Type</span>
-          </div>
-
-          <span 
-            style={{ 
-              color: intakeStep === 'form' ? '#38bdf8' : '#64748b', 
-              fontSize: '0.8rem', 
-              fontWeight: intakeStep === 'form' ? 700 : 500 
-            }}
-          >
-            2. Multi-Step Form & Plan
-          </span>
-        </div>
-      </div>
-
-      {/* Error Alert */}
-      {errorMsg && (
-        <div style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.4)', padding: '0.75rem 1rem', borderRadius: '8px', color: '#fca5a5', fontSize: '0.85rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <AlertTriangle size={16} />
-          <span>{errorMsg}</span>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* STEP 1A: BUSINESS TYPE SELECTION (NEW STARTUP vs EXISTING BUSINESS EXPANSION) */}
-      {/* ========================================================================= */}
-      {intakeStep === 'type_select' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+        {/* Top Header bar with Logo & Step Indicators */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '1.25rem', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.85rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+            <Logo variant="compact" height={36} />
             <div>
-              <h3 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.3px', margin: '0 0 0.35rem 0' }}>
-                Select Business Type
-              </h3>
-              <p style={{ fontSize: '0.9rem', color: '#94a3b8', margin: 0, lineHeight: 1.5 }}>
-                Choose whether you are launching a new enterprise or scaling an existing operation.
-              </p>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.3px', margin: 0 }}>
+                AI Business Plan Generator
+              </h2>
             </div>
-
-            <button
-              type="button"
-              onClick={handleManualSwitchWithContext}
-              className="ghost-manual-btn"
-              title="Skip AI assistant and jump straight to the multi-step form"
-            >
-              <FileEdit size={15} style={{ color: '#94a3b8' }} />
-              <span>Fill Form Manually</span>
-            </button>
           </div>
 
-          {/* 2-Column Selection Cards */}
-          <div 
-            style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
-              gap: '1.5rem', 
-              marginTop: '0.25rem' 
-            }}
-          >
-            {/* Card 1: New Startup */}
+          {/* Stepper Indicator */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {/* Step 1: Business Type */}
             <div
-              role="button"
-              tabIndex={0}
-              onClick={handleSelectStartup}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelectStartup(); } }}
-              className="wizard-card-startup"
+              style={{
+                background: (intakeStep === 'type_select' || intakeStep === 'expansion_select')
+                  ? 'linear-gradient(135deg, #0ea5e9, #3b82f6)'
+                  : 'rgba(56, 189, 248, 0.15)',
+                color: (intakeStep === 'type_select' || intakeStep === 'expansion_select') ? '#ffffff' : '#38bdf8',
+                padding: '0.35rem 0.85rem',
+                borderRadius: '24px',
+                fontWeight: 700,
+                fontSize: '0.78rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem'
+              }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1.25rem' }}>
-                <div style={{ maxWidth: '240px' }}>
-                  <h4 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.5rem', letterSpacing: '-0.3px' }}>
-                    New Startup
-                  </h4>
-                  <p style={{ fontSize: '0.86rem', color: '#94a3b8', lineHeight: 1.5, margin: 0 }}>
-                    Turn your business idea into a clear, professional plan and take the first step toward launching your business.
-                  </p>
-                </div>
-
-                {/* 3D Isometric Glowing Blue Neon Rocket Illustration */}
-                <div 
-                  style={{ 
-                    width: '100px', 
-                    height: '100px', 
-                    flexShrink: 0, 
-                    position: 'relative',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <div 
-                    style={{
-                      position: 'absolute',
-                      width: '75px',
-                      height: '75px',
-                      borderRadius: '50%',
-                      background: 'radial-gradient(circle, rgba(6, 182, 212, 0.35) 0%, rgba(59, 130, 246, 0.15) 50%, transparent 75%)',
-                      filter: 'blur(14px)',
-                      zIndex: 0,
-                    }}
-                  />
-                  <svg width="90" height="90" viewBox="0 0 100 100" fill="none" style={{ position: 'relative', zIndex: 1, filter: 'drop-shadow(0 0 10px rgba(6, 182, 212, 0.65))' }}>
-                    <defs>
-                      <linearGradient id="rocketBodyGrad" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#38bdf8" />
-                        <stop offset="60%" stopColor="#0284c7" />
-                        <stop offset="100%" stopColor="#0369a1" />
-                      </linearGradient>
-                      <linearGradient id="neonGlowGrad" x1="0" y1="1" x2="1" y2="0">
-                        <stop offset="0%" stopColor="#06b6d4" />
-                        <stop offset="100%" stopColor="#38bdf8" />
-                      </linearGradient>
-                    </defs>
-                    {/* Isometric Launch Blueprint Floor Plane */}
-                    <polygon points="50,75 85,60 50,45 15,60" fill="rgba(6, 182, 212, 0.08)" stroke="#06b6d4" strokeWidth="1" strokeDasharray="3 3" />
-                    {/* Rocket Exhaust Trail */}
-                    <polygon points="46,55 54,55 51,78 49,78" fill="url(#neonGlowGrad)" opacity="0.8" />
-                    <circle cx="50" cy="80" r="4" fill="#38bdf8" opacity="0.6" />
-                    {/* Left & Right Fins */}
-                    <path d="M36,46 L26,58 L38,55 Z" fill="#0284c7" stroke="#38bdf8" strokeWidth="1.5" />
-                    <path d="M64,46 L74,58 L62,55 Z" fill="#0284c7" stroke="#38bdf8" strokeWidth="1.5" />
-                    {/* Main Rocket Fuselage */}
-                    <path d="M50,15 C44,28 42,42 42,54 L58,54 C58,42 56,28 50,15 Z" fill="url(#rocketBodyGrad)" stroke="#38bdf8" strokeWidth="2" />
-                    {/* Porthole */}
-                    <circle cx="50" cy="34" r="5" fill="#0c4a6e" stroke="#22d3ee" strokeWidth="1.8" />
-                    <circle cx="50" cy="34" r="2.5" fill="#38bdf8" />
-                  </svg>
-                </div>
-              </div>
-
-              <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#22d3ee', fontSize: '0.88rem', fontWeight: 700, paddingTop: '0.5rem' }}>
-                <span>Select New Startup</span>
-                <ArrowRight size={16} />
-              </div>
+              <span>1. Business Type</span>
             </div>
 
-            {/* Card 2: Existing Business Expansion */}
+            {/* Step 2: Conversational Intake */}
             <div
-              role="button"
-              tabIndex={0}
-              onClick={handleSelectExpansion}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelectExpansion(); } }}
-              className="wizard-card-expansion"
+              style={{
+                background: intakeStep === 'chat'
+                  ? 'linear-gradient(135deg, #0ea5e9, #3b82f6)'
+                  : (intakeStep === 'form' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255, 255, 255, 0.05)'),
+                color: intakeStep === 'chat' ? '#ffffff' : (intakeStep === 'form' ? '#38bdf8' : 'var(--text-muted)'),
+                padding: '0.35rem 0.85rem',
+                borderRadius: '24px',
+                fontWeight: 700,
+                fontSize: '0.78rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem'
+              }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1.25rem' }}>
-                <div style={{ maxWidth: '240px' }}>
-                  <h4 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.5rem', letterSpacing: '-0.3px' }}>
-                    Existing Business Expansion
-                  </h4>
-                  <p style={{ fontSize: '0.86rem', color: '#94a3b8', lineHeight: 1.5, margin: 0 }}>
-                    Plan your next stage of growth, from opening a new location to introducing new products or services.
-                  </p>
-                </div>
+              <Sparkles size={13} />
+              <span>2. AI Conversation</span>
+            </div>
 
-                {/* 3D Isometric Glowing Purple Building Blocks & Trending Arrow */}
-                <div 
-                  style={{ 
-                    width: '100px', 
-                    height: '100px', 
-                    flexShrink: 0, 
-                    position: 'relative',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <div 
-                    style={{
-                      position: 'absolute',
-                      width: '75px',
-                      height: '75px',
-                      borderRadius: '50%',
-                      background: 'radial-gradient(circle, rgba(168, 85, 247, 0.35) 0%, rgba(217, 70, 239, 0.15) 50%, transparent 75%)',
-                      filter: 'blur(14px)',
-                      zIndex: 0,
-                    }}
-                  />
-                  <svg width="90" height="90" viewBox="0 0 100 100" fill="none" style={{ position: 'relative', zIndex: 1, filter: 'drop-shadow(0 0 10px rgba(168, 85, 247, 0.65))' }}>
-                    <defs>
-                      <linearGradient id="cubeTopGrad" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#c084fc" />
-                        <stop offset="100%" stopColor="#9333ea" />
-                      </linearGradient>
-                      <linearGradient id="cubeLeftGrad" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#7e22ce" />
-                        <stop offset="100%" stopColor="#581c87" />
-                      </linearGradient>
-                      <linearGradient id="cubeRightGrad" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#9333ea" />
-                        <stop offset="100%" stopColor="#6b21a8" />
-                      </linearGradient>
-                    </defs>
-                    {/* Isometric Cube 1 (Low) */}
-                    <g transform="translate(18, 54)">
-                      <polygon points="12,0 24,6 12,12 0,6" fill="url(#cubeTopGrad)" stroke="#c084fc" strokeWidth="1" />
-                      <polygon points="0,6 12,12 12,22 0,16" fill="url(#cubeLeftGrad)" stroke="#c084fc" strokeWidth="1" />
-                      <polygon points="12,12 24,6 24,16 12,22" fill="url(#cubeRightGrad)" stroke="#c084fc" strokeWidth="1" />
-                    </g>
-                    {/* Isometric Cube 2 (Mid) */}
-                    <g transform="translate(38, 42)">
-                      <polygon points="12,0 24,6 12,12 0,6" fill="url(#cubeTopGrad)" stroke="#c084fc" strokeWidth="1" />
-                      <polygon points="0,6 12,12 12,34 0,28" fill="url(#cubeLeftGrad)" stroke="#c084fc" strokeWidth="1" />
-                      <polygon points="12,12 24,6 24,28 12,34" fill="url(#cubeRightGrad)" stroke="#c084fc" strokeWidth="1" />
-                    </g>
-                    {/* Isometric Cube 3 (High) */}
-                    <g transform="translate(58, 30)">
-                      <polygon points="12,0 24,6 12,12 0,6" fill="url(#cubeTopGrad)" stroke="#c084fc" strokeWidth="1" />
-                      <polygon points="0,6 12,12 12,46 0,40" fill="url(#cubeLeftGrad)" stroke="#c084fc" strokeWidth="1" />
-                      <polygon points="12,12 24,6 24,40 12,46" fill="url(#cubeRightGrad)" stroke="#c084fc" strokeWidth="1" />
-                    </g>
-                    {/* Upward Trending Neon Magenta/Purple Arrow */}
-                    <path d="M22,50 Q48,32 72,16" stroke="#f472b6" strokeWidth="3" strokeLinecap="round" />
-                    <polygon points="78,13 65,14 74,23" fill="#f472b6" />
-                  </svg>
-                </div>
-              </div>
-
-              <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#c084fc', fontSize: '0.88rem', fontWeight: 700, paddingTop: '0.5rem' }}>
-                <span>Select Expansion Path</span>
-                <ArrowRight size={16} />
-              </div>
+            {/* Step 3: Review Form */}
+            <div
+              style={{
+                background: intakeStep === 'form'
+                  ? 'linear-gradient(135deg, #0ea5e9, #3b82f6)'
+                  : 'rgba(255, 255, 255, 0.05)',
+                color: intakeStep === 'form' ? '#ffffff' : 'var(--text-muted)',
+                padding: '0.35rem 0.85rem',
+                borderRadius: '24px',
+                fontWeight: 700,
+                fontSize: '0.78rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem'
+              }}
+            >
+              <span>3. Review & Plan</span>
             </div>
           </div>
         </div>
-      )}
 
-      {/* ========================================================================= */}
-      {/* STEP 1B: EXPANSION SUB-TYPE SELECTION (BRANCH vs NEW PRODUCT LINE) */}
-      {/* ========================================================================= */}
-      {intakeStep === 'expansion_select' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <button
-                type="button"
-                onClick={handleBack}
-                className="btn btn-secondary"
-                style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-              >
-                <ArrowLeft size={14} /> Back
-              </button>
-              <div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.2px' }}>
-                  Choose Expansion Strategy
-                </h3>
-                <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.15rem' }}>
-                  Select the expansion model for your existing enterprise.
-                </p>
-              </div>
+        {/* Global Error Banner */}
+        {chatError && (
+          <div style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.4)', padding: '0.75rem 1rem', borderRadius: '10px', color: '#fca5a5', fontSize: '0.85rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <AlertTriangle size={16} />
+              <span>{chatError}</span>
             </div>
-
             <button
               type="button"
               onClick={handleManualSwitchWithContext}
               className="btn btn-secondary"
-              style={{ fontSize: '0.75rem', padding: '0.4rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              style={{ fontSize: '0.75rem', padding: '0.3rem 0.7rem' }}
             >
-              <FileEdit size={14} />
-              <span>Fill Form Manually</span>
+              Skip to Form
             </button>
           </div>
+        )}
 
-          <div 
-            className="grid-2" 
-            style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
-              gap: '1.25rem', 
-              marginTop: '0.5rem' 
-            }}
-          >
-            {/* Expansion Card 1: Expand / Open a New Branch */}
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => handleSelectExpansionGoal('Open New Branch')}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelectExpansionGoal('Open New Branch'); } }}
-              style={{
-                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(129, 140, 248, 0.08))',
-                border: '1px solid rgba(129, 140, 248, 0.35)',
-                borderRadius: '14px',
-                padding: '1.75rem 1.5rem',
-                cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.9rem',
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                outline: 'none',
-                position: 'relative'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-3px)';
-                e.currentTarget.style.borderColor = '#818cf8';
-                e.currentTarget.style.boxShadow = '0 10px 28px rgba(99, 102, 241, 0.25)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.35)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = '#818cf8';
-                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(129, 140, 248, 0.3)';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.35)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              <div 
-                style={{ 
-                  width: '52px', 
-                  height: '52px', 
-                  borderRadius: '12px', 
-                  background: 'linear-gradient(135deg, #6366f1, #818cf8)', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  color: '#ffffff',
-                  boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)'
-                }}
-              >
-                <Building2 size={26} />
-              </div>
-
+        {/* ========================================================================= */}
+        {/* STEP 1A: BUSINESS TYPE SELECTION (NEW STARTUP vs EXISTING EXPANSION)       */}
+        {/* ========================================================================= */}
+        {intakeStep === 'type_select' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', animation: 'fadeIn 0.2s ease-in-out' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
-                <h4 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.35rem' }}>
-                  Expand / Open a New Branch
-                </h4>
-                <p style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.4, margin: 0 }}>
-                  Set up an additional physical location or branch.
+                <h3 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.3px', margin: '0 0 0.35rem 0' }}>
+                  Select Business Type
+                </h3>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                  Choose whether you are launching a new enterprise or expanding an existing business.
                 </p>
               </div>
 
-              <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#818cf8', fontSize: '0.82rem', fontWeight: 700 }}>
-                <span>Select Branch Expansion</span>
-                <ArrowRight size={15} />
-              </div>
+              <button
+                type="button"
+                onClick={handleManualSwitchWithContext}
+                className="ghost-manual-btn"
+                title="Skip conversational intake and fill form manually"
+              >
+                <FileEdit size={15} style={{ color: 'var(--text-secondary)' }} />
+                <span>Fill Form Manually</span>
+              </button>
             </div>
 
-            {/* Expansion Card 2: Introduce a New Product / Service Line */}
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => handleSelectExpansionGoal('Introduce New Product')}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelectExpansionGoal('Introduce New Product'); } }}
-              style={{
-                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(234, 88, 12, 0.08))',
-                border: '1px solid rgba(245, 158, 11, 0.35)',
-                borderRadius: '14px',
-                padding: '1.75rem 1.5rem',
-                cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.9rem',
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                outline: 'none',
-                position: 'relative'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-3px)';
-                e.currentTarget.style.borderColor = '#fbbf24';
-                e.currentTarget.style.boxShadow = '0 10px 28px rgba(245, 158, 11, 0.25)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.35)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = '#fbbf24';
-                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245, 158, 11, 0.3)';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.35)';
-                e.currentTarget.style.boxShadow = 'none';
+            {/* 2-Column Selection Cards */}
+            <div 
+              style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
+                gap: '1.5rem', 
+                marginTop: '0.25rem' 
               }}
             >
-              <div 
-                style={{ 
-                  width: '52px', 
-                  height: '52px', 
-                  borderRadius: '12px', 
-                  background: 'linear-gradient(135deg, #f59e0b, #ea580c)', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  color: '#ffffff',
-                  boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)'
-                }}
+              {/* Option A: New Startup */}
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={handleSelectStartup}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelectStartup(); } }}
+                className="wizard-card-startup"
               >
-                <Layers size={26} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1.25rem' }}>
+                  <div style={{ maxWidth: '240px' }}>
+                    <h4 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.5rem', letterSpacing: '-0.3px' }}>
+                      Start a New Business
+                    </h4>
+                    <p style={{ fontSize: '0.86rem', color: '#94a3b8', lineHeight: 1.5, margin: 0 }}>
+                      Turn your business idea into a validated plan. We'll guide you through capital, location, products, and feasibility.
+                    </p>
+                  </div>
+
+                  {/* Rocket Icon Graphic */}
+                  <div 
+                    style={{ 
+                      width: '84px', 
+                      height: '84px', 
+                      flexShrink: 0, 
+                      borderRadius: '16px',
+                      background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(59, 130, 246, 0.15))',
+                      border: '1px solid rgba(6, 182, 212, 0.4)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#38bdf8',
+                      boxShadow: '0 0 20px rgba(6, 182, 212, 0.3)'
+                    }}
+                  >
+                    <Rocket size={42} strokeWidth={2} />
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#22d3ee', fontSize: '0.88rem', fontWeight: 700, paddingTop: '1rem' }}>
+                  <span>Start New Business Conversation</span>
+                  <ArrowRight size={16} />
+                </div>
               </div>
 
-              <div>
-                <h4 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.35rem' }}>
-                  Introduce a New Product / Service Line
-                </h4>
-                <p style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.4, margin: 0 }}>
-                  Add new inventory, offerings, or service lines.
-                </p>
-              </div>
+              {/* Option B: Existing Business Expansion */}
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={handleSelectExpansion}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelectExpansion(); } }}
+                className="wizard-card-expansion"
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1.25rem' }}>
+                  <div style={{ maxWidth: '240px' }}>
+                    <h4 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.5rem', letterSpacing: '-0.3px' }}>
+                      Grow an Existing Business
+                    </h4>
+                    <p style={{ fontSize: '0.86rem', color: '#94a3b8', lineHeight: 1.5, margin: 0 }}>
+                      Plan strategic growth for an active enterprise — from opening a new location to introducing new products or services.
+                    </p>
+                  </div>
 
-              <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#fbbf24', fontSize: '0.82rem', fontWeight: 700 }}>
-                <span>Select Product Expansion</span>
-                <ArrowRight size={15} />
+                  {/* Growth Building Icon Graphic */}
+                  <div 
+                    style={{ 
+                      width: '84px', 
+                      height: '84px', 
+                      flexShrink: 0, 
+                      borderRadius: '16px',
+                      background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(217, 70, 239, 0.15))',
+                      border: '1px solid rgba(168, 85, 247, 0.4)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#c084fc',
+                      boxShadow: '0 0 20px rgba(168, 85, 247, 0.3)'
+                    }}
+                  >
+                    <TrendingUp size={42} strokeWidth={2} />
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#c084fc', fontSize: '0.88rem', fontWeight: 700, paddingTop: '1rem' }}>
+                  <span>Select Growth Path</span>
+                  <ArrowRight size={16} />
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ========================================================================= */}
-      {/* STEP 2: DESCRIBE BUSINESS IDEA (FULL CLEAN PAGE) */}
-      {/* ========================================================================= */}
-      {(intakeStep === 'describe' || intakeStep === 'form') && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem', animation: 'fadeIn 0.2s ease-in-out' }}>
-          
-          {/* Top navigation row: Back button & Stage badge */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        {/* ========================================================================= */}
+        {/* STEP 1B: EXPANSION SUB-TYPE SELECTION (BRANCH vs NEW PRODUCT LINE)         */}
+        {/* ========================================================================= */}
+        {intakeStep === 'expansion_select' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', animation: 'fadeIn 0.2s ease-in-out' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="btn btn-secondary"
+                  style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  <ArrowLeft size={14} /> Back
+                </button>
+                <div>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.2px', margin: 0 }}>
+                    Choose Expansion Strategy
+                  </h3>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0 0' }}>
+                    Select the growth path for your existing business enterprise.
+                  </p>
+                </div>
+              </div>
+
               <button
                 type="button"
-                onClick={handleBack}
+                onClick={handleManualSwitchWithContext}
                 className="btn btn-secondary"
-                style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-                title="Return to previous selection"
+                style={{ fontSize: '0.75rem', padding: '0.4rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               >
-                <ArrowLeft size={14} /> Back
+                <FileEdit size={14} />
+                <span>Fill Form Manually</span>
               </button>
+            </div>
 
-              {/* Status Badge */}
-              {selectedStage === 'New' ? (
+            <div 
+              style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+                gap: '1.25rem', 
+                marginTop: '0.5rem' 
+              }}
+            >
+              {/* Expansion Option 1: Expand / Open a New Branch */}
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => handleSelectExpansionGoal('Open New Branch')}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelectExpansionGoal('Open New Branch'); } }}
+                style={{
+                  background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(129, 140, 248, 0.08))',
+                  border: '1px solid rgba(129, 140, 248, 0.35)',
+                  borderRadius: '14px',
+                  padding: '1.75rem 1.5rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.9rem',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  outline: 'none'
+                }}
+              >
+                <div 
+                  style={{ 
+                    width: '52px', 
+                    height: '52px', 
+                    borderRadius: '12px', 
+                    background: 'linear-gradient(135deg, #6366f1, #818cf8)', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    color: '#ffffff',
+                    boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)'
+                  }}
+                >
+                  <Building2 size={26} />
+                </div>
+
+                <div>
+                  <h4 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.35rem' }}>
+                    Expand / Open a New Branch
+                  </h4>
+                  <p style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.4, margin: 0 }}>
+                    Set up an additional physical location, store, or branch in another area.
+                  </p>
+                </div>
+
+                <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#818cf8', fontSize: '0.82rem', fontWeight: 700 }}>
+                  <span>Start Branch Conversation</span>
+                  <ArrowRight size={15} />
+                </div>
+              </div>
+
+              {/* Expansion Option 2: Introduce a New Product / Service Line */}
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => handleSelectExpansionGoal('Introduce New Product')}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelectExpansionGoal('Introduce New Product'); } }}
+                style={{
+                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(234, 88, 12, 0.08))',
+                  border: '1px solid rgba(245, 158, 11, 0.35)',
+                  borderRadius: '14px',
+                  padding: '1.75rem 1.5rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.9rem',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  outline: 'none'
+                }}
+              >
+                <div 
+                  style={{ 
+                    width: '52px', 
+                    height: '52px', 
+                    borderRadius: '12px', 
+                    background: 'linear-gradient(135deg, #f59e0b, #ea580c)', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    color: '#ffffff',
+                    boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)'
+                  }}
+                >
+                  <Layers size={26} />
+                </div>
+
+                <div>
+                  <h4 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.35rem' }}>
+                    Introduce a New Product / Service Line
+                  </h4>
+                  <p style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.4, margin: 0 }}>
+                    Add new inventory, offerings, or service lines within your existing establishment.
+                  </p>
+                </div>
+
+                <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#fbbf24', fontSize: '0.82rem', fontWeight: 700 }}>
+                  <span>Start Product Line Conversation</span>
+                  <ArrowRight size={15} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* STEP 2: FREE-STYLE CONVERSATIONAL INTAKE INTERFACE                        */}
+        {/* ========================================================================= */}
+        {intakeStep === 'chat' && (
+          <div className="conversational-intake-container">
+
+            {/* Navigation & Context Row */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="btn btn-secondary"
+                  style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  <ArrowLeft size={14} /> Back
+                </button>
+
+                {/* Stage Badge */}
+                {selectedStage === 'New' ? (
+                  <span 
+                    style={{ 
+                      background: 'rgba(56, 189, 248, 0.15)', 
+                      color: '#38bdf8', 
+                      border: '1px solid rgba(56, 189, 248, 0.35)', 
+                      padding: '0.25rem 0.75rem', 
+                      borderRadius: '20px', 
+                      fontSize: '0.75rem', 
+                      fontWeight: 700, 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: '0.35rem' 
+                    }}
+                  >
+                    <Rocket size={13} /> New Startup
+                  </span>
+                ) : selectedGoal === 'Open New Branch' ? (
+                  <span 
+                    style={{ 
+                      background: 'rgba(129, 140, 248, 0.15)', 
+                      color: '#818cf8', 
+                      border: '1px solid rgba(129, 140, 248, 0.35)', 
+                      padding: '0.25rem 0.75rem', 
+                      borderRadius: '20px', 
+                      fontSize: '0.75rem', 
+                      fontWeight: 700, 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: '0.35rem' 
+                    }}
+                  >
+                    <Building2 size={13} /> Branch Expansion
+                  </span>
+                ) : (
+                  <span 
+                    style={{ 
+                      background: 'rgba(245, 158, 11, 0.15)', 
+                      color: '#fbbf24', 
+                      border: '1px solid rgba(245, 158, 11, 0.35)', 
+                      padding: '0.25rem 0.75rem', 
+                      borderRadius: '20px', 
+                      fontSize: '0.75rem', 
+                      fontWeight: 700, 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: '0.35rem' 
+                    }}
+                  >
+                    <Layers size={13} /> Product Line Expansion
+                  </span>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <button
+                  type="button"
+                  onClick={handleManualSwitchWithContext}
+                  className="btn btn-secondary"
+                  style={{ fontSize: '0.78rem', padding: '0.45rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  <FileEdit size={14} />
+                  <span>Fill Form Manually</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleContinueToForm}
+                  className="btn btn-primary"
+                  style={{ 
+                    fontSize: '0.82rem', 
+                    padding: '0.5rem 1.15rem', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.45rem',
+                    fontWeight: 700,
+                    boxShadow: '0 4px 14px rgba(56, 189, 248, 0.35)'
+                  }}
+                >
+                  <span>Continue to Form</span>
+                  {extractedCount > 0 && (
+                    <span style={{ background: 'rgba(255, 255, 255, 0.25)', padding: '0.1rem 0.45rem', borderRadius: '10px', fontSize: '0.72rem' }}>
+                      {extractedCount}
+                    </span>
+                  )}
+                  <ArrowRight size={15} />
+                </button>
+              </div>
+            </div>
+
+            {/* 2-Column Chat Layout: Left Chat Stream, Right Live Extracted Profile */}
+            <div className="chat-layout-grid">
+
+              {/* LEFT: Main Chat Card */}
+              <div className="chat-main-card">
+                {/* Chat Stream Messages Viewport */}
+                <div className="chat-stream-viewport">
+                  {chatMessages.map((msg) => (
+                    <div 
+                      key={msg.id} 
+                      className={`chat-message-row ${msg.role}`}
+                    >
+                      <div className={`chat-avatar ${msg.role}`}>
+                        {msg.role === 'assistant' ? <Bot size={18} /> : <User size={18} />}
+                      </div>
+
+                      <div className={`chat-bubble ${msg.role}`}>
+                        {/* Message Content formatted with linebreaks and bold */}
+                        <div style={{ whiteSpace: 'pre-wrap' }}>
+                          {msg.content.split('\n').map((line, idx) => (
+                            <p key={idx} style={{ margin: '0 0 0.35rem 0', lineHeight: 1.55 }}>
+                              {line.split(/(\*\*.*?\*\*|\*.*?\*)/g).map((part, pIdx) => {
+                                if (part.startsWith('**') && part.endsWith('**')) {
+                                  return <strong key={pIdx} style={{ color: msg.role === 'assistant' ? 'var(--text-primary)' : '#ffffff' }}>{part.slice(2, -2)}</strong>;
+                                }
+                                if (part.startsWith('*') && part.endsWith('*')) {
+                                  return <em key={pIdx} style={{ opacity: 0.85 }}>{part.slice(1, -1)}</em>;
+                                }
+                                return part;
+                              })}
+                            </p>
+                          ))}
+                        </div>
+
+                        <div className="chat-timestamp">
+                          {msg.timestamp}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Typing Indicator */}
+                  {isProcessingChat && (
+                    <div className="chat-message-row assistant">
+                      <div className="chat-avatar assistant">
+                        <Bot size={18} />
+                      </div>
+                      <div className="chat-bubble assistant chat-typing-bubble">
+                        <span className="chat-dot" />
+                        <span className="chat-dot" />
+                        <span className="chat-dot" />
+                        <span style={{ fontSize: '0.78rem', color: '#94a3b8', marginLeft: '0.35rem' }}>Extracting details...</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Chat Input Bar */}
+                <div className="chat-input-bar">
+                  {/* Quick Suggestion Chips */}
+                  <div className="chat-suggestions-container">
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem', whiteSpace: 'nowrap' }}>
+                      <Sparkles size={11} style={{ color: '#38bdf8' }} /> Examples:
+                    </span>
+                    {getSuggestionPrompts().map((promptText, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleSendMessage(promptText)}
+                        className="chat-suggestion-chip"
+                        disabled={isProcessingChat}
+                      >
+                        {promptText}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Textarea Input & Send Button */}
+                  <div className="chat-input-row">
+                    <textarea
+                      rows={2}
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder={
+                        selectedStage === 'New'
+                          ? "E.g.: I want to open a grocery shop in Homagama with LKR 800,000 capital and 3 years experience..."
+                          : "E.g.: We run Royal Garments in Colombo. We want to open a branch in Gampaha with 1.5 million..."
+                      }
+                      className="chat-textarea-field"
+                      disabled={isProcessingChat}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => handleSendMessage()}
+                      disabled={!chatInput.trim() || isProcessingChat}
+                      className="chat-send-action-btn"
+                      title="Send message (Enter)"
+                    >
+                      {isProcessingChat ? (
+                        <Loader2 size={16} className="spin" />
+                      ) : (
+                        <Send size={16} />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* RIGHT: Live Profile Extracted Snapshot */}
+              <div className="live-profile-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <ShieldCheck size={18} style={{ color: '#38bdf8' }} />
+                    <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                      Extracted Profile
+                    </h4>
+                  </div>
+                  <span 
+                    style={{ 
+                      fontSize: '0.72rem', 
+                      background: 'rgba(56, 189, 248, 0.15)', 
+                      color: '#38bdf8', 
+                      padding: '0.15rem 0.55rem', 
+                      borderRadius: '12px',
+                      fontWeight: 700
+                    }}
+                  >
+                    {extractedCount} Captured
+                  </span>
+                </div>
+
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.45 }}>
+                  Information parsed from your conversation. Unmentioned fields remain blank and can be completed on the form.
+                </p>
+
+                {/* Captured Fields List */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, overflowY: 'auto' }}>
+                  
+                  {/* Category */}
+                  <div className={`live-fact-item ${prefilledFormData?.business_category ? 'extracted' : 'missing'}`}>
+                    <span className="live-fact-label">Category</span>
+                    <span className="live-fact-value">
+                      {prefilledFormData?.business_category || 'Not specified'}
+                    </span>
+                  </div>
+
+                  {/* District & Province */}
+                  <div className={`live-fact-item ${prefilledFormData?.district ? 'extracted' : 'missing'}`}>
+                    <span className="live-fact-label">District</span>
+                    <span className="live-fact-value">
+                      {prefilledFormData?.district ? `${prefilledFormData.district} (${prefilledFormData.province || 'Western'})` : 'Not specified'}
+                    </span>
+                  </div>
+
+                  {/* Available Capital */}
+                  <div className={`live-fact-item ${prefilledFormData?.available_capital_lkr ? 'extracted' : 'missing'}`}>
+                    <span className="live-fact-label">Available Capital</span>
+                    <span className="live-fact-value">
+                      {prefilledFormData?.available_capital_lkr ? `LKR ${Number(prefilledFormData.available_capital_lkr).toLocaleString()}` : 'Not specified'}
+                    </span>
+                  </div>
+
+                  {/* Monthly Budget */}
+                  <div className={`live-fact-item ${prefilledFormData?.monthly_budget_lkr ? 'extracted' : 'missing'}`}>
+                    <span className="live-fact-label">Monthly Budget</span>
+                    <span className="live-fact-value">
+                      {prefilledFormData?.monthly_budget_lkr ? `LKR ${Number(prefilledFormData.monthly_budget_lkr).toLocaleString()}` : 'Not specified'}
+                    </span>
+                  </div>
+
+                  {/* Daily Customers */}
+                  <div className={`live-fact-item ${prefilledFormData?.expected_customers_per_day ? 'extracted' : 'missing'}`}>
+                    <span className="live-fact-label">Expected Customers</span>
+                    <span className="live-fact-value">
+                      {prefilledFormData?.expected_customers_per_day ? `${prefilledFormData.expected_customers_per_day} / day` : 'Not specified'}
+                    </span>
+                  </div>
+
+                  {/* Average Spend / Price */}
+                  <div className={`live-fact-item ${prefilledFormData?.expected_price_lkr ? 'extracted' : 'missing'}`}>
+                    <span className="live-fact-label">Average Spend</span>
+                    <span className="live-fact-value">
+                      {prefilledFormData?.expected_price_lkr ? `LKR ${Number(prefilledFormData.expected_price_lkr).toLocaleString()}` : 'Not specified'}
+                    </span>
+                  </div>
+
+                  {/* Experience */}
+                  <div className={`live-fact-item ${prefilledFormData?.entrepreneur_experience_years !== '' && prefilledFormData?.entrepreneur_experience_years !== null ? 'extracted' : 'missing'}`}>
+                    <span className="live-fact-label">Experience</span>
+                    <span className="live-fact-value">
+                      {prefilledFormData?.entrepreneur_experience_years !== '' && prefilledFormData?.entrepreneur_experience_years !== null
+                        ? `${prefilledFormData.entrepreneur_experience_years} years`
+                        : 'Not specified'}
+                    </span>
+                  </div>
+
+                  {/* Staff Count */}
+                  <div className={`live-fact-item ${prefilledFormData?.available_staff_count ? 'extracted' : 'missing'}`}>
+                    <span className="live-fact-label">Staff Count</span>
+                    <span className="live-fact-value">
+                      {prefilledFormData?.available_staff_count ? `${prefilledFormData.available_staff_count} members` : 'Not specified'}
+                    </span>
+                  </div>
+
+                  {/* Competition Level */}
+                  <div className={`live-fact-item ${prefilledFormData?.competition_level ? 'extracted' : 'missing'}`}>
+                    <span className="live-fact-label">Competition</span>
+                    <span className="live-fact-value">
+                      {prefilledFormData?.competition_level || 'Not specified'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Primary CTA Button */}
+                <button
+                  type="button"
+                  onClick={handleContinueToForm}
+                  className="btn btn-primary"
+                  style={{
+                    width: '100%',
+                    padding: '0.8rem 1rem',
+                    fontSize: '0.88rem',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    boxShadow: '0 4px 16px rgba(56, 189, 248, 0.4)',
+                    marginTop: 'auto'
+                  }}
+                >
+                  <span>Review Prefilled Form</span>
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      {/* ========================================================================= */}
+      {/* STEP 3: REVIEW & COMPLETE PREFILLED FORM                                  */}
+      {/* ========================================================================= */}
+      {intakeStep === 'form' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', animation: 'fadeIn 0.25s ease-in-out' }}>
+          
+          {/* AI Prefill Notice Banner */}
+          {aiFilledKeys.size > 0 && (
+            <div className="ai-prefill-banner">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <Sparkles size={18} style={{ color: '#38bdf8', flexShrink: 0 }} />
+                <span>
+                  <strong>Information Extracted from Your Conversation:</strong> We've prefilled details from your chat. Fields with the <Sparkles size={11} style={{ display: 'inline', color: '#38bdf8' }} /> <strong>AI-filled</strong> tag were populated automatically. Please review, edit as needed, and complete any remaining required fields.
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIntakeStep('chat')}
+                className="btn btn-secondary"
+                style={{ fontSize: '0.74rem', padding: '0.35rem 0.75rem', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                title="Return to the conversational intake chat"
+              >
+                <Bot size={13} />
+                <span>Back to Chat</span>
+              </button>
+            </div>
+          )}
+
+          {/* Render Specialized Dual Form Dispatcher */}
+          <BusinessForm
+            selectedStage={selectedStage}
+            initialValues={prefilledFormData}
+            aiFilledKeys={aiFilledKeys}
+            onSubmit={onCompleteIntake}
+            loading={loading}
+            onBack={handleBack}
+            onClose={handleBack}
+            onFormChange={handleFormChange}
+            isStageLocked={selectedStage === 'New' && (stageSelectedByUser || prefilledFormData?.business_stage === 'New')}
+            stageBadge={
+              selectedStage === 'New' ? (
                 <span 
                   style={{ 
                     background: 'rgba(56, 189, 248, 0.15)', 
                     color: '#38bdf8', 
                     border: '1px solid rgba(56, 189, 248, 0.35)', 
-                    padding: '0.3rem 0.8rem', 
-                    borderRadius: '20px', 
-                    fontSize: '0.78rem', 
+                    padding: '0.2rem 0.65rem', 
+                    borderRadius: '16px', 
+                    fontSize: '0.75rem', 
                     fontWeight: 700, 
                     display: 'inline-flex', 
                     alignItems: 'center', 
-                    gap: '0.4rem' 
+                    gap: '0.35rem' 
                   }}
                 >
-                  <Rocket size={13} /> New Startup
+                  <Rocket size={12} /> New Startup
                 </span>
               ) : selectedGoal === 'Open New Branch' ? (
                 <span 
@@ -772,16 +1161,16 @@ export default function AiIntakeAssistant({ onCompleteIntake, onSwitchToManual, 
                     background: 'rgba(129, 140, 248, 0.15)', 
                     color: '#818cf8', 
                     border: '1px solid rgba(129, 140, 248, 0.35)', 
-                    padding: '0.3rem 0.8rem', 
-                    borderRadius: '20px', 
-                    fontSize: '0.78rem', 
+                    padding: '0.2rem 0.65rem', 
+                    borderRadius: '16px', 
+                    fontSize: '0.75rem', 
                     fontWeight: 700, 
                     display: 'inline-flex', 
                     alignItems: 'center', 
-                    gap: '0.4rem' 
+                    gap: '0.35rem' 
                   }}
                 >
-                  <Building2 size={13} /> Branch Expansion
+                  <Building2 size={12} /> Branch Expansion
                 </span>
               ) : (
                 <span 
@@ -789,183 +1178,21 @@ export default function AiIntakeAssistant({ onCompleteIntake, onSwitchToManual, 
                     background: 'rgba(245, 158, 11, 0.15)', 
                     color: '#fbbf24', 
                     border: '1px solid rgba(245, 158, 11, 0.35)', 
-                    padding: '0.3rem 0.8rem', 
-                    borderRadius: '20px', 
-                    fontSize: '0.78rem', 
+                    padding: '0.2rem 0.65rem', 
+                    borderRadius: '16px', 
+                    fontSize: '0.75rem', 
                     fontWeight: 700, 
                     display: 'inline-flex', 
                     alignItems: 'center', 
-                    gap: '0.4rem' 
+                    gap: '0.35rem' 
                   }}
                 >
-                  <Layers size={13} /> New Product / Service Line
+                  <Layers size={12} /> New Product Line
                 </span>
-              )}
-            </div>
-
-            <button
-              type="button"
-              onClick={handleManualSwitchWithContext}
-              className="btn btn-secondary"
-              style={{ fontSize: '0.8rem', padding: '0.45rem 0.95rem', display: 'flex', alignItems: 'center', gap: '0.45rem' }}
-            >
-              <FileEdit size={14} />
-              <span>Fill Form Manually</span>
-            </button>
-          </div>
-
-          {/* Heading & Short Professional Description */}
-          <div>
-            <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.3px', margin: '0 0 0.4rem 0' }}>
-              {selectedStage === 'New' 
-                ? 'Describe your business idea'
-                : selectedGoal === 'Open New Branch'
-                ? 'Describe your branch expansion plan'
-                : 'Describe your new product or service expansion'}
-            </h3>
-            <p style={{ fontSize: '0.88rem', color: '#94a3b8', lineHeight: 1.5, margin: 0 }}>
-              {selectedStage === 'New'
-                ? 'Turn your business idea into a clear, professional plan. Describe what you want to offer, your target audience, and your capital — let our AI Business Plan Generator do the heavy lifting.'
-                : 'Detail your existing business operations, target expansion goals, location or product details, and allocated budget.'}
-            </p>
-          </div>
-
-          {/* Business Idea Textarea */}
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <label style={{ fontSize: '0.88rem', color: '#cbd5e1', fontWeight: 700 }}>
-                Business Details:
-              </label>
-              <span style={{ fontSize: '0.75rem', color: inputText.length >= 15 ? '#4ade80' : '#94a3b8' }}>
-                {inputText.length} characters (min 15)
-              </span>
-            </div>
-
-            <textarea
-              rows={7}
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder={
-                selectedStage === 'New'
-                  ? "Describe what your business will offer, target customers, location, starting capital, and your goals..."
-                  : selectedGoal === 'Open New Branch'
-                  ? "Describe your current business operations, your new branch location, available capital, and expected customer footfall..."
-                  : "Describe your existing store, the new products or services you want to launch, target customer base, and allocated budget..."
-              }
-              className="form-control"
-              style={{ 
-                fontSize: '0.92rem', 
-                lineHeight: '1.65', 
-                padding: '1.15rem', 
-                borderRadius: '12px',
-                minHeight: '170px'
-              }}
-            />
-          </div>
-
-          {/* Action Row: Fill Form Manually & Continue */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <button
-              type="button"
-              onClick={handleManualSwitchWithContext}
-              className="btn btn-secondary"
-              style={{ fontSize: '0.85rem', padding: '0.65rem 1.15rem', display: 'flex', alignItems: 'center', gap: '0.45rem' }}
-            >
-              <FileEdit size={15} />
-              <span>Fill Form Manually</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleExtractAndReview}
-              disabled={extracting || !inputText.trim() || inputText.trim().length < 15}
-              className="btn btn-primary"
-              style={{ padding: '0.85rem 2.2rem', fontSize: '0.95rem', fontWeight: 700, boxShadow: '0 4px 16px rgba(59, 130, 246, 0.4)', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
-            >
-              {extracting ? (
-                <>
-                  <Loader2 size={16} className="spin" />
-                  <span>Preparing Your Plan...</span>
-                </>
-              ) : (
-                <>
-                  <span>Continue</span>
-                  <ArrowRight size={16} />
-                </>
-              )}
-            </button>
-          </div>
+              )
+            }
+          />
         </div>
-      )}
-
-      </div>
-
-      {intakeStep === 'form' && (
-        <BusinessForm
-          selectedStage={selectedStage}
-          initialValues={prefilledFormData}
-          aiFilledKeys={aiFilledKeys}
-          onSubmit={onCompleteIntake}
-          loading={loading}
-          onBack={handleBack}
-          onClose={handleBack}
-          onFormChange={handleFormChange}
-          isStageLocked={selectedStage === 'New' && (stageSelectedByUser || prefilledFormData?.business_stage === 'New')}
-          stageBadge={
-            selectedStage === 'New' ? (
-              <span 
-                style={{ 
-                  background: 'rgba(56, 189, 248, 0.15)', 
-                  color: '#38bdf8', 
-                  border: '1px solid rgba(56, 189, 248, 0.35)', 
-                  padding: '0.2rem 0.65rem', 
-                  borderRadius: '16px', 
-                  fontSize: '0.75rem', 
-                  fontWeight: 700, 
-                  display: 'inline-flex', 
-                  alignItems: 'center', 
-                  gap: '0.35rem' 
-                }}
-              >
-                <Rocket size={12} /> New Startup
-              </span>
-            ) : selectedGoal === 'Open New Branch' ? (
-              <span 
-                style={{ 
-                  background: 'rgba(129, 140, 248, 0.15)', 
-                  color: '#818cf8', 
-                  border: '1px solid rgba(129, 140, 248, 0.35)', 
-                  padding: '0.2rem 0.65rem', 
-                  borderRadius: '16px', 
-                  fontSize: '0.75rem', 
-                  fontWeight: 700, 
-                  display: 'inline-flex', 
-                  alignItems: 'center', 
-                  gap: '0.35rem' 
-                }}
-              >
-                <Building2 size={12} /> Branch Expansion
-              </span>
-            ) : (
-              <span 
-                style={{ 
-                  background: 'rgba(245, 158, 11, 0.15)', 
-                  color: '#fbbf24', 
-                  border: '1px solid rgba(245, 158, 11, 0.35)', 
-                  padding: '0.2rem 0.65rem', 
-                  borderRadius: '16px', 
-                  fontSize: '0.75rem', 
-                  fontWeight: 700, 
-                  display: 'inline-flex', 
-                  alignItems: 'center', 
-                  gap: '0.35rem' 
-                }}
-              >
-                <Layers size={12} /> New Product Line
-              </span>
-            )
-          }
-        />
       )}
     </>
   );
