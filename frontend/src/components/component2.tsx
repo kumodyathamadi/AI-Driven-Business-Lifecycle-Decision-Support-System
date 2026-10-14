@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './compliance.css';
 
 // ---------------------------------------------------------------------------
 // Types & Data Contracts
@@ -120,6 +121,7 @@ const FACT_DISPLAY_LABELS: Record<string, string> = {
   local_authority: 'Local Authority',
   legal_form: 'Legal Form',
   number_of_employees: 'Number of Employees',
+  employee_band: 'Number of Employees',
   has_physical_premises: 'Physical Premises',
   handles_food: 'Handles Food',
   is_manufacturing: 'Manufacturing Operations',
@@ -243,7 +245,7 @@ function InlineAnswerControl({
         {label}?
       </span>
 
-      {!isSelect ? (
+      {!isSelect && factKey !== 'number_of_employees' && factKey !== 'employee_band' ? (
         <div className="flex items-center gap-1.5">
           <button
             type="button"
@@ -259,14 +261,31 @@ function InlineAnswerControl({
           >
             No
           </button>
+          <button
+            type="button"
+            onClick={() => onAnswer(factKey as keyof BusinessProfileForm, null)}
+            className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-600 font-semibold border border-slate-300 rounded transition-colors"
+          >
+            Not sure
+          </button>
         </div>
+      ) : factKey === 'number_of_employees' || factKey === 'employee_band' ? (
+        <input
+          type="number"
+          min="0"
+          placeholder="Enter number..."
+          onBlur={(e) => {
+            if (e.target.value !== '') onAnswer('number_of_employees', Number(e.target.value));
+          }}
+          className="w-32 border border-amber-300 bg-white rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
+        />
       ) : factKey === 'turnover_band' ? (
         <select
           onChange={(e) => onAnswer('turnover_band', e.target.value)}
           defaultValue=""
           className="border border-amber-300 bg-white rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
         >
-          <option value="" disabled>Select band...</option>
+          <option value="">Not sure (keep unknown)</option>
           <option value="under_1m">Under LKR 1 Million</option>
           <option value="1m_10m">LKR 1M – 10M</option>
           <option value="10m_50m">LKR 10M – 50M</option>
@@ -278,10 +297,34 @@ function InlineAnswerControl({
           defaultValue=""
           className="border border-amber-300 bg-white rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
         >
-          <option value="" disabled>Select legal form...</option>
+          <option value="">Not sure (keep unknown)</option>
           <option value="sole_proprietorship">Sole Proprietorship</option>
           <option value="partnership">Partnership</option>
           <option value="private_limited">Private Limited</option>
+        </select>
+      ) : factKey === 'local_authority' ? (
+        <select
+          onChange={(e) => onAnswer('local_authority', e.target.value || null)}
+          defaultValue=""
+          className="border border-amber-300 bg-white rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
+        >
+          <option value="">Not sure (keep unknown)</option>
+          <option value="Colombo Municipal Council">Colombo Municipal Council</option>
+          <option value="Sri Jayawardenepura Kotte Municipal Council">Kotte Municipal Council</option>
+          <option value="Dehiwala-Mount Lavinia Municipal Council">Dehiwala-Mount Lavinia Municipal Council</option>
+          <option value="Moratuwa Municipal Council">Moratuwa Municipal Council</option>
+        </select>
+      ) : factKey === 'business_type' ? (
+        <select
+          onChange={(e) => onAnswer('business_type', e.target.value || null)}
+          defaultValue=""
+          className="border border-amber-300 bg-white rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
+        >
+          <option value="">Not sure (keep unknown)</option>
+          <option value="food">Food</option>
+          <option value="clothing">Clothing</option>
+          <option value="salon">Salon</option>
+          <option value="vehicle_parts">Vehicle parts</option>
         </select>
       ) : null}
     </div>
@@ -291,11 +334,13 @@ function InlineAnswerControl({
 function ObligationCard({
   obl,
   onAnswerMissingFact,
+  onOpenEvidence,
 }: {
   obl: ObligationResult;
   onAnswerMissingFact: (key: keyof BusinessProfileForm, value: unknown) => void;
+  onOpenEvidence: (obligationId: string) => void;
 }) {
-  const [expanded, setExpanded] = useState(obl.status === 'APPLICABLE' || obl.status === 'UNKNOWN');
+  const [expanded, setExpanded] = useState(false);
   const cfg = STATUS_CONFIG[obl.status] || STATUS_CONFIG.UNKNOWN;
 
   return (
@@ -437,6 +482,15 @@ function ObligationCard({
               </p>
             )}
           </div>
+          <button
+            type="button"
+            onClick={() => onOpenEvidence(obl.obligation_id)}
+            className="w-full rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5 text-left text-xs font-semibold text-blue-800 transition hover:border-blue-300 hover:bg-blue-100"
+          >
+            <i className="fa-solid fa-book-open mr-2" />
+            Open evidence details
+            <i className="fa-solid fa-arrow-right float-right mt-0.5" />
+          </button>
         </div>
       )}
     </div>
@@ -472,6 +526,9 @@ export const RegistrationComplianceDashboard: React.FC = () => {
   const [result, setResult] = useState<ComplianceAnalysisResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeStep, setActiveStep] = useState<'profile' | 'results' | 'evidence'>('profile');
+  const [selectedObligationId, setSelectedObligationId] = useState('');
+  const [resultFilter, setResultFilter] = useState<'all' | ApplicabilityStatus>('all');
 
   const setField = (key: keyof BusinessProfileForm, value: unknown) => {
     setProfile((prev) => ({
@@ -486,6 +543,12 @@ export const RegistrationComplianceDashboard: React.FC = () => {
     try {
       const data = await analyseComplianceAPI(profToAnalyze);
       setResult(data);
+      setSelectedObligationId((current) =>
+        data.obligations.some((obligation) => obligation.obligation_id === current)
+          ? current
+          : data.obligations[0]?.obligation_id || ''
+      );
+      setActiveStep('results');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error evaluating compliance');
     } finally {
@@ -508,48 +571,92 @@ export const RegistrationComplianceDashboard: React.FC = () => {
   };
 
   // Group obligations
-  const applicableList = result?.obligations.filter((o) => o.status === 'APPLICABLE') || [];
   const unknownList = result?.obligations.filter((o) => o.status === 'UNKNOWN') || [];
-  const notApplicableList = result?.obligations.filter((o) => o.status === 'NOT_APPLICABLE') || [];
+  const selectedObligation = result?.obligations.find(
+    (obligation) => obligation.obligation_id === selectedObligationId
+  ) || result?.obligations[0];
+  const profileFactKeys = [
+    'business_type',
+    'legal_form',
+    'local_authority',
+    'number_of_employees',
+    'has_physical_premises',
+    'handles_food',
+    'is_manufacturing',
+    'is_importing',
+    'turnover_band',
+    ...(profile.business_type === 'food' ? ['serves_cooked_food', 'sells_alcohol'] : []),
+    ...(profile.business_type === 'salon' ? ['uses_chemicals_or_cosmetics'] : []),
+    ...(profile.business_type === 'vehicle_parts' ? ['handles_waste_oil_or_batteries'] : []),
+  ];
+  const knownProfileFacts = profileFactKeys.filter((key) => {
+    const value = profile[key as keyof BusinessProfileForm];
+    return value !== null && value !== undefined;
+  }).length;
+  const profileCompleteness = Math.round((knownProfileFacts / profileFactKeys.length) * 100);
+  const followUpFacts = Array.from(
+    new Set(unknownList.flatMap((obligation) => obligation.missing_facts))
+  );
+  const filteredObligations = (result?.obligations || []).filter(
+    (obligation) => resultFilter === 'all' || obligation.status === resultFilter
+  );
 
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-auto bg-slate-100 font-sans">
-      {/* Top Header */}
-      <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-20 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-sm">
-            <i className="fa-solid fa-scale-balanced text-lg" />
-          </div>
-          <div>
-            <h1 className="text-base font-bold text-slate-900">
-              Legal &amp; Regulatory Requirement Identification
-            </h1>
-            <p className="text-xs text-slate-500">
-              Component 2 &mdash; AI-Driven Business Lifecycle Decision Support System &middot;{' '}
-              <span className="font-semibold text-blue-600">Western Province</span>, Sri Lanka
-            </p>
-          </div>
+    <div className="compliance-app min-h-screen flex-1 font-sans">
+      <header className="compliance-header sticky top-0 z-20">
+        <div className="compliance-header-inner">
+          <a className="compliance-brand" href="/" aria-label="Compliance Navigator home">
+            <span className="compliance-brand-mark">C2</span>
+            <span>
+              <strong>Compliance Navigator</strong>
+              <small>Western Province SME registration guidance</small>
+            </span>
+          </a>
+          <nav className="compliance-steps" aria-label="Compliance analysis steps">
+            {([
+              { id: 'profile', label: 'Profile', number: '1' },
+              { id: 'results', label: 'Results', number: '2' },
+              { id: 'evidence', label: 'Evidence', number: '3' },
+            ] as const).map((step) => {
+              const isAvailable = step.id === 'profile' || Boolean(result);
+              return (
+                <button
+                  key={step.id}
+                  type="button"
+                  disabled={!isAvailable}
+                  aria-current={activeStep === step.id ? 'step' : undefined}
+                  onClick={() => isAvailable && setActiveStep(step.id)}
+                  className={`compliance-step ${activeStep === step.id ? 'is-active' : ''}`}
+                >
+                  <span>{step.number} · {step.label}</span>
+                </button>
+              );
+            })}
+          </nav>
         </div>
       </header>
 
-      <main className="flex-1 p-6 max-w-4xl mx-auto w-full space-y-6">
+      <main className="compliance-main">
         {/* Guidance disclaimer banner */}
-        <div className="bg-gradient-to-r from-blue-700 to-indigo-700 rounded-2xl p-4 text-white shadow-md">
+        <div className="compliance-notice">
           <div className="flex items-start gap-3">
-            <i className="fa-solid fa-shield-halved text-blue-200 text-lg mt-0.5" />
+            <i className="fa-solid fa-shield-halved text-lg mt-0.5" />
             <div>
-              <p className="text-sm font-bold tracking-tight">Regulatory Guidance &mdash; Not Legal Advice</p>
-              <p className="text-xs text-blue-100 mt-0.5 leading-relaxed">
+              <p className="text-xs font-semibold tracking-tight">Decision support only, not legal advice.</p>
+              <p className="text-xs mt-0.5 leading-relaxed">
                 Applicability decisions are generated 100% deterministically by a Three-Valued Kleene Logic Rule Engine,
                 never by an LLM. Results provide preliminary guidance for NEW BUSINESS REGISTRATION in Western Province.
-                Verify all statutory permits with the relevant authority.
+                “Not sure” answers remain unknown and are never treated as “No”.
               </p>
             </div>
           </div>
         </div>
 
+        {activeStep === 'profile' && (
+          <div className="compliance-layout">
+            <section className="compliance-panel">
         {/* Form Container */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-5">
+        <div className="compliance-form-card bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-5">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
             <div>
               <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
@@ -885,7 +992,7 @@ export const RegistrationComplianceDashboard: React.FC = () => {
             type="button"
             onClick={() => runAnalysis(profile)}
             disabled={loading}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+            className="compliance-primary-button w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
@@ -895,111 +1002,241 @@ export const RegistrationComplianceDashboard: React.FC = () => {
             ) : (
               <>
                 <i className="fa-solid fa-bolt" />
-                Analyse Compliance
+                Analyze requirements
+                <i className="fa-solid fa-arrow-right ml-1" />
               </>
             )}
           </button>
         </div>
+            </section>
+
+            <aside className="compliance-side-panel">
+              <section className="compliance-side-card">
+                <p className="compliance-eyebrow">Profile completeness</p>
+                <div className="compliance-completeness">
+                  <strong>{profileCompleteness}%</strong>
+                  <span>{profileFactKeys.length - knownProfileFacts} facts unknown</span>
+                </div>
+                <div
+                  className="compliance-progress"
+                  role="progressbar"
+                  aria-label="Profile completeness"
+                  aria-valuenow={profileCompleteness}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                >
+                  <span style={{ width: `${profileCompleteness}%` }} />
+                </div>
+                <p className="compliance-side-copy">
+                  {profileFactKeys.length - knownProfileFacts === 0
+                    ? 'Your profile is complete. Analyze it to see the requirements that may apply.'
+                    : 'Unknown answers are kept as unknown. Adding details can clarify more requirements.'}
+                </p>
+              </section>
+
+              <section className="compliance-side-card">
+                <p className="compliance-eyebrow">How it works</p>
+                <ol className="compliance-how-list">
+                  <li><span>1</span><p>Your profile is checked against the local rulebook.</p></li>
+                  <li><span>2</span><p>Each requirement is marked applicable, unknown, or not applicable.</p></li>
+                  <li><span>3</span><p>Results include their source reference and evidence status.</p></li>
+                </ol>
+              </section>
+            </aside>
+          </div>
+        )}
 
         {/* Error Notification */}
         {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
+          <div className="compliance-error p-4 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
             <i className="fa-solid fa-triangle-exclamation text-red-500" />
             <span>{error}</span>
           </div>
         )}
 
-        {/* Results Section */}
-        {result && (
-          <div className="space-y-6">
-            <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-600">
-              <span className="font-semibold">Evaluation {result.evaluation_id}</span>
-              {' · '}Retrieval: <span className="font-semibold">{result.retrieval_mode}</span>
+        {activeStep === 'results' && result && (
+          <div className="compliance-results-layout">
+            <section className="compliance-results-main">
+              <div className="compliance-result-meta">
+                <div>
+                  <p className="compliance-eyebrow">Analysis results</p>
+                  <h2>Requirements for this business</h2>
+                </div>
+                <span>Evaluation {result.evaluation_id}</span>
+              </div>
+
               {!result.profile_validation.complete && (
-                <p className="mt-1 text-amber-800">
-                  Profile is incomplete. Add: {result.profile_validation.missing_required_fields.join(', ')}.
-                </p>
+                <div className="compliance-incomplete">
+                  <i className="fa-solid fa-circle-info" />
+                  <span>Some profile details are still unknown. You can answer questions on the right or edit the profile.</span>
+                </div>
               )}
-            </div>
 
-            {/* Summary Counters */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-center">
-                <span className="text-2xl font-black text-emerald-800">{result.summary.applicable}</span>
-                <p className="text-xs font-bold text-emerald-700 mt-0.5">Applicable</p>
-              </div>
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
-                <span className="text-2xl font-black text-amber-800">{result.summary.unknown}</span>
-                <p className="text-xs font-bold text-amber-700 mt-0.5">Conditional / Review</p>
-              </div>
-              <div className="bg-slate-100 border border-slate-200 rounded-2xl p-4 text-center">
-                <span className="text-2xl font-black text-slate-700">{result.summary.not_applicable}</span>
-                <p className="text-xs font-bold text-slate-600 mt-0.5">Not Applicable</p>
-              </div>
-            </div>
-
-            {/* Group 1: Applicable Cards */}
-            {applicableList.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-2">
-                  <i className="fa-solid fa-circle-check text-emerald-600" />
-                  Applicable Obligations ({applicableList.length})
-                </h3>
-                <div className="space-y-3">
-                  {applicableList.map((obl) => (
-                    <ObligationCard
-                      key={obl.obligation_id}
-                      obl={obl}
-                      onAnswerMissingFact={handleInlineAnswer}
-                    />
-                  ))}
+              <div className="compliance-summary-grid">
+                <div className="compliance-summary-card applicable">
+                  <strong>{result.summary.applicable}</strong><span>Applicable</span>
+                </div>
+                <div className="compliance-summary-card conditional">
+                  <strong>{result.summary.unknown}</strong><span>Conditional / unknown</span>
+                </div>
+                <div className="compliance-summary-card not-applicable">
+                  <strong>{result.summary.not_applicable}</strong><span>Not applicable</span>
+                </div>
+                <div className="compliance-summary-card total">
+                  <strong>{result.summary.total}</strong><span>Reviewed</span>
                 </div>
               </div>
-            )}
 
-            {/* Group 2: Unknown Cards */}
-            {unknownList.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-800 flex items-center gap-2">
-                  <i className="fa-solid fa-circle-question text-amber-600" />
-                  Conditional &mdash; Missing Facts or Evidence Review ({unknownList.length})
-                </h3>
-                <div className="space-y-3">
-                  {unknownList.map((obl) => (
-                    <ObligationCard
-                      key={obl.obligation_id}
-                      obl={obl}
-                      onAnswerMissingFact={handleInlineAnswer}
-                    />
-                  ))}
-                </div>
+              <div className="compliance-filter-row" aria-label="Filter requirements">
+                {([
+                  { id: 'all', label: 'All', count: result.summary.total },
+                  { id: 'APPLICABLE', label: 'Applicable', count: result.summary.applicable },
+                  { id: 'UNKNOWN', label: 'Unknown', count: result.summary.unknown },
+                  { id: 'NOT_APPLICABLE', label: 'Not applicable', count: result.summary.not_applicable },
+                ] as const).map((filter) => (
+                  <button
+                    key={filter.id}
+                    type="button"
+                    className={`compliance-filter ${resultFilter === filter.id ? 'is-active' : ''}`}
+                    onClick={() => setResultFilter(filter.id)}
+                  >
+                    {filter.label}<span>{filter.count}</span>
+                  </button>
+                ))}
               </div>
-            )}
 
-            {/* Group 3: Not Applicable Cards */}
-            {notApplicableList.length > 0 && (
               <div className="space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-2">
-                  <i className="fa-solid fa-circle-minus text-slate-500" />
-                  Not Applicable ({notApplicableList.length})
-                </h3>
-                <div className="space-y-3">
-                  {notApplicableList.map((obl) => (
-                    <ObligationCard
-                      key={obl.obligation_id}
-                      obl={obl}
-                      onAnswerMissingFact={handleInlineAnswer}
-                    />
-                  ))}
-                </div>
+                {filteredObligations.map((obligation) => (
+                  <ObligationCard
+                    key={obligation.obligation_id}
+                    obl={obligation}
+                    onAnswerMissingFact={handleInlineAnswer}
+                    onOpenEvidence={(id) => {
+                      setSelectedObligationId(id);
+                      setActiveStep('evidence');
+                    }}
+                  />
+                ))}
+                {filteredObligations.length === 0 && (
+                  <div className="compliance-empty-state">No requirements match this filter.</div>
+                )}
               </div>
-            )}
+            </section>
 
-            {/* Persistent Disclaimer */}
-            <div className="p-3 bg-yellow-50/80 border border-yellow-200 rounded-xl text-[11px] text-yellow-900 flex items-center gap-2">
-              <i className="fa-solid fa-scale-balanced text-yellow-600 shrink-0" />
-              <span>{result.disclaimer}</span>
-            </div>
+            <aside className="compliance-side-panel">
+              <section className="compliance-side-card">
+                <p className="compliance-eyebrow">Answers to resolve</p>
+                {followUpFacts.length > 0 ? (
+                  <div className="compliance-followups">
+                    {followUpFacts.map((factKey) => {
+                      const obligationCount = unknownList.filter((obligation) =>
+                        obligation.missing_facts.includes(factKey)
+                      ).length;
+                      return (
+                        <div className="compliance-followup" key={factKey}>
+                          <InlineAnswerControl factKey={factKey} onAnswer={handleInlineAnswer} />
+                          <small>May clarify {obligationCount} {obligationCount === 1 ? 'requirement' : 'requirements'}</small>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="compliance-side-copy">No unanswered facts are currently blocking a decision.</p>
+                )}
+                <p className="compliance-side-copy">Questions are based on missing facts in the rule results. “Not sure” keeps a fact unknown.</p>
+                <button type="button" className="compliance-secondary-button" onClick={() => setActiveStep('profile')}>
+                  <i className="fa-solid fa-arrow-left mr-2" />Edit profile
+                </button>
+              </section>
+            </aside>
+          </div>
+        )}
+
+        {activeStep === 'evidence' && result && selectedObligation && (
+          <div className="compliance-evidence-layout">
+            <section className="compliance-evidence-main">
+              <button type="button" className="compliance-back-link" onClick={() => setActiveStep('results')}>
+                <i className="fa-solid fa-arrow-left mr-2" />Back to results
+              </button>
+              <div className="compliance-evidence-heading">
+                <div>
+                  <p className="compliance-eyebrow">Requirement evidence</p>
+                  <h2>{selectedObligation.title}</h2>
+                </div>
+                <StatusBadge status={selectedObligation.status} />
+              </div>
+
+              <div className="compliance-fact-table">
+                {Object.entries(selectedObligation.triggering_facts).map(([fact, value]) => (
+                  <div key={fact}><span>{FACT_DISPLAY_LABELS[fact] || fact}</span><strong>{String(value)}</strong></div>
+                ))}
+                {selectedObligation.missing_facts.map((fact) => (
+                  <div key={fact}><span>{FACT_DISPLAY_LABELS[fact] || fact}</span><strong className="is-unknown">Unknown</strong></div>
+                ))}
+                {Object.keys(selectedObligation.triggering_facts).length === 0 && selectedObligation.missing_facts.length === 0 && (
+                  <div><span>Evaluation</span><strong>No triggering or missing facts were returned.</strong></div>
+                )}
+              </div>
+
+              <section className="compliance-evidence-section">
+                <p className="compliance-eyebrow">What to do</p>
+                <p>{selectedObligation.action || 'Follow the process confirmed by the relevant authority.'}</p>
+                <p className="compliance-next-action"><strong>Next action:</strong> {selectedObligation.next_action}</p>
+                {selectedObligation.registration_steps.length > 0 && (
+                  <ol>
+                    {selectedObligation.registration_steps.map((step, index) => <li key={index}>{step}</li>)}
+                  </ol>
+                )}
+                {selectedObligation.documents_needed.length > 0 && (
+                  <div className="compliance-documents">
+                    <p className="compliance-eyebrow">Documents noted by the rulebook</p>
+                    <ul>{selectedObligation.documents_needed.map((document, index) => <li key={index}>{document}</li>)}</ul>
+                    {selectedObligation.documents_notice && <small>{selectedObligation.documents_notice}</small>}
+                  </div>
+                )}
+              </section>
+
+              <section className="compliance-quote-card">
+                <div className="compliance-quote-meta">
+                  <span>{selectedObligation.source_id} · {selectedObligation.source_paragraph}</span>
+                  <span className={selectedObligation.has_verified_source ? 'is-verified' : 'is-draft'}>
+                    <i className={`fa-solid ${selectedObligation.has_verified_source ? 'fa-circle-check' : 'fa-triangle-exclamation'} mr-1`} />
+                    {selectedObligation.has_verified_source ? 'Citation verified' : 'Draft · expert review pending'}
+                  </span>
+                </div>
+                {selectedObligation.source_text ? (
+                  <blockquote>“{selectedObligation.source_text}”</blockquote>
+                ) : (
+                  <p className="compliance-side-copy">No matching source excerpt is available in the local corpus.</p>
+                )}
+              </section>
+            </section>
+
+            <aside className="compliance-side-panel">
+              <section className="compliance-side-card">
+                <p className="compliance-eyebrow">Authority</p>
+                <p className="compliance-authority">{selectedObligation.authority || 'Relevant local authority'}</p>
+                <p className="compliance-eyebrow">Status</p>
+                <StatusBadge status={selectedObligation.status} />
+                <p className="compliance-side-copy">
+                  {selectedObligation.has_verified_source
+                    ? 'This evidence is marked as verified in the local source register.'
+                    : 'This source reference is not independently verified. Confirm details with the relevant authority.'}
+                </p>
+                <div className="compliance-source-id">
+                  <span>Obligation</span><strong>{selectedObligation.obligation_id}</strong>
+                  <span>Source reference</span><strong>{selectedObligation.source_id} · {selectedObligation.source_paragraph}</strong>
+                  <span>Rule priority</span><strong>{selectedObligation.priority}</strong>
+                </div>
+              </section>
+            </aside>
+          </div>
+        )}
+
+        {result && (
+          <div className="compliance-disclaimer">
+            <i className="fa-solid fa-scale-balanced" />
+            <span>{result.disclaimer}</span>
           </div>
         )}
       </main>

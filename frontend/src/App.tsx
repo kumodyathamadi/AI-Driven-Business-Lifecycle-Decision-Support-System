@@ -5,7 +5,7 @@ export const App: React.FC = () => {
   const [activeComponent, setActiveComponent] = useState<'comp1' | 'comp2' | 'comp3' | 'comp4'>('comp2');
 
   return (
-    <div className="w-full h-screen overflow-hidden flex bg-slate-100 font-sans">
+    <div className="w-full min-h-screen flex bg-slate-100 font-sans">
       {activeComponent === 'comp2' ? (
         <RegistrationComplianceDashboard />
       ) : (
