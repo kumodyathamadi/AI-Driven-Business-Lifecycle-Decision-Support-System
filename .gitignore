@@ -13,6 +13,8 @@ node_modules/
 # Frontend build
 dist/
 build/
+*.timestamp-*.mjs
+*.timestamp-*
 
 # Database
 *.db
