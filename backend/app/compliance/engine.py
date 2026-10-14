@@ -24,7 +24,10 @@ Three-valued logic
 
 from __future__ import annotations
 
+import json
+import logging
 from typing import Any, Dict, List, Optional, Tuple
+from pathlib import Path
 
 from backend.app.compliance.schemas import (
     ApplicabilityStatus,
@@ -38,6 +41,9 @@ from backend.app.compliance.schemas import (
 from backend.app.compliance.rulebook_loader import get_obligations
 from backend.app.compliance.source_registry import get_source_details
 
+logger = logging.getLogger(__name__)
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+
 
 # ---------------------------------------------------------------------------
 # Scope Guard Configuration
@@ -48,6 +54,8 @@ COVERED_AUTHORITIES = {
     "dehiwala-mount lavinia municipal council",
 }
 COVERED_JURISDICTIONS = {
+    "colombo",
+    "colombo district",
     "western province",
     "sri lanka (national)",
     "national",
@@ -150,6 +158,44 @@ def _eval_legal_form(
     if not is_match:
         return False, None, f"Legal form '{profile.legal_form}' not in {', '.join(allowed_forms)}"
     return True, None, None
+
+
+def _has_verified_quote(rule: ObligationRule) -> bool:
+    quote = rule.evidence.quote.strip()
+    page_number = rule.evidence.page
+    if (
+        rule.reviewer_status != ReviewerStatus.VERIFIED
+        or not quote
+        or page_number is None
+        or any(not exception.confirmed for exception in rule.exceptions)
+    ):
+        return False
+
+    processed_path = (
+        _REPO_ROOT
+        / "data"
+        / "compliance"
+        / "processed"
+        / f"{rule.evidence.source_id}.json"
+    )
+    if not processed_path.is_file():
+        return False
+    try:
+        document = json.loads(processed_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        logger.warning(
+            "Could not verify the configured quote for obligation %s: %s",
+            rule.id,
+            exc,
+        )
+        return False
+
+    pages = document if isinstance(document, list) else document.get("pages", [])
+    return any(
+        page.get("page_number", page.get("page")) == page_number
+        and quote in page.get("text", "")
+        for page in pages
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -328,7 +374,7 @@ def analyze_compliance(profile: BusinessProfile) -> ComplianceAnalysisResponse:
 
         # Build evidence from rulebook (source-grounded, not hallucinated)
         evidence_chunks: List[EvidenceChunk] = []
-        has_verified_quote = bool(rule.evidence.quote and rule.evidence.quote.strip())
+        has_verified_quote = _has_verified_quote(rule)
 
         if rule.evidence.source_id:
             src_info = get_source_details(rule.evidence.source_id)
@@ -359,6 +405,8 @@ def analyze_compliance(profile: BusinessProfile) -> ComplianceAnalysisResponse:
                 reason=reason,
                 trigger_facts=trigger_facts,
                 missing_facts=missing_facts,
+                applicability_conditions=rule.applies_if,
+                exceptions=rule.exceptions,
                 authority=rule.authority,
                 jurisdiction=rule.jurisdiction,
                 required_action=rule.required_action.strip(),

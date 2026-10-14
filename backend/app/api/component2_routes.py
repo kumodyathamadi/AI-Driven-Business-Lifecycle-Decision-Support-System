@@ -12,8 +12,18 @@ from sqlalchemy.orm import Session
 
 from backend.app.compliance.engine import analyze_compliance
 from backend.app.compliance.guidance import build_obligation_output, build_guidance
+from backend.app.compliance.legal_sources import (
+    LegalSourceIngestionResult,
+    LegalSourceInventory,
+    PdfExtractionUnavailable,
+    get_legal_source_inventory,
+    ingest_legal_sources,
+)
 from backend.app.compliance.profile import BusinessContextRequest
-from backend.app.compliance.retrieval import retrieve_evidence
+from backend.app.compliance.retrieval import (
+    retrieve_evidence,
+    retrieve_legal_candidates,
+)
 from backend.app.compliance.rulebook_loader import get_obligations
 from backend.database import get_db
 from backend.models import ComplianceEvaluationRecord
@@ -35,17 +45,24 @@ class Component2EvidenceSource(BaseModel):
     url: Optional[str] = None
     effective_date: Optional[str] = None
     retrieval_score: Optional[float] = None
+    page: Optional[int] = None
     reviewer_status: str
     contains_placeholder: bool
+    verification_status: Optional[str] = None
+    title_is_filename_guess: bool = False
 
 
 class Component2Obligation(BaseModel):
     obligation_id: str
     obligation: str
     title: str
-    classification: Literal["Mandatory", "Conditional", "Not Applicable"]
+    classification: Literal[
+        "Mandatory", "Conditional", "Not Applicable", "Needs Verification"
+    ]
     priority: Literal["high", "review", "none"]
-    status: Literal["APPLICABLE", "UNKNOWN", "NOT_APPLICABLE"]
+    status: Literal[
+        "APPLICABLE", "UNKNOWN", "NOT_APPLICABLE", "NEEDS_VERIFICATION"
+    ]
     authority: str
     jurisdiction: str
     source_reference: Optional[Dict[str, Any]] = None
@@ -55,6 +72,8 @@ class Component2Obligation(BaseModel):
     explanation: str
     action: str
     triggering_facts: Dict[str, Any]
+    applicability_conditions: Dict[str, Any]
+    exceptions: List[Dict[str, Any]]
     missing_facts: List[str]
     required_documents: List[str]
     documents_needed: List[str]
@@ -63,6 +82,7 @@ class Component2Obligation(BaseModel):
     registration_steps: List[str]
     next_action: str
     evidence_source: List[Component2EvidenceSource]
+    verification_status: str
     has_verified_source: bool
 
 
@@ -79,6 +99,8 @@ class Component2EvaluationResponse(BaseModel):
     summary: Dict[str, int]
     obligations: List[Component2Obligation]
     guidance: List[Component2Obligation]
+    source_discovery: List[Component2EvidenceSource] = Field(default_factory=list)
+    source_discovery_mode: str = "lexical_pdf_candidates"
     follow_up_questions: List[Dict[str, Any]]
     retrieval_mode: str
     disclaimer: str = (
@@ -87,6 +109,34 @@ class Component2EvaluationResponse(BaseModel):
         "The current corpus contains draft or placeholder material; verify all "
         "requirements with the responsible Sri Lankan authority."
     )
+
+
+@router.get("/sources", response_model=LegalSourceInventory)
+def list_legal_source_inventory() -> LegalSourceInventory:
+    """List discovered legal PDFs and their extraction/verification state."""
+    try:
+        return get_legal_source_inventory()
+    except (OSError, ValueError) as exc:
+        logger.exception("Could not read Component 2 legal-source inventory")
+        raise HTTPException(
+            status_code=503,
+            detail="The legal-source inventory could not be read.",
+        ) from exc
+
+
+@router.post("/sources/ingest", response_model=LegalSourceIngestionResult)
+def ingest_legal_source_documents() -> LegalSourceIngestionResult:
+    """Ingest PDFs from the configured raw-source directory; originals are read-only."""
+    try:
+        return ingest_legal_sources()
+    except PdfExtractionUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except (OSError, ValueError) as exc:
+        logger.exception("Could not ingest Component 2 legal sources")
+        raise HTTPException(
+            status_code=503,
+            detail="Legal-source ingestion failed; inspect the server log for details.",
+        ) from exc
 
 
 @router.post("/evaluate", response_model=Component2EvaluationResponse)
@@ -121,6 +171,25 @@ def evaluate_compliance(
             retrieved = retrieve_evidence(query, top_k=3)
             retrieval_modes.add(retrieved["mode"])
             evidence_by_obligation[result.id] = retrieved["evidence"]
+
+        discovery_query = " ".join(
+            part
+            for part in (
+                request.business_type,
+                request.sector,
+                request.district,
+                request.province,
+                request.local_authority,
+                " ".join(request.products_services),
+                " ".join(request.activities),
+            )
+            if part
+        )
+        candidate_result = (
+            retrieve_legal_candidates(discovery_query, top_k=5)
+            if discovery_query
+            else {"evidence": []}
+        )
     except FileNotFoundError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except (ImportError, RuntimeError) as exc:
@@ -146,6 +215,23 @@ def evaluate_compliance(
     guidance_outputs = build_guidance(
         analysis.obligations, evidence_by_obligation, documents_by_obligation
     )
+    source_discovery = [
+        {
+            "source_id": item["metadata"]["source_id"],
+            "title": item["metadata"]["source_title"],
+            "authority": item["metadata"]["authority"] or None,
+            "excerpt": item["text"],
+            "url": item["metadata"]["url"] or None,
+            "effective_date": item["metadata"]["effective_date"] or None,
+            "retrieval_score": item["score"],
+            "page": item["metadata"]["page"],
+            "reviewer_status": item["metadata"]["reviewer_status"],
+            "contains_placeholder": item["metadata"]["contains_placeholder"],
+            "verification_status": item["metadata"]["verification_status"],
+            "title_is_filename_guess": item["metadata"]["title_is_filename_guess"],
+        }
+        for item in candidate_result["evidence"]
+    ]
     summary = {
         "total": len(obligation_outputs),
         "applicable": sum(
@@ -158,6 +244,10 @@ def evaluate_compliance(
         ),
         "unknown": sum(
             result["classification"] == "Conditional"
+            for result in obligation_outputs
+        ),
+        "needs_verification": sum(
+            result["classification"] == "Needs Verification"
             for result in obligation_outputs
         ),
     }
@@ -184,6 +274,10 @@ def evaluate_compliance(
         "summary": summary,
         "obligations": obligation_outputs,
         "guidance": guidance_outputs,
+        "source_discovery": source_discovery,
+        "source_discovery_mode": candidate_result.get(
+            "mode", "lexical_pdf_candidates"
+        ),
         "follow_up_questions": generate_follow_up_questions(missing_facts),
         "retrieval_mode": (
             next(iter(retrieval_modes))

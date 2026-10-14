@@ -10,6 +10,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
+from backend.app.compliance.legal_sources import get_legal_source_inventory
 from backend.app.compliance.source_registry import get_source_details
 
 logger = logging.getLogger(__name__)
@@ -84,6 +85,89 @@ def _lexical_search(query: str, top_k: int) -> List[Dict[str, Any]]:
         {"score": score, "text": text, "metadata": metadata}
         for score, text, metadata in ranked[:top_k]
     ]
+
+
+def _legal_pdf_chunks() -> List[Tuple[str, str, Dict[str, Any]]]:
+    """Load page text as unverified discovery evidence, never as obligation rules."""
+    chunks: List[Tuple[str, str, Dict[str, Any]]] = []
+    inventory = get_legal_source_inventory()
+    for source in inventory.sources:
+        if source.extraction_status != "extracted" or not source.processed_text_path:
+            continue
+        processed_path = _REPO_ROOT / source.processed_text_path
+        if not processed_path.is_file():
+            raise FileNotFoundError(
+                f"Processed text for legal source {source.source_id} is missing: "
+                f"{processed_path}"
+            )
+        try:
+            document = json.loads(processed_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            raise RuntimeError(
+                f"Processed text for legal source {source.source_id} is unreadable"
+            ) from exc
+        if document.get("file_checksum") != source.file_checksum:
+            raise RuntimeError(
+                f"Processed text checksum mismatch for legal source {source.source_id}"
+            )
+        for page in document.get("pages", []):
+            text = str(page.get("text") or "").strip()
+            if not text:
+                continue
+            for index in range(0, len(text), _CHUNK_SIZE):
+                excerpt = text[index : index + _CHUNK_SIZE]
+                page_number = int(page["page_number"])
+                chunk_id = hashlib.sha256(
+                    f"{source.source_id}:{page_number}:{index}:{excerpt}".encode("utf-8")
+                ).hexdigest()
+                chunks.append(
+                    (
+                        chunk_id,
+                        excerpt,
+                        {
+                            "source_id": source.source_id,
+                            "source_title": source.title,
+                            "authority": source.issuing_authority or "",
+                            "url": source.official_url or "",
+                            "effective_date": source.document_date or "",
+                            "reviewer_status": (
+                                "verified"
+                                if source.verification_status == "verified"
+                                else "draft"
+                            ),
+                            "verification_status": source.verification_status,
+                            "title_is_filename_guess": source.title_is_filename_guess,
+                            "contains_placeholder": "placeholder" in text.lower(),
+                            "page": page_number,
+                            "corpus_file": source.source_paths[0],
+                        },
+                    )
+                )
+    return chunks
+
+
+def retrieve_legal_candidates(query: str, top_k: int = 5) -> Dict[str, Any]:
+    """Find relevant extracted PDF excerpts without asserting they establish law."""
+    if top_k < 1 or top_k > 10:
+        raise ValueError("top_k must be between 1 and 10")
+    query_tokens = set(_TOKEN_PATTERN.findall(query.lower()))
+    if not query_tokens:
+        return {"mode": "lexical_pdf_candidates", "evidence": []}
+
+    ranked: List[Tuple[float, str, Dict[str, Any]]] = []
+    for chunk_id, text, metadata in _legal_pdf_chunks():
+        text_tokens = set(_TOKEN_PATTERN.findall(text.lower()))
+        score = len(query_tokens.intersection(text_tokens)) / len(query_tokens)
+        if score:
+            ranked.append((score, text, metadata | {"chunk_id": chunk_id}))
+    ranked.sort(key=lambda item: (-item[0], item[2]["source_id"], item[2]["page"]))
+    return {
+        "mode": "lexical_pdf_candidates",
+        "evidence": [
+            {"score": score, "text": text, "metadata": metadata}
+            for score, text, metadata in ranked[:top_k]
+        ],
+    }
 
 
 @lru_cache(maxsize=1)

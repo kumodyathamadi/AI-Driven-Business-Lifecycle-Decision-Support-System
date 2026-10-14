@@ -12,12 +12,17 @@ _CLASSIFICATION = {
     ApplicabilityStatus.CONDITIONAL: "Conditional",
     ApplicabilityStatus.UNKNOWN: "Conditional",
     ApplicabilityStatus.NOT_IDENTIFIED: "Not Applicable",
-    ApplicabilityStatus.NOT_COVERED: "Conditional",
+    ApplicabilityStatus.NOT_COVERED: "Needs Verification",
 }
 
 
-def classify_obligation(status: ApplicabilityStatus) -> str:
-    """Map engine verdicts without turning unknown or out-of-scope into false."""
+def classify_obligation(
+    status: ApplicabilityStatus,
+    has_verified_source: bool,
+) -> str:
+    """Keep unverified source evidence distinct from conditional profile facts."""
+    if not has_verified_source:
+        return "Needs Verification"
     return _CLASSIFICATION[status]
 
 
@@ -58,12 +63,25 @@ def build_obligation_output(
         for item in evidence
     ]
 
-    steps = [result.required_action] if result.required_action else []
-    steps.append(
-        f"Contact {result.authority} to confirm the current application process, "
-        "forms, fees, and supporting documents before filing."
-    )
-    if result.missing_facts:
+    classification = classify_obligation(result.status, result.has_verified_source)
+    needs_verification = classification == "Needs Verification"
+    if needs_verification:
+        steps = [
+            "Verify the source document, applicable provision, authority, and "
+            "current legal status before relying on this candidate requirement."
+        ]
+    else:
+        steps = [result.required_action] if result.required_action else []
+        steps.append(
+            f"Contact {result.authority} to confirm the current application process, "
+            "forms, fees, and supporting documents before filing."
+        )
+    if needs_verification:
+        next_action = (
+            "Verify this candidate requirement with an official Sri Lankan source "
+            "and the responsible authority before taking action."
+        )
+    elif result.missing_facts:
         next_action = (
             "Complete the missing business-profile facts: "
             + ", ".join(result.missing_facts)
@@ -98,15 +116,19 @@ def build_obligation_output(
         if result.evidence
         else None
     )
-    status_for_frontend = {
-        ApplicabilityStatus.APPLICABLE: "APPLICABLE",
-        ApplicabilityStatus.NOT_IDENTIFIED: "NOT_APPLICABLE",
-    }.get(result.status, "UNKNOWN")
-    classification = classify_obligation(result.status)
+    status_for_frontend = (
+        "NEEDS_VERIFICATION"
+        if needs_verification
+        else {
+            ApplicabilityStatus.APPLICABLE: "APPLICABLE",
+            ApplicabilityStatus.NOT_IDENTIFIED: "NOT_APPLICABLE",
+        }.get(result.status, "UNKNOWN")
+    )
     priority = {
         "Mandatory": "high",
         "Conditional": "review",
         "Not Applicable": "none",
+        "Needs Verification": "review",
     }[classification]
     document_checklist = required_documents or []
     documents_verified = (
@@ -137,8 +159,12 @@ def build_obligation_output(
             evidence_sources[0]["excerpt"] if evidence_sources else ""
         ),
         "explanation": result.reason or "No explanation was supplied by the rule engine.",
-        "action": result.required_action,
+        "action": result.required_action if not needs_verification else "",
         "triggering_facts": result.trigger_facts,
+        "applicability_conditions": result.applicability_conditions,
+        "exceptions": [
+            exception.model_dump() for exception in result.exceptions
+        ],
         "missing_facts": result.missing_facts,
         "required_documents": document_checklist,
         "documents_needed": document_checklist,
@@ -157,9 +183,13 @@ def build_obligation_output(
         "registration_steps": steps,
         "next_action": next_action,
         "evidence_source": evidence_sources,
-        "has_verified_source": result.has_verified_source
-        and bool(evidence_sources)
-        and all(source["reviewer_status"] == "verified" for source in evidence_sources),
+        "verification_status": (
+            "verified" if not needs_verification else "needs_verification"
+        ),
+        "has_verified_source": result.has_verified_source,
+        "evidence_quality": (
+            "verified_page_quote" if result.has_verified_source else "unverified_source"
+        ),
     }
 
 
@@ -177,4 +207,5 @@ def build_guidance(
         )
         for result in obligations
         if result.status != ApplicabilityStatus.NOT_IDENTIFIED
+        or not result.has_verified_source
     ]

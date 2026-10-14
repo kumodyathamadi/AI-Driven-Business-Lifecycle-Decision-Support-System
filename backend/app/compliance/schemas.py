@@ -178,6 +178,14 @@ class ObligationResult(BaseModel):
         default_factory=dict,
         description="Profile fields that drove the verdict.",
     )
+    applicability_conditions: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Declared rulebook conditions; these do not imply verified law.",
+    )
+    exceptions: List[ExceptionDef] = Field(
+        default_factory=list,
+        description="Documented exceptions and whether each has been reviewed.",
+    )
     missing_facts: List[str] = Field(
         default_factory=list,
         description="Profile fields that are None and needed to resolve the verdict.",

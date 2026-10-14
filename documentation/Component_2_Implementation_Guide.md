@@ -93,13 +93,36 @@ current rules do not use them as applicability triggers.
   `chroma_sentence_transformers` or `lexical_fallback`.
 - The response contains the normalized `business_context`, a completeness
   report, summary counts, source-linked obligation results, guidance, an
-  evaluation identifier, deterministic priority labels, and a
+  evaluation identifier, deterministic priority labels, profile-matched
+  `source_discovery` excerpts from the ingested PDFs, and a
   legal-advice/evidence-quality disclaimer. Priority is a review ordering hint,
   not a statutory deadline or legal risk score.
 - The `compliance_evaluation_records` table stores `id`, `business_context`
   (JSON/JSONB), `result` (JSON/JSONB), `retrieval_mode`, and `created_at`.
 - The UI uses `VITE_API_BASE_URL` to select the API origin; it defaults to
   `http://localhost:8000`.
+- `GET /api/v1/component2/sources` lists the ingested PDF source inventory,
+  including checksums, page counts, extraction status, and verification status.
+- `POST /api/v1/component2/sources/ingest` recursively processes PDFs from
+  `data/compliance/raw/Component2_Legal_Sources/`. Original files are read-only;
+  extracted page text is stored separately in
+  `data/compliance/processed/legal_sources/`, with metadata in
+  `data/compliance/legal_source_inventory.json`.
+
+Run the same idempotent ingestion locally from the repository root:
+
+```powershell
+python scripts/compliance/ingest_legal_sources.py
+```
+
+Install `backend/requirements.txt` first to enable PyMuPDF extraction. Pages
+with no extractable text are flagged as `empty_or_scanned` and recommend OCR;
+OCR is not performed by this prototype. Every imported archive record starts
+as `needs_verification`. Filename-derived titles, extracted text, and checksums
+do not establish a source's authority, legal status, or applicability.
+PDF page excerpts are found with local lexical retrieval and returned as
+discovery evidence only. They are not converted into or used to classify
+obligations automatically.
 
 To apply the database migration in a deployed environment:
 

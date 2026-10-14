@@ -15,8 +15,8 @@ pyyaml>=6.0.1
 chromadb>=0.5.5
 sentence-transformers>=3.0.0
 
-# PDF extraction (for extract.py script)
-# PyMuPDF>=1.24.0   # uncomment when running extraction scripts
+# Page-preserving legal PDF extraction
+PyMuPDF>=1.24.0
 
 # Testing
 pytest>=8.2.0

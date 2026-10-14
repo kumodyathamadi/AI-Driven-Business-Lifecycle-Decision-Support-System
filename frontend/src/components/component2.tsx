@@ -5,16 +5,22 @@ import './compliance.css';
 // Types & Data Contracts
 // ---------------------------------------------------------------------------
 
-export type ApplicabilityStatus = 'APPLICABLE' | 'UNKNOWN' | 'NOT_APPLICABLE';
+export type ApplicabilityStatus =
+  | 'APPLICABLE'
+  | 'UNKNOWN'
+  | 'NOT_APPLICABLE'
+  | 'NEEDS_VERIFICATION';
 
 export interface ObligationResult {
   obligation_id: string;
   title: string;
   status: ApplicabilityStatus;
-  classification: 'Mandatory' | 'Conditional' | 'Not Applicable';
+  classification: 'Mandatory' | 'Conditional' | 'Not Applicable' | 'Needs Verification';
   priority: 'high' | 'review' | 'none';
   triggering_facts: Record<string, unknown>;
   missing_facts: string[];
+  applicability_conditions: Record<string, unknown>;
+  exceptions: Array<{ description: string; source_id: string; confirmed: boolean }>;
   authority: string;
   explanation: string;
   action: string;
@@ -26,6 +32,7 @@ export interface ObligationResult {
   documents_needed: string[];
   documents_notice: string;
   has_verified_source: boolean;
+  evidence_quality?: string;
 }
 
 export interface FollowUpQuestion {
@@ -41,12 +48,26 @@ export interface AnalysisSummary {
   applicable: number;
   not_applicable: number;
   unknown: number;
+  needs_verification: number;
+}
+
+export interface LegalSourceExcerpt {
+  source_id: string;
+  title: string;
+  authority: string | null;
+  excerpt: string;
+  url: string | null;
+  page: number;
+  retrieval_score: number;
+  verification_status: string;
+  title_is_filename_guess: boolean;
 }
 
 export interface ComplianceAnalysisResponse {
   summary: AnalysisSummary;
   obligations: ObligationResult[];
   follow_up_questions: FollowUpQuestion[];
+  source_discovery: LegalSourceExcerpt[];
   evaluation_id: string;
   retrieval_mode: string;
   business_context: Record<string, unknown>;
@@ -64,6 +85,7 @@ export interface BusinessProfileForm {
   legal_form?: 'sole_proprietorship' | 'partnership' | 'private_limited' | 'other' | null;
   number_of_employees?: number | null;
   province?: string | null;
+  district?: string | null;
   handles_food?: boolean | null;
   has_physical_premises?: boolean | null;
   is_manufacturing?: boolean | null;
@@ -113,10 +135,19 @@ const STATUS_CONFIG: Record<
     badge: 'bg-slate-100 text-slate-700 border-slate-300',
     icon: 'fa-circle-minus',
   },
+  NEEDS_VERIFICATION: {
+    label: 'Needs Verification',
+    color: 'text-amber-900',
+    bg: 'bg-amber-50',
+    border: 'border-amber-300',
+    badge: 'bg-amber-100 text-amber-900 border-amber-400',
+    icon: 'fa-triangle-exclamation',
+  },
 };
 
 const FACT_DISPLAY_LABELS: Record<string, string> = {
   province: 'Province',
+  district: 'District',
   business_type: 'Business Type',
   local_authority: 'Local Authority',
   legal_form: 'Legal Form',
@@ -138,6 +169,7 @@ const SAMPLE_PROFILES: Record<string, BusinessProfileForm> = {
   clear_case: {
     business_type: 'food',
     province: 'Western Province',
+    district: 'Colombo',
     local_authority: 'Colombo Municipal Council',
     legal_form: 'sole_proprietorship',
     number_of_employees: 4,
@@ -155,6 +187,7 @@ const SAMPLE_PROFILES: Record<string, BusinessProfileForm> = {
   conditional_case: {
     business_type: 'vehicle_parts',
     province: 'Western Province',
+    district: 'Colombo',
     local_authority: 'Colombo Municipal Council',
     legal_form: 'partnership',
     number_of_employees: 6,
@@ -171,6 +204,7 @@ const SAMPLE_PROFILES: Record<string, BusinessProfileForm> = {
   missing_info_case: {
     business_type: 'food',
     province: 'Western Province',
+    district: 'Colombo',
     local_authority: 'Colombo Municipal Council',
     legal_form: null,
     number_of_employees: null,
@@ -411,13 +445,51 @@ function ObligationCard({
             </div>
           )}
 
+          {(Object.keys(obl.applicability_conditions).length > 0 || obl.exceptions.length > 0) && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-2">
+              {Object.keys(obl.applicability_conditions).length > 0 && (
+                <div>
+                  <p className="font-semibold text-slate-600 uppercase tracking-wide text-[11px] mb-1">
+                    Rulebook applicability conditions
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1 text-slate-700">
+                    {Object.entries(obl.applicability_conditions).map(([key, value]) => (
+                      <li key={key}><strong>{FACT_DISPLAY_LABELS[key] || key}:</strong> {String(value)}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {obl.exceptions.length > 0 && (
+                <div>
+                  <p className="font-semibold text-slate-600 uppercase tracking-wide text-[11px] mb-1">
+                    Recorded exceptions
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1 text-slate-700">
+                    {obl.exceptions.map((exception, index) => (
+                      <li key={`${exception.source_id}-${index}`}>
+                        {exception.description} — {exception.confirmed ? 'reviewed' : 'not verified'}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <p className="text-[11px] text-slate-500">
+                These are rulebook records and are not legal determinations unless their source is verified.
+              </p>
+            </div>
+          )}
+
           {/* Required Action */}
           <div>
             <p className="font-semibold text-slate-500 uppercase tracking-wide text-[11px]">
-              Required Statutory Action
+              {obl.status === 'NEEDS_VERIFICATION' ? 'Verification Required' : 'Rulebook Action'}
             </p>
             <p className="text-xs text-slate-800 mt-1 leading-relaxed bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-              {obl.action || 'Comply with designated registration procedure.'}
+              {obl.action || (
+                obl.status === 'NEEDS_VERIFICATION'
+                  ? 'No compliance action is recommended until the source and requirement are verified.'
+                  : 'Confirm the current procedure with the responsible authority.'
+              )}
             </p>
             <p className="text-xs text-slate-600 mt-2">{obl.explanation}</p>
             <p className="text-xs font-semibold text-blue-800 mt-2">Next action: {obl.next_action}</p>
@@ -426,7 +498,7 @@ function ObligationCard({
           {obl.registration_steps.length > 0 && (
             <div>
               <p className="font-semibold text-slate-500 uppercase tracking-wide text-[11px] mb-1.5">
-                Registration Guidance
+                {obl.status === 'NEEDS_VERIFICATION' ? 'Verification step' : 'Registration Guidance'}
               </p>
               <ol className="list-decimal pl-5 space-y-1 text-slate-700">
                 {obl.registration_steps.map((step, index) => <li key={index}>{step}</li>)}
@@ -509,6 +581,7 @@ export const RegistrationComplianceDashboard: React.FC = () => {
     legal_form: null,
     number_of_employees: null,
     province: 'Western Province', // Fixed scope
+    district: null,
     handles_food: null,
     has_physical_premises: null,
     is_manufacturing: null,
@@ -571,7 +644,9 @@ export const RegistrationComplianceDashboard: React.FC = () => {
   };
 
   // Group obligations
-  const unknownList = result?.obligations.filter((o) => o.status === 'UNKNOWN') || [];
+  const unknownList = result?.obligations.filter(
+    (o) => o.status === 'UNKNOWN' || o.status === 'NEEDS_VERIFICATION'
+  ) || [];
   const selectedObligation = result?.obligations.find(
     (obligation) => obligation.obligation_id === selectedObligationId
   ) || result?.obligations[0];
@@ -579,6 +654,10 @@ export const RegistrationComplianceDashboard: React.FC = () => {
     'business_type',
     'legal_form',
     'local_authority',
+    'district',
+    'province',
+    'products_services',
+    'business_size',
     'number_of_employees',
     'has_physical_premises',
     'handles_food',
@@ -591,7 +670,8 @@ export const RegistrationComplianceDashboard: React.FC = () => {
   ];
   const knownProfileFacts = profileFactKeys.filter((key) => {
     const value = profile[key as keyof BusinessProfileForm];
-    return value !== null && value !== undefined;
+    if (Array.isArray(value)) return value.length > 0;
+    return value !== null && value !== undefined && value !== '';
   }).length;
   const profileCompleteness = Math.round((knownProfileFacts / profileFactKeys.length) * 100);
   const followUpFacts = Array.from(
@@ -720,6 +800,17 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                 value={profile.location || ''}
                 onChange={(e) => setField('location', e.target.value || null)}
                 placeholder="Town or business area"
+                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">District</label>
+              <input
+                type="text"
+                value={profile.district || ''}
+                onChange={(e) => setField('district', e.target.value || null)}
+                placeholder="Colombo"
                 className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -1072,12 +1163,49 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                 </div>
               )}
 
+              {result.source_discovery.length > 0 && (
+                <section className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+                  <div className="mb-3">
+                    <p className="text-sm font-semibold text-amber-950">Related legal-source excerpts</p>
+                    <p className="mt-1 text-xs text-amber-900">
+                      Discovery evidence only. These extracts are not verified obligations or legal advice.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    {result.source_discovery.map((source, index) => (
+                      <article
+                        key={`${source.source_id}-${source.page}-${index}`}
+                        className="rounded-lg border border-amber-100 bg-white p-3"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <strong className="text-xs text-slate-900">{source.title}</strong>
+                          <span className="text-[11px] font-semibold text-amber-800">
+                            Needs source verification
+                          </span>
+                        </div>
+                        <p className="mt-1 text-[11px] text-slate-500">
+                          {source.source_id} · page {source.page}
+                          {source.title_is_filename_guess ? ' · title from filename' : ''}
+                          {source.authority ? ` · ${source.authority}` : ''}
+                        </p>
+                        <blockquote className="mt-2 border-l-2 border-amber-300 pl-3 text-xs leading-relaxed text-slate-700">
+                          {source.excerpt}
+                        </blockquote>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              )}
+
               <div className="compliance-summary-grid">
                 <div className="compliance-summary-card applicable">
                   <strong>{result.summary.applicable}</strong><span>Applicable</span>
                 </div>
                 <div className="compliance-summary-card conditional">
                   <strong>{result.summary.unknown}</strong><span>Conditional / unknown</span>
+                </div>
+                <div className="compliance-summary-card needs-verification">
+                  <strong>{result.summary.needs_verification}</strong><span>Needs verification</span>
                 </div>
                 <div className="compliance-summary-card not-applicable">
                   <strong>{result.summary.not_applicable}</strong><span>Not applicable</span>
@@ -1092,6 +1220,7 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                   { id: 'all', label: 'All', count: result.summary.total },
                   { id: 'APPLICABLE', label: 'Applicable', count: result.summary.applicable },
                   { id: 'UNKNOWN', label: 'Unknown', count: result.summary.unknown },
+                  { id: 'NEEDS_VERIFICATION', label: 'Needs verification', count: result.summary.needs_verification },
                   { id: 'NOT_APPLICABLE', label: 'Not applicable', count: result.summary.not_applicable },
                 ] as const).map((filter) => (
                   <button
@@ -1179,8 +1308,14 @@ export const RegistrationComplianceDashboard: React.FC = () => {
               </div>
 
               <section className="compliance-evidence-section">
-                <p className="compliance-eyebrow">What to do</p>
-                <p>{selectedObligation.action || 'Follow the process confirmed by the relevant authority.'}</p>
+                  <p className="compliance-eyebrow">
+                    {selectedObligation.status === 'NEEDS_VERIFICATION' ? 'Verification required' : 'What to do'}
+                  </p>
+                  <p>{selectedObligation.action || (
+                    selectedObligation.status === 'NEEDS_VERIFICATION'
+                      ? 'No compliance action is recommended until the source and requirement are verified.'
+                      : 'Confirm the process with the relevant authority.'
+                  )}</p>
                 <p className="compliance-next-action"><strong>Next action:</strong> {selectedObligation.next_action}</p>
                 {selectedObligation.registration_steps.length > 0 && (
                   <ol>
@@ -1214,7 +1349,9 @@ export const RegistrationComplianceDashboard: React.FC = () => {
 
             <aside className="compliance-side-panel">
               <section className="compliance-side-card">
-                <p className="compliance-eyebrow">Authority</p>
+                <p className="compliance-eyebrow">
+                  {selectedObligation.status === 'NEEDS_VERIFICATION' ? 'Potential authority — unverified' : 'Authority'}
+                </p>
                 <p className="compliance-authority">{selectedObligation.authority || 'Relevant local authority'}</p>
                 <p className="compliance-eyebrow">Status</p>
                 <StatusBadge status={selectedObligation.status} />

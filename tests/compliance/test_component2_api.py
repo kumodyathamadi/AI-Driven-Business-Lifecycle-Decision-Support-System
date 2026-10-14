@@ -42,6 +42,26 @@ def test_profile_aliases_and_normalization():
     assert str(profile.employee_band) == "1_9"
     assert profile.jurisdiction == "Western Province"
     assert request.to_business_context()["products_services"] == ["Bread", "Cakes"]
+    assert request.to_business_context()["location"]["province"] == "Western Province"
+
+
+def test_profile_context_normalizes_colombo_district_and_preserves_location_details():
+    context = BusinessContextRequest(
+        business_type="vehicle spare-parts, repair, and reselling businesses",
+        location="Colombo 03",
+        district="colombo district",
+        province="western",
+        local_authority="Colombo Municipal Council",
+    ).to_business_context()
+
+    assert context["business_type"] == "vehicle_parts_retail"
+    assert context["sector"] == "vehicle_parts"
+    assert context["location"] == {
+        "address": "Colombo 03",
+        "district": "Colombo",
+        "province": "Western Province",
+        "local_authority": "Colombo Municipal Council",
+    }
 
 
 def test_profile_rejects_negative_employee_count():
@@ -74,6 +94,42 @@ def test_unsupported_sector_is_not_misreported_as_not_applicable():
         item.status == ApplicabilityStatus.NOT_COVERED
         for item in analysis.obligations
     )
+
+
+@pytest.mark.parametrize(
+    ("business_type", "expected_sector"),
+    [
+        ("food", "food"),
+        ("clothing", "clothing"),
+        ("salon", "salon"),
+        ("vehicle spare-parts, repair, and reselling businesses", "vehicle_parts"),
+    ],
+)
+def test_target_sector_profiles_do_not_turn_draft_rules_into_legal_conclusions(
+    business_type: str, expected_sector: str
+):
+    from backend.app.compliance.guidance import build_guidance
+
+    request = BusinessContextRequest(
+        business_type=business_type,
+        district="Colombo",
+        province="Western Province",
+        local_authority="Colombo Municipal Council",
+        ownership="sole_proprietorship",
+        employees=3,
+        products_services=["Representative products or services"],
+        business_size="small",
+        handles_food=business_type == "food",
+        has_physical_premises=True,
+    )
+    context = request.to_business_context()
+    analysis = analyze_compliance(request.to_rule_engine_profile())
+    guidance = build_guidance(analysis.obligations, {})
+
+    assert context["sector"] == expected_sector
+    assert guidance
+    assert all(item["classification"] == "Needs Verification" for item in guidance)
+    assert all(item["has_verified_source"] is False for item in guidance)
 
 
 def test_lexical_fallback_returns_draft_source_chunks(tmp_path: Path, monkeypatch):
@@ -119,11 +175,14 @@ def test_guidance_does_not_invent_document_checklist():
     )
     output = build_obligation_output(result, [])
 
-    assert output["classification"] == "Conditional"
+    assert output["classification"] == "Needs Verification"
+    assert output["status"] == "NEEDS_VERIFICATION"
     assert output["required_documents"] == []
     assert output["documents_status"] == "not_listed"
     assert "confirm required documents" in output["documents_notice"].lower()
     assert output["evidence_source"] == []
+    assert output["action"] == ""
+    assert "verify this candidate requirement" in output["next_action"].lower()
 
 
 def test_guidance_marks_unverified_document_checklist_as_draft():
@@ -140,6 +199,8 @@ def test_guidance_marks_unverified_document_checklist_as_draft():
     assert output["required_documents"] == ["Example application form"]
     assert output["documents_status"] == "draft_unverified"
     assert output["has_verified_source"] is False
+    assert output["classification"] == "Needs Verification"
+    assert output["action"] == ""
     assert "draft suggestions" in output["documents_notice"].lower()
 
 
@@ -195,6 +256,31 @@ def test_evaluate_endpoint_returns_guidance_and_persists_evaluation(monkeypatch)
             ],
         },
     )
+    monkeypatch.setattr(
+        component2_routes,
+        "retrieve_legal_candidates",
+        lambda query, top_k: {
+            "mode": "lexical_pdf_candidates",
+            "evidence": [
+                {
+                    "score": 0.8,
+                    "text": "Candidate source excerpt.",
+                    "metadata": {
+                        "source_id": "SL-C2-PDF-TEST",
+                        "source_title": "Filename-derived title",
+                        "authority": "",
+                        "url": "",
+                        "effective_date": "",
+                        "page": 4,
+                        "reviewer_status": "draft",
+                        "verification_status": "needs_verification",
+                        "title_is_filename_guess": True,
+                        "contains_placeholder": False,
+                    },
+                }
+            ],
+        },
+    )
     app = FastAPI()
     app.include_router(component2_routes.router)
     app.dependency_overrides[get_db] = override_get_db
@@ -224,9 +310,14 @@ def test_evaluate_endpoint_returns_guidance_and_persists_evaluation(monkeypatch)
     assert response.status_code == 200, response.text
     payload = response.json()
     assert payload["business_context"]["employees"] == 2
-    assert payload["summary"]["unknown"] == 1
-    assert payload["obligations"][0]["classification"] == "Conditional"
+    assert payload["summary"]["unknown"] == 0
+    assert payload["summary"]["needs_verification"] == 1
+    assert payload["obligations"][0]["classification"] == "Needs Verification"
+    assert payload["obligations"][0]["status"] == "NEEDS_VERIFICATION"
     assert payload["obligations"][0]["has_verified_source"] is False
+    assert payload["source_discovery"][0]["page"] == 4
+    assert payload["source_discovery"][0]["verification_status"] == "needs_verification"
+    assert payload["source_discovery"][0]["title_is_filename_guess"] is True
     assert payload["evaluation_id"]
     assert payload["retrieval_mode"] == "lexical_fallback"
     assert stored_count == 1
@@ -292,20 +383,39 @@ def test_real_evaluate_endpoint_integrates_rulebook_retrieval_and_storage(monkey
     assert payload["business_context"] == {
         "business_type": "bakery",
         "sector": "food",
-        "location": "Colombo 03",
+        "location": {
+            "address": "Colombo 03",
+            "district": "Colombo",
+            "province": "Western Province",
+            "local_authority": "Colombo Municipal Council",
+        },
         "ownership": "sole_proprietorship",
         "employees": 4,
         "products_services": ["Bread", "Cakes"],
+        "activities": [],
         "business_size": "small",
+        "premises": {"has_physical_premises": True},
+        "operational_characteristics": {
+            "handles_food": True,
+            "is_manufacturing": True,
+            "is_importing": False,
+            "serves_cooked_food": None,
+            "sells_alcohol": None,
+            "uses_chemicals_or_cosmetics": None,
+            "handles_waste_oil_or_batteries": None,
+            "turnover_band": None,
+        },
     }
     assert payload["retrieval_mode"] == "lexical_fallback"
     assert payload["summary"]["total"] == 7
+    assert payload["summary"]["needs_verification"] == 7
+    assert payload["summary"]["unknown"] == 0
     assert stored_count == 1
 
     business_name_rule = next(
         item for item in payload["obligations"] if item["obligation_id"] == "OBL-001"
     )
-    assert business_name_rule["classification"] == "Conditional"
+    assert business_name_rule["classification"] == "Needs Verification"
     assert business_name_rule["evidence_source"]
     assert business_name_rule["evidence_source"][0]["source_id"] == (
         "SL-WESTERNPROV-BUSINESSNAMES-1990"
