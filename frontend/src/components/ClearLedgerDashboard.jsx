@@ -18,7 +18,10 @@ import {
   Percent,
   Eye,
   FileCheck,
-  AlertOctagon
+  AlertOctagon,
+  Trash2,
+  Calendar,
+  Filter
 } from 'lucide-react';
 import {
   uploadInvoicePdf,
@@ -40,9 +43,24 @@ export default function ClearLedgerDashboard() {
   const [ocrError, setOcrError] = useState(null);
   const [showStepLogs, setShowStepLogs] = useState(false);
 
-  // RAMIS Tax Engine States
-  const [taxPeriod, setTaxPeriod] = useState('2025-Q2');
+  // RAMIS Tax Engine States & Period Options (Quarterly vs Monthly)
+  const [periodType, setPeriodType] = useState('quarterly'); // 'quarterly' | 'monthly'
+  const [selectedYear, setSelectedYear] = useState('2026');
+  const [selectedQuarter, setSelectedQuarter] = useState('Q1'); // 'Q1', 'Q2', 'Q3', 'Q4'
+  const [selectedMonth, setSelectedMonth] = useState('01'); // '01' to '12'
+  const [filterByPeriod, setFilterByPeriod] = useState(false);
+  const [taxPeriod, setTaxPeriod] = useState('2026-Q1');
   const [taxpayerTin, setTaxpayerTin] = useState('102938475');
+
+  // Synchronize taxPeriod string whenever period controls change
+  useEffect(() => {
+    if (periodType === 'quarterly') {
+      setTaxPeriod(`${selectedYear}-${selectedQuarter}`);
+    } else {
+      setTaxPeriod(`${selectedYear}-${selectedMonth}`);
+    }
+  }, [periodType, selectedYear, selectedQuarter, selectedMonth]);
+
   const [taxInvoices, setTaxInvoices] = useState([
     {
       invoice_number: 'INV-3425',
@@ -78,6 +96,37 @@ export default function ClearLedgerDashboard() {
       tax_category: 'Standard'
     }
   ]);
+
+  // Delete individual invoice
+  const handleDeleteInvoice = (invNumber) => {
+    setTaxInvoices(prev => prev.filter(inv => inv.invoice_number !== invNumber));
+    setStatusMessage({
+      type: 'success',
+      text: `Invoice #${invNumber} removed successfully.`
+    });
+  };
+
+  // Clear all invoices
+  const handleClearAllInvoices = () => {
+    if (window.confirm("Are you sure you want to clear all uploaded invoices?")) {
+      setTaxInvoices([]);
+      setStatusMessage({
+        type: 'success',
+        text: 'All uploaded invoices have been cleared from the active ledger.'
+      });
+    }
+  };
+
+  // Discard current OCR document preview
+  const handleDiscardOcr = () => {
+    setUploadedFile(null);
+    setOcrResult(null);
+    setOcrError(null);
+    setStatusMessage({
+      type: 'success',
+      text: 'Uploaded document preview cleared.'
+    });
+  };
 
   // Fraud Review Queue States
   const [reviewQueue, setReviewQueue] = useState([]);
@@ -135,17 +184,68 @@ export default function ClearLedgerDashboard() {
     }
   };
 
-  // Download RAMIS Schedule 7 CSV
+  // Helper to extract year and month from diverse invoice date strings
+  const getInvoiceYearMonth = (dateStr) => {
+    if (!dateStr) return { year: '', month: 0 };
+    const s = String(dateStr).trim();
+    // YYYY-MM-DD
+    if (/^\d{4}-\d{1,2}/.test(s)) {
+      const parts = s.split('-');
+      return { year: parts[0], month: parseInt(parts[1], 10) };
+    }
+    // DD/MM/YYYY
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
+      const parts = s.split('/');
+      return { year: parts[2], month: parseInt(parts[1], 10) };
+    }
+    // Text format like "31 May 2022" or "1 Sep 2026"
+    const monthsMap = {
+      jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+      jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12
+    };
+    const mMatch = s.match(/(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i);
+    const yMatch = s.match(/\b(20\d{2})\b/);
+    if (mMatch && yMatch) {
+      const mStr = mMatch[0].toLowerCase().slice(0, 3);
+      return { year: yMatch[1], month: monthsMap[mStr] || 0 };
+    }
+    return { year: '', month: 0 };
+  };
+
+  // Filter invoices matching the selected quarterly or monthly period
+  const displayedInvoices = taxInvoices.filter(inv => {
+    if (!filterByPeriod) return true;
+    const { year, month } = getInvoiceYearMonth(inv.date_of_supply);
+    if (!year || !month) return true;
+
+    if (periodType === 'quarterly') {
+      const qNum = Math.ceil(month / 3);
+      return year === selectedYear && `Q${qNum}` === selectedQuarter;
+    } else {
+      const mStr = String(month).padStart(2, '0');
+      return year === selectedYear && mStr === selectedMonth;
+    }
+  });
+
+  // Download RAMIS Schedule 7 CSV (exports displayed/filtered or all invoices)
   const handleDownloadSchedule7 = async () => {
+    const exportList = filterByPeriod ? displayedInvoices : taxInvoices;
+    if (exportList.length === 0) {
+      setStatusMessage({ type: 'error', text: `No invoices available to export for period ${taxPeriod}.` });
+      return;
+    }
     setLoading(true);
     try {
       const payload = {
         taxpayer_tin: taxpayerTin,
         tax_period: taxPeriod,
-        invoices: taxInvoices
+        invoices: exportList
       };
       await downloadRamisSchedule7Csv(payload);
-      setStatusMessage({ type: 'success', text: `Successfully generated and downloaded RAMIS Schedule 7 CSV for ${taxPeriod}!` });
+      setStatusMessage({
+        type: 'success',
+        text: `Successfully generated and downloaded RAMIS Schedule 7 CSV for ${taxPeriod} (${exportList.length} invoices)!`
+      });
     } catch (err) {
       setStatusMessage({ type: 'error', text: `Failed to download CSV: ${err.message}` });
     } finally {
@@ -214,10 +314,10 @@ export default function ClearLedgerDashboard() {
     }
   };
 
-  // Calculate Tax Metrics
-  const cageDTotal = taxInvoices.filter(i => i.tax_category === 'Zero-Rated').reduce((s, i) => s + i.total_amount, 0);
-  const cageATotal = taxInvoices.filter(i => i.tax_category === 'Standard').reduce((s, i) => s + i.total_amount, 0);
-  const outputVatLkr = taxInvoices.filter(i => i.tax_category === 'Standard').reduce((s, i) => s + i.tax_amount, 0);
+  // Calculate Tax Metrics on displayed/current invoices
+  const cageDTotal = displayedInvoices.filter(i => i.tax_category === 'Zero-Rated').reduce((s, i) => s + (Number(i.total_amount) || 0), 0);
+  const cageATotal = displayedInvoices.filter(i => i.tax_category === 'Standard').reduce((s, i) => s + (Number(i.total_amount) || 0), 0);
+  const outputVatLkr = displayedInvoices.filter(i => i.tax_category === 'Standard').reduce((s, i) => s + (Number(i.tax_amount) || 0), 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', color: '#f8fafc' }}>
@@ -467,77 +567,155 @@ export default function ClearLedgerDashboard() {
 
           {/* Recent Invoices Table */}
           <div style={{ background: 'rgba(30, 41, 59, 0.7)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', padding: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Active Invoices Monitored in ClearLedger</h3>
-              <button
-                onClick={handleDownloadSchedule7}
-                disabled={loading}
-                style={{
-                  background: 'rgba(34, 197, 94, 0.2)',
-                  color: '#4ade80',
-                  border: '1px solid rgba(34, 197, 94, 0.4)',
-                  borderRadius: '8px',
-                  padding: '0.4rem 0.85rem',
-                  fontSize: '0.75rem',
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>Active Invoices Monitored in ClearLedger</h3>
+                <span style={{
+                  background: 'rgba(59, 130, 246, 0.15)',
+                  color: '#60a5fa',
+                  fontSize: '0.7rem',
                   fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem'
-                }}
-              >
-                <Download size={14} />
-                Export RAMIS Schedule 7 CSV
-              </button>
+                  padding: '0.15rem 0.5rem',
+                  borderRadius: '999px',
+                  border: '1px solid rgba(59, 130, 246, 0.3)'
+                }}>
+                  {taxInvoices.length} {taxInvoices.length === 1 ? 'Invoice' : 'Invoices'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                {taxInvoices.length > 0 && (
+                  <button
+                    onClick={handleClearAllInvoices}
+                    disabled={loading}
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      color: '#f87171',
+                      border: '1px solid rgba(239, 68, 68, 0.35)',
+                      borderRadius: '8px',
+                      padding: '0.4rem 0.85rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      transition: 'all 0.15s'
+                    }}
+                    title="Delete all uploaded invoices from active ledger"
+                  >
+                    <Trash2 size={13} />
+                    Clear All Invoices
+                  </button>
+                )}
+                <button
+                  onClick={handleDownloadSchedule7}
+                  disabled={loading || taxInvoices.length === 0}
+                  style={{
+                    background: 'rgba(34, 197, 94, 0.2)',
+                    color: '#4ade80',
+                    border: '1px solid rgba(34, 197, 94, 0.4)',
+                    borderRadius: '8px',
+                    padding: '0.4rem 0.85rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: taxInvoices.length === 0 ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    opacity: taxInvoices.length === 0 ? 0.6 : 1
+                  }}
+                >
+                  <Download size={14} />
+                  Export RAMIS Schedule 7 CSV
+                </button>
+              </div>
             </div>
 
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', color: '#94a3b8' }}>
-                    <th style={{ padding: '0.75rem' }}>Invoice #</th>
-                    <th style={{ padding: '0.75rem' }}>Customer / Consignee</th>
-                    <th style={{ padding: '0.75rem' }}>Date</th>
-                    <th style={{ padding: '0.75rem' }}>Category</th>
-                    <th style={{ padding: '0.75rem' }}>Total Amount</th>
-                    <th style={{ padding: '0.75rem' }}>VAT</th>
-                    <th style={{ padding: '0.75rem' }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {taxInvoices.map((inv, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                      <td style={{ padding: '0.75rem', fontWeight: 600, color: '#60a5fa' }}>{inv.invoice_number}</td>
-                      <td style={{ padding: '0.75rem' }}>{inv.customer_name}</td>
-                      <td style={{ padding: '0.75rem', color: '#94a3b8' }}>{inv.date_of_supply}</td>
-                      <td style={{ padding: '0.75rem' }}>
-                        <span style={{
-                          background: inv.tax_category === 'Zero-Rated' ? 'rgba(34, 197, 94, 0.15)' : inv.tax_category === 'Standard' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(168, 85, 247, 0.15)',
-                          color: inv.tax_category === 'Zero-Rated' ? '#4ade80' : inv.tax_category === 'Standard' ? '#60a5fa' : '#c084fc',
-                          padding: '0.2rem 0.5rem',
-                          borderRadius: '4px',
-                          fontSize: '0.7rem',
-                          fontWeight: 600
-                        }}>
-                          {inv.tax_category}
-                        </span>
-                      </td>
-                      <td style={{ padding: '0.75rem', fontWeight: 600 }}>
-                        {inv.currency} {inv.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </td>
-                      <td style={{ padding: '0.75rem', color: '#94a3b8' }}>
-                        {inv.currency} {inv.tax_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </td>
-                      <td style={{ padding: '0.75rem' }}>
-                        <span style={{ color: '#4ade80', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}>
-                          <CheckCircle2 size={14} /> AUTO_PASS
-                        </span>
-                      </td>
+            {taxInvoices.length === 0 ? (
+              <div style={{
+                background: 'rgba(15, 23, 42, 0.5)',
+                border: '1px dashed rgba(255, 255, 255, 0.12)',
+                borderRadius: '10px',
+                padding: '2.5rem 1rem',
+                textAlign: 'center',
+                color: '#94a3b8'
+              }}>
+                <FileText size={36} color="#64748b" style={{ margin: '0 auto 0.5rem' }} />
+                <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#cbd5e1' }}>No Invoices in Ledger</div>
+                <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: '#64748b' }}>
+                  Upload a PDF in the "Invoice OCR" tab to automatically extract and register new invoices.
+                </div>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', color: '#94a3b8' }}>
+                      <th style={{ padding: '0.75rem' }}>Invoice #</th>
+                      <th style={{ padding: '0.75rem' }}>Customer / Consignee</th>
+                      <th style={{ padding: '0.75rem' }}>Date</th>
+                      <th style={{ padding: '0.75rem' }}>Category</th>
+                      <th style={{ padding: '0.75rem' }}>Total Amount</th>
+                      <th style={{ padding: '0.75rem' }}>VAT</th>
+                      <th style={{ padding: '0.75rem' }}>Status</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'center' }}>Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {taxInvoices.map((inv, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                        <td style={{ padding: '0.75rem', fontWeight: 600, color: '#60a5fa' }}>{inv.invoice_number}</td>
+                        <td style={{ padding: '0.75rem' }}>{inv.customer_name}</td>
+                        <td style={{ padding: '0.75rem', color: '#94a3b8' }}>{inv.date_of_supply}</td>
+                        <td style={{ padding: '0.75rem' }}>
+                          <span style={{
+                            background: inv.tax_category === 'Zero-Rated' ? 'rgba(34, 197, 94, 0.15)' : inv.tax_category === 'Standard' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(168, 85, 247, 0.15)',
+                            color: inv.tax_category === 'Zero-Rated' ? '#4ade80' : inv.tax_category === 'Standard' ? '#60a5fa' : '#c084fc',
+                            padding: '0.2rem 0.5rem',
+                            borderRadius: '4px',
+                            fontSize: '0.7rem',
+                            fontWeight: 600
+                          }}>
+                            {inv.tax_category}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.75rem', fontWeight: 600 }}>
+                          {inv.currency} {inv.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+                        <td style={{ padding: '0.75rem', color: '#94a3b8' }}>
+                          {inv.currency} {inv.tax_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+                        <td style={{ padding: '0.75rem' }}>
+                          <span style={{ color: '#4ade80', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}>
+                            <CheckCircle2 size={14} /> AUTO_PASS
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                          <button
+                            onClick={() => handleDeleteInvoice(inv.invoice_number)}
+                            title={`Delete invoice ${inv.invoice_number}`}
+                            style={{
+                              background: 'rgba(239, 68, 68, 0.12)',
+                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                              color: '#f87171',
+                              borderRadius: '6px',
+                              padding: '0.3rem 0.5rem',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'background 0.15s'
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
         </div>
@@ -636,6 +814,28 @@ export default function ClearLedgerDashboard() {
                       {ocrResult.confidence_score}%
                     </div>
                   </div>
+
+                  <button
+                    onClick={handleDiscardOcr}
+                    title="Clear uploaded document and preview"
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      border: '1px solid rgba(239, 68, 68, 0.35)',
+                      color: '#f87171',
+                      borderRadius: '8px',
+                      padding: '0.5rem 0.85rem',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    <Trash2 size={14} />
+                    Clear Upload
+                  </button>
                 </div>
               </div>
 
@@ -731,123 +931,463 @@ export default function ClearLedgerDashboard() {
       {activeSubTab === 'tax' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
-          {/* Header Settings Bar */}
+          {/* Period Selector & RAMIS Filing Control Panel */}
           <div style={{
-            background: 'rgba(30, 41, 59, 0.7)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '12px',
-            padding: '1.25rem',
+            background: 'rgba(30, 41, 59, 0.8)',
+            border: '1px solid rgba(59, 130, 246, 0.3)',
+            borderRadius: '16px',
+            padding: '1.5rem',
             display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '1rem'
+            flexDirection: 'column',
+            gap: '1.25rem',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
           }}>
-            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+            {/* Header with Title and Mode Switcher */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{ background: 'rgba(59, 130, 246, 0.2)', padding: '0.5rem', borderRadius: '8px', color: '#60a5fa' }}>
+                  <Calendar size={20} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: '#ffffff' }}>
+                    RAMIS Filing Period & Schedule 7 Configuration
+                  </h3>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.15rem' }}>
+                    Select Quarterly (Quata) or Monthly tax return schedule as mandated by Sri Lanka IRD Form 2540
+                  </div>
+                </div>
+              </div>
+
+              {/* Period Frequency Toggle: Quarterly vs Monthly */}
+              <div style={{
+                background: 'rgba(15, 23, 42, 0.8)',
+                padding: '0.3rem',
+                borderRadius: '10px',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                display: 'inline-flex',
+                gap: '0.3rem'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setPeriodType('quarterly')}
+                  style={{
+                    background: periodType === 'quarterly' ? '#3b82f6' : 'transparent',
+                    color: periodType === 'quarterly' ? '#ffffff' : '#94a3b8',
+                    border: 'none',
+                    borderRadius: '7px',
+                    padding: '0.45rem 1rem',
+                    fontSize: '0.8rem',
+                    fontWeight: periodType === 'quarterly' ? 700 : 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  Quarterly (Quata)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPeriodType('monthly')}
+                  style={{
+                    background: periodType === 'monthly' ? '#3b82f6' : 'transparent',
+                    color: periodType === 'monthly' ? '#ffffff' : '#94a3b8',
+                    border: 'none',
+                    borderRadius: '7px',
+                    padding: '0.45rem 1rem',
+                    fontSize: '0.8rem',
+                    fontWeight: periodType === 'monthly' ? 700 : 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  Monthly Filing
+                </button>
+              </div>
+            </div>
+
+            {/* Selectors Grid: Year, Quarter/Month, TIN */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '1rem',
+              background: 'rgba(15, 23, 42, 0.5)',
+              padding: '1.25rem',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.05)'
+            }}>
+              {/* Year Dropdown */}
               <div>
-                <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>
+                <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>
+                  Tax Assessment Year
+                </label>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: 'rgba(30, 41, 59, 0.8)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    borderRadius: '8px',
+                    padding: '0.5rem 0.75rem',
+                    color: '#ffffff',
+                    fontSize: '0.85rem',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="2026">2026 (Current)</option>
+                  <option value="2025">2025</option>
+                  <option value="2024">2024</option>
+                  <option value="2023">2023</option>
+                </select>
+              </div>
+
+              {/* Sub-period: Quarters OR Months */}
+              {periodType === 'quarterly' ? (
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>
+                    Tax Quarter (Quata)
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.35rem' }}>
+                    {['Q1', 'Q2', 'Q3', 'Q4'].map(q => (
+                      <button
+                        key={q}
+                        type="button"
+                        onClick={() => setSelectedQuarter(q)}
+                        style={{
+                          background: selectedQuarter === q ? 'rgba(59, 130, 246, 0.3)' : 'rgba(30, 41, 59, 0.8)',
+                          border: `1px solid ${selectedQuarter === q ? '#60a5fa' : 'rgba(255, 255, 255, 0.1)'}`,
+                          color: selectedQuarter === q ? '#93c5fd' : '#cbd5e1',
+                          borderRadius: '6px',
+                          padding: '0.5rem 0.25rem',
+                          fontSize: '0.8rem',
+                          fontWeight: selectedQuarter === q ? 700 : 500,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>
+                    Tax Month
+                  </label>
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    style={{
+                      width: '100%',
+                      background: 'rgba(30, 41, 59, 0.8)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      borderRadius: '8px',
+                      padding: '0.5rem 0.75rem',
+                      color: '#ffffff',
+                      fontSize: '0.85rem',
+                      outline: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="01">01 - January</option>
+                    <option value="02">02 - February</option>
+                    <option value="03">03 - March</option>
+                    <option value="04">04 - April</option>
+                    <option value="05">05 - May</option>
+                    <option value="06">06 - June</option>
+                    <option value="07">07 - July</option>
+                    <option value="08">08 - August</option>
+                    <option value="09">09 - September</option>
+                    <option value="10">10 - October</option>
+                    <option value="11">11 - November</option>
+                    <option value="12">12 - December</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Taxpayer TIN */}
+              <div>
+                <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>
                   Taxpayer TIN (RAMIS)
                 </label>
                 <input
                   type="text"
                   value={taxpayerTin}
                   onChange={(e) => setTaxpayerTin(e.target.value)}
+                  placeholder="e.g. 102938475"
                   style={{
-                    background: 'rgba(15, 23, 42, 0.8)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '6px',
-                    padding: '0.4rem 0.75rem',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    background: 'rgba(30, 41, 59, 0.8)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    borderRadius: '8px',
+                    padding: '0.5rem 0.75rem',
                     color: '#ffffff',
-                    fontSize: '0.85rem'
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>
-                  Tax Filing Period
-                </label>
-                <input
-                  type="text"
-                  value={taxPeriod}
-                  onChange={(e) => setTaxPeriod(e.target.value)}
-                  style={{
-                    background: 'rgba(15, 23, 42, 0.8)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '6px',
-                    padding: '0.4rem 0.75rem',
-                    color: '#ffffff',
-                    fontSize: '0.85rem'
+                    fontSize: '0.85rem',
+                    outline: 'none'
                   }}
                 />
               </div>
             </div>
 
-            <button
-              onClick={handleDownloadSchedule7}
-              disabled={loading}
-              style={{
-                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '10px',
-                padding: '0.65rem 1.25rem',
-                fontSize: '0.85rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                boxShadow: '0 4px 14px rgba(34, 197, 94, 0.3)'
-              }}
-            >
-              <Download size={16} />
-              Download Official RAMIS Schedule 7 CSV
-            </button>
+            {/* Action & Filter Summary Bar */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '1rem',
+              paddingTop: '0.25rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                {/* Active Period Code Badge */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Period Code:</span>
+                  <span style={{
+                    background: 'rgba(34, 197, 94, 0.15)',
+                    color: '#4ade80',
+                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                    padding: '0.25rem 0.65rem',
+                    borderRadius: '6px',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.5px'
+                  }}>
+                    {taxPeriod}
+                  </span>
+                </div>
+
+                {/* Filter Checkbox */}
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.8rem',
+                  color: filterByPeriod ? '#60a5fa' : '#94a3b8',
+                  cursor: 'pointer',
+                  userSelect: 'none'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={filterByPeriod}
+                    onChange={(e) => setFilterByPeriod(e.target.checked)}
+                    style={{ cursor: 'pointer', accentColor: '#3b82f6', width: '16px', height: '16px' }}
+                  />
+                  <span>Filter Ledger strictly for <strong>{taxPeriod}</strong></span>
+                </label>
+              </div>
+
+              {/* Download RAMIS CSV Button */}
+              <button
+                onClick={handleDownloadSchedule7}
+                disabled={loading || displayedInvoices.length === 0}
+                style={{
+                  background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '0.65rem 1.25rem',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: (loading || displayedInvoices.length === 0) ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  boxShadow: '0 4px 14px rgba(34, 197, 94, 0.3)',
+                  opacity: (loading || displayedInvoices.length === 0) ? 0.6 : 1
+                }}
+              >
+                <Download size={16} />
+                Export Schedule 7 CSV ({taxPeriod})
+              </button>
+            </div>
           </div>
 
-          {/* Schedule 7 Cage Breakdown */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
-            
-            <div style={{ background: 'rgba(30, 41, 59, 0.7)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '12px', padding: '1.25rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.8rem', color: '#60a5fa', fontWeight: 700 }}>CAGE A • STANDARD 18%</span>
-                <span style={{ fontSize: '0.7rem', background: 'rgba(59, 130, 246, 0.15)', padding: '0.15rem 0.45rem', borderRadius: '4px', color: '#60a5fa' }}>Domestic</span>
+          {/* Schedule 7 Cage Breakdown (Calculated dynamically on displayed/filtered invoices) */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0' }}>
+                Schedule 7 Cage Totals
               </div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 800, marginTop: '0.75rem' }}>
-                Rs. {cageATotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>
-                Output VAT: Rs. {outputVatLkr.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                Calculated from {displayedInvoices.length} {filterByPeriod ? `invoices in period ${taxPeriod}` : 'active invoices'}
               </div>
             </div>
 
-            <div style={{ background: 'rgba(30, 41, 59, 0.7)', border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: '12px', padding: '1.25rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.8rem', color: '#4ade80', fontWeight: 700 }}>CAGE D • ZERO-RATED 0%</span>
-                <span style={{ fontSize: '0.7rem', background: 'rgba(34, 197, 94, 0.15)', padding: '0.15rem 0.45rem', borderRadius: '4px', color: '#4ade80' }}>Direct Export</span>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+              
+              <div style={{ background: 'rgba(30, 41, 59, 0.7)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '12px', padding: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.8rem', color: '#60a5fa', fontWeight: 700 }}>CAGE A • STANDARD 18%</span>
+                  <span style={{ fontSize: '0.7rem', background: 'rgba(59, 130, 246, 0.15)', padding: '0.15rem 0.45rem', borderRadius: '4px', color: '#60a5fa' }}>Domestic</span>
+                </div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, marginTop: '0.75rem' }}>
+                  Rs. {cageATotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>
+                  Output VAT: Rs. {outputVatLkr.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </div>
               </div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#4ade80', marginTop: '0.75rem' }}>
-                € {cageDTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+
+              <div style={{ background: 'rgba(30, 41, 59, 0.7)', border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: '12px', padding: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.8rem', color: '#4ade80', fontWeight: 700 }}>CAGE D • ZERO-RATED 0%</span>
+                  <span style={{ fontSize: '0.7rem', background: 'rgba(34, 197, 94, 0.15)', padding: '0.15rem 0.45rem', borderRadius: '4px', color: '#4ade80' }}>Direct Export</span>
+                </div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#4ade80', marginTop: '0.75rem' }}>
+                  € {cageDTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>
+                  Zero-Rated Export under Sri Lanka VAT Act
+                </div>
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>
-                Zero-Rated Export under Sri Lanka VAT Act
+
+              <div style={{ background: 'rgba(30, 41, 59, 0.7)', border: '1px solid rgba(168, 85, 247, 0.3)', borderRadius: '12px', padding: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.8rem', color: '#c084fc', fontWeight: 700 }}>CAGE E • EXEMPT SUPPLIES</span>
+                  <span style={{ fontSize: '0.7rem', background: 'rgba(168, 85, 247, 0.15)', padding: '0.15rem 0.45rem', borderRadius: '4px', color: '#c084fc' }}>Exempt</span>
+                </div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#c084fc', marginTop: '0.75rem' }}>
+                  Rs. 7,025,000.00
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>
+                  Educational, Agricultural, Healthcare
+                </div>
               </div>
+
+            </div>
+          </div>
+
+          {/* Tax Filing Invoices Table with Individual Delete & Clear All Buttons */}
+          <div style={{ background: 'rgba(30, 41, 59, 0.7)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', padding: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>
+                  Invoices in Tax Ledger {filterByPeriod && `(${taxPeriod})`}
+                </h3>
+                <span style={{
+                  background: 'rgba(59, 130, 246, 0.15)',
+                  color: '#60a5fa',
+                  fontSize: '0.7rem',
+                  fontWeight: 600,
+                  padding: '0.15rem 0.5rem',
+                  borderRadius: '999px',
+                  border: '1px solid rgba(59, 130, 246, 0.3)'
+                }}>
+                  {displayedInvoices.length} {displayedInvoices.length === 1 ? 'Invoice' : 'Invoices'}
+                </span>
+              </div>
+
+              {taxInvoices.length > 0 && (
+                <button
+                  onClick={handleClearAllInvoices}
+                  disabled={loading}
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.15)',
+                    color: '#f87171',
+                    border: '1px solid rgba(239, 68, 68, 0.35)',
+                    borderRadius: '8px',
+                    padding: '0.4rem 0.85rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    transition: 'all 0.15s'
+                  }}
+                  title="Clear all invoices from active ledger"
+                >
+                  <Trash2 size={13} />
+                  Clear All Invoices
+                </button>
+              )}
             </div>
 
-            <div style={{ background: 'rgba(30, 41, 59, 0.7)', border: '1px solid rgba(168, 85, 247, 0.3)', borderRadius: '12px', padding: '1.25rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.8rem', color: '#c084fc', fontWeight: 700 }}>CAGE E • EXEMPT SUPPLIES</span>
-                <span style={{ fontSize: '0.7rem', background: 'rgba(168, 85, 247, 0.15)', padding: '0.15rem 0.45rem', borderRadius: '4px', color: '#c084fc' }}>Exempt</span>
+            {displayedInvoices.length === 0 ? (
+              <div style={{
+                background: 'rgba(15, 23, 42, 0.5)',
+                border: '1px dashed rgba(255, 255, 255, 0.12)',
+                borderRadius: '10px',
+                padding: '2.5rem 1rem',
+                textAlign: 'center',
+                color: '#94a3b8'
+              }}>
+                <Filter size={36} color="#64748b" style={{ margin: '0 auto 0.5rem' }} />
+                <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#cbd5e1' }}>
+                  No Invoices Found for {filterByPeriod ? `Period ${taxPeriod}` : 'Ledger'}
+                </div>
+                <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: '#64748b' }}>
+                  {filterByPeriod
+                    ? 'Try switching period or unchecking "Filter Ledger strictly" to view all records.'
+                    : 'Upload invoices via the Invoice OCR tab to populate this ledger.'}
+                </div>
               </div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#c084fc', marginTop: '0.75rem' }}>
-                Rs. 7,025,000.00
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', color: '#94a3b8' }}>
+                      <th style={{ padding: '0.75rem' }}>Invoice #</th>
+                      <th style={{ padding: '0.75rem' }}>Customer / Consignee</th>
+                      <th style={{ padding: '0.75rem' }}>Date of Supply</th>
+                      <th style={{ padding: '0.75rem' }}>Category</th>
+                      <th style={{ padding: '0.75rem' }}>Total Amount</th>
+                      <th style={{ padding: '0.75rem' }}>VAT</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'center' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {displayedInvoices.map((inv, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                        <td style={{ padding: '0.75rem', fontWeight: 600, color: '#60a5fa' }}>{inv.invoice_number}</td>
+                        <td style={{ padding: '0.75rem' }}>{inv.customer_name}</td>
+                        <td style={{ padding: '0.75rem', color: '#94a3b8' }}>{inv.date_of_supply}</td>
+                        <td style={{ padding: '0.75rem' }}>
+                          <span style={{
+                            background: inv.tax_category === 'Zero-Rated' ? 'rgba(34, 197, 94, 0.15)' : inv.tax_category === 'Standard' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(168, 85, 247, 0.15)',
+                            color: inv.tax_category === 'Zero-Rated' ? '#4ade80' : inv.tax_category === 'Standard' ? '#60a5fa' : '#c084fc',
+                            padding: '0.2rem 0.5rem',
+                            borderRadius: '4px',
+                            fontSize: '0.7rem',
+                            fontWeight: 600
+                          }}>
+                            {inv.tax_category}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.75rem', fontWeight: 600 }}>
+                          {inv.currency} {inv.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+                        <td style={{ padding: '0.75rem', color: '#94a3b8' }}>
+                          {inv.currency} {inv.tax_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+                        <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                          <button
+                            onClick={() => handleDeleteInvoice(inv.invoice_number)}
+                            title={`Delete invoice ${inv.invoice_number}`}
+                            style={{
+                              background: 'rgba(239, 68, 68, 0.12)',
+                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                              color: '#f87171',
+                              borderRadius: '6px',
+                              padding: '0.3rem 0.5rem',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'background 0.15s'
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>
-                Educational, Agricultural, Healthcare
-              </div>
-            </div>
-
+            )}
           </div>
 
           {/* Form 2540 Summary Info */}
