@@ -171,6 +171,9 @@ class ObligationEvaluationResult(BaseModel):
     def __getitem__(self, item: str) -> Any:
         return getattr(self, item)
 
+    def __contains__(self, item: str) -> bool:
+        return hasattr(self, item)
+
 
 class SummaryCounts(BaseModel):
     """Aggregate counts across all evaluated obligations."""
@@ -181,6 +184,9 @@ class SummaryCounts(BaseModel):
 
     def __getitem__(self, item: str) -> Any:
         return getattr(self, item)
+
+    def __contains__(self, item: str) -> bool:
+        return hasattr(self, item)
 
 
 class GroupedObligations(BaseModel):
@@ -194,12 +200,23 @@ class FollowUpQuestion(BaseModel):
     """Deterministic question generated for unresolved facts (no LLM hallucination)."""
     fact: str
     question: str
+    question_en: Optional[str] = None
     question_si: Optional[str] = None
     type: Literal["boolean", "select", "number", "text"] = "boolean"
     options: List[Any] = Field(default_factory=list)
 
+    def __init__(self, **data: Any):
+        if "question" in data and "question_en" not in data:
+            data["question_en"] = data["question"]
+        elif "question_en" in data and "question" not in data:
+            data["question"] = data["question_en"]
+        super().__init__(**data)
+
     def __getitem__(self, item: str) -> Any:
         return getattr(self, item)
+
+    def __contains__(self, item: str) -> bool:
+        return hasattr(self, item)
 
 
 class ComplianceEvaluationResponse(BaseModel):
