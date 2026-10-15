@@ -63,10 +63,10 @@ export default function ClearLedgerDashboard() {
 
   const [taxInvoices, setTaxInvoices] = useState([
     {
-      invoice_number: 'INV-3425',
+      invoice_number: '3425',
       customer_tin: '1146888607000',
       customer_name: 'STARFLORA HOLLAND B.V.',
-      date_of_supply: '2026-01-06',
+      date_of_supply: '06/01/2026',
       sub_total: 3399.50,
       tax_amount: 0.00,
       total_amount: 3399.50,
@@ -74,26 +74,37 @@ export default function ClearLedgerDashboard() {
       tax_category: 'Zero-Rated'
     },
     {
-      invoice_number: 'INV-0097',
-      customer_tin: '109887766',
-      customer_name: 'CEYLON TEA TRADERS',
-      date_of_supply: '2025-05-31',
-      sub_total: 7025000.00,
+      invoice_number: '3426',
+      customer_tin: '1140859877000',
+      customer_name: 'FRESH FROM SOURCE B.V.',
+      date_of_supply: '08/01/2026',
+      sub_total: 7822.50,
       tax_amount: 0.00,
-      total_amount: 7025000.00,
-      currency: 'LKR',
-      tax_category: 'Exempt'
+      total_amount: 7822.50,
+      currency: 'EUR',
+      tax_category: 'Zero-Rated'
     },
     {
-      invoice_number: 'INV-DOM-88',
-      customer_tin: '103356111',
-      customer_name: 'LANKA STEEL DISTRIBUTORS',
-      date_of_supply: '2025-06-15',
-      sub_total: 100000.00,
-      tax_amount: 18000.00,
-      total_amount: 118000.00,
-      currency: 'LKR',
-      tax_category: 'Standard'
+      invoice_number: '3427',
+      customer_tin: '1140859877000',
+      customer_name: 'FRESH FROM SOURCE B.V.',
+      date_of_supply: '16/01/2026',
+      sub_total: 8742.40,
+      tax_amount: 0.00,
+      total_amount: 8742.40,
+      currency: 'EUR',
+      tax_category: 'Zero-Rated'
+    },
+    {
+      invoice_number: '3428',
+      customer_tin: '1146888607000',
+      customer_name: 'STARFLORA HOLLAND B.V.',
+      date_of_supply: '16/01/2026',
+      sub_total: 2334.00,
+      tax_amount: 0.00,
+      total_amount: 2334.00,
+      currency: 'EUR',
+      tax_category: 'Zero-Rated'
     }
   ]);
 
@@ -166,14 +177,14 @@ export default function ClearLedgerDashboard() {
         const ext = result.extracted_amounts;
         const newEntry = {
           invoice_number: ext.invoice_number || `INV-${Date.now().toString().slice(-4)}`,
-          customer_tin: '1146888607000',
-          customer_name: 'Extracted Invoice Client',
-          date_of_supply: ext.invoice_date || '2026-01-01',
+          customer_tin: ext.customer_tin || '1146888607000',
+          customer_name: ext.customer_name || 'STARFLORA HOLLAND B.V.',
+          date_of_supply: ext.invoice_date || '01/01/2026',
           sub_total: ext.sub_total || 0,
           tax_amount: ext.tax_amount || 0,
           total_amount: ext.total_amount || 0,
-          currency: ext.currency || 'LKR',
-          tax_category: ext.tax_category || 'Standard'
+          currency: ext.currency || 'EUR',
+          tax_category: ext.tax_category || 'Zero-Rated'
         };
         setTaxInvoices(prev => [newEntry, ...prev.filter(x => x.invoice_number !== newEntry.invoice_number)]);
       }

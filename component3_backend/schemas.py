@@ -151,6 +151,8 @@ class ExtractedAmountDetails(BaseModel):
     tax_category: str = Field("Standard", description="Detected tax category (Standard 18%, Zero-Rated, Exempt)")
     invoice_number: str = Field(..., description="Extracted or detected invoice number")
     invoice_date: str = Field(..., description="Extracted invoice date")
+    customer_name: Optional[str] = Field("Extracted Invoice Client", description="Extracted customer / consignee name")
+    customer_tin: Optional[str] = Field("1146888607000", description="Extracted customer / consignee TIN")
     is_math_valid: bool = Field(..., description="Whether Subtotal + Tax == Total")
     math_difference: float = Field(..., description="Numerical difference in mathematical consistency")
 
