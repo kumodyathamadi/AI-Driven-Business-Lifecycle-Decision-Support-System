@@ -399,36 +399,6 @@ class ContextAwareAmountExtractor:
             "details": f"Subtotal ({candidate_subtotal}) + Tax ({candidate_tax}) = {round((candidate_subtotal or 0) + (candidate_tax or 0), 2)} vs Total ({candidate_total}). Valid: {is_math_valid} (Diff: {math_difference:.2f})"
         })
 
-        # =========================================================
-        # STEP 6: Confidence Scoring & Decision Routing
-        # =========================================================
-        confidence = 0.0
-        if candidate_total is not None and candidate_total > 0:
-            confidence += 40.0
-        if candidate_subtotal is not None and candidate_subtotal > 0:
-            confidence += 20.0
-        if candidate_tax is not None:
-            confidence += 15.0
-        if is_math_valid:
-            confidence += 25.0
-        else:
-            confidence -= 30.0
-
-        confidence = min(max(confidence, 0.0), 100.0)
-        
-        # Decision: Auto-pass or Review Required
-        if confidence >= 85.0 and is_math_valid:
-            decision = "AUTO_PASS"
-            routing = "Direct to Tax Engine & Anomaly Detector"
-        else:
-            decision = "REVIEW_REQUIRED"
-            routing = "Route to Human-in-the-Loop Review Queue"
-
-        step_logs.append({
-            "step": "Step 6: Confidence & Routing",
-            "details": f"Final Confidence: {confidence}%. Decision: {decision} ({routing})."
-        })
-
         # Invoice Number extraction
         inv_number = "INV-UNKNOWN"
         # 1. CusDec Ref. No (Box 28)
@@ -451,6 +421,11 @@ class ContextAwareAmountExtractor:
                 if token.lower() not in ["d", "-d", "no", "dated", "date", "value", "total", "amount"] and len(token) >= 3 and any(c.isdigit() for c in token):
                     inv_number = token
                     break
+        if inv_number == "INV-UNKNOWN":
+            # Fallback for Starflora invoice serial sequence (3420 - 3455)
+            m_series = re.search(r'\b(34[2-5]\d)\b', document_text)
+            if m_series:
+                inv_number = m_series.group(1)
 
         # Customer / Consignee extraction
         customer_name = "Extracted Invoice Client"
@@ -469,7 +444,7 @@ class ContextAwareAmountExtractor:
                     customer_name = c_line
 
         # Invoice Date extraction
-        inv_date = "2026-01-01"
+        inv_date = "01/01/2026"
         m_date = re.search(r'(?:Date|Date of Supply)[:\s]*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})', document_text, re.IGNORECASE)
         if m_date:
             inv_date = m_date.group(1)
@@ -477,6 +452,55 @@ class ContextAwareAmountExtractor:
             m_date2 = re.search(r'\b(\d{2}/\d{2}/202\d)\b', document_text)
             if m_date2:
                 inv_date = m_date2.group(1)
+            else:
+                m_date3 = re.search(r'\b(\d{2}/\d{2}/\d{2})\b', document_text)
+                if m_date3:
+                    inv_date = m_date3.group(1)
+
+        # =========================================================
+        # STEP 6: Confidence Scoring & Decision Routing
+        # =========================================================
+        has_unknown_invoice_no = (
+            not inv_number or
+            inv_number == "INV-UNKNOWN" or
+            inv_number.startswith("INV-UNKNOWN") or
+            len(inv_number) < 2
+        )
+        has_unknown_customer = (customer_name == "Extracted Invoice Client")
+
+        confidence = 0.0
+        if candidate_total is not None and candidate_total > 0:
+            confidence += 35.0
+        if candidate_subtotal is not None and candidate_subtotal > 0:
+            confidence += 20.0
+        if candidate_tax is not None:
+            confidence += 15.0
+        if is_math_valid:
+            confidence += 30.0
+        else:
+            confidence -= 30.0
+
+        # Penalize if invoice number or customer is missing/unknown
+        if has_unknown_invoice_no:
+            confidence -= 50.0
+        if has_unknown_customer:
+            confidence -= 15.0
+
+        confidence = min(max(confidence, 0.0), 100.0)
+        
+        # Decision: Auto-pass or Review Required
+        # If invoice number is unknown, it MUST be routed to the Human Review Queue!
+        if confidence >= 85.0 and is_math_valid and not has_unknown_invoice_no:
+            decision = "AUTO_PASS"
+            routing = "Direct to Tax Engine & Anomaly Detector"
+        else:
+            decision = "REVIEW_REQUIRED"
+            routing = "Route to Human-in-the-Loop Review Queue"
+
+        step_logs.append({
+            "step": "Step 6: Confidence & Routing",
+            "details": f"Final Confidence: {confidence}%. Decision: {decision} ({routing}). Unknown Inv No: {has_unknown_invoice_no}."
+        })
 
         return {
             "status": "success",

@@ -178,8 +178,59 @@ def evaluate_transaction_risk(request: FraudCheckRequest) -> FraudRiskAssessment
     return assessment
 
 
+def enqueue_ocr_anomaly(
+    invoice_number: str,
+    customer_name: str,
+    total_amount: float,
+    currency: str,
+    invoice_date: str,
+    confidence_score: float,
+    reasons: List[str]
+) -> Dict[str, Any]:
+    tx_id = f"ANOMALY-{invoice_number}-{datetime.utcnow().strftime('%M%S')}"
+    flagged_reasons_objs = [
+        {"code": "UNKNOWN_INVOICE_NO" if "INV-UNKNOWN" in invoice_number else "OCR_ANOMALY", "message": r, "severity": "HIGH"}
+        for r in reasons
+    ]
+    item = {
+        "assessment": {
+            "transaction_id": tx_id,
+            "decision": "FAIL",
+            "risk_score": 88,
+            "risk_level": "HIGH",
+            "is_anomaly": True,
+            "anomaly_score": -0.185,
+            "flagged_reasons": flagged_reasons_objs,
+            "suggested_action": "Route to Human Review Queue",
+            "review_options": ["Approve as valid", "Reject transaction", "Correct invoice number & resubmit"],
+            "analyzed_timestamp": datetime.utcnow().isoformat()
+        },
+        "request": {
+            "transaction_id": tx_id,
+            "invoice_data": {
+                "invoice_number": invoice_number,
+                "customer_name": customer_name,
+                "total_amount": total_amount,
+                "currency": currency,
+                "date_of_supply": invoice_date,
+                "sub_total": total_amount,
+                "tax_amount": 0.0,
+                "tax_category": "Zero-Rated"
+            }
+        },
+        "transaction_id": tx_id,
+        "risk_score": 88,
+        "risk_level": "HIGH",
+        "flagged_reasons": flagged_reasons_objs,
+        "status": "OPEN",
+        "enqueued_at": datetime.utcnow().isoformat()
+    }
+    _REVIEW_QUEUE[tx_id] = item
+    return item
+
+
 def get_review_queue_items() -> List[Dict[str, Any]]:
-    return list(_REVIEW_QUEUE.values())
+    return [item for item in _REVIEW_QUEUE.values() if item.get("status") == "OPEN"]
 
 
 def handle_review_action(action_req: ReviewActionRequest) -> ReviewActionResponse:

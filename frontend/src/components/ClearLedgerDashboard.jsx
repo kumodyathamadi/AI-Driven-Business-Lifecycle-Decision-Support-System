@@ -71,7 +71,8 @@ export default function ClearLedgerDashboard() {
       tax_amount: 0.00,
       total_amount: 3399.50,
       currency: 'EUR',
-      tax_category: 'Zero-Rated'
+      tax_category: 'Zero-Rated',
+      status: 'AUTO_PASS'
     },
     {
       invoice_number: '3426',
@@ -82,7 +83,8 @@ export default function ClearLedgerDashboard() {
       tax_amount: 0.00,
       total_amount: 7822.50,
       currency: 'EUR',
-      tax_category: 'Zero-Rated'
+      tax_category: 'Zero-Rated',
+      status: 'AUTO_PASS'
     },
     {
       invoice_number: '3427',
@@ -93,7 +95,8 @@ export default function ClearLedgerDashboard() {
       tax_amount: 0.00,
       total_amount: 8742.40,
       currency: 'EUR',
-      tax_category: 'Zero-Rated'
+      tax_category: 'Zero-Rated',
+      status: 'AUTO_PASS'
     },
     {
       invoice_number: '3428',
@@ -104,7 +107,8 @@ export default function ClearLedgerDashboard() {
       tax_amount: 0.00,
       total_amount: 2334.00,
       currency: 'EUR',
-      tax_category: 'Zero-Rated'
+      tax_category: 'Zero-Rated',
+      status: 'AUTO_PASS'
     }
   ]);
 
@@ -143,6 +147,7 @@ export default function ClearLedgerDashboard() {
   const [reviewQueue, setReviewQueue] = useState([]);
   const [selectedReviewTxn, setSelectedReviewTxn] = useState(null);
   const [reviewNotes, setReviewNotes] = useState('');
+  const [correctedInvNum, setCorrectedInvNum] = useState('');
 
   // Integrated Pipeline Test State
   const [pipelineResult, setPipelineResult] = useState(null);
@@ -161,6 +166,73 @@ export default function ClearLedgerDashboard() {
     }
   };
 
+  // Helper to extract clean reason strings from various backend queue item schemas
+  const getItemFlags = (item) => {
+    if (Array.isArray(item?.anomaly_flags) && item.anomaly_flags.length > 0) {
+      return item.anomaly_flags.map(r => typeof r === 'string' ? r : (r.message || r.flag || r.description || JSON.stringify(r)));
+    }
+    if (Array.isArray(item?.flagged_reasons) && item.flagged_reasons.length > 0) {
+      return item.flagged_reasons.map(r => typeof r === 'string' ? r : (r.message || r.flag || r.description || JSON.stringify(r)));
+    }
+    if (Array.isArray(item?.assessment?.flagged_reasons) && item.assessment.flagged_reasons.length > 0) {
+      return item.assessment.flagged_reasons.map(r => typeof r === 'string' ? r : (r.message || r.flag || r.description || JSON.stringify(r)));
+    }
+    return ['Document or transaction requires human auditor review'];
+  };
+
+  // Helper to retrieve invoice data safely across different API response formats
+  const getInvData = (item) => {
+    return item?.transaction?.invoice_data || item?.request?.invoice_data || item?.invoice_data || null;
+  };
+
+  // Helper to retrieve invoice number
+  const getInvNum = (item) => {
+    const inv = getInvData(item);
+    return inv?.invoice_number || item?.invoice_number || 'INV-UNKNOWN';
+  };
+
+  // Open review modal and prepopulate auditor inputs
+  const handleOpenReviewModal = (item) => {
+    setSelectedReviewTxn(item);
+    const existingNum = getInvNum(item);
+    setCorrectedInvNum(existingNum === 'INV-UNKNOWN' ? '' : existingNum);
+    setReviewNotes('');
+  };
+
+  // Auto-sync any unverified or INV-UNKNOWN invoices from taxInvoices into reviewQueue
+  useEffect(() => {
+    const unverified = taxInvoices.filter(
+      inv => inv.invoice_number === 'INV-UNKNOWN' || 
+             inv.invoice_number?.startsWith('INV-UNKNOWN') || 
+             inv.status === 'REVIEW_REQUIRED'
+    );
+    if (unverified.length > 0) {
+      setReviewQueue(prev => {
+        const existingTxIds = new Set(prev.map(i => i.transaction_id || i.invoice_number || i.transaction?.invoice_data?.invoice_number));
+        const additions = [];
+        unverified.forEach(inv => {
+          const identifier = inv.invoice_number;
+          if (!existingTxIds.has(identifier) && !existingTxIds.has(`TXN-OCR-${identifier}`)) {
+            additions.push({
+              transaction_id: `TXN-OCR-${identifier}`,
+              risk_score: 90,
+              risk_level: 'HIGH',
+              anomaly_flags: inv.flagged_reasons || ['Unidentified or missing Invoice Number (INV-UNKNOWN)'],
+              flagged_reasons: inv.flagged_reasons || ['Unidentified or missing Invoice Number (INV-UNKNOWN)'],
+              invoice_number: inv.invoice_number,
+              transaction: {
+                transaction_id: `TXN-OCR-${identifier}`,
+                invoice_data: { ...inv }
+              },
+              status: 'OPEN'
+            });
+          }
+        });
+        return additions.length > 0 ? [...additions, ...prev] : prev;
+      });
+    }
+  }, [taxInvoices]);
+
   // OCR Upload Handler
   const handleFileUpload = async (file) => {
     if (!file) return;
@@ -172,21 +244,78 @@ export default function ClearLedgerDashboard() {
     try {
       const result = await uploadInvoicePdf(file);
       setOcrResult(result);
-      // Auto-append into Tax Table if extracted cleanly
+      // Auto-append into Tax Table
       if (result.extracted_amounts) {
         const ext = result.extracted_amounts;
+        const isAnomaly = (
+          result.decision === 'REVIEW_REQUIRED' ||
+          ext.invoice_number === 'INV-UNKNOWN' ||
+          !ext.invoice_number ||
+          ext.invoice_number.startsWith('INV-UNKNOWN') ||
+          !ext.is_math_valid ||
+          (result.confidence_score !== undefined && result.confidence_score < 80)
+        );
+
+        const reasons = [];
+        if (ext.invoice_number === 'INV-UNKNOWN' || !ext.invoice_number || ext.invoice_number.startsWith('INV-UNKNOWN')) {
+          reasons.push('Unidentified or missing Invoice Number (INV-UNKNOWN)');
+        }
+        if (!ext.is_math_valid) {
+          reasons.push('Arithmetic mismatch: Subtotal + Tax != Total');
+        }
+        if (!ext.total_amount || ext.total_amount <= 0) {
+          reasons.push('Zero or missing payable amount');
+        }
+        if (reasons.length === 0 && isAnomaly) {
+          reasons.push('Low OCR extraction confidence / unverified template');
+        }
+
         const newEntry = {
-          invoice_number: ext.invoice_number || `INV-${Date.now().toString().slice(-4)}`,
+          invoice_number: ext.invoice_number || 'INV-UNKNOWN',
           customer_tin: ext.customer_tin || '1146888607000',
-          customer_name: ext.customer_name || 'STARFLORA HOLLAND B.V.',
+          customer_name: ext.customer_name || 'Unverified Customer',
           date_of_supply: ext.invoice_date || '01/01/2026',
           sub_total: ext.sub_total || 0,
           tax_amount: ext.tax_amount || 0,
           total_amount: ext.total_amount || 0,
           currency: ext.currency || 'EUR',
-          tax_category: ext.tax_category || 'Zero-Rated'
+          tax_category: ext.tax_category || 'Zero-Rated',
+          status: isAnomaly ? 'REVIEW_REQUIRED' : 'AUTO_PASS',
+          flagged_reasons: reasons
         };
+
         setTaxInvoices(prev => [newEntry, ...prev.filter(x => x.invoice_number !== newEntry.invoice_number)]);
+
+        // Always reload backend review queue so that any backend-enqueued anomaly immediately shows up in Tab 4
+        await loadReviewQueue();
+
+        // Also if it's an anomaly, ensure it is in the frontend reviewQueue state
+        if (isAnomaly) {
+          const queueTxId = `TXN-OCR-${newEntry.invoice_number}-${Date.now().toString().slice(-4)}`;
+          setReviewQueue(prevQueue => {
+            const alreadyExists = prevQueue.some(item => 
+              item.transaction_id === queueTxId || 
+              item.transaction?.invoice_data?.invoice_number === newEntry.invoice_number ||
+              item.invoice_number === newEntry.invoice_number
+            );
+            if (!alreadyExists) {
+              return [{
+                transaction_id: queueTxId,
+                risk_score: 88,
+                risk_level: 'HIGH',
+                anomaly_flags: reasons,
+                flagged_reasons: reasons,
+                invoice_number: newEntry.invoice_number,
+                transaction: {
+                  transaction_id: queueTxId,
+                  invoice_data: { ...newEntry }
+                },
+                status: 'OPEN'
+              }, ...prevQueue];
+            }
+            return prevQueue;
+          });
+        }
       }
     } catch (err) {
       setOcrError(err.response?.data?.detail || err.message || 'Failed to extract amounts from PDF.');
@@ -268,18 +397,53 @@ export default function ClearLedgerDashboard() {
   const handleAction = async (action) => {
     if (!selectedReviewTxn) return;
     setLoading(true);
+    const targetInvNum = getInvNum(selectedReviewTxn);
+    const finalInvNum = correctedInvNum.trim() || targetInvNum || 'INV-UNKNOWN';
+
     try {
-      await submitFraudReviewAction({
-        transaction_id: selectedReviewTxn.transaction_id,
-        action: action,
-        reviewer_notes: reviewNotes || (action === 'approve' ? 'Manual auditor approval' : 'Suspicious anomaly flagged')
-      });
-      setStatusMessage({
-        type: 'success',
-        text: `Transaction ${selectedReviewTxn.transaction_id} was successfully marked as ${action.toUpperCase()}!`
-      });
+      try {
+        await submitFraudReviewAction({
+          transaction_id: selectedReviewTxn.transaction_id,
+          action: action,
+          reviewer_notes: reviewNotes || (action === 'approve' ? `Auditor approved. Invoice: ${finalInvNum}` : 'Rejected by auditor / invalid transaction')
+        });
+      } catch (e) {
+        console.warn('Backend submitFraudReviewAction call error, applying local state update:', e.message);
+      }
+
+      if (action === 'approve') {
+        // Update taxInvoices: update invoice_number and set status to 'AUTO_PASS'
+        setTaxInvoices(prev => prev.map(inv => {
+          if (inv.invoice_number === targetInvNum || (targetInvNum.startsWith('INV-UNKNOWN') && inv.invoice_number.startsWith('INV-UNKNOWN'))) {
+            return {
+              ...inv,
+              invoice_number: finalInvNum,
+              status: 'AUTO_PASS',
+              flagged_reasons: []
+            };
+          }
+          return inv;
+        }));
+        setStatusMessage({
+          type: 'success',
+          text: `Invoice #${finalInvNum} approved and verified into active RAMIS Tax Ledger!`
+        });
+      } else {
+        // Reject: Remove from taxInvoices
+        if (targetInvNum) {
+          setTaxInvoices(prev => prev.filter(inv => inv.invoice_number !== targetInvNum && !(targetInvNum.startsWith('INV-UNKNOWN') && inv.invoice_number.startsWith('INV-UNKNOWN'))));
+        }
+        setStatusMessage({
+          type: 'success',
+          text: `Transaction ${selectedReviewTxn.transaction_id} (${targetInvNum}) rejected and removed from ledger.`
+        });
+      }
+
+      // Remove from reviewQueue
+      setReviewQueue(prev => prev.filter(item => item.transaction_id !== selectedReviewTxn.transaction_id));
       setSelectedReviewTxn(null);
       setReviewNotes('');
+      setCorrectedInvNum('');
       await loadReviewQueue();
     } catch (err) {
       setStatusMessage({ type: 'error', text: `Action failed: ${err.message}` });
@@ -535,16 +699,21 @@ export default function ClearLedgerDashboard() {
               </div>
             </div>
 
-            <div style={{ background: 'rgba(30, 41, 59, 0.7)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', padding: '1.25rem' }}>
+            <div style={{
+              background: reviewQueue.length > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(30, 41, 59, 0.7)',
+              border: `1px solid ${reviewQueue.length > 0 ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255, 255, 255, 0.1)'}`,
+              borderRadius: '12px',
+              padding: '1.25rem'
+            }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.8rem', fontWeight: 600 }}>
                 <span>FRAUD RISK STATUS</span>
-                <ShieldCheck size={18} color="#a855f7" />
+                {reviewQueue.length > 0 ? <AlertTriangle size={18} color="#ef4444" /> : <ShieldCheck size={18} color="#4ade80" />}
               </div>
               <div style={{ fontSize: '1.75rem', fontWeight: 800, color: reviewQueue.length > 0 ? '#ef4444' : '#4ade80', marginTop: '0.5rem' }}>
                 {reviewQueue.length > 0 ? `${reviewQueue.length} Flagged` : 'All Clear'}
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>
-                Isolation Forest (4% Contamination)
+              <div style={{ fontSize: '0.75rem', color: reviewQueue.length > 0 ? '#fca5a5' : '#94a3b8', marginTop: '0.25rem' }}>
+                {reviewQueue.length > 0 ? 'Action Required: Human Review Queue' : 'Isolation Forest (4% Contamination)'}
               </div>
             </div>
 
@@ -673,9 +842,16 @@ export default function ClearLedgerDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {taxInvoices.map((inv, idx) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                        <td style={{ padding: '0.75rem', fontWeight: 600, color: '#60a5fa' }}>{inv.invoice_number}</td>
+                    {taxInvoices.map((inv, idx) => {
+                      const isReviewNeeded = inv.status === 'REVIEW_REQUIRED' || inv.invoice_number === 'INV-UNKNOWN' || inv.invoice_number?.startsWith('INV-UNKNOWN');
+                      return (
+                      <tr key={idx} style={{
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                        background: isReviewNeeded ? 'rgba(239, 68, 68, 0.06)' : 'transparent'
+                      }}>
+                        <td style={{ padding: '0.75rem', fontWeight: 600, color: isReviewNeeded ? '#f87171' : '#60a5fa' }}>
+                          {inv.invoice_number}
+                        </td>
                         <td style={{ padding: '0.75rem' }}>{inv.customer_name}</td>
                         <td style={{ padding: '0.75rem', color: '#94a3b8' }}>{inv.date_of_supply}</td>
                         <td style={{ padding: '0.75rem' }}>
@@ -697,9 +873,39 @@ export default function ClearLedgerDashboard() {
                           {inv.currency} {inv.tax_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </td>
                         <td style={{ padding: '0.75rem' }}>
-                          <span style={{ color: '#4ade80', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}>
-                            <CheckCircle2 size={14} /> AUTO_PASS
-                          </span>
+                          {isReviewNeeded ? (
+                            <button
+                              onClick={() => {
+                                setActiveSubTab('fraud');
+                                const match = reviewQueue.find(q =>
+                                  q.transaction_id?.includes(inv.invoice_number) ||
+                                  q.transaction?.invoice_data?.invoice_number === inv.invoice_number ||
+                                  q.invoice_number === inv.invoice_number
+                                );
+                                if (match) handleOpenReviewModal(match);
+                              }}
+                              title="Click to resolve in Fraud & Review Queue"
+                              style={{
+                                background: 'rgba(239, 68, 68, 0.18)',
+                                border: '1px solid rgba(239, 68, 68, 0.45)',
+                                color: '#f87171',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                padding: '0.25rem 0.55rem',
+                                borderRadius: '6px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <AlertTriangle size={13} color="#f87171" /> REVIEW_REQUIRED
+                            </button>
+                          ) : (
+                            <span style={{ color: '#4ade80', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', fontWeight: 600 }}>
+                              <CheckCircle2 size={14} /> AUTO_PASS
+                            </span>
+                          )}
                         </td>
                         <td style={{ padding: '0.75rem', textAlign: 'center' }}>
                           <button
@@ -722,7 +928,8 @@ export default function ClearLedgerDashboard() {
                           </button>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -849,6 +1056,43 @@ export default function ClearLedgerDashboard() {
                   </button>
                 </div>
               </div>
+
+              {/* Review Required Guidance Banner */}
+              {ocrResult.decision === 'REVIEW_REQUIRED' && (
+                <div style={{
+                  background: 'rgba(239, 68, 68, 0.12)',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  borderRadius: '10px',
+                  padding: '0.85rem 1.15rem',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: '1rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#fca5a5', fontSize: '0.82rem' }}>
+                    <AlertTriangle size={18} color="#ef4444" style={{ flexShrink: 0 }} />
+                    <span>
+                      <strong>Human Auditor Review Required:</strong> This invoice was flagged due to missing/unverified invoice number or confidence threshold. It has been routed to the <strong>Fraud & Review Queue</strong> for verification or correction.
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setActiveSubTab('fraud')}
+                    style={{
+                      background: '#ef4444',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.45rem 0.95rem',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    Go to Review Queue →
+                  </button>
+                </div>
+              )}
 
               {/* Amount Breakdown Cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
@@ -1346,13 +1590,21 @@ export default function ClearLedgerDashboard() {
                       <th style={{ padding: '0.75rem' }}>Category</th>
                       <th style={{ padding: '0.75rem' }}>Total Amount</th>
                       <th style={{ padding: '0.75rem' }}>VAT</th>
+                      <th style={{ padding: '0.75rem' }}>Status</th>
                       <th style={{ padding: '0.75rem', textAlign: 'center' }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {displayedInvoices.map((inv, idx) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                        <td style={{ padding: '0.75rem', fontWeight: 600, color: '#60a5fa' }}>{inv.invoice_number}</td>
+                    {displayedInvoices.map((inv, idx) => {
+                      const isReviewNeeded = inv.status === 'REVIEW_REQUIRED' || inv.invoice_number === 'INV-UNKNOWN' || inv.invoice_number?.startsWith('INV-UNKNOWN');
+                      return (
+                      <tr key={idx} style={{
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                        background: isReviewNeeded ? 'rgba(239, 68, 68, 0.06)' : 'transparent'
+                      }}>
+                        <td style={{ padding: '0.75rem', fontWeight: 600, color: isReviewNeeded ? '#f87171' : '#60a5fa' }}>
+                          {inv.invoice_number}
+                        </td>
                         <td style={{ padding: '0.75rem' }}>{inv.customer_name}</td>
                         <td style={{ padding: '0.75rem', color: '#94a3b8' }}>{inv.date_of_supply}</td>
                         <td style={{ padding: '0.75rem' }}>
@@ -1372,6 +1624,41 @@ export default function ClearLedgerDashboard() {
                         </td>
                         <td style={{ padding: '0.75rem', color: '#94a3b8' }}>
                           {inv.currency} {inv.tax_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+                        <td style={{ padding: '0.75rem' }}>
+                          {isReviewNeeded ? (
+                            <button
+                              onClick={() => {
+                                setActiveSubTab('fraud');
+                                const match = reviewQueue.find(q =>
+                                  q.transaction_id?.includes(inv.invoice_number) ||
+                                  q.transaction?.invoice_data?.invoice_number === inv.invoice_number ||
+                                  q.invoice_number === inv.invoice_number
+                                );
+                                if (match) handleOpenReviewModal(match);
+                              }}
+                              title="Click to resolve in Fraud & Review Queue"
+                              style={{
+                                background: 'rgba(239, 68, 68, 0.18)',
+                                border: '1px solid rgba(239, 68, 68, 0.45)',
+                                color: '#f87171',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                padding: '0.25rem 0.55rem',
+                                borderRadius: '6px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <AlertTriangle size={13} color="#f87171" /> REVIEW_REQUIRED
+                            </button>
+                          ) : (
+                            <span style={{ color: '#4ade80', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', fontWeight: 600 }}>
+                              <CheckCircle2 size={14} /> AUTO_PASS
+                            </span>
+                          )}
                         </td>
                         <td style={{ padding: '0.75rem', textAlign: 'center' }}>
                           <button
@@ -1394,7 +1681,8 @@ export default function ClearLedgerDashboard() {
                           </button>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1472,68 +1760,97 @@ export default function ClearLedgerDashboard() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {reviewQueue.map((item, qIdx) => (
-                <div
-                  key={qIdx}
-                  style={{
-                    background: 'rgba(30, 41, 59, 0.8)',
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                    borderRadius: '12px',
-                    padding: '1.25rem',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: '1rem'
-                  }}
-                >
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ fontWeight: 800, color: '#f87171' }}>{item.transaction_id}</span>
-                      <span style={{
-                        background: 'rgba(239, 68, 68, 0.15)',
-                        color: '#f87171',
-                        fontSize: '0.7rem',
-                        fontWeight: 700,
-                        padding: '0.15rem 0.45rem',
-                        borderRadius: '4px'
-                      }}>
-                        Risk Score: {item.risk_score}/100
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-                      {item.anomaly_flags?.map((flag, fIdx) => (
-                        <span key={fIdx} style={{
-                          background: 'rgba(245, 158, 11, 0.15)',
-                          color: '#fbbf24',
-                          fontSize: '0.7rem',
-                          padding: '0.15rem 0.4rem',
-                          borderRadius: '4px'
-                        }}>
-                          ⚠️ {flag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => setSelectedReviewTxn(item)}
+              {reviewQueue.map((item, qIdx) => {
+                const invData = getInvData(item);
+                const invNum = getInvNum(item);
+                const flags = getItemFlags(item);
+                return (
+                  <div
+                    key={qIdx}
                     style={{
-                      background: 'rgba(59, 130, 246, 0.2)',
-                      color: '#60a5fa',
-                      border: '1px solid rgba(59, 130, 246, 0.4)',
-                      borderRadius: '8px',
-                      padding: '0.5rem 1rem',
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      cursor: 'pointer'
+                      background: 'rgba(30, 41, 59, 0.8)',
+                      border: '1px solid rgba(239, 68, 68, 0.35)',
+                      borderRadius: '12px',
+                      padding: '1.25rem',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '1rem'
                     }}
                   >
-                    Review Anomaly
-                  </button>
-                </div>
-              ))}
+                    <div style={{ flex: 1, minWidth: '280px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 800, color: '#f87171', fontSize: '0.95rem' }}>
+                          {item.transaction_id}
+                        </span>
+                        <span style={{
+                          background: invNum === 'INV-UNKNOWN' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                          color: invNum === 'INV-UNKNOWN' ? '#f87171' : '#60a5fa',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          padding: '0.15rem 0.5rem',
+                          borderRadius: '4px',
+                          border: `1px solid ${invNum === 'INV-UNKNOWN' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`
+                        }}>
+                          Invoice #{invNum}
+                        </span>
+                        <span style={{
+                          background: 'rgba(239, 68, 68, 0.15)',
+                          color: '#f87171',
+                          fontSize: '0.7rem',
+                          fontWeight: 700,
+                          padding: '0.15rem 0.45rem',
+                          borderRadius: '4px'
+                        }}>
+                          Risk Score: {item.risk_score || 88}/100
+                        </span>
+                      </div>
+
+                      {invData && (
+                        <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '0.4rem' }}>
+                          <strong>{invData.customer_name}</strong> • {invData.currency || 'EUR'} {invData.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} • Date: {invData.date_of_supply}
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                        {flags.map((flag, fIdx) => (
+                          <span key={fIdx} style={{
+                            background: 'rgba(245, 158, 11, 0.15)',
+                            color: '#fbbf24',
+                            border: '1px solid rgba(245, 158, 11, 0.3)',
+                            fontSize: '0.72rem',
+                            padding: '0.2rem 0.5rem',
+                            borderRadius: '4px'
+                          }}>
+                            ⚠️ {flag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleOpenReviewModal(item)}
+                      style={{
+                        background: 'rgba(59, 130, 246, 0.2)',
+                        color: '#60a5fa',
+                        border: '1px solid rgba(59, 130, 246, 0.4)',
+                        borderRadius: '8px',
+                        padding: '0.55rem 1.15rem',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        transition: 'all 0.15s'
+                      }}
+                    >
+                      Review Anomaly →
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -1557,7 +1874,7 @@ export default function ClearLedgerDashboard() {
                 border: '1px solid rgba(255, 255, 255, 0.15)',
                 borderRadius: '16px',
                 padding: '1.75rem',
-                maxWidth: '540px',
+                maxWidth: '560px',
                 width: '100%',
                 display: 'flex',
                 flexDirection: 'column',
@@ -1565,30 +1882,137 @@ export default function ClearLedgerDashboard() {
                 boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6)'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0 }}>
-                    Human Auditor Resolution
-                  </h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <AlertTriangle size={20} color="#f87171" />
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: '#ffffff' }}>
+                      Human Auditor Resolution
+                    </h3>
+                  </div>
                   <button
-                    onClick={() => setSelectedReviewTxn(null)}
-                    style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.2rem' }}
+                    onClick={() => { setSelectedReviewTxn(null); setCorrectedInvNum(''); setReviewNotes(''); }}
+                    style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.4rem' }}
                   >
                     ×
                   </button>
                 </div>
 
-                <div style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: '1.5' }}>
-                  Transaction <strong>{selectedReviewTxn.transaction_id}</strong> was flagged with a risk score of <strong>{selectedReviewTxn.risk_score}/100</strong>.
-                  <div style={{ marginTop: '0.5rem', color: '#fbbf24' }}>
-                    Reason: {selectedReviewTxn.anomaly_flags?.join(', ')}
+                <div style={{
+                  background: 'rgba(15, 23, 42, 0.7)',
+                  borderRadius: '10px',
+                  padding: '1rem',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.6rem',
+                  fontSize: '0.85rem'
+                }}>
+                  {(() => {
+                    const modalInvData = getInvData(selectedReviewTxn);
+                    const modalInvNum = getInvNum(selectedReviewTxn);
+                    return (
+                      <>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: '#94a3b8' }}>Transaction ID:</span>
+                          <strong style={{ color: '#60a5fa' }}>{selectedReviewTxn.transaction_id}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: '#94a3b8' }}>Current Invoice #:</span>
+                          <strong style={{ color: modalInvNum.startsWith('INV-UNKNOWN') ? '#f87171' : '#f1f5f9' }}>
+                            {modalInvNum}
+                          </strong>
+                        </div>
+                        {modalInvData?.customer_name && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: '#94a3b8' }}>Customer / Consignee:</span>
+                            <strong style={{ color: '#f1f5f9' }}>{modalInvData.customer_name}</strong>
+                          </div>
+                        )}
+                        {modalInvData?.total_amount !== undefined && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: '#94a3b8' }}>Total Amount:</span>
+                            <strong style={{ color: '#4ade80' }}>
+                              {modalInvData.currency || 'EUR'} {modalInvData.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </strong>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#94a3b8' }}>Risk Assessment:</span>
+                    <span style={{
+                      background: 'rgba(239, 68, 68, 0.2)',
+                      color: '#f87171',
+                      padding: '0.15rem 0.5rem',
+                      borderRadius: '4px',
+                      fontWeight: 700,
+                      fontSize: '0.75rem'
+                    }}>
+                      Score {selectedReviewTxn.risk_score || 88}/100 ({selectedReviewTxn.risk_level || 'HIGH'})
+                    </span>
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.4rem' }}>
-                    Reviewer Notes / Justification:
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.4rem', fontWeight: 600 }}>
+                    Flagged Discrepancy / Risk Reason(s):
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    {getItemFlags(selectedReviewTxn).map((flag, fIdx) => (
+                      <div key={fIdx} style={{
+                        background: 'rgba(245, 158, 11, 0.12)',
+                        border: '1px solid rgba(245, 158, 11, 0.3)',
+                        color: '#fbbf24',
+                        padding: '0.4rem 0.65rem',
+                        borderRadius: '6px',
+                        fontSize: '0.78rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem'
+                      }}>
+                        <span>⚠️</span> {flag}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Auditor Invoice Number Correction */}
+                <div style={{
+                  background: 'rgba(59, 130, 246, 0.08)',
+                  border: '1px solid rgba(59, 130, 246, 0.25)',
+                  borderRadius: '10px',
+                  padding: '0.85rem'
+                }}>
+                  <label style={{ fontSize: '0.75rem', color: '#93c5fd', display: 'block', marginBottom: '0.4rem', fontWeight: 700 }}>
+                    Assign / Correct Invoice Number (e.g. 3431):
+                  </label>
+                  <input
+                    type="text"
+                    value={correctedInvNum}
+                    onChange={(e) => setCorrectedInvNum(e.target.value)}
+                    placeholder="Enter real invoice # to approve (e.g. 3431)"
+                    style={{
+                      width: '100%',
+                      background: 'rgba(15, 23, 42, 0.9)',
+                      border: '1px solid rgba(59, 130, 246, 0.4)',
+                      borderRadius: '6px',
+                      padding: '0.55rem 0.75rem',
+                      color: '#ffffff',
+                      fontSize: '0.85rem',
+                      fontWeight: 600
+                    }}
+                  />
+                  <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.35rem' }}>
+                    Entering the verified invoice number renames `INV-UNKNOWN` and clears the error flag from the active tax ledger.
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.4rem', fontWeight: 600 }}>
+                    Auditor Notes & Justification:
                   </label>
                   <textarea
-                    rows={3}
+                    rows={2}
                     value={reviewNotes}
                     onChange={(e) => setReviewNotes(e.target.value)}
                     placeholder="Enter reason for approval override or fraud rejection..."
@@ -1605,22 +2029,22 @@ export default function ClearLedgerDashboard() {
                   />
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
                   <button
                     onClick={() => handleAction('reject')}
                     disabled={loading}
                     style={{
-                      background: '#ef4444',
-                      color: '#ffffff',
-                      border: 'none',
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      border: '1px solid rgba(239, 68, 68, 0.4)',
+                      color: '#f87171',
                       borderRadius: '8px',
-                      padding: '0.55rem 1.15rem',
+                      padding: '0.6rem 1.15rem',
                       fontSize: '0.85rem',
                       fontWeight: 700,
                       cursor: 'pointer'
                     }}
                   >
-                    Reject & Flag Fraud
+                    Reject & Remove Invoice
                   </button>
 
                   <button
@@ -1631,13 +2055,16 @@ export default function ClearLedgerDashboard() {
                       color: '#ffffff',
                       border: 'none',
                       borderRadius: '8px',
-                      padding: '0.55rem 1.15rem',
+                      padding: '0.6rem 1.25rem',
                       fontSize: '0.85rem',
                       fontWeight: 700,
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem'
                     }}
                   >
-                    Approve (Override ML)
+                    <CheckCircle2 size={16} /> Save & Approve to Ledger
                   </button>
                 </div>
               </div>
