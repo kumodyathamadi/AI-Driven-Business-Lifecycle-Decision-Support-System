@@ -1,20 +1,19 @@
 """
-Component 2 — Deterministic Three-Valued Kleene Logic Rule Engine
-Evaluates compliance obligations against a business profile.
+Component 2 — Three-Valued Kleene Logic Rule Engine (engine.py)
+Evaluates compliance obligations against a business profile using 3-valued Kleene logic.
 
-Logic Rules:
-- Three-valued Kleene logic: True, False, None (Unknown).
+Kleene Logic Rules (True, False, None):
 - Kleene AND (all_of):
-    - Any False  -> False
-    - Else Any None (Unknown) -> None
-    - Else (All True) -> True
+    - Any child is False -> False
+    - Else if any child is None (Unknown) -> None
+    - Else (all True) -> True
 - Kleene OR (any_of):
-    - Any True   -> True
-    - Else Any None (Unknown) -> None
-    - Else (All False) -> False
+    - Any child is True -> True
+    - Else if any child is None (Unknown) -> None
+    - Else (all False) -> False
 
 Determinism:
-Same profile input will ALWAYS produce the exact same output.
+Identical profile input will ALWAYS produce the exact same output.
 Zero external calls, zero non-deterministic random state.
 """
 
@@ -22,22 +21,94 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 # Ensure repository root is on sys.path
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from engine.schema import ObligationSchema, RuleNode
+from engine.schemas import (
+    BusinessProfileInput,
+    ObligationSchema,
+    RuleNode,
+)
 from engine.loader import load_rulebook
 
-TriVal = Optional[bool]  # True | False | None (Unknown)
+TriVal = Optional[bool]  # True | False | None (representing UNKNOWN in Kleene 3VL)
 
+
+# ---------------------------------------------------------------------------
+# Fact Resolution with Dot Notation & Semantic Aliases
+# ---------------------------------------------------------------------------
+
+def get_fact_value(profile: Dict[str, Any], fact_path: str) -> Any:
+    """
+    Resolves fact values from the business profile supporting:
+      1. Direct key match (e.g. 'physical_premises' or 'location.province')
+      2. Dot notation traversal (e.g. 'location.province' -> profile['location']['province'])
+      3. Sub-object leaf lookup (e.g. 'province' -> look inside profile['location']['province'])
+      4. Top-level fallback for nested paths (e.g. 'location.province' -> profile['province'])
+      5. Semantic aliases (e.g. legal_structure <-> legal_form, employee_count <-> number_of_employees)
+    """
+    # 1. Direct key match
+    if fact_path in profile:
+        return profile[fact_path]
+
+    parts = fact_path.split(".")
+
+    # 2. Dot-notation traversal
+    curr: Any = profile
+    traversal_success = True
+    for p in parts:
+        if isinstance(curr, dict) and p in curr:
+            curr = curr[p]
+        else:
+            traversal_success = False
+            break
+
+    if traversal_success:
+        return curr
+
+    # 3. Leaf fallback in 'location' object
+    leaf = parts[-1]
+    if len(parts) == 1 and isinstance(profile.get("location"), dict):
+        if leaf in profile["location"]:
+            return profile["location"][leaf]
+
+    # 4. Top-level fallback if fact_path was dotted
+    if leaf in profile:
+        return profile[leaf]
+
+    # 5. Semantic alias bridge for Component 1 / Component 2 compatibility
+    aliases = {
+        "legal_structure": ["legal_form", "entity_type", "ownership"],
+        "legal_form": ["legal_structure", "entity_type", "ownership"],
+        "employee_count": ["number_of_employees", "employees", "employees_count"],
+        "number_of_employees": ["employee_count", "employees", "employees_count"],
+        "physical_premises": ["has_physical_premises"],
+        "has_physical_premises": ["physical_premises"],
+        "operates_kitchen": ["handles_food", "serves_cooked_food"],
+        "handles_food": ["operates_kitchen"],
+        "uses_chemicals_or_cosmetics": ["uses_chemicals"],
+        "handles_waste_oil_or_batteries": ["handles_waste_oil", "handles_batteries"],
+    }
+    for alias in aliases.get(leaf, []):
+        if alias in profile:
+            return profile[alias]
+        if isinstance(profile.get("location"), dict) and alias in profile["location"]:
+            return profile["location"][alias]
+
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Atomic Condition Evaluation
+# ---------------------------------------------------------------------------
 
 def compare_leaf(fact_val: Any, op: str, target_val: Any) -> bool:
     """
-    Deterministically evaluates a leaf condition operator against a fact value.
+    Deterministically evaluates an atomic comparison operator.
     Supports ==, !=, in, >=, <.
     """
     if op == "==":
@@ -81,15 +152,22 @@ def compare_leaf(fact_val: Any, op: str, target_val: Any) -> bool:
         raise ValueError(f"Unsupported comparison operator '{op}'")
 
 
+# ---------------------------------------------------------------------------
+# Recursive Kleene 3-Valued Logic Evaluator
+# ---------------------------------------------------------------------------
+
 def eval_rule_node(
     node: RuleNode,
     profile: Dict[str, Any]
 ) -> Tuple[TriVal, Dict[str, Any], List[str]]:
     """
-    Recursively evaluate a RuleNode using three-valued Kleene logic.
+    Recursively evaluates a RuleNode using three-valued Kleene logic.
 
     Returns:
-        Tuple of (TriVal verdict, triggering_facts dict, missing_facts list)
+        Tuple of:
+          - TriVal verdict (True, False, or None for UNKNOWN)
+          - triggering_facts dict (facts that contributed to the verdict)
+          - missing_facts list (fact paths that evaluated to None / Unknown)
     """
     # 1. Atomic Leaf Condition
     if node.is_leaf():
@@ -97,17 +175,60 @@ def eval_rule_node(
         op = node.op           # type: ignore[assignment]
         target_val = node.value
 
-        fact_val = profile.get(fact_name)
+        fact_val = get_fact_value(profile, fact_name)
 
-        # In three-valued logic, null/None or absence of fact is UNKNOWN (None)
+        # In Kleene logic: None represents an unknown state
         if fact_val is None:
-            return None, {}, [fact_name]
+            missing_list = [fact_name]
+            leaf = fact_name.split(".")[-1]
+            if leaf != fact_name:
+                missing_list.append(leaf)
+
+            aliases = {
+                "physical_premises": ["has_physical_premises", "physical_premises"],
+                "has_physical_premises": ["has_physical_premises", "physical_premises"],
+                "legal_structure": ["legal_form", "legal_structure"],
+                "legal_form": ["legal_form", "legal_structure"],
+                "employee_count": ["number_of_employees", "employees", "employee_count"],
+                "number_of_employees": ["number_of_employees", "employees", "employee_count"],
+                "operates_kitchen": ["handles_food", "operates_kitchen"],
+                "handles_food": ["operates_kitchen", "handles_food"],
+            }
+            for alias in aliases.get(leaf, []):
+                if alias in profile and profile[alias] is None:
+                    missing_list.append(alias)
+
+            return None, {}, sorted(list(set(missing_list)))
 
         is_met = compare_leaf(fact_val, op, target_val)
+
+        trigs: Dict[str, Any] = {fact_name: fact_val}
+        leaf = fact_name.split(".")[-1]
+        if leaf != fact_name:
+            trigs[leaf] = fact_val
+
+        aliases_map = {
+            "physical_premises": ["has_physical_premises", "physical_premises"],
+            "has_physical_premises": ["has_physical_premises", "physical_premises"],
+            "legal_structure": ["legal_form", "legal_structure"],
+            "legal_form": ["legal_form", "legal_structure"],
+            "employee_count": ["number_of_employees", "employees", "employee_count"],
+            "number_of_employees": ["number_of_employees", "employees", "employee_count"],
+            "operates_kitchen": ["handles_food", "operates_kitchen"],
+            "handles_food": ["operates_kitchen", "handles_food"],
+        }
+        for alias in aliases_map.get(leaf, []):
+            if alias in profile:
+                trigs[alias] = profile[alias]
+
+        for k in profile.keys():
+            if k == leaf or k == fact_name:
+                trigs[k] = profile[k]
+
         if is_met:
-            return True, {fact_name: fact_val}, []
+            return True, trigs, []
         else:
-            return False, {fact_name: fact_val}, []
+            return False, trigs, []
 
     # 2. Conjunction (all_of / Kleene AND)
     if node.all_of is not None:
@@ -126,8 +247,8 @@ def eval_rule_node(
                 false_triggering.update(trigs)
 
         # Kleene AND rules:
-        # If any False -> False
-        # Else if any None -> None
+        # Any False -> False (absorbs Unknown)
+        # Else if any None (Unknown) -> None
         # Else -> True
         if False in child_verdicts:
             return False, false_triggering, []
@@ -153,8 +274,8 @@ def eval_rule_node(
                 all_false_trigs.update(trigs)
 
         # Kleene OR rules:
-        # If any True -> True
-        # Else if any None -> None
+        # Any True -> True (absorbs Unknown)
+        # Else if any None (Unknown) -> None
         # Else -> False
         if True in child_verdicts:
             return True, true_triggering, []
@@ -165,6 +286,10 @@ def eval_rule_node(
 
     raise ValueError("Invalid RuleNode: neither leaf condition nor all_of/any_of defined.")
 
+
+# ---------------------------------------------------------------------------
+# Obligation & Compliance Evaluators
+# ---------------------------------------------------------------------------
 
 def evaluate_obligation(
     obligation: ObligationSchema,
@@ -187,9 +312,10 @@ def evaluate_obligation(
         "obligation_id": obligation.obligation_id,
         "title": obligation.title,
         "status": status,
+        "layer": obligation.layer,
+        "authority": obligation.authority,
         "triggering_facts": triggering_facts,
         "missing_facts": missing_facts,
-        "authority": obligation.authority,
         "source_id": obligation.source_id,
         "source_paragraph": obligation.source_paragraph,
         "source_text": obligation.source_text,
@@ -197,35 +323,49 @@ def evaluate_obligation(
     }
 
 
-def evaluate_all(
-    profile: Dict[str, Any],
-    obligations: Optional[List[ObligationSchema]] = None
+def evaluate_compliance(
+    profile: Union[Dict[str, Any], BusinessProfileInput],
+    obligations: Optional[List[ObligationSchema]] = None,
+    filter_by_layer: bool = False,
 ) -> List[Dict[str, Any]]:
     """
-    Evaluates all obligations in the rulebook against the given profile.
-    Deterministic: identical profile always returns identical results.
+    Evaluates obligations against a profile dictionary or BusinessProfileInput model.
+
+    Args:
+        profile: Dictionary or BusinessProfileInput from Component 1.
+        obligations: Optional custom list of ObligationSchema. If None, loads from data/obligations.json.
+        filter_by_layer: If True, only evaluates 'common' layer and the layer matching profile.business_type.
+
+    Returns:
+        List of evaluated obligation dictionaries with APPLICABLE, NOT_APPLICABLE, or UNKNOWN status.
     """
+    if isinstance(profile, BusinessProfileInput):
+        profile_dict = profile.model_dump()
+    elif hasattr(profile, "model_dump"):
+        profile_dict = profile.model_dump()
+    else:
+        profile_dict = dict(profile)
+
     if obligations is None:
         obligations = load_rulebook()
 
+    # Layer filtering if requested
+    if filter_by_layer:
+        biz_type = profile_dict.get("business_type")
+        target_layers = {"common"}
+        if biz_type:
+            target_layers.add(biz_type)
+        obligations_to_eval = [o for o in obligations if o.layer in target_layers]
+    else:
+        obligations_to_eval = obligations
+
     results: List[Dict[str, Any]] = []
-    for obl in obligations:
-        res = evaluate_obligation(obl, profile)
+    for obl in obligations_to_eval:
+        res = evaluate_obligation(obl, profile_dict)
         results.append(res)
 
     return results
 
 
-if __name__ == "__main__":
-    test_profile = {
-        "province": "Western Province",
-        "business_type": "food",
-        "handles_food": True,
-        "has_physical_premises": True,
-        "legal_form": "sole_proprietorship",
-        "number_of_employees": 2,
-    }
-    evaluated = evaluate_all(test_profile)
-    print(f"Evaluated {len(evaluated)} obligations for test profile:")
-    for item in evaluated:
-        print(f"  {item['obligation_id']} [{item['status']}]: Triggers={item['triggering_facts']} Missing={item['missing_facts']}")
+# Backward compatibility alias
+evaluate_all = evaluate_compliance
