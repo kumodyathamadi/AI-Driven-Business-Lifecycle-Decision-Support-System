@@ -2,11 +2,11 @@
 Component 2 — Legal Text Extraction Pipeline (scripts/extract.py)
 
 Extracts reference-preserving legal text from Sri Lankan SME regulatory sources.
-- Uses digital text layer (pdftotext / PyMuPDF) if present.
+- Uses digital text layer (pdftotext CLI / PyMuPDF) if present.
 - Falls back to Tesseract OCR (eng+sin+tam) at 300 DPI for scanned pages.
 - Detects and skips legacy-font Sinhala PDFs (e.g., FMAbhaya/DL-Araliya ASCII mojibake) and logs them.
-- Preserves 1-indexed page numbers for statutory citations.
-- Outputs both full document text (data/text/<doc_id>.txt) and page-level JSON (data/text/<doc_id>.json).
+- Preserves 1-indexed page numbers so statutory citations point to exact pages.
+- Outputs full text (data/text/<doc_id>.txt) plus page-level JSON {doc_id, page, text} (data/text/<doc_id>.json).
 """
 
 from __future__ import annotations
@@ -16,7 +16,6 @@ import csv
 import json
 import logging
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -38,6 +37,19 @@ except ImportError:
     docx = None
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+# Auto-locate Tesseract binary on Windows / Linux if pytesseract is available
+if pytesseract is not None:
+    tesseract_candidates = [
+        shutil.which("tesseract"),
+        r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+        r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+        os.path.expandvars(r"%LOCALAPPDATA%\Programs\Tesseract-OCR\tesseract.exe"),
+    ]
+    for candidate in tesseract_candidates:
+        if candidate and Path(candidate).is_file():
+            pytesseract.pytesseract.tesseract_cmd = str(candidate)
+            break
 
 # Configure logging
 logging.basicConfig(
@@ -99,24 +111,17 @@ def is_legacy_font_sinhala(doc: pymupdf.Document, language: str) -> Tuple[bool, 
     return False, ""
 
 
-def extract_text_layer_from_page(page: pymupdf.Page) -> str:
+def extract_text_layer_from_page(page: pymupdf.Page, pdf_path: Optional[Path] = None, page_num: int = 1) -> str:
     """
     Extracts text layer from a PDF page using pdftotext CLI if available,
     falling back to high-fidelity PyMuPDF page text extraction.
     """
-    # Try pdftotext CLI first if present in system PATH
+    # 1. Try pdftotext CLI if installed in system PATH
     pdftotext_cmd = shutil.which("pdftotext")
-    if pdftotext_cmd:
+    if pdftotext_cmd and pdf_path and pdf_path.is_file():
         try:
-            # Create a single-page temporary PDF document
-            single_doc = pymupdf.open()
-            single_doc.insert_pdf(page.parent, from_page=page.number, to_page=page.number)
-            pdf_bytes = single_doc.tobytes()
-            single_doc.close()
-
             proc = subprocess.run(
-                [pdftotext_cmd, "-", "-"],
-                input=pdf_bytes,
+                [pdftotext_cmd, "-f", str(page_num), "-l", str(page_num), str(pdf_path), "-"],
                 capture_output=True,
                 check=False,
             )
@@ -125,9 +130,9 @@ def extract_text_layer_from_page(page: pymupdf.Page) -> str:
                 if len(text) > 10:
                     return text
         except Exception:
-            pass  # Fall back to PyMuPDF
+            pass
 
-    # PyMuPDF extraction (layout-preserving text layer)
+    # 2. PyMuPDF extraction (layout-preserving text layer)
     return page.get_text("text").strip()
 
 
@@ -181,7 +186,7 @@ def extract_pdf_document(
             page = doc[page_idx]
 
             # 1. Check if digital text layer exists
-            text = extract_text_layer_from_page(page)
+            text = extract_text_layer_from_page(page, pdf_path=pdf_path, page_num=page_num)
 
             # 2. If text layer is missing or near-empty, fallback to Tesseract OCR at 300 DPI
             if len(text.strip()) < 30:
@@ -288,6 +293,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
         txt_out = args.output_dir / f"{doc_id}.txt"
         json_out = args.output_dir / f"{doc_id}.json"
+        jsonl_out = args.output_dir / f"{doc_id}.jsonl"
 
         if txt_out.exists() and json_out.exists() and not args.force:
             logger.info("Skipping already extracted source: %s (%s)", doc_id, filename)
@@ -328,9 +334,14 @@ def main(argv: Optional[List[str]] = None) -> int:
             logger.warning("Unsupported file extension '%s' for %s", ext, filename)
             continue
 
-        # Write data/text/<doc_id>.json (page-level JSON objects {doc_id, page, text})
+        # Write data/text/<doc_id>.json (page-level JSON array [{doc_id, page, text}, ...])
         with open(json_out, "w", encoding="utf-8") as f:
             json.dump(pages, f, indent=2, ensure_ascii=False)
+
+        # Write data/text/<doc_id>.jsonl (one page-level JSON {doc_id, page, text} per line)
+        with open(jsonl_out, "w", encoding="utf-8") as f:
+            for p in pages:
+                f.write(json.dumps(p, ensure_ascii=False) + "\n")
 
         # Write data/text/<doc_id>.txt (human-readable text preserving page markers)
         with open(txt_out, "w", encoding="utf-8") as f:
