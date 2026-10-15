@@ -59,6 +59,13 @@ FACT_QUESTION_MAP: Dict[str, Dict[str, Any]] = {
         "type": "select",
         "options": ["under_1m", "1m_10m", "10m_50m", "over_50m"],
     },
+    "turnover_band": {
+        "fact": "turnover_band",
+        "question": "What is the projected annual business revenue or turnover tier?",
+        "question_si": "ඇස්තමේන්තුගත වාර්ෂික පිරිවැටුම් මට්ටම කුමක්ද?",
+        "type": "select",
+        "options": ["under_1m", "1m_10m", "10m_50m", "over_50m"],
+    },
     "location.local_authority": {
         "fact": "location.local_authority",
         "question": "Which local municipal council or pradeshiya sabha governs your business premises?",
