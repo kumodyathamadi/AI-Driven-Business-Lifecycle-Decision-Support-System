@@ -40,11 +40,13 @@ class BusinessPlanDocxGenerator:
     def generate_docx(report_data: dict) -> bytes:
         doc = Document()
 
-        raw_cover = report_data.get("cover_image")
+        raw_cover = report_data.get("cover_image") or "default"
         cover_info = None
-        if raw_cover:
+        try:
+            cover_info = CoverImageHandler.process_cover_image(raw_cover)
+        except Exception:
             try:
-                cover_info = CoverImageHandler.process_cover_image(raw_cover)
+                cover_info = CoverImageHandler.process_cover_image("default")
             except Exception:
                 cover_info = None
 

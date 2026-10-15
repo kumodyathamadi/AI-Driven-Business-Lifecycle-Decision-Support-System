@@ -16,6 +16,8 @@ from backend.services.business_plan_generator.pdf_generator import BusinessPlanP
 from backend.services.business_plan_generator.docx_generator import BusinessPlanDocxGenerator
 
 
+
+# Define base payloads for new business and existing business (growth).
 def get_base_startup_payload():
     return {
         "business_name": "Kandy Fresh Mart",
@@ -43,6 +45,8 @@ def get_base_startup_payload():
     }
 
 
+
+# payload for existing business (growth)
 def get_base_growth_payload():
     return {
         "business_name": "Silva Supermarket Expansion",

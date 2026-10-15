@@ -32,6 +32,10 @@ def test_stage_canonicalization():
     assert d_label == "Existing Business"
     assert m_token == "Existing"
 
+
+
+
+## TEST : FEASIBILITY MODEL VARIANCE
 def test_model_feasibility_variance():
     """
     Verifies that the feasibility model outputs vary sensibly across differing inputs
@@ -92,6 +96,9 @@ def test_model_feasibility_variance():
     assert res_strong["probabilities"]["Feasible"] > res_weak["probabilities"]["Feasible"]
     assert res_weak["probabilities"]["Infeasible"] > res_strong["probabilities"]["Infeasible"]
 
+
+
+## TEST : API RECORDS AND SUMMARY COUNTS
 def test_api_records_and_summary_counts():
     """
     Verifies that the records endpoint returns real non-zero total_count, no NaNs, and real summary KPIs.

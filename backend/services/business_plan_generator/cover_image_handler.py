@@ -21,30 +21,38 @@ MAX_COVER_IMAGE_BYTES = 10 * 1024 * 1024
 ALLOWED_FORMATS = {"PNG", "JPEG", "WEBP"}
 
 
-DEFAULT_OFFICIAL_COVER_PATH = os.path.abspath(os.path.join(
+FRONTEND_OFFICIAL_COVER_PATH = os.path.abspath(os.path.join(
+    os.path.dirname(__file__), "..", "..", "..", "frontend", "src", "assets", "covers", "sme360_official_cover.png"
+))
+BACKEND_OFFICIAL_COVER_PATH = os.path.abspath(os.path.join(
     os.path.dirname(__file__), "..", "..", "assets", "sme360_official_cover.png"
 ))
+
+DEFAULT_OFFICIAL_COVER_PATH = (
+    FRONTEND_OFFICIAL_COVER_PATH
+    if os.path.exists(FRONTEND_OFFICIAL_COVER_PATH)
+    else BACKEND_OFFICIAL_COVER_PATH
+)
 
 
 class CoverImageHandler:
     """
-    Validates, normalizes, and calculates layout dimensions for user-provided
-    cover page images for both PDF and DOCX business plan reports.
+    Handles layout dimensions and processing for the official SME360 AI
+    cover page image for both PDF and DOCX business plan reports.
     """
 
     @staticmethod
-    def extract_and_validate_bytes(raw_input: Any) -> Optional[bytes]:
+    def extract_and_validate_bytes(raw_input: Any = None) -> Optional[bytes]:
         """
-        Extracts raw image bytes from supported input formats:
-        - None or empty string -> None
-        - bytes -> validates length
-        - str: 'default' / 'official' -> loads built-in SME360 AI official cover
-        - str: Data URL ('data:image/...;base64,...')
-        - str: Raw base64 string
-        - str: Existing local file path
-        - dict: {'data': '...', 'mime_type': '...', 'filename': '...'}
+        Extracts raw image bytes. If raw_input is None, empty, or 'default',
+        it automatically loads the official SME360 AI cover page from:
+        frontend/src/assets/covers/sme360_official_cover.png
         """
-        if not raw_input:
+        # Automatically load official default cover if None, empty, or keyword
+        if not raw_input or (isinstance(raw_input, str) and raw_input.strip().lower() in ("default", "official", "sme360_official", "sme360_cover", "none", "")):
+            if os.path.exists(DEFAULT_OFFICIAL_COVER_PATH):
+                with open(DEFAULT_OFFICIAL_COVER_PATH, "rb") as f:
+                    return f.read()
             return None
 
         img_bytes: Optional[bytes] = None
@@ -55,24 +63,14 @@ class CoverImageHandler:
         elif isinstance(raw_input, dict):
             data_val = raw_input.get("data") or raw_input.get("content") or raw_input.get("base64")
             if not data_val:
-                return None
+                return CoverImageHandler.extract_and_validate_bytes(None)
             return CoverImageHandler.extract_and_validate_bytes(data_val)
 
         elif isinstance(raw_input, str):
             clean_str = raw_input.strip()
-            if not clean_str:
-                return None
-
-            # 0. Check if default/official keyword
-            if clean_str.lower() in ("default", "official", "sme360_official", "sme360_cover"):
-                if os.path.exists(DEFAULT_OFFICIAL_COVER_PATH):
-                    with open(DEFAULT_OFFICIAL_COVER_PATH, "rb") as f:
-                        img_bytes = f.read()
-                else:
-                    return None
 
             # 1. Check if it's a file path
-            elif os.path.exists(clean_str) and os.path.isfile(clean_str):
+            if os.path.exists(clean_str) and os.path.isfile(clean_str):
                 with open(clean_str, "rb") as f:
                     img_bytes = f.read()
 

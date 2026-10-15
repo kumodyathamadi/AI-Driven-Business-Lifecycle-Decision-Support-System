@@ -11,7 +11,7 @@ from src.orchestrator import analyze_business
 def test_new_unseen_business():
     print("=" * 80)
     print("TESTING END-TO-END PIPELINE WITH A NEW UNSEEN SME INPUT")
-    print("Business Case: Artisanal Bakery in Homagama, Colombo District")
+    print("Business Case: Artisanal Bakery in Colombo, Colombo District")
     print("=" * 80)
 
     raw_new_business = {
@@ -19,7 +19,7 @@ def test_new_unseen_business():
         "business_category": "Bakery / Food / Grocery",
         "district": "Colombo",
         "province": "Western",
-        "location_type": "Suburban Commercial Hub (Homagama)",
+        "location_type": "Suburban Commercial Hub (Colombo)",
         "proposed_action": "Establish New Bakery Branch",
         "available_capital_lkr": 800000.0,
         "loan_amount_lkr": 200000.0,
