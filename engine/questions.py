@@ -132,12 +132,12 @@ FACT_QUESTION_MAP: Dict[str, Dict[str, Any]] = {
 }
 
 
-def generate_follow_up_questions(missing_facts: List[str]) -> List[FollowUpQuestion]:
+def generate_follow_up_questions(missing_facts: List[str]) -> List[Dict[str, Any]]:
     """
-    Given a list of missing facts, returns deterministic FollowUpQuestion models
-    using a static lookup table. No LLM generation is involved.
+    Given a list of missing facts, returns deterministic follow-up questions
+    as dictionaries (JSON-serializable) using a static lookup table. No LLM generation is involved.
     """
-    questions: List[FollowUpQuestion] = []
+    questions: List[Dict[str, Any]] = []
     seen: set = set()
 
     for fact in missing_facts:
@@ -147,26 +147,24 @@ def generate_follow_up_questions(missing_facts: List[str]) -> List[FollowUpQuest
 
         mapping = FACT_QUESTION_MAP.get(fact)
         if mapping:
-            questions.append(
-                FollowUpQuestion(
-                    fact=mapping["fact"],
-                    question=mapping["question"],
-                    question_si=mapping.get("question_si"),
-                    type=mapping.get("type", "boolean"),
-                    options=mapping.get("options", []),
-                )
-            )
+            questions.append({
+                "fact": mapping["fact"],
+                "question": mapping["question"],
+                "question_en": mapping.get("question", ""),
+                "question_si": mapping.get("question_si"),
+                "type": mapping.get("type", "boolean"),
+                "options": mapping.get("options", []),
+            })
         else:
             # Deterministic clean fallback for any unmapped fact
             clean_name = fact.replace(".", " ").replace("_", " ").title()
-            questions.append(
-                FollowUpQuestion(
-                    fact=fact,
-                    question=f"Please specify information for '{clean_name}'.",
-                    question_si=f"කරුණාකර '{clean_name}' පිළිබඳ තොරතුරු සපයන්න.",
-                    type="text",
-                    options=[],
-                )
-            )
+            questions.append({
+                "fact": fact,
+                "question": f"Please specify information for '{clean_name}'.",
+                "question_en": f"Please specify information for '{clean_name}'.",
+                "question_si": f"කරුණාකර '{clean_name}' පිළිබඳ තොරතුරු සපයන්න.",
+                "type": "text",
+                "options": [],
+            })
 
     return questions
