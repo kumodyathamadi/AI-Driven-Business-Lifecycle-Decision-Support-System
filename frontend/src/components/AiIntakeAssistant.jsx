@@ -368,10 +368,8 @@ export default function AiIntakeAssistant({
     }
   };
 
-  // Render extracted count
-  const extractedCount = Object.keys(prefilledFormData || {}).filter(
-    (k) => prefilledFormData[k] !== '' && prefilledFormData[k] !== null && prefilledFormData[k] !== undefined && k !== 'business_stage'
-  ).length;
+  // Render extracted count (strictly counts fields extracted by AI)
+  const extractedCount = aiFilledKeys ? aiFilledKeys.size : 0;
 
   return (
     <>

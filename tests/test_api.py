@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from backend.main import app
 
-client = TestClient(app)
+client = TestClient(app)    #creates a test client for testing the application.
 
 
 def test_health_check_endpoint():
@@ -25,7 +25,7 @@ def test_ai_intake_extraction_endpoint():
     
     # Test English Extraction
     english_payload = {
-        "text": "I want to start a small bakery in Homagama. I have around Rs. 500,000 available. I have 5 years of baking experience and expect 40 customers per day."
+        "text": "I want to start a small bakery in Colombo. I have around Rs. 500,000 available. I have 5 years of baking experience and expect 40 customers per day."
     }
     res_en = client.post("/api/business/intake/extract", json=english_payload)
     assert res_en.status_code == 200, f"Expected 200, got {res_en.status_code}: {res_en.text}"
@@ -43,18 +43,18 @@ def test_ai_intake_extraction_endpoint():
     assert data_en["extracted_fields"]["competition_level"]["value"] is None
     assert data_en["extracted_fields"]["competition_level"]["status"] == "missing"
     
-    print("  English AI Intake Extraction SUCCESS! Extracted count:", data_en["summary"]["extracted_count"])
+    print(" AI Intake Extraction SUCCESS! Extracted count:", data_en["summary"]["extracted_count"])
 
     # Test Singlish Extraction
     singlish_payload = {
-        "text": "Mama Homagama wala bakery ekak patan ganna inne. Capital 500000k thiyenawa. Baking experience awurudu 5k thiyenawa."
+        "text": "Mama Nugegoda wala bakery ekak patan ganna inne. Capital 500000k thiyenawa. Baking experience awurudu 5k thiyenawa."
     }
     res_si = client.post("/api/business/intake/extract", json=singlish_payload)
     assert res_si.status_code == 200
     data_si = res_si.json()
     assert data_si["extracted_fields"]["business_category"]["value"] == "Bakery / Food / Grocery"
     assert data_si["extracted_fields"]["district"]["value"] == "Colombo"
-    print("  Singlish AI Intake Extraction SUCCESS!")
+    print(" Singlish AI Intake Extraction SUCCESS!")
 
 
 def test_business_analyze_endpoint():

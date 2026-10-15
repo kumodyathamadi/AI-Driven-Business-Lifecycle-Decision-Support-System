@@ -16,6 +16,14 @@ from src.intake.dynamic_config import (
     BUSINESS_GOALS
 )
 
+WORD_TO_NUM = {
+    "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+    "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15,
+    "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20,
+    "thirty": 30, "forty": 40, "fifty": 50
+}
+
 # Canonical Stage Normalization
 def normalize_stage_canonical(stage_str: Optional[str]) -> str:
     """Normalizes any business stage string to canonical 'New' or 'Existing'."""
@@ -140,8 +148,8 @@ def extract_turn_facts(text: str, stage: str, goal: str) -> Dict[str, Dict[str, 
             "note": "Deterministically derived from Western Province"
         }
 
-    # Location Type
-    if any(w in lower for w in ["home based", "home-based", "gedara", "at home", "from home", "house"]):
+    # Location Type: strict word boundary matching to avoid matching 'household', 'warehouse', etc.
+    if any(re.search(p, lower) for p in [r'\bhome[\s-]based\b', r'\bfrom home\b', r'\bat home\b', r'\bgedara\b', r'\bhouse[\s-]based\b', r'\brun from (?:my )?house\b']):
         extracted["location_type"] = {
             "value": "Home Based",
             "provenance": "explicit",
@@ -150,7 +158,7 @@ def extract_turn_facts(text: str, stage: str, goal: str) -> Dict[str, Dict[str, 
             "type": "select",
             "note": "Home-based operation detected"
         }
-    elif any(w in lower for w in ["industrial", "zone", "factory", "park"]):
+    elif any(re.search(p, lower) for p in [r'\bindustrial\b', r'\bfactory zone\b', r'\bzone\b', r'\bindustrial park\b']):
         extracted["location_type"] = {
             "value": "Industrial Zone",
             "provenance": "explicit",
@@ -159,7 +167,7 @@ def extract_turn_facts(text: str, stage: str, goal: str) -> Dict[str, Dict[str, 
             "type": "select",
             "note": "Industrial zone detected"
         }
-    elif any(w in lower for w in ["main street", "main road", "urban", "town center", "city center", "high street"]):
+    elif any(re.search(p, lower) for p in [r'\bmain street\b', r'\bmain road\b', r'\bcity center\b', r'\btown center\b', r'\bhigh street\b']):
         extracted["location_type"] = {
             "value": "Urban Main Street",
             "provenance": "explicit",
@@ -183,19 +191,42 @@ def extract_turn_facts(text: str, stage: str, goal: str) -> Dict[str, Dict[str, 
         "ignore previous", "ignore all", "override", "bypass", "system prompt", "jailbreak", "set feasibility"
     ])
 
-    # Available Capital / Investment Amount
+    # 1. Requested Loan Amount (evaluated first to isolate bank loans from equity/capital)
+    loan_match = re.search(r'(?:loan|bank loan|borrow|credit|naya)\s*(?:of|is|=|:|around|approx|about)?\s*(?:rs\.?|lkr|\$)?\s*([\d,]+(?:\.\d+)?\s*(?:k|lakh|lakhs|million)?)', lower)
+    loan_val = None
+    if loan_match:
+        val, note = parse_numeric_amount(loan_match.group(0))
+        if val is not None and val > 0:
+            loan_val = val
+            extracted["loan_amount_lkr"] = {
+                "value": val,
+                "provenance": "explicit",
+                "confidence": 0.92,
+                "label": "Requested Loan Amount (LKR)",
+                "type": "number",
+                "note": note or f"Extracted loan amount LKR {val:,.0f}"
+            }
+
+    # 2. Available Capital / Investment Amount
+    # Supports: "plan to invest LKR 2,500,000 from my available capital", "LKR 2,500,000 from available capital", "capital of 2.5 million", etc.
     cap_patterns = [
-        r'(?:capital|investment|funds|seed money|salli)[\s\w:=around|approx|about]*?(?:rs\.?|lkr|\$)?\s*([\d,]+(?:\.\d+)?\s*(?:k|lakh|lakhs|laks|million|mn)?)',
-        r'(?:have|with|available|investing|starting with)[\s\w:=around|approx|about]*?(?:capital|investment|salli)?[\s\w:=around|approx|about]*?(?:rs\.?|lkr|\$)?\s*([\d,]+(?:\.\d+)?\s*(?:k|lakh|lakhs|laks|million|mn)?)',
-        r'([\d,\.]+\s*(?:k|lakh|lakhs|laks|million|mn)?)\s*(?:in capital|capital|available capital|seed money|investment|salli thiyenawa)',
+        r'(?:plan to invest|invest|investing|put in|inject|seed money of)\s*(?:around|approx|about)?\s*(?:rs\.?|lkr|\$)?\s*([\d,]+(?:\.\d+)?\s*(?:k|lakh|lakhs|laks|million|mn)?)',
+        r'(?:rs\.?|lkr|\$)?\s*([\d,]+(?:\.\d+)?\s*(?:k|lakh|lakhs|laks|million|mn)?)\s*(?:from|as|of)?\s*(?:my\s+)?(?:available\s+)?(?:capital|savings|funds|investment|equity|salli)',
+        r'(?:available\s+)?(?:capital|savings|funds|equity|salli)\s*(?:of|is|=|:|\s+)*\s*(?:around|approx|about)?\s*(?:rs\.?|lkr|\$)?\s*([\d,]+(?:\.\d+)?\s*(?:k|lakh|lakhs|laks|million|mn)?)',
+        r'(?:have|with|starting with)\s*(?:around|approx|about)?\s*(?:rs\.?|lkr|\$)?\s*([\d,]+(?:\.\d+)?\s*(?:k|lakh|lakhs|laks|million|mn)?)\s*(?:available|capital|to start)?'
     ]
     if not is_injection_attempt:
         for pat in cap_patterns:
             m = re.search(pat, lower)
             if m:
-                val, note = parse_numeric_amount(m.group(0))
+                val, note = parse_numeric_amount(m.group(1))
+                if val is None:
+                    val, note = parse_numeric_amount(m.group(0))
                 # Enforce realistic SME capital boundaries (up to 100M LKR)
                 if val is not None and 1000 <= val <= 100000000:
+                    # Do not confuse with separate loan amount if user explicitly specified both
+                    if loan_val is not None and val == loan_val and ('invest' in lower or 'available capital' in lower):
+                        continue
                     is_approx = any(w in lower for w in ["approx", "around", "about", "maybe", "rough"])
                     extracted["available_capital_lkr"] = {
                         "value": val,
@@ -206,20 +237,6 @@ def extract_turn_facts(text: str, stage: str, goal: str) -> Dict[str, Dict[str, 
                         "note": note or f"Extracted LKR {val:,.0f}"
                     }
                     break
-
-    # Requested Loan Amount
-    loan_match = re.search(r'(?:loan|bank loan|naya|credit)\s*(?:of|is|=|:)?\s*(?:rs\.?|lkr)?\s*([\d,\.]+\s*(?:k|lakh|lakhs|million)?)', lower)
-    if loan_match:
-        val, note = parse_numeric_amount(loan_match.group(0))
-        if val is not None and val > 0:
-            extracted["loan_amount_lkr"] = {
-                "value": val,
-                "provenance": "explicit",
-                "confidence": 0.92,
-                "label": "Requested Loan Amount (LKR)",
-                "type": "number",
-                "note": note or f"Extracted loan amount LKR {val:,.0f}"
-            }
 
     # Monthly Operating Budget
     budget_match = re.search(r'(?:monthly budget|operating budget|monthly cost|monthly expense|operating cost|viyadama)\s*(?:of|is|=|:|around|approx|about|\s+)*\s*(?:rs\.?|lkr)?\s*([\d,\.]+\s*(?:k|lakh|lakhs|million)?)', lower) or \
@@ -250,23 +267,29 @@ def extract_turn_facts(text: str, stage: str, goal: str) -> Dict[str, Dict[str, 
                 "note": note or f"Extracted inventory cost LKR {val:,.0f}"
             }
 
-    # Expected Unit Selling Price / Average Spend
-    price_match = re.search(r'(?:average price|price per|spend per|unit price|ticket size|gana)\s*(?:of|is|=|:)?\s*(?:rs\.?|lkr)?\s*(\d+(?:,\d+)?)', lower) or \
-                  re.search(r'(\d+(?:,\d+)?)\s*(?:rs\.?|lkr)?\s*(?:average price|price per unit|unit price|average spend|ticket size)', lower)
-    if price_match:
-        try:
-            raw_p = float(price_match.group(1).replace(",", ""))
-            if 5 <= raw_p <= 100000:
-                extracted["expected_price_lkr"] = {
-                    "value": raw_p,
-                    "provenance": "explicit",
-                    "confidence": 0.90,
-                    "label": "Expected Unit Price / Average Spend (LKR)",
-                    "type": "number",
-                    "note": f"Extracted expected price LKR {raw_p:,.0f}"
-                }
-        except ValueError:
-            pass
+    # Expected Unit Selling Price / Average Spend / Average Purchase Value
+    price_pats = [
+        r'(?:average\s+)?(?:purchase value|order value|basket size|spend per|ticket size|spend|price per|price|unit price|cost per|selling price|gana)\s*(?:of|is|=|:|around|approx|about)?\s*(?:rs\.?|lkr|\$)?\s*([\d,]+(?:\.\d+)?)',
+        r'([\d,]+(?:\.\d+)?)\s*(?:rs\.?|lkr|\$)?\s*(?:per customer|per visit|per head|per person|average purchase|average spend|ticket size|unit price|price)'
+    ]
+    for pat in price_pats:
+        m = re.search(pat, lower)
+        if m:
+            val_str = m.group(1).replace(',', '')
+            try:
+                val = float(val_str)
+                if 5 <= val <= 100000:
+                    extracted["expected_price_lkr"] = {
+                        "value": val,
+                        "provenance": "explicit",
+                        "confidence": 0.90,
+                        "label": "Expected Unit Price / Average Spend (LKR)",
+                        "type": "number",
+                        "note": f"Extracted expected price LKR {val:,.0f}"
+                    }
+                    break
+            except ValueError:
+                pass
 
     # Expected Customers Per Day
     cust_match = re.search(r'(\d+)\s*(?:customers|clients|buyers|footfall|visitors|dennek)\s*(?:per day|daily|a day|each day)?', lower) or \
@@ -287,12 +310,19 @@ def extract_turn_facts(text: str, stage: str, goal: str) -> Dict[str, Dict[str, 
             pass
 
     # Entrepreneur Experience (Years)
-    exp_match = re.search(r'(\d+)\s*(?:years|year|yr|yrs|awurudu|awrudu)\s*(?:of)?\s*(?:experience|running|managing|working|in business|exp)', lower) or \
-                re.search(r'(?:experience|running for)\s*(?:of)?\s*(\d+)\s*(?:years|year|yr|yrs|awurudu)?', lower)
-    if exp_match:
-        try:
-            val = int(exp_match.group(1))
-            if 0 <= val <= 60:
+    # Supports digits (e.g. 5) as well as English word numbers ("five", "three", "ten")
+    exp_num_regex = r'(\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty)'
+    exp_pats = [
+        rf'(?:running|operating|managing|in business|experience|run)?[\s\w]*?(?:for|with|having)?\s*(?:the\s+past\s+)?{exp_num_regex}\s*(?:years|year|yrs|yr|awurudu|awrudu)',
+        rf'{exp_num_regex}\s*(?:years|year|yrs|yr|awurudu|awrudu)\s*(?:of)?\s*(?:experience|running|managing|working|in business|exp)',
+        rf'(?:experience|running for|operating for)\s*(?:of)?\s*{exp_num_regex}\s*(?:years|year|yr|yrs|awurudu)?'
+    ]
+    for pat in exp_pats:
+        m = re.search(pat, lower)
+        if m:
+            num_str = m.group(1).lower()
+            val = int(num_str) if num_str.isdigit() else WORD_TO_NUM.get(num_str)
+            if val is not None and 0 <= val <= 60:
                 extracted["entrepreneur_experience_years"] = {
                     "value": val,
                     "provenance": "explicit",
@@ -301,8 +331,7 @@ def extract_turn_facts(text: str, stage: str, goal: str) -> Dict[str, Dict[str, 
                     "type": "number",
                     "note": f"Extracted {val} years of experience"
                 }
-        except ValueError:
-            pass
+                break
 
     # Available Staff Count
     staff_match = re.search(r'(\d+)\s*(?:staff|employees|workers|assistants|crew|team members|sewakayan)', lower) or \

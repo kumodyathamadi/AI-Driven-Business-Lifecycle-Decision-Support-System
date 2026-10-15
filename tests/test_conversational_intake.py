@@ -60,7 +60,7 @@ def test_free_style_multi_turn_new_business():
     """Simulates a multi-turn conversation for a New Business and verifies incremental accumulation."""
     # Turn 1: Idea, category, location, and capital
     turn1 = process_conversational_intake(
-        message="I want to start a small grocery shop in Homagama. My available capital is around LKR 800,000.",
+        message="I want to start a small grocery shop in Colombo. My available capital is around LKR 800,000.",
         history=[],
         business_stage="New",
         business_goal="Establish New Business"
@@ -82,7 +82,7 @@ def test_free_style_multi_turn_new_business():
 
     # Turn 2: User provides monthly budget and daily customer expectations
     history = [
-        {"role": "user", "content": "I want to start a small grocery shop in Homagama. My available capital is around LKR 800,000."},
+        {"role": "user", "content": "I want to start a small grocery shop in Colombo. My available capital is around LKR 800,000."},
         {"role": "assistant", "content": turn1["reply"]}
     ]
     turn2 = process_conversational_intake(
@@ -109,7 +109,7 @@ def test_free_style_multi_turn_new_business():
 def test_user_corrections_handling():
     """Validates that if a user corrects a previously provided value, the new value overrides the old one without losing other fields."""
     turn1 = process_conversational_intake(
-        message="Starting a bakery in Homagama with capital 600,000",
+        message="Starting a bakery in Colombo with capital 600,000",
         history=[],
         business_stage="New"
     )
@@ -175,7 +175,7 @@ def test_prompt_injection_safety():
 def test_chat_api_endpoint():
     """Tests POST /api/business/intake/chat endpoint."""
     payload = {
-        "message": "I plan to start a salon in Homagama with 750k capital and 3 staff members.",
+        "message": "I plan to start a salon in Colombo with 750k capital and 3 staff members.",
         "history": [],
         "business_stage": "New",
         "business_goal": "Establish New Business"
@@ -195,7 +195,7 @@ def test_chat_api_endpoint():
 def test_legacy_extract_endpoint_backward_compatibility():
     """Ensures POST /api/business/intake/extract remains 100% backward compatible."""
     payload = {
-        "text": "Starting a grocery shop in Homagama with capital 500k",
+        "text": "Starting a grocery shop in Colombo with capital 500k",
         "business_stage": "new_startup"
     }
     res = client.post("/api/business/intake/extract", json=payload)
@@ -205,6 +205,52 @@ def test_legacy_extract_endpoint_backward_compatibility():
     assert data["extracted_fields"]["district"]["value"] == "Colombo"
     assert data["extracted_fields"]["available_capital_lkr"]["value"] == 500000.0
     print("[PASS] test_legacy_extract_endpoint_backward_compatibility")
+
+
+def test_user_reported_branch_expansion_paragraph():
+    """
+    Validates the exact paragraph provided by the user:
+    - Available capital is 2,500,000 (not 1,000,000 bank loan)
+    - Bank loan is 1,000,000
+    - Average purchase value is 1,500 LKR
+    - Experience is 5 years ('past five years')
+    - Location type is Suburban Commercial Hub (not Home Based, even with 'household products')
+    - Expected customers is 60/day
+    - Staff count is null/unmentioned ('a few employees')
+    - Monthly budget is null/unmentioned
+    """
+    text = (
+        "I would like to expand my existing grocery business by opening a new branch in Maharagama. "
+        "My current grocery shop is located in Colombo, and I have been running this business for the past five years. "
+        "I plan to invest LKR 2,500,000 from my available capital and obtain an additional bank loan of LKR 1,000,000 "
+        "to establish the new branch. I expect to serve around 60 customers per day, with an average purchase value of "
+        "LKR 1,500 per customer. The new branch will sell groceries, fresh vegetables, fruits, beverages, and other essential "
+        "household products. I want to attract more customers by offering reasonable prices, good customer service, promotional "
+        "discounts, WhatsApp ordering, and local delivery services. I will hire a few employees to manage daily operations and "
+        "maintain sufficient stock through reliable suppliers. However, I need to evaluate the competition, location suitability, "
+        "operating expenses, customer demand, and available resources before investing. I would like the SME360 AI system to "
+        "assess the feasibility of opening this new branch and provide recommendations."
+    )
+    res = process_conversational_intake(
+        message=text,
+        history=[],
+        business_stage="Existing",
+        business_goal="Open New Branch"
+    )
+    fields = res["extracted_fields"]
+
+    assert fields["business_category"]["value"] == "Grocery / Mini-Mart"
+    assert fields["district"]["value"] == "Colombo"
+    assert fields["province"]["value"] == "Western"
+    assert fields["location_type"]["value"] == "Suburban Commercial Hub"
+    assert fields["available_capital_lkr"]["value"] == 2500000.0
+    assert fields["loan_amount_lkr"]["value"] == 1000000.0
+    assert fields["expected_price_lkr"]["value"] == 1500.0
+    assert fields["entrepreneur_experience_years"]["value"] == 5
+    assert fields["expected_customers_per_day"]["value"] == 60
+    assert fields["monthly_budget_lkr"]["value"] is None
+    assert fields["available_staff_count"]["value"] is None
+    print("[PASS] test_user_reported_branch_expansion_paragraph")
 
 
 if __name__ == "__main__":
@@ -220,6 +266,7 @@ if __name__ == "__main__":
     test_prompt_injection_safety()
     test_chat_api_endpoint()
     test_legacy_extract_endpoint_backward_compatibility()
+    test_user_reported_branch_expansion_paragraph()
     print("=" * 70)
     print("ALL CONVERSATIONAL INTAKE TESTS PASSED SUCCESSFULLY!")
     print("=" * 70)

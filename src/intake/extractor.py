@@ -2,6 +2,14 @@ import re
 from typing import Dict, Any, List, Tuple, Optional
 from src.intake.dynamic_config import get_dynamic_field_config, ALL_FIELD_DEFINITIONS
 
+WORD_TO_NUM = {
+    "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+    "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15,
+    "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20,
+    "thirty": 30, "forty": 40, "fifty": 50
+}
+
 
 def parse_numeric_amount(text_snippet: str) -> Tuple[Optional[float], Optional[str]]:
     """
@@ -162,24 +170,36 @@ def extract_business_info(user_text: str, specified_stage: str = "", specified_g
 
     # Location Type (if not hidden)
     if extracted_fields["location_type"]["requirement_state"] != "hidden":
-        if any(w in lower_text for w in ["home", "gedara", "house", "home-based"]):
+        if any(re.search(p, lower_text) for p in [r'\bhome[\s-]based\b', r'\bgedara\b', r'\bfrom home\b', r'\bworking from home\b', r'\boperate from home\b']):
             extracted_fields["location_type"] = {"value": "Home Based", "status": "extracted", "requirement_state": extracted_fields["location_type"]["requirement_state"], "confidence": 0.95, "label": "Location Type", "type": "select", "note": "Home-based operation detected"}
-        elif any(w in lower_text for w in ["industrial", "zone", "factory", "park"]):
+        elif any(re.search(p, lower_text) for p in [r'\bindustrial\b', r'\bfactory zone\b', r'\bzone\b', r'\bindustrial park\b']):
             extracted_fields["location_type"] = {"value": "Industrial Zone", "status": "extracted", "requirement_state": extracted_fields["location_type"]["requirement_state"], "confidence": 0.90, "label": "Location Type", "type": "select", "note": "Industrial zone detected"}
-        elif any(w in lower_text for w in ["main street", "urban", "city center", "main road"]):
+        elif any(re.search(p, lower_text) for p in [r'\bmain street\b', r'\bmain road\b', r'\bcity center\b', r'\btown center\b', r'\bhigh street\b']):
             extracted_fields["location_type"] = {"value": "Urban Main Street", "status": "extracted", "requirement_state": extracted_fields["location_type"]["requirement_state"], "confidence": 0.90, "label": "Location Type", "type": "select", "note": "Urban main street detected"}
-        elif found_loc in ["Homagama", "Maharagama", "Kottawa", "Piliyandala", "Kadawatha"] or "suburban" in lower_text or "hub" in lower_text:
+        elif found_loc in ["Homagama", "Maharagama", "Kottawa", "Piliyandala", "Kadawatha", "Horana", "Panadura"] or "suburban" in lower_text or "hub" in lower_text:
             extracted_fields["location_type"] = {"value": "Suburban Commercial Hub", "status": "extracted", "requirement_state": extracted_fields["location_type"]["requirement_state"], "confidence": 0.90, "label": "Location Type", "type": "select", "note": f"Suburban Commercial Hub detected ({found_loc or 'Hub'})"}
 
     # Proposed Action
     act_text = f"{detected_goal} ({detected_category})"
     extracted_fields["proposed_action"] = {"value": act_text, "status": "extracted", "requirement_state": "required", "confidence": 0.90, "label": "Proposed Action", "type": "text", "note": f"Context Goal: {detected_goal}"}
 
-    # Financial Amounts Extraction
+    # 1. Loan Amount (evaluated first to isolate bank loans from equity/capital)
+    loan_match = re.search(r'(?:loan|bank loan|borrow|credit|naya)\s*(?:of|is|=|:|around|approx|about)?\s*(?:rs\.?|lkr|\$)?\s*([\d,]+(?:\.\d+)?\s*(?:k|lakh|lakhs|million)?)', lower_text)
+    loan_val = None
+    if loan_match:
+        val, loan_note = parse_numeric_amount(loan_match.group(0))
+        if val is not None and val > 0:
+            loan_val = val
+            extracted_fields["loan_amount_lkr"] = {
+                "value": val, "status": "extracted", "requirement_state": extracted_fields["loan_amount_lkr"]["requirement_state"], "confidence": 0.92, "label": "Requested Loan Amount (LKR)", "type": "number", "note": loan_note or f"Extracted loan amount LKR {val:,.0f}"
+            }
+
+    # 2. Available Capital Extraction
     cap_patterns = [
-        r'(?:capital|investment|salli|have|available|budget of|rs\.?|lkr)?\s*([\d,\.]+\s*(?:k|lakh|lakhs|laks|million|mn)?)\s*(?:capital|available|investment|salli)',
-        r'(?:capital|investment)\s*(?:is|of|=|:)?\s*(?:rs\.?|lkr)?\s*([\d,\.]+\s*(?:k|lakh|lakhs|laks|million|mn)?)',
-        r'(?:have|with|starting with|investing)\s*(?:around|about|approx)?\s*(?:rs\.?|lkr)?\s*([\d,\.]+\s*(?:k|lakh|lakhs|laks|million|mn)?)'
+        r'(?:plan to invest|invest|investing|put in|inject|seed money of)\s*(?:around|approx|about)?\s*(?:rs\.?|lkr|\$)?\s*([\d,]+(?:\.\d+)?\s*(?:k|lakh|lakhs|laks|million|mn)?)',
+        r'(?:rs\.?|lkr|\$)?\s*([\d,]+(?:\.\d+)?\s*(?:k|lakh|lakhs|laks|million|mn)?)\s*(?:from|as|of)?\s*(?:my\s+)?(?:available\s+)?(?:capital|savings|funds|investment|equity|salli)',
+        r'(?:available\s+)?(?:capital|savings|funds|equity|salli)\s*(?:of|is|=|:|\s+)*\s*(?:around|approx|about)?\s*(?:rs\.?|lkr|\$)?\s*([\d,]+(?:\.\d+)?\s*(?:k|lakh|lakhs|laks|million|mn)?)',
+        r'(?:have|with|starting with)\s*(?:around|approx|about)?\s*(?:rs\.?|lkr|\$)?\s*([\d,]+(?:\.\d+)?\s*(?:k|lakh|lakhs|laks|million|mn)?)\s*(?:available|capital|to start)?'
     ]
     
     cap_val, cap_note = None, None
@@ -189,28 +209,24 @@ def extract_business_info(user_text: str, specified_stage: str = "", specified_g
         for pat in cap_patterns:
             m = re.search(pat, lower_text)
             if m:
-                cap_val, cap_note = parse_numeric_amount(m.group(0))
-                if cap_val:
+                val, note = parse_numeric_amount(m.group(1))
+                if val is None:
+                    val, note = parse_numeric_amount(m.group(0))
+                if val is not None and 1000 <= val <= 100000000:
+                    if loan_val is not None and val == loan_val and ('invest' in lower_text or 'available capital' in lower_text):
+                        continue
+                    cap_val, cap_note = val, note
                     break
 
     if cap_val:
-        is_approx = any(w in lower_text for w in ["approx", "around", "about", "half a million", "maybe", "lakhs"])
+        is_approx = any(w in lower_text for w in ["approx", "around", "about", "half a million", "maybe", "rough"])
         status = "needs_verification" if is_approx else "extracted"
         conf = 0.75 if is_approx else 0.95
         extracted_fields["available_capital_lkr"] = {
-            "value": cap_val, "status": status, "requirement_state": extracted_fields["available_capital_lkr"]["requirement_state"], "confidence": conf, "label": "Available Capital (LKR)", "type": "number", "note": cap_note
+            "value": cap_val, "status": status, "requirement_state": extracted_fields["available_capital_lkr"]["requirement_state"], "confidence": conf, "label": "Available Capital (LKR)", "type": "number", "note": cap_note or f"Extracted LKR {cap_val:,.0f}"
         }
 
-    # Loan Amount
-    loan_match = re.search(r'(?:loan|bank loan|naya)\s*(?:of|is|=|:)?\s*(?:rs\.?|lkr)?\s*([\d,\.]+\s*(?:k|lakh|lakhs|million)?)', lower_text)
-    if loan_match:
-        loan_val, loan_note = parse_numeric_amount(loan_match.group(0))
-        if loan_val:
-            extracted_fields["loan_amount_lkr"] = {
-                "value": loan_val, "status": "extracted", "requirement_state": extracted_fields["loan_amount_lkr"]["requirement_state"], "confidence": 0.90, "label": "Requested Loan Amount (LKR)", "type": "number", "note": loan_note
-            }
-
-    # Monthly Budget
+    # 3. Monthly Budget
     budget_match = re.search(r'(?:monthly budget|operating budget|monthly cost|viyadama)\s*(?:of|is|=|:)?\s*(?:rs\.?|lkr)?\s*([\d,\.]+\s*(?:k|lakh|lakhs|million)?)', lower_text)
     if budget_match:
         bud_val, bud_note = parse_numeric_amount(budget_match.group(0))
@@ -219,40 +235,54 @@ def extract_business_info(user_text: str, specified_stage: str = "", specified_g
                 "value": bud_val, "status": "extracted", "requirement_state": extracted_fields["monthly_budget_lkr"]["requirement_state"], "confidence": 0.90, "label": "Monthly Operating Budget (LKR)", "type": "number", "note": bud_note
             }
 
-    # Unit Price
-    price_match = re.search(r'(?:price|cost per|unit price|gana)\s*(?:of|is|=|:)?\s*(?:rs\.?|lkr)?\s*(\d+)', lower_text)
-    if price_match:
+    # 4. Expected Unit Selling Price / Average Spend
+    price_pats = [
+        r'(?:average\s+)?(?:purchase value|order value|basket size|spend per|ticket size|spend|price per|price|unit price|cost per|selling price|gana)\s*(?:of|is|=|:|around|approx|about)?\s*(?:rs\.?|lkr|\$)?\s*([\d,]+(?:\.\d+)?)',
+        r'([\d,]+(?:\.\d+)?)\s*(?:rs\.?|lkr|\$)?\s*(?:per customer|per visit|per head|per person|average purchase|average spend|ticket size|unit price|price)'
+    ]
+    for pat in price_pats:
+        m = re.search(pat, lower_text)
+        if m:
+            val_str = m.group(1).replace(',', '')
+            try:
+                pval = float(val_str)
+                if 5 <= pval <= 100000:
+                    extracted_fields["expected_price_lkr"] = {
+                        "value": pval, "status": "extracted", "requirement_state": extracted_fields["expected_price_lkr"]["requirement_state"], "confidence": 0.90, "label": "Expected Unit Price / Average Spend (LKR)", "type": "number", "note": f"Extracted price LKR {pval:,.0f}"
+                    }
+                    break
+            except ValueError:
+                pass
+
+    # 5. Operational Factors
+    cust_match = re.search(r'(\d+)\s*(?:customers|buyers|clients|footfall|dennek)\s*(?:per day|a day|daily)?', lower_text) or \
+                 re.search(r'(?:expect|target|have|serve)\s*(?:around|about)?\s*(\d+)\s*customers', lower_text)
+    if cust_match:
         try:
-            pval = float(price_match.group(1))
-            if pval < 50000:
-                extracted_fields["expected_price_lkr"] = {
-                    "value": pval, "status": "extracted", "requirement_state": extracted_fields["expected_price_lkr"]["requirement_state"], "confidence": 0.90, "label": "Expected Price / Unit (LKR)", "type": "number", "note": f"Extracted price LKR {pval}"
+            cval = int(cust_match.group(1))
+            if 1 <= cval <= 2000:
+                extracted_fields["expected_customers_per_day"] = {
+                    "value": cval, "status": "extracted", "requirement_state": extracted_fields["expected_customers_per_day"]["requirement_state"], "confidence": 0.95, "label": "Expected Customers / Day", "type": "number", "note": f"Extracted {cval} daily customers"
                 }
         except ValueError:
             pass
 
-    # Operational Factors
-    cust_match = re.search(r'(\d+)\s*(?:customers|buyers|clients|footfall|dennek)\s*(?:per day|a day|daily)?', lower_text) or \
-                 re.search(r'(?:expect|target|have)\s*(?:around|about)?\s*(\d+)\s*customers', lower_text)
-    if cust_match:
-        try:
-            cval = int(cust_match.group(1))
-            extracted_fields["expected_customers_per_day"] = {
-                "value": cval, "status": "extracted", "requirement_state": extracted_fields["expected_customers_per_day"]["requirement_state"], "confidence": 0.95, "label": "Expected Customers / Day", "type": "number", "note": f"Extracted {cval} daily customers"
-            }
-        except ValueError:
-            pass
-
-    exp_match = re.search(r'(\d+)\s*(?:years|yr|yrs|awurudu|awrudu)\s*(?:of)?\s*(?:experience|baking|work|exp)', lower_text) or \
-                re.search(r'experience\s*(?:of)?\s*(\d+)\s*(?:years|yr|yrs|awurudu)?', lower_text)
-    if exp_match:
-        try:
-            eval_val = int(exp_match.group(1))
-            extracted_fields["entrepreneur_experience_years"] = {
-                "value": eval_val, "status": "extracted", "requirement_state": extracted_fields["entrepreneur_experience_years"]["requirement_state"], "confidence": 0.95, "label": "Entrepreneur Experience (Years)", "type": "number", "note": f"Extracted {eval_val} years experience"
-            }
-        except ValueError:
-            pass
+    exp_num_regex = r'(\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty)'
+    exp_pats = [
+        rf'(?:running|operating|managing|in business|experience|run)?[\s\w]*?(?:for|with|having)?\s*(?:the\s+past\s+)?{exp_num_regex}\s*(?:years|year|yrs|yr|awurudu|awrudu)',
+        rf'{exp_num_regex}\s*(?:years|year|yrs|yr|awurudu|awrudu)\s*(?:of)?\s*(?:experience|running|managing|working|in business|exp)',
+        rf'(?:experience|running for|operating for)\s*(?:of)?\s*{exp_num_regex}\s*(?:years|year|yr|yrs|awurudu)?'
+    ]
+    for pat in exp_pats:
+        m = re.search(pat, lower_text)
+        if m:
+            num_str = m.group(1).lower()
+            eval_val = int(num_str) if num_str.isdigit() else WORD_TO_NUM.get(num_str)
+            if eval_val is not None and 0 <= eval_val <= 60:
+                extracted_fields["entrepreneur_experience_years"] = {
+                    "value": eval_val, "status": "extracted", "requirement_state": extracted_fields["entrepreneur_experience_years"]["requirement_state"], "confidence": 0.95, "label": "Entrepreneur Experience (Years)", "type": "number", "note": f"Extracted {eval_val} years experience"
+                }
+                break
 
     staff_match = re.search(r'(\d+)\s*(?:staff|employees|workers|veda karayo)', lower_text)
     if staff_match:
