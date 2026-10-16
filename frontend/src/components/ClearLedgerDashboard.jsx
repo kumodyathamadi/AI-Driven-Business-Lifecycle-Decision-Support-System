@@ -376,18 +376,63 @@ export default function ClearLedgerDashboard() {
     }
     setLoading(true);
     try {
+      // Normalize invoices so date_of_supply is safe and matches RAMIS schema
+      const normalizedInvoices = exportList.map(inv => {
+        let dateVal = String(inv.date_of_supply || '01/01/2026').trim();
+        // Convert DD/MM/YYYY or DD-MM-YYYY to ISO YYYY-MM-DD
+        if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}$/.test(dateVal)) {
+          const parts = dateVal.split(/[\/-]/);
+          const day = parts[0].padStart(2, '0');
+          const month = parts[1].padStart(2, '0');
+          const year = parts[2];
+          dateVal = `${year}-${month}-${day}`;
+        }
+        return {
+          invoice_number: String(inv.invoice_number || 'INV-0001'),
+          date_of_supply: dateVal,
+          sub_total: Number(inv.sub_total || 0),
+          tax_amount: Number(inv.tax_amount || 0),
+          total_amount: Number(inv.total_amount || 0),
+          currency: inv.currency || 'EUR',
+          tax_category: inv.tax_category || 'Zero-Rated',
+          customer_name: inv.customer_name || 'STARFLORA HOLLAND B.V.',
+          customer_tin: inv.customer_tin || '1146888607000',
+          supplier_name: inv.supplier_name || 'STAR FLORA (PVT) LTD',
+          supplier_tin: inv.supplier_tin || taxpayerTin,
+          exchange_rate: Number(inv.exchange_rate || 1.0),
+          description_of_supply: inv.description_of_supply || 'Export of Cut Foliage & Flowers'
+        };
+      });
+
       const payload = {
-        taxpayer_tin: taxpayerTin,
+        taxpayer_tin: taxpayerTin || '102938475',
+        taxpayer_name: 'STAR FLORA (PVT) LTD',
         tax_period: taxPeriod,
-        invoices: exportList
+        invoices: normalizedInvoices
       };
       await downloadRamisSchedule7Csv(payload);
       setStatusMessage({
         type: 'success',
-        text: `Successfully generated and downloaded RAMIS Schedule 7 CSV for ${taxPeriod} (${exportList.length} invoices)!`
+        text: `Successfully generated and downloaded RAMIS Schedule 7 CSV for ${taxPeriod} (${normalizedInvoices.length} invoices)!`
       });
     } catch (err) {
-      setStatusMessage({ type: 'error', text: `Failed to download CSV: ${err.message}` });
+      let msg = err.message || 'Failed to download CSV.';
+      if (err.response?.data) {
+        if (err.response.data instanceof Blob) {
+          try {
+            const text = await err.response.data.text();
+            const parsed = JSON.parse(text);
+            msg = parsed.detail || text;
+          } catch (e) {
+            msg = `Error (${err.response.status}): Could not process CSV download`;
+          }
+        } else if (err.response.data.detail) {
+          msg = typeof err.response.data.detail === 'string'
+            ? err.response.data.detail
+            : JSON.stringify(err.response.data.detail);
+        }
+      }
+      setStatusMessage({ type: 'error', text: `Failed to download CSV: ${msg}` });
     } finally {
       setLoading(false);
     }

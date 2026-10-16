@@ -1,5 +1,5 @@
 # component3_backend/schemas.py
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict, Any
 from datetime import date, datetime
 
@@ -18,6 +18,21 @@ class InvoiceData(BaseModel):
     customer_tin: Optional[str] = Field(None, description="Customer TIN number")
     exchange_rate: Optional[float] = Field(1.0, gt=0.0, description="Exchange rate to LKR for foreign currencies")
     description_of_supply: Optional[str] = Field("General Supply", description="Nature / Description of goods or services")
+
+    @field_validator('date_of_supply', mode='before')
+    @classmethod
+    def parse_flexible_date(cls, v: Any) -> Any:
+        if isinstance(v, date):
+            return v
+        if isinstance(v, str):
+            v_str = v.strip()
+            # Try supported date formats (ISO, DD/MM/YYYY, DD-MM-YYYY, etc.)
+            for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%d/%m/%y', '%d-%m-%y', '%Y/%m/%d', '%d %b %Y', '%d %B %Y'):
+                try:
+                    return datetime.strptime(v_str, fmt).date()
+                except ValueError:
+                    pass
+        return v
 
 
 class TaxCalculationResult(BaseModel):
