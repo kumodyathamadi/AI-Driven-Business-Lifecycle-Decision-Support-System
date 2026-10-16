@@ -247,6 +247,66 @@ async function analyseComplianceAPI(profile: BusinessProfileForm): Promise<Compl
   return res.json();
 }
 
+export interface ExtractedPlanResponse {
+  success: boolean;
+  filename: string;
+  pages_count: number;
+  is_scanned: boolean;
+  ocr_used: boolean;
+  character_count: number;
+  extracted_profile: Record<string, any>;
+  metadata: Record<string, any>;
+  raw_text_preview: string;
+}
+
+export interface SamplePlanItem {
+  id: string;
+  title: string;
+  category: string;
+  sector: string;
+  stage: string;
+  location: string;
+  strategy: string;
+  filename: string;
+  description: string;
+}
+
+async function uploadAndExtractPlanPDF(file: File): Promise<ExtractedPlanResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch(`${API_BASE}/api/v1/component2/extract-plan-pdf`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Failed to extract business plan PDF');
+  }
+
+  return res.json();
+}
+
+async function extractSamplePlanAPI(sampleId: string): Promise<ExtractedPlanResponse> {
+  const res = await fetch(`${API_BASE}/api/v1/component2/sample-plans/${sampleId}/extract`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Failed to extract sample plan');
+  }
+  return res.json();
+}
+
+async function fetchSamplePlansListAPI(): Promise<SamplePlanItem[]> {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/component2/sample-plans`);
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Sub-components: Badges, Controls, Cards
 // ---------------------------------------------------------------------------
@@ -606,6 +666,107 @@ export const RegistrationComplianceDashboard: React.FC = () => {
   const [selectedObligationId, setSelectedObligationId] = useState('');
   const [resultFilter, setResultFilter] = useState<'all' | ApplicabilityStatus>('all');
 
+  // PDF Business / Growth Plan Ingestion State
+  const [pdfUploading, setPdfUploading] = useState(false);
+  const [pdfExtractResult, setPdfExtractResult] = useState<ExtractedPlanResponse | null>(null);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [samplePlans, setSamplePlans] = useState<SamplePlanItem[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [extractedProfileEdit, setExtractedProfileEdit] = useState<any | null>(null);
+  const [newProductTag, setNewProductTag] = useState('');
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  // Load available sample business plans on mount
+  React.useEffect(() => {
+    fetchSamplePlansListAPI().then(setSamplePlans);
+  }, []);
+
+  const handlePdfFile = async (file: File) => {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      setPdfError('Please upload a valid PDF document (.pdf).');
+      return;
+    }
+    setPdfUploading(true);
+    setPdfError(null);
+    try {
+      const data = await uploadAndExtractPlanPDF(file);
+      setPdfExtractResult(data);
+      setExtractedProfileEdit({ ...data.extracted_profile });
+    } catch (err: any) {
+      setPdfError(err.message || 'Failed to process business plan PDF');
+    } finally {
+      setPdfUploading(false);
+    }
+  };
+
+  const handleSelectSamplePlan = async (sampleId: string) => {
+    setPdfUploading(true);
+    setPdfError(null);
+    try {
+      const data = await extractSamplePlanAPI(sampleId);
+      setPdfExtractResult(data);
+      setExtractedProfileEdit({ ...data.extracted_profile });
+    } catch (err: any) {
+      setPdfError(err.message || 'Failed to load sample business plan');
+    } finally {
+      setPdfUploading(false);
+    }
+  };
+
+  const handleConfirmExtractedProfile = () => {
+    if (!extractedProfileEdit) return;
+
+    const confirmed: BusinessProfileForm = {
+      business_type: extractedProfileEdit.business_type || 'food',
+      province: extractedProfileEdit.province || 'Western Province',
+      district: extractedProfileEdit.district || 'Colombo',
+      local_authority: extractedProfileEdit.local_authority || 'Colombo Municipal Council',
+      legal_form: extractedProfileEdit.legal_form || 'sole_proprietorship',
+      number_of_employees: extractedProfileEdit.number_of_employees ?? 2,
+      has_physical_premises: extractedProfileEdit.has_physical_premises ?? true,
+      handles_food: extractedProfileEdit.handles_food ?? (extractedProfileEdit.business_type === 'food'),
+      serves_cooked_food: extractedProfileEdit.serves_cooked_food ?? false,
+      sells_alcohol: extractedProfileEdit.sells_alcohol ?? false,
+      uses_chemicals_or_cosmetics: extractedProfileEdit.uses_chemicals_or_cosmetics ?? (extractedProfileEdit.business_type === 'salon'),
+      handles_waste_oil_or_batteries: extractedProfileEdit.handles_waste_oil_or_batteries ?? (extractedProfileEdit.business_type === 'vehicle_parts'),
+      is_manufacturing: extractedProfileEdit.is_manufacturing ?? false,
+      is_importing: extractedProfileEdit.is_importing ?? false,
+      turnover_band: extractedProfileEdit.turnover_band || '1m_10m',
+      location: extractedProfileEdit.location || 'Colombo',
+      products_services: extractedProfileEdit.products_services || [],
+      business_size: (extractedProfileEdit.number_of_employees ?? 2) > 10 ? 'medium' : 'small',
+    };
+
+    setProfile(confirmed);
+    runAnalysis(confirmed);
+  };
+
+  const handleEditInManualForm = () => {
+    if (!extractedProfileEdit) return;
+    setProfile((prev) => ({
+      ...prev,
+      business_type: extractedProfileEdit.business_type || prev.business_type,
+      province: extractedProfileEdit.province || prev.province,
+      district: extractedProfileEdit.district || prev.district,
+      local_authority: extractedProfileEdit.local_authority || prev.local_authority,
+      legal_form: extractedProfileEdit.legal_form || prev.legal_form,
+      number_of_employees: extractedProfileEdit.number_of_employees ?? prev.number_of_employees,
+      has_physical_premises: extractedProfileEdit.has_physical_premises ?? prev.has_physical_premises,
+      handles_food: extractedProfileEdit.handles_food ?? prev.handles_food,
+      serves_cooked_food: extractedProfileEdit.serves_cooked_food ?? prev.serves_cooked_food,
+      sells_alcohol: extractedProfileEdit.sells_alcohol ?? prev.sells_alcohol,
+      uses_chemicals_or_cosmetics: extractedProfileEdit.uses_chemicals_or_cosmetics ?? prev.uses_chemicals_or_cosmetics,
+      handles_waste_oil_or_batteries: extractedProfileEdit.handles_waste_oil_or_batteries ?? prev.handles_waste_oil_or_batteries,
+      is_manufacturing: extractedProfileEdit.is_manufacturing ?? prev.is_manufacturing,
+      is_importing: extractedProfileEdit.is_importing ?? prev.is_importing,
+      turnover_band: extractedProfileEdit.turnover_band || prev.turnover_band,
+      location: extractedProfileEdit.location || prev.location,
+      products_services: extractedProfileEdit.products_services || prev.products_services,
+    }));
+    setPdfExtractResult(null);
+  };
+
   const setField = (key: keyof BusinessProfileForm, value: unknown) => {
     setProfile((prev) => ({
       ...prev,
@@ -686,7 +847,7 @@ export const RegistrationComplianceDashboard: React.FC = () => {
 
   return (
     <div className="compliance-app min-h-screen flex-1 font-sans">
-      <header className="compliance-header sticky top-0 z-20">
+      <header className="compliance-header sticky top-16 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200">
         <div className="compliance-header-inner">
           <a className="compliance-brand" href="/" aria-label="Compliance Navigator home">
             <span className="compliance-brand-mark">C2</span>
@@ -737,9 +898,536 @@ export const RegistrationComplianceDashboard: React.FC = () => {
 
         {activeStep === 'profile' && (
           <div className="compliance-layout">
-            <section className="compliance-panel">
-        {/* Form Container */}
-        <div className="compliance-form-card bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-5">
+            <section className="compliance-panel space-y-5">
+              {/* ------------------------------------------------------------- */}
+              {/* COMPONENT 1 ➔ COMPONENT 2 INTEGRATION: PDF INGESTION & EXTRACTION */}
+              {/* ------------------------------------------------------------- */}
+              <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 rounded-2xl p-6 text-white shadow-md border border-slate-700/80">
+                {/* Header & Steps Indicator */}
+                <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-700/60 pb-4">
+                  <div>
+                    <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-300 text-[11px] font-bold border border-blue-400/30 mb-2">
+                      <i className="fa-solid fa-arrows-split-up-and-left" />
+                      Component 1 ➔ Component 2 Meaningful Integration
+                    </div>
+                    <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                      <i className="fa-solid fa-file-pdf text-red-400" />
+                      Upload Business / Growth Plan (PDF)
+                    </h2>
+                    <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                      Upload the PDF plan generated from Component 1 or any SME business plan.
+                      The system automatically parses text (or performs OCR on scanned PDFs), extracts a comprehensive
+                      business profile, and lets you confirm it before displaying applicable Sri Lankan legal &amp; regulatory requirements.
+                    </p>
+                  </div>
+
+                  {/* Step badges */}
+                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 text-[11px] font-semibold bg-slate-800/80 p-1.5 rounded-xl border border-slate-700 overflow-x-auto max-w-full">
+                    <span className="px-2 py-0.5 rounded bg-blue-500/30 text-blue-300 whitespace-nowrap">1. Download Plan</span>
+                    <i className="fa-solid fa-arrow-right text-[10px] text-slate-500 shrink-0" />
+                    <span className="px-2 py-0.5 rounded bg-teal-500/30 text-teal-300 whitespace-nowrap">2. Upload PDF</span>
+                    <i className="fa-solid fa-arrow-right text-[10px] text-slate-500 shrink-0" />
+                    <span className="px-2 py-0.5 rounded bg-amber-500/30 text-amber-300 whitespace-nowrap">3. Extract &amp; Confirm</span>
+                    <i className="fa-solid fa-arrow-right text-[10px] text-slate-500 shrink-0" />
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/30 text-emerald-300 whitespace-nowrap">4. Legal Guidance</span>
+                  </div>
+                </div>
+
+                {/* Upload Error Banner */}
+                {pdfError && (
+                  <div className="mt-4 p-3 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-200 text-xs flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <i className="fa-solid fa-circle-exclamation text-rose-400" />
+                      {pdfError}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setPdfError(null)}
+                      className="text-rose-300 hover:text-white text-xs ml-3"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                )}
+
+                {/* Main Ingestion & Upload Section (Shown when no extracted profile is awaiting confirmation) */}
+                {!pdfExtractResult && (
+                  <div className="mt-5 space-y-4">
+                    {/* Drag and Drop Zone */}
+                    <div
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsDragOver(true);
+                      }}
+                      onDragLeave={() => setIsDragOver(false)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDragOver(false);
+                        const file = e.dataTransfer.files?.[0];
+                        if (file) handlePdfFile(file);
+                      }}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
+                        isDragOver
+                          ? 'border-teal-400 bg-teal-500/10 scale-[1.01]'
+                          : 'border-slate-600 hover:border-slate-400 bg-slate-800/40 hover:bg-slate-800/70'
+                      }`}
+                    >
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="application/pdf"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handlePdfFile(file);
+                        }}
+                      />
+
+                      {pdfUploading ? (
+                        <div className="py-4 space-y-3">
+                          <i className="fa-solid fa-circle-notch fa-spin text-3xl text-teal-400" />
+                          <div className="text-sm font-semibold text-teal-300">
+                            Analyzing &amp; Extracting Business Profile from PDF...
+                          </div>
+                          <p className="text-xs text-slate-400">
+                            Running PyMuPDF text extractor · Scanning for OCR text · Identifying category, location &amp; products
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="w-12 h-12 mx-auto rounded-full bg-slate-700/80 flex items-center justify-center text-teal-400 text-xl shadow-inner">
+                            <i className="fa-solid fa-cloud-arrow-up" />
+                          </div>
+                          <div className="text-sm font-semibold text-slate-200">
+                            Drop your Business Plan PDF here, or <span className="text-teal-400 underline">browse file</span>
+                          </div>
+                          <p className="text-[11px] text-slate-400">
+                            Supports Component 1 SME360 AI Reports, Strategic Growth Plans, or Scanned SME Business Plans (.pdf)
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Quick-Load Built-in Sample Plans */}
+                    <div className="pt-2">
+                      <div className="flex items-center justify-between text-xs text-slate-300 mb-2.5">
+                        <span className="font-semibold flex items-center gap-1.5 text-slate-300">
+                          <i className="fa-solid fa-bolt text-amber-400" />
+                          Or Test Instantly with Built-in Component 1 Sample Business Plans:
+                        </span>
+                        <span className="text-[11px] text-slate-400">Pre-generated by SME360 AI Decision Engine</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {/* Sample 1: FreshMart Grocery */}
+                        <div className="bg-slate-800/90 border border-slate-700 hover:border-slate-500 rounded-xl p-3.5 flex flex-col justify-between transition-all">
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                                <i className="fa-solid fa-basket-shopping" /> FreshMart Grocery
+                              </span>
+                              <span className="text-[10px] bg-slate-700 px-2 py-0.5 rounded text-slate-300">Existing Business</span>
+                            </div>
+                            <div className="text-[11px] text-slate-300 mt-1 font-mono">Grocery / Mini-Mart · Colombo, Western Province</div>
+                            <p className="text-[11px] text-slate-400 mt-1.5 line-clamp-2">
+                              Expansion plan: multi-channel WhatsApp delivery, grocery retail, LKR 2.5M capital, 1 staff member.
+                            </p>
+                          </div>
+                          <div className="mt-3 flex items-center gap-2 pt-2 border-t border-slate-700/50">
+                            <button
+                              type="button"
+                              onClick={() => handleSelectSamplePlan('freshmart_grocery')}
+                              disabled={pdfUploading}
+                              className="flex-1 py-1.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                            >
+                              <i className="fa-solid fa-wand-magic-sparkles" />
+                              Auto-Ingest &amp; Extract
+                            </button>
+                            <a
+                              href={`${API_BASE}/api/v1/component2/sample-plans/freshmart_grocery/download-pdf`}
+                              download="FreshMart_Grocery_Business_Plan.pdf"
+                              title="Download PDF file to test uploading yourself"
+                              className="py-1.5 px-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-medium rounded-lg transition-colors flex items-center gap-1"
+                            >
+                              <i className="fa-solid fa-download" />
+                              <span className="text-[10px]">PDF</span>
+                            </a>
+                          </div>
+                        </div>
+
+                        {/* Sample 2: Trendy Style Clothing Shop */}
+                        <div className="bg-slate-800/90 border border-slate-700 hover:border-slate-500 rounded-xl p-3.5 flex flex-col justify-between transition-all">
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-purple-400 flex items-center gap-1.5">
+                                <i className="fa-solid fa-shirt" /> Trendy Style Clothing Shop
+                              </span>
+                              <span className="text-[10px] bg-slate-700 px-2 py-0.5 rounded text-slate-300">New Startup</span>
+                            </div>
+                            <div className="text-[11px] text-slate-300 mt-1 font-mono">Clothing / Garment · Colombo, Western Province</div>
+                            <p className="text-[11px] text-slate-400 mt-1.5 line-clamp-2">
+                              Startup plan: T-shirts, dresses, casual &amp; office wear, physical storefront, 2 staff members.
+                            </p>
+                          </div>
+                          <div className="mt-3 flex items-center gap-2 pt-2 border-t border-slate-700/50">
+                            <button
+                              type="button"
+                              onClick={() => handleSelectSamplePlan('trendy_style_clothing')}
+                              disabled={pdfUploading}
+                              className="flex-1 py-1.5 px-3 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                            >
+                              <i className="fa-solid fa-wand-magic-sparkles" />
+                              Auto-Ingest &amp; Extract
+                            </button>
+                            <a
+                              href={`${API_BASE}/api/v1/component2/sample-plans/trendy_style_clothing/download-pdf`}
+                              download="Trendy_Style_Clothing_Shop_Business_Plan.pdf"
+                              title="Download PDF file to test uploading yourself"
+                              className="py-1.5 px-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-medium rounded-lg transition-colors flex items-center gap-1"
+                            >
+                              <i className="fa-solid fa-download" />
+                              <span className="text-[10px]">PDF</span>
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ------------------------------------------------------------- */}
+                {/* STEP 3 & 4: EXTRACTED PROFILE CONFIRMATION & REVIEW CARD     */}
+                {/* ------------------------------------------------------------- */}
+                {pdfExtractResult && extractedProfileEdit && (
+                  <div className="mt-5 bg-white text-slate-900 rounded-xl p-5 shadow-lg border border-slate-200 space-y-4">
+                    {/* Header verification tag */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                      <div>
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold mb-1">
+                          <i className="fa-solid fa-circle-check text-emerald-600" />
+                          Step 3 Complete: Business Profile Extracted
+                        </div>
+                        <h3 className="text-base font-bold text-slate-900">
+                          Step 4: Confirm &amp; Adjust Extracted Business Profile
+                        </h3>
+                        <p className="text-xs text-slate-500">
+                          Extracted from <span className="font-semibold text-slate-700">{pdfExtractResult.filename}</span> ({pdfExtractResult.pages_count} Pages · {pdfExtractResult.is_scanned ? 'OCR Processed' : 'Digital Text Extracted'})
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPdfExtractResult(null);
+                            setExtractedProfileEdit(null);
+                          }}
+                          className="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                        >
+                          <i className="fa-solid fa-arrow-rotate-left mr-1" />
+                          Upload Different PDF
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Editable Fields Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 text-xs">
+                      {/* Business Name */}
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">Business Name</label>
+                        <input
+                          type="text"
+                          value={extractedProfileEdit.business_name || ''}
+                          onChange={(e) =>
+                            setExtractedProfileEdit({ ...extractedProfileEdit, business_name: e.target.value })
+                          }
+                          className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none font-semibold text-slate-800"
+                        />
+                      </div>
+
+                      {/* Business Category & Mapped Sector */}
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">
+                          Category &amp; Mapped Legal Sector
+                        </label>
+                        <select
+                          value={extractedProfileEdit.business_type || 'food'}
+                          onChange={(e) => {
+                            const bt = e.target.value;
+                            setExtractedProfileEdit({
+                              ...extractedProfileEdit,
+                              business_type: bt,
+                              sector: bt,
+                              handles_food: bt === 'food',
+                              uses_chemicals_or_cosmetics: bt === 'salon',
+                              handles_waste_oil_or_batteries: bt === 'vehicle_parts',
+                            });
+                          }}
+                          className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 font-semibold"
+                        >
+                          <option value="food">Grocery / Mini-Mart / Food Business</option>
+                          <option value="clothing">Clothing / Garment Retail</option>
+                          <option value="salon">Beauty Salon / Grooming</option>
+                          <option value="vehicle_parts">Vehicle Parts &amp; Auto Accessories</option>
+                        </select>
+                      </div>
+
+                      {/* Business Stage */}
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">Business Stage</label>
+                        <select
+                          value={extractedProfileEdit.business_stage || 'New Startup'}
+                          onChange={(e) =>
+                            setExtractedProfileEdit({ ...extractedProfileEdit, business_stage: e.target.value })
+                          }
+                          className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                        >
+                          <option value="New Startup">New Startup</option>
+                          <option value="Existing Business">Existing Business (Expansion)</option>
+                        </select>
+                      </div>
+
+                      {/* Province & District */}
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">Province &amp; District</label>
+                        <div className="flex gap-1.5">
+                          <input
+                            type="text"
+                            readOnly
+                            value={extractedProfileEdit.province || 'Western Province'}
+                            className="w-1/2 bg-slate-100 border border-slate-300 rounded-lg px-2 py-1.5 text-xs text-slate-600"
+                          />
+                          <input
+                            type="text"
+                            value={extractedProfileEdit.district || 'Colombo'}
+                            onChange={(e) =>
+                              setExtractedProfileEdit({ ...extractedProfileEdit, district: e.target.value })
+                            }
+                            className="w-1/2 border border-slate-300 rounded-lg px-2 py-1.5 text-xs"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Local Authority */}
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">Local Authority</label>
+                        <select
+                          value={extractedProfileEdit.local_authority || 'Colombo Municipal Council'}
+                          onChange={(e) =>
+                            setExtractedProfileEdit({ ...extractedProfileEdit, local_authority: e.target.value })
+                          }
+                          className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                        >
+                          <option value="Colombo Municipal Council">Colombo Municipal Council</option>
+                          <option value="Kotte Municipal Council">Kotte Municipal Council</option>
+                          <option value="Dehiwala-Mount Lavinia Municipal Council">Dehiwala-Mount Lavinia Municipal Council</option>
+                          <option value="Gampaha Municipal Council">Gampaha Municipal Council</option>
+                          <option value="Negombo Municipal Council">Negombo Municipal Council</option>
+                          <option value="Kalutara Urban Council">Kalutara Urban Council</option>
+                        </select>
+                      </div>
+
+                      {/* Number of Staff */}
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">Hired Staff / Employees</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={extractedProfileEdit.number_of_employees ?? 1}
+                          onChange={(e) =>
+                            setExtractedProfileEdit({
+                              ...extractedProfileEdit,
+                              number_of_employees: parseInt(e.target.value, 10) || 0,
+                            })
+                          }
+                          className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none font-semibold"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Proposed Activity / Concept */}
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">
+                        Proposed Activity / Business Concept (Identified from PDF)
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={extractedProfileEdit.proposed_activity || ''}
+                        onChange={(e) =>
+                          setExtractedProfileEdit({ ...extractedProfileEdit, proposed_activity: e.target.value })
+                        }
+                        className="w-full border border-slate-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none leading-relaxed text-slate-700"
+                      />
+                    </div>
+
+                    {/* Products & Services Tag Cloud */}
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">
+                        Products &amp; Commercial Offerings
+                      </label>
+                      <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-50 border border-slate-200 rounded-lg min-h-[38px]">
+                        {(extractedProfileEdit.products_services || []).map((prod: string, idx: number) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-[11px] font-medium"
+                          >
+                            {prod}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = extractedProfileEdit.products_services.filter(
+                                  (_: any, i: number) => i !== idx
+                                );
+                                setExtractedProfileEdit({ ...extractedProfileEdit, products_services: updated });
+                              }}
+                              className="text-blue-500 hover:text-blue-900 ml-0.5 text-[10px]"
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        ))}
+
+                        <div className="inline-flex items-center gap-1 ml-1">
+                          <input
+                            type="text"
+                            placeholder="+ Add product"
+                            value={newProductTag}
+                            onChange={(e) => setNewProductTag(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && newProductTag.trim()) {
+                                e.preventDefault();
+                                const updated = [
+                                  ...(extractedProfileEdit.products_services || []),
+                                  newProductTag.trim(),
+                                ];
+                                setExtractedProfileEdit({ ...extractedProfileEdit, products_services: updated });
+                                setNewProductTag('');
+                              }
+                            }}
+                            className="text-[11px] border border-slate-300 rounded px-1.5 py-0.5 w-24 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Operational Checkbox Flags */}
+                    <div className="pt-2 border-t border-slate-100">
+                      <span className="block font-bold text-slate-700 mb-2">
+                        Operational Attributes for Regulatory Rulebook:
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-[11px]">
+                        <label className="flex items-center gap-2 cursor-pointer bg-slate-50 p-2 rounded-lg border border-slate-200">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(extractedProfileEdit.has_physical_premises)}
+                            onChange={(e) =>
+                              setExtractedProfileEdit({
+                                ...extractedProfileEdit,
+                                has_physical_premises: e.target.checked,
+                              })
+                            }
+                            className="rounded text-blue-600"
+                          />
+                          <span>Physical Premises</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 cursor-pointer bg-slate-50 p-2 rounded-lg border border-slate-200">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(extractedProfileEdit.handles_food)}
+                            onChange={(e) =>
+                              setExtractedProfileEdit({
+                                ...extractedProfileEdit,
+                                handles_food: e.target.checked,
+                              })
+                            }
+                            className="rounded text-blue-600"
+                          />
+                          <span>Handles Food / Grocery</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 cursor-pointer bg-slate-50 p-2 rounded-lg border border-slate-200">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(extractedProfileEdit.uses_chemicals_or_cosmetics)}
+                            onChange={(e) =>
+                              setExtractedProfileEdit({
+                                ...extractedProfileEdit,
+                                uses_chemicals_or_cosmetics: e.target.checked,
+                              })
+                            }
+                            className="rounded text-blue-600"
+                          />
+                          <span>Uses Cosmetics/Chemicals</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 cursor-pointer bg-slate-50 p-2 rounded-lg border border-slate-200">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(extractedProfileEdit.handles_waste_oil_or_batteries)}
+                            onChange={(e) =>
+                              setExtractedProfileEdit({
+                                ...extractedProfileEdit,
+                                handles_waste_oil_or_batteries: e.target.checked,
+                              })
+                            }
+                            className="rounded text-blue-600"
+                          />
+                          <span>Waste Oil / Batteries</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Bottom Confirmation Bar */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                      <div className="text-[11px] text-slate-500">
+                        {extractedProfileEdit.selected_strategy && (
+                          <span>
+                            Active Strategy: <strong className="text-slate-700">{extractedProfileEdit.selected_strategy}</strong>
+                          </span>
+                        )}
+                        {extractedProfileEdit.available_capital_lkr && (
+                          <span className="ml-2 font-mono">
+                            · Capital: LKR {extractedProfileEdit.available_capital_lkr.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleEditInManualForm}
+                          className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition-colors"
+                        >
+                          Edit in Form Below
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleConfirmExtractedProfile}
+                          disabled={loading}
+                          className="px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold rounded-xl text-xs transition-all shadow-md flex items-center gap-2"
+                        >
+                          {loading ? (
+                            <>
+                              <i className="fa-solid fa-circle-notch fa-spin text-xs" />
+                              <span>Evaluating Statutory Obligations...</span>
+                            </>
+                          ) : (
+                            <>
+                              <i className="fa-solid fa-check text-xs" />
+                              <span>Confirm Profile &amp; View Legal Guidance ➔</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Form Container */}
+              <div className="compliance-form-card bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-5">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
             <div>
               <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
@@ -933,7 +1621,7 @@ export const RegistrationComplianceDashboard: React.FC = () => {
             <p className="text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
               Operational Attributes (Defaults to Unknown / null)
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {([
                 { key: 'handles_food', label: 'Handles Food' },
                 { key: 'has_physical_premises', label: 'Physical Premises' },
