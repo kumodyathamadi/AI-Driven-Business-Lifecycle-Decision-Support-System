@@ -524,26 +524,115 @@ export default function NewBusinessForm({
       return null;
     }
 
-    if (key === 'available_capital_lkr' && Number(val) < 0) {
-      return 'Available Capital cannot be negative.';
+    const num = Number(val);
+
+    // Business Name Length Check
+    if (key === 'business_name' && typeof val === 'string' && val.trim().length > 0) {
+      if (val.trim().length < 2) {
+        return 'Business Name must be at least 2 characters.';
+      }
+      if (val.trim().length > 60) {
+        return 'Business Name cannot exceed 60 characters.';
+      }
     }
-    if (key === 'monthly_budget_lkr' && Number(val) < 0) {
-      return 'Monthly Operating Budget cannot be negative.';
+
+    // Available Capital: LKR 10,000 to 100,000,000
+    if (key === 'available_capital_lkr') {
+      if (num < 10000) {
+        return 'Available Capital must be at least LKR 10,000 for a viable business setup.';
+      }
+      if (num > 100000000) {
+        return 'Available Capital cannot exceed LKR 100,000,000 (100 Million) for an SME. Please enter a realistic amount.';
+      }
     }
-    if (key === 'expected_price_lkr' && Number(val) <= 0) {
-      return 'Average Customer Spend per Visit must be greater than 0.';
+
+    // Loan Amount: Up to LKR 75,000,000
+    if (key === 'loan_amount_lkr') {
+      if (num < 0) {
+        return 'Loan amount cannot be negative.';
+      }
+      if (num > 75000000) {
+        return 'Loan amount exceeds maximum SME credit threshold (LKR 75 Million).';
+      }
     }
-    if (key === 'expected_customers_per_day' && Number(val) < 0) {
-      return 'Expected Customers / Day cannot be negative.';
+
+    // Monthly Operating Budget: LKR 5,000 to 50,000,000
+    if (key === 'monthly_budget_lkr') {
+      if (num < 5000) {
+        return 'Monthly Operating Budget must be at least LKR 5,000.';
+      }
+      if (num > 50000000) {
+        return 'Monthly Operating Budget cannot exceed LKR 50,000,000 (50 Million).';
+      }
     }
-    if (key === 'customer_demand_score' && (Number(val) < 1 || Number(val) > 100)) {
+
+    // Initial Inventory Cost: Up to LKR 60,000,000
+    if (key === 'initial_inventory_cost_lkr') {
+      if (num < 0) {
+        return 'Initial Inventory Cost cannot be negative.';
+      }
+      if (num > 60000000) {
+        return 'Initial Inventory Cost cannot exceed LKR 60,000,000.';
+      }
+    }
+
+    // Expected Customer Spend / Unit Price: LKR 10 to 250,000
+    if (key === 'expected_price_lkr') {
+      if (num < 10) {
+        return 'Average Customer Spend per Visit must be at least LKR 10.';
+      }
+      if (num > 250000) {
+        return 'Average Customer Spend cannot exceed LKR 250,000 for retail SME transactions.';
+      }
+    }
+
+    // Expected Customers per Day: 1 to 2,500
+    if (key === 'expected_customers_per_day') {
+      if (num < 1) {
+        return 'Expected Customers / Day must be at least 1.';
+      }
+      if (num > 2500) {
+        return 'Expected Customers / Day cannot exceed 2,500 for a single retail SME storefront.';
+      }
+    }
+
+    // Customer Demand Score: 1 to 100
+    if (key === 'customer_demand_score' && (num < 1 || num > 100)) {
       return 'Customer Demand Score must be between 1 and 100.';
     }
-    if (key === 'entrepreneur_experience_years' && Number(val) < 0) {
-      return 'Entrepreneur Experience cannot be negative.';
+
+    // Operating Days per Month: 10 to 31
+    if (key === 'expected_operating_days_per_month' && (num < 10 || num > 31)) {
+      return 'Operating Days per Month must be between 10 and 31 days.';
     }
-    if (key === 'available_staff_count' && Number(val) < 0) {
-      return 'Available Staff Count cannot be negative.';
+
+    // Entrepreneur Experience: 0 to 60 years
+    if (key === 'entrepreneur_experience_years') {
+      if (num < 0) {
+        return 'Entrepreneur Experience cannot be negative.';
+      }
+      if (num > 60) {
+        return 'Entrepreneur Experience cannot exceed 60 years.';
+      }
+    }
+
+    // Staff Count: 0 to 100 staff
+    if (key === 'available_staff_count') {
+      if (num < 0) {
+        return 'Available Staff Count cannot be negative.';
+      }
+      if (num > 100) {
+        return 'Available Staff Count cannot exceed 100 for an SME.';
+      }
+    }
+
+    if (key === 'required_staff_count') {
+      if (num < 0) {
+        return 'Required Staff Count cannot be negative.';
+      }
+      if (num > 100) {
+        return 'Required Staff Count cannot exceed 100.';
+      }
     }
 
     return null;
@@ -666,6 +755,25 @@ export default function NewBusinessForm({
       const labels = missingStep2Keys.map((k) => FIELD_HUMAN_LABELS[k] || k).join(', ');
       setValidationError(`Please complete required fields in Section 2: ${labels}.`);
       focusFirstInvalidField(missingStep2Keys);
+      return;
+    }
+
+    const OPTIONAL_NUMERIC_KEYS = [
+      'loan_amount_lkr',
+      'initial_inventory_cost_lkr',
+      'business_name'
+    ];
+
+    const invalidKey = OPTIONAL_NUMERIC_KEYS.find((k) => !!getFieldError(k));
+    if (invalidKey) {
+      if (['loan_amount_lkr', 'initial_inventory_cost_lkr'].includes(invalidKey)) {
+        setCurrentStep(2);
+      } else if (invalidKey === 'business_name') {
+        setCurrentStep(1);
+      }
+      setTouched((prev) => ({ ...prev, [invalidKey]: true }));
+      setValidationError(getFieldError(invalidKey));
+      focusFirstInvalidField([invalidKey]);
       return;
     }
 

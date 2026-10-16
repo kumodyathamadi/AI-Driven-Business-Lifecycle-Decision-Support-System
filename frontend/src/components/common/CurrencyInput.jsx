@@ -42,6 +42,7 @@ export default function CurrencyInput({
   placeholder = 'e.g. 1,000,000',
   disabled = false,
   autoFocus = false,
+  max = 100000000,
   className = '',
   style = {},
 }) {
@@ -60,9 +61,15 @@ export default function CurrencyInput({
     
     // Prevent multiple decimals
     const parts = sanitized.split('.');
-    const cleanNumberString = parts.length > 2 
+    let cleanNumberString = parts.length > 2 
       ? `${parts[0]}.${parts.slice(1).join('')}` 
       : sanitized;
+
+    // Restrict maximum integer length to 12 digits (prevent quintillion overflow)
+    const intPart = cleanNumberString.split('.')[0];
+    if (intPart.length > 12) {
+      cleanNumberString = intPart.slice(0, 12);
+    }
 
     const formatted = formatWithCommas(cleanNumberString);
     setDisplayValue(formatted);

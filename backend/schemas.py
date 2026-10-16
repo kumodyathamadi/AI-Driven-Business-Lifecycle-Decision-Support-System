@@ -40,17 +40,17 @@ class BusinessAnalysisRequest(BaseModel):
     district: str = Field(..., examples=["Colombo"])
     location_type: str = Field(..., examples=["Suburban Commercial Hub"])
     
-    # Financial Inputs (Required user input)
-    available_capital_lkr: float = Field(..., ge=0, examples=[800000.0])
-    monthly_budget_lkr: float = Field(..., ge=0, examples=[150000.0])
-    expected_price_lkr: float = Field(..., gt=0, examples=[350.0])
+    # Financial Inputs (Required user input) - Realistic Sri Lankan SME Boundaries
+    available_capital_lkr: float = Field(..., ge=10000.0, le=100000000.0, examples=[800000.0], description="LKR 10,000 to 100M")
+    monthly_budget_lkr: float = Field(..., ge=5000.0, le=50000000.0, examples=[150000.0], description="LKR 5,000 to 50M")
+    expected_price_lkr: float = Field(..., ge=10.0, le=250000.0, examples=[350.0], description="LKR 10 to 250k")
     
     # Market & Operations Inputs (Required user input)
-    expected_customers_per_day: int = Field(..., ge=0, examples=[45])
+    expected_customers_per_day: int = Field(..., ge=1, le=2500, examples=[45], description="1 to 2,500 patrons/day")
     competition_level: str = Field(..., examples=["Moderate"])
     customer_demand_score: int = Field(..., ge=1, le=100, examples=[75])
-    entrepreneur_experience_years: int = Field(..., ge=0, examples=[4])
-    available_staff_count: int = Field(..., ge=0, examples=[3])
+    entrepreneur_experience_years: int = Field(..., ge=0, le=60, examples=[4], description="0 to 60 years")
+    available_staff_count: int = Field(..., ge=0, le=100, examples=[3], description="0 to 100 employees")
     
     # Operational Readiness Scores 1-5 (Required user input)
     location_suitability_score: int = Field(..., ge=1, le=5, examples=[4])
@@ -59,21 +59,21 @@ class BusinessAnalysisRequest(BaseModel):
     supplier_availability_score: int = Field(..., ge=1, le=5, examples=[5])
 
     # Conditional / Optional / System-Derived Fields
-    loan_amount_lkr: Optional[float] = Field(default=0.0, ge=0, examples=[200000.0])
-    initial_inventory_cost_lkr: Optional[float] = Field(default=0.0, ge=0, examples=[180000.0])
-    required_staff_count: Optional[int] = Field(default=None, ge=0, examples=[3])
-    expected_operating_days_per_month: Optional[int] = Field(default=26, ge=1, le=31, examples=[26])
+    loan_amount_lkr: Optional[float] = Field(default=0.0, ge=0.0, le=75000000.0, examples=[200000.0], description="Up to LKR 75M")
+    initial_inventory_cost_lkr: Optional[float] = Field(default=0.0, ge=0.0, le=60000000.0, examples=[180000.0], description="Up to LKR 60M")
+    required_staff_count: Optional[int] = Field(default=None, ge=0, le=100, examples=[3])
+    expected_operating_days_per_month: Optional[int] = Field(default=26, ge=10, le=31, examples=[26])
     province: Optional[str] = Field(default=None, examples=["Western"])
     proposed_action: Optional[str] = Field(default=None, examples=["Establish New Commercial Enterprise"])
 
     # Optional Supplementary Growth Fields (for Existing Business Growth Plan)
-    current_monthly_revenue_lkr: Optional[float] = Field(default=None, ge=0, examples=[450000.0])
-    current_monthly_net_profit_lkr: Optional[float] = Field(default=None, examples=[75000.0])
-    existing_monthly_debt_obligations_lkr: Optional[float] = Field(default=None, ge=0, examples=[25000.0])
-    business_age_years: Optional[float] = Field(default=None, ge=0, examples=[3.5])
-    expansion_capex_lkr: Optional[float] = Field(default=None, ge=0, examples=[350000.0])
+    current_monthly_revenue_lkr: Optional[float] = Field(default=None, ge=0.0, le=100000000.0, examples=[450000.0])
+    current_monthly_net_profit_lkr: Optional[float] = Field(default=None, ge=-20000000.0, le=40000000.0, examples=[75000.0])
+    existing_monthly_debt_obligations_lkr: Optional[float] = Field(default=None, ge=0.0, le=20000000.0, examples=[25000.0])
+    business_age_years: Optional[float] = Field(default=None, ge=0.0, le=80.0, examples=[3.5])
+    expansion_capex_lkr: Optional[float] = Field(default=None, ge=0.0, le=100000000.0, examples=[350000.0])
     target_payback_months: Optional[int] = Field(default=None, ge=1, le=120, examples=[18])
-    current_capacity_utilization_pct: Optional[float] = Field(default=None, ge=0, le=100, examples=[85.0])
+    current_capacity_utilization_pct: Optional[float] = Field(default=None, ge=0.0, le=100.0, examples=[85.0])
     expansion_type: Optional[str] = Field(default=None, examples=["Physical Branch Expansion"])
 
     # Optional Narrative & Report Metadata Fields
@@ -135,8 +135,32 @@ class BusinessAnalysisRequest(BaseModel):
             raise ValueError(f"{label} is required.")
         
         parsed = parse_clean_numeric(v, -1.0)
-        if parsed < 0 and info.field_name == "expected_price_lkr":
-            raise ValueError(f"Expected price must be a valid positive number.")
+
+        # Enforce realistic SME boundaries with descriptive messages
+        if info.field_name == "available_capital_lkr":
+            if parsed < 10000:
+                raise ValueError("Available Capital must be at least LKR 10,000.")
+            if parsed > 100000000:
+                raise ValueError(f"Available Capital of LKR {parsed:,.0f} exceeds the realistic Sri Lankan SME ceiling of LKR 100,000,000 (100 Million).")
+
+        elif info.field_name == "monthly_budget_lkr":
+            if parsed < 5000:
+                raise ValueError("Monthly Operating Budget must be at least LKR 5,000.")
+            if parsed > 50000000:
+                raise ValueError(f"Monthly Operating Budget of LKR {parsed:,.0f} exceeds the realistic SME ceiling of LKR 50,000,000.")
+
+        elif info.field_name == "expected_price_lkr":
+            if parsed < 10:
+                raise ValueError("Average Customer Spend / Expected Price must be at least LKR 10.")
+            if parsed > 250000:
+                raise ValueError(f"Average Customer Spend of LKR {parsed:,.0f} exceeds typical retail SME transaction ceiling of LKR 250,000.")
+
+        elif info.field_name == "loan_amount_lkr" and parsed > 75000000:
+            raise ValueError(f"Requested Loan Amount of LKR {parsed:,.0f} exceeds maximum SME credit threshold (LKR 75,000,000).")
+
+        elif info.field_name == "initial_inventory_cost_lkr" and parsed > 60000000:
+            raise ValueError(f"Initial Inventory Cost of LKR {parsed:,.0f} exceeds maximum SME inventory threshold (LKR 60,000,000).")
+
         return parsed
 
     @field_validator(
@@ -152,24 +176,54 @@ class BusinessAnalysisRequest(BaseModel):
         if info.field_name == "target_payback_months":
             if v is None or (isinstance(v, str) and not v.strip()):
                 return None
-            return int(round(parse_clean_numeric(v, 0.0)))
+            val = int(round(parse_clean_numeric(v, 0.0)))
+            if val < 1 or val > 120:
+                raise ValueError("Target payback period must be between 1 and 120 months.")
+            return val
 
         # System-derived or optional fields
         if info.field_name == "expected_operating_days_per_month":
             if v is None or (isinstance(v, str) and not v.strip()):
                 return 26
-            return int(round(parse_clean_numeric(v, 26.0)))
+            val = int(round(parse_clean_numeric(v, 26.0)))
+            if val < 10 or val > 31:
+                raise ValueError("Operating days per month must be between 10 and 31 days.")
+            return val
+
         if info.field_name == "required_staff_count":
             if v is None or (isinstance(v, str) and not v.strip()):
                 return None
-            return int(round(parse_clean_numeric(v, 0.0)))
+            val = int(round(parse_clean_numeric(v, 0.0)))
+            if val < 0 or val > 100:
+                raise ValueError("Required staff count must be between 0 and 100.")
+            return val
 
         # Required fields must NOT be missing or empty string
         if v is None or (isinstance(v, str) and not v.strip()):
             label = info.field_name.replace("_", " ").title()
             raise ValueError(f"{label} is required.")
 
-        return int(round(parse_clean_numeric(v, 0.0)))
+        parsed = int(round(parse_clean_numeric(v, 0.0)))
+
+        if info.field_name == "expected_customers_per_day":
+            if parsed < 1:
+                raise ValueError("Expected daily customers must be at least 1.")
+            if parsed > 2500:
+                raise ValueError(f"Expected daily customers ({parsed:,}) exceeds physical SME storefront capacity (2,500/day).")
+
+        elif info.field_name == "entrepreneur_experience_years":
+            if parsed < 0:
+                raise ValueError("Entrepreneur Experience cannot be negative.")
+            if parsed > 60:
+                raise ValueError(f"Entrepreneur Experience ({parsed} years) cannot exceed 60 years.")
+
+        elif info.field_name == "available_staff_count":
+            if parsed < 0:
+                raise ValueError("Available Staff Count cannot be negative.")
+            if parsed > 100:
+                raise ValueError(f"Available Staff Count ({parsed}) cannot exceed 100.")
+
+        return parsed
 
 
 class IntakeExtractRequest(BaseModel):

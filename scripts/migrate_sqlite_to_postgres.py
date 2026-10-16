@@ -26,6 +26,8 @@ def migrate_data():
         print(f"[Info] No existing SQLite database found at: {SQLITE_DB_PATH}")
         return
 
+
+
     # 1. Read SQLite data
     print(f"Reading SQLite database at: {SQLITE_DB_PATH}...")
     conn = sqlite3.connect(SQLITE_DB_PATH)

@@ -244,14 +244,38 @@ def validate_and_format_input(raw_input: Dict[str, Any]) -> Tuple[pd.DataFrame, 
     else:
         cleaned_input["province"] = DISTRICT_TO_PROVINCE.get(cleaned_input["district"], "Western")
 
-    # 3. Extract & Format Required Numerical Fields (with range enforcement)
-    cleaned_input["available_capital_lkr"] = max(0.0, parse_clean_number(raw_input["available_capital_lkr"], 0.0))
-    cleaned_input["monthly_budget_lkr"] = max(0.0, parse_clean_number(raw_input["monthly_budget_lkr"], 0.0))
-    cleaned_input["expected_price_lkr"] = max(1.0, parse_clean_number(raw_input["expected_price_lkr"], 1.0))
-    cleaned_input["expected_customers_per_day"] = max(0, int(round(parse_clean_number(raw_input["expected_customers_per_day"], 0.0))))
+    # 3. Extract & Format Required Numerical Fields (with realistic Sri Lankan SME boundaries)
+    raw_cap = parse_clean_number(raw_input["available_capital_lkr"], 0.0)
+    if raw_cap > 100000000.0:
+        raise InputValidationError(f"Available Capital of LKR {raw_cap:,.0f} exceeds the realistic Sri Lankan SME ceiling of LKR 100,000,000.")
+    cleaned_input["available_capital_lkr"] = max(10000.0, min(100000000.0, raw_cap))
+
+    raw_budget = parse_clean_number(raw_input["monthly_budget_lkr"], 0.0)
+    if raw_budget > 50000000.0:
+        raise InputValidationError(f"Monthly Operating Budget of LKR {raw_budget:,.0f} exceeds the realistic SME ceiling of LKR 50,000,000.")
+    cleaned_input["monthly_budget_lkr"] = max(5000.0, min(50000000.0, raw_budget))
+
+    raw_price = parse_clean_number(raw_input["expected_price_lkr"], 1.0)
+    if raw_price > 250000.0:
+        raise InputValidationError(f"Average Customer Spend of LKR {raw_price:,.0f} exceeds typical retail SME transaction ceiling of LKR 250,000.")
+    cleaned_input["expected_price_lkr"] = max(10.0, min(250000.0, raw_price))
+
+    raw_cust = int(round(parse_clean_number(raw_input["expected_customers_per_day"], 0.0)))
+    if raw_cust > 2500:
+        raise InputValidationError(f"Expected daily customers ({raw_cust:,}) exceeds physical storefront capacity (2,500/day).")
+    cleaned_input["expected_customers_per_day"] = max(1, min(2500, raw_cust))
+
     cleaned_input["customer_demand_score"] = min(100, max(1, int(round(parse_clean_number(raw_input["customer_demand_score"], 50.0)))))
-    cleaned_input["entrepreneur_experience_years"] = max(0, int(round(parse_clean_number(raw_input["entrepreneur_experience_years"], 0.0))))
-    cleaned_input["available_staff_count"] = max(0, int(round(parse_clean_number(raw_input["available_staff_count"], 0.0))))
+
+    raw_exp = int(round(parse_clean_number(raw_input["entrepreneur_experience_years"], 0.0)))
+    if raw_exp > 60:
+        raise InputValidationError(f"Entrepreneur Experience ({raw_exp} years) cannot exceed 60 years.")
+    cleaned_input["entrepreneur_experience_years"] = max(0, min(60, raw_exp))
+
+    raw_staff = int(round(parse_clean_number(raw_input["available_staff_count"], 0.0)))
+    if raw_staff > 100:
+        raise InputValidationError(f"Available Staff Count ({raw_staff}) exceeds SME limit of 100.")
+    cleaned_input["available_staff_count"] = max(0, min(100, raw_staff))
 
     cleaned_input["location_suitability_score"] = min(5, max(1, int(round(parse_clean_number(raw_input["location_suitability_score"], 3.0)))))
     cleaned_input["available_equipment_score"] = min(5, max(1, int(round(parse_clean_number(raw_input["available_equipment_score"], 3.0)))))
@@ -260,10 +284,22 @@ def validate_and_format_input(raw_input: Dict[str, Any]) -> Tuple[pd.DataFrame, 
 
     # 4. Conditional Numerical Fields (0.0 if not requested / not applicable)
     raw_loan = raw_input.get("loan_amount_lkr")
-    cleaned_input["loan_amount_lkr"] = 0.0 if is_missing_value(raw_loan) else max(0.0, parse_clean_number(raw_loan, 0.0))
+    if is_missing_value(raw_loan):
+        cleaned_input["loan_amount_lkr"] = 0.0
+    else:
+        loan_num = parse_clean_number(raw_loan, 0.0)
+        if loan_num > 75000000.0:
+            raise InputValidationError(f"Requested Loan Amount of LKR {loan_num:,.0f} exceeds maximum SME credit threshold (LKR 75,000,000).")
+        cleaned_input["loan_amount_lkr"] = max(0.0, min(75000000.0, loan_num))
 
     raw_inv = raw_input.get("initial_inventory_cost_lkr")
-    cleaned_input["initial_inventory_cost_lkr"] = 0.0 if is_missing_value(raw_inv) else max(0.0, parse_clean_number(raw_inv, 0.0))
+    if is_missing_value(raw_inv):
+        cleaned_input["initial_inventory_cost_lkr"] = 0.0
+    else:
+        inv_num = parse_clean_number(raw_inv, 0.0)
+        if inv_num > 60000000.0:
+            raise InputValidationError(f"Initial Inventory Cost of LKR {inv_num:,.0f} exceeds maximum SME inventory threshold (LKR 60,000,000).")
+        cleaned_input["initial_inventory_cost_lkr"] = max(0.0, min(60000000.0, inv_num))
 
     # 5. System-Derived Operational Fields
     raw_op_days = raw_input.get("expected_operating_days_per_month")
