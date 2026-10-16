@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import logging
+import base64
+from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -376,3 +378,193 @@ def evaluate_compliance(
         ) from exc
 
     return Component2EvaluationResponse.model_validate(response_data)
+
+
+# ---------------------------------------------------------------------------
+# Business / Growth Plan PDF Ingestion & Profile Extraction Endpoints
+# ---------------------------------------------------------------------------
+
+from backend.app.compliance.plan_pdf_extractor import (
+    extract_text_from_pdf_bytes,
+    extract_business_profile_from_text,
+)
+
+SAMPLE_PLANS_DIR = Path(__file__).resolve().parents[3] / "data" / "sample_plans"
+
+SAMPLE_PLANS_METADATA = [
+    {
+        "id": "freshmart_grocery",
+        "title": "FreshMart Grocery",
+        "category": "Grocery / Mini-Mart",
+        "sector": "food",
+        "stage": "Existing Business",
+        "location": "Colombo, Western Province",
+        "strategy": "Online Ordering & Delivery Expansion",
+        "filename": "FreshMart_Grocery_Business_Plan.pdf",
+        "description": "Established grocery store executing multi-channel delivery and local expansion in Colombo.",
+    },
+    {
+        "id": "trendy_style_clothing",
+        "title": "Trendy Style Clothing Shop",
+        "category": "Clothing / Garment",
+        "sector": "clothing",
+        "stage": "New Startup",
+        "location": "Colombo, Western Province",
+        "strategy": "Storefront + Home Delivery Model",
+        "filename": "Trendy_Style_Clothing_Shop_Business_Plan.pdf",
+        "description": "New fashion retail startup offering trendy clothing with storefront setup and WhatsApp delivery.",
+    },
+]
+
+
+class Base64PdfRequest(BaseModel):
+    filename: str = "business_plan.pdf"
+    file_base64: str
+
+
+class PdfExtractionResponse(BaseModel):
+    success: bool
+    filename: str
+    pages_count: int
+    is_scanned: bool
+    ocr_used: bool
+    character_count: int
+    extracted_profile: Dict[str, Any]
+    metadata: Dict[str, Any]
+    raw_text_preview: str
+
+
+@router.post("/extract-plan-pdf", response_model=PdfExtractionResponse)
+async def extract_plan_pdf(file: UploadFile = File(...)) -> PdfExtractionResponse:
+    """
+    Step 2 & 3: Uploads a Business / Growth Plan PDF, extracts text (including OCR if scanned),
+    and identifies a structured business profile for user confirmation in Component 2.
+    """
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Uploaded file must be a PDF document.")
+
+    try:
+        pdf_bytes = await file.read()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Could not read uploaded PDF file: {exc}")
+
+    if not pdf_bytes:
+        raise HTTPException(status_code=400, detail="Uploaded PDF file is empty.")
+
+    try:
+        full_text, pages, is_scanned, ocr_used = extract_text_from_pdf_bytes(pdf_bytes)
+        result = extract_business_profile_from_text(full_text, file.filename)
+    except Exception as exc:
+        logger.exception("Failed to extract business profile from PDF")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to process and extract PDF: {str(exc)}"
+        )
+
+    return PdfExtractionResponse(
+        success=True,
+        filename=file.filename,
+        pages_count=len(pages),
+        is_scanned=is_scanned,
+        ocr_used=ocr_used,
+        character_count=len(full_text),
+        extracted_profile=result["profile"],
+        metadata=result["metadata"],
+        raw_text_preview=full_text[:800],
+    )
+
+
+@router.post("/extract-plan-base64", response_model=PdfExtractionResponse)
+def extract_plan_base64(payload: Base64PdfRequest) -> PdfExtractionResponse:
+    """
+    Accepts base64 encoded PDF payload, extracts text and structured business profile.
+    """
+    try:
+        # Strip data URL prefix if present
+        raw_b64 = payload.file_base64
+        if "base64," in raw_b64:
+            raw_b64 = raw_b64.split("base64,")[1]
+        pdf_bytes = base64.b64decode(raw_b64)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid base64 payload: {exc}")
+
+    try:
+        full_text, pages, is_scanned, ocr_used = extract_text_from_pdf_bytes(pdf_bytes)
+        result = extract_business_profile_from_text(full_text, payload.filename)
+    except Exception as exc:
+        logger.exception("Failed to extract business profile from base64 PDF")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to process and extract PDF: {str(exc)}"
+        )
+
+    return PdfExtractionResponse(
+        success=True,
+        filename=payload.filename,
+        pages_count=len(pages),
+        is_scanned=is_scanned,
+        ocr_used=ocr_used,
+        character_count=len(full_text),
+        extracted_profile=result["profile"],
+        metadata=result["metadata"],
+        raw_text_preview=full_text[:800],
+    )
+
+
+@router.get("/sample-plans")
+def list_sample_plans() -> List[Dict[str, Any]]:
+    """Returns metadata for built-in sample business plan PDFs."""
+    return SAMPLE_PLANS_METADATA
+
+
+@router.get("/sample-plans/{sample_id}/download-pdf")
+def download_sample_plan_pdf(sample_id: str) -> Response:
+    """Downloads one of the built-in sample business plan PDFs."""
+    match = next((item for item in SAMPLE_PLANS_METADATA if item["id"] == sample_id), None)
+    if not match:
+        raise HTTPException(status_code=404, detail="Sample business plan not found.")
+
+    file_path = SAMPLE_PLANS_DIR / match["filename"]
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Sample PDF file not found on disk.")
+
+    with open(file_path, "rb") as fh:
+        pdf_bytes = fh.read()
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{match["filename"]}"',
+            "Access-Control-Expose-Headers": "Content-Disposition",
+        },
+    )
+
+
+@router.get("/sample-plans/{sample_id}/extract", response_model=PdfExtractionResponse)
+def extract_sample_plan(sample_id: str) -> PdfExtractionResponse:
+    """Directly extracts and returns the business profile from a sample PDF."""
+    match = next((item for item in SAMPLE_PLANS_METADATA if item["id"] == sample_id), None)
+    if not match:
+        raise HTTPException(status_code=404, detail="Sample business plan not found.")
+
+    file_path = SAMPLE_PLANS_DIR / match["filename"]
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Sample PDF file not found on disk.")
+
+    with open(file_path, "rb") as fh:
+        pdf_bytes = fh.read()
+
+    full_text, pages, is_scanned, ocr_used = extract_text_from_pdf_bytes(pdf_bytes)
+    result = extract_business_profile_from_text(full_text, match["filename"])
+
+    return PdfExtractionResponse(
+        success=True,
+        filename=match["filename"],
+        pages_count=len(pages),
+        is_scanned=is_scanned,
+        ocr_used=ocr_used,
+        character_count=len(full_text),
+        extracted_profile=result["profile"],
+        metadata=result["metadata"],
+        raw_text_preview=full_text[:800],
+    )
+
