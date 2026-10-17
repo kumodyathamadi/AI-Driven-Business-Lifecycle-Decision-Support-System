@@ -37,6 +37,8 @@ from backend.app.compliance.action_predictor import (
     build_registration_guidance,
 )
 from backend.app.compliance.br_form_generator import generate_br_application_pdf
+from backend.app.compliance.dossier_generator import generate_compliance_dossier_pdf
+from fastapi.responses import FileResponse
 
 logger = logging.getLogger(__name__)
 
@@ -660,5 +662,83 @@ def download_sample_br_form(
             "Access-Control-Expose-Headers": "Content-Disposition",
         },
     )
+
+
+@router.get("/legal-documents/{document_query}")
+def get_official_legal_document(document_query: str) -> FileResponse:
+    """
+    Retrieves and streams an authentic, official Sri Lankan legal statute,
+    provincial gazette, or prescribed application form PDF from the legal corpus.
+    """
+    legal_dir = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "compliance", "raw", "Component2_Legal_Sources")
+    )
+    query_clean = document_query.lower().replace("-", " ").replace("_", " ").replace(".pdf", "")
+    
+    canonical_map = {
+        "wp_bn_1990": "Act-7-of-2007-English.pdf",
+        "companies_act": "Act-7-of-2007-English.pdf",
+        "food_act": "food_act_no26_1980_en.pdf",
+        "food_policy": "National_Food_Safety_Policy.pdf",
+        "environmental_act": "1.National_Environmental_Act_No._47_of_1980.pdf",
+        "motor_traffic": "garaj_application_2023e.pdf",
+        "cosmetics": "INFORMATION REQUIRED FOR REGISTRATION OF A COSMETIC..pdf",
+        "data_protection": "Data Protection Act SL - English (2).pdf",
+    }
+    
+    target_file = canonical_map.get(document_query.lower())
+
+    matched_path = None
+    for root, _, files in os.walk(legal_dir):
+        for f in files:
+            if not f.lower().endswith(".pdf"):
+                continue
+            if target_file and f.lower() == target_file.lower():
+                matched_path = os.path.join(root, f)
+                break
+            f_clean = f.lower().replace("-", " ").replace("_", " ").replace(".pdf", "")
+            if query_clean in f_clean or f_clean in query_clean:
+                matched_path = os.path.join(root, f)
+                break
+        if matched_path:
+            break
+
+    if not matched_path or not os.path.exists(matched_path):
+        default_path = os.path.join(legal_dir, "01_Common_Business_Registration", "Act-7-of-2007-English.pdf")
+        if os.path.exists(default_path):
+            matched_path = default_path
+        else:
+            raise HTTPException(status_code=404, detail="Legal document PDF not found.")
+
+    filename = os.path.basename(matched_path)
+    return FileResponse(
+        path=matched_path,
+        media_type="application/pdf",
+        filename=filename,
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
+    )
+
+
+@router.post("/download-compliance-dossier")
+def download_compliance_dossier(payload: Dict[str, Any]) -> Response:
+    """
+    Generates and downloads the comprehensive, publication-grade SME Legal Compliance
+    & Business Registration Guidance Dossier as an official PDF document.
+    """
+    try:
+        pdf_bytes = generate_compliance_dossier_pdf(payload)
+        district = payload.get("business_context", {}).get("district") or payload.get("registration_guidance", {}).get("district") or "Western_Province"
+        filename = f"SME_Compliance_Registration_Dossier_{district}.pdf"
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Access-Control-Expose-Headers": "Content-Disposition",
+            },
+        )
+    except Exception as exc:
+        logger.exception("Failed to generate compliance dossier PDF: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Failed to generate compliance dossier: {str(exc)}")
 
 
