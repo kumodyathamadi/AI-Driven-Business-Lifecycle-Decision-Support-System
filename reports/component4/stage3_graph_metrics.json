@@ -1,0 +1,77 @@
+{
+  "dataset_07": {
+    "dataset": "Dataset_07",
+    "graph_type": "Heterogeneous Bipartite & Homogeneous Projected Multigraph",
+    "entity_nodes_count": 2,
+    "document_nodes_count": 70,
+    "total_nodes_hetero": 72,
+    "total_edges_hetero": 140,
+    "projected_nodes_count": 2,
+    "projected_edges_count": 70,
+    "unique_entity_dyads": 1,
+    "connected_components_hetero": 2,
+    "temporal_coverage": {
+      "earliest_date": "2022-05-01",
+      "latest_date": "2026-08-02",
+      "total_valid_dates": 70
+    },
+    "financial_summary": {
+      "currencies": [
+        "AUD",
+        "LKR"
+      ],
+      "total_volume_lkr": 193542341.24,
+      "total_volume_aud": 1814098.0
+    },
+    "gnn_experimentation_feasibility": {
+      "is_suitable_for_deep_gnn": false,
+      "topological_classification": "Dyadic Single-Pair Temporal Multigraph",
+      "reasons": [
+        "Only 2 distinct business entities exist in the entire graph (AU parent and LK subsidiary).",
+        "No multi-hop structural paths (triangles, cycles, multi-tier supply chains) exist.",
+        "Message-passing over 2 nodes trivially degenerates into pairwise 1-step ping-pong.",
+        "All documents represent authorized normal corporate billing; zero financial distress or default labels exist."
+      ]
+    }
+  },
+  "dataset_06": {
+    "dataset": "Dataset_06",
+    "graph_type": "Heterogeneous Customs Graph & Homogeneous Projected Trade Star Graph",
+    "entity_nodes_count": 11,
+    "document_nodes_count": 171,
+    "total_nodes_hetero": 182,
+    "total_edges_hetero": 388,
+    "projected_nodes_count": 11,
+    "projected_edges_count": 171,
+    "unique_entity_dyads": 7,
+    "connected_components_hetero": 2,
+    "temporal_coverage": {
+      "earliest_date": "2025-05-09",
+      "latest_date": "2026-10-31",
+      "total_valid_dates": 52
+    },
+    "document_status_breakdown": {
+      "verified_complete": 13,
+      "verified_partial": 37,
+      "unverified_scanned": 109,
+      "duplicate_omitted": 12
+    },
+    "gnn_experimentation_feasibility": {
+      "is_suitable_for_deep_gnn": false,
+      "topological_classification": "Radial Star Graph with Single Hub Exporter",
+      "reasons": [
+        "A single central exporter connects radially to ~7 international buyers; no buyer-to-buyer edges exist.",
+        "No multi-tier supplier network (tier-2, tier-3 suppliers) is present.",
+        "118 of 171 PDFs are unindexed image scans with no verifiable transactional amounts.",
+        "All records represent legitimate customs declarations; no ground-truth business risk or default labels exist."
+      ]
+    }
+  },
+  "comparative_analysis": {
+    "datasets_are_independent": true,
+    "dataset_linkage_established": false,
+    "feasibility_records_linkage_established": false,
+    "overall_gnn_readiness": "INSUFFICIENT_FOR_SUPERVISED_DEEP_GNN_TRAINING",
+    "recommended_next_stage_experimental_design": "Stage 4 should deploy a controlled synthetic multi-tier supply chain scenario (e.g., 50-200 nodes with cascading default propagation) for rigorous GNN benchmarking, supplemented by a rule-based transaction anomaly detector on the real invoice graphs."
+  }
+}

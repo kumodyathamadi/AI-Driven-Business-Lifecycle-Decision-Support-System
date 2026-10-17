@@ -1,0 +1,353 @@
+{
+  "environment": {
+    "python_version": "3.13.7",
+    "torch_version": "2.14.1+cpu",
+    "torch_geometric_version": "2.4.0",
+    "sklearn_version": "1.9.1",
+    "pandas_version": "3.0.6",
+    "numpy_version": "2.5.3",
+    "pypdf_version": "6.21.0",
+    "cuda_available": false
+  },
+  "feasibility_dataset": {
+    "file_path": "data/raw/Component_One_Core_Feasibility.csv",
+    "total_rows": 1200,
+    "total_columns": 25,
+    "columns": [
+      "case_id",
+      "business_stage",
+      "business_category",
+      "business_description",
+      "district",
+      "province",
+      "location_type",
+      "proposed_action",
+      "available_capital_lkr",
+      "loan_amount_lkr",
+      "monthly_budget_lkr",
+      "initial_inventory_cost_lkr",
+      "expected_price_lkr",
+      "expected_customers_per_day",
+      "competition_level",
+      "customer_demand_score",
+      "expected_operating_days_per_month",
+      "feasibility_label",
+      "entrepreneur_experience_years",
+      "location_suitability_score",
+      "available_staff_count",
+      "required_staff_count",
+      "available_equipment_score",
+      "required_equipment_score",
+      "supplier_availability_score"
+    ],
+    "missing_values_count": 0,
+    "duplicate_rows": 0,
+    "case_id_unique": true,
+    "target_distribution": {
+      "Conditionally Feasible": 682,
+      "Feasible": 314,
+      "Infeasible": 204
+    },
+    "target_percentages": {
+      "Conditionally Feasible": 56.83,
+      "Feasible": 26.17,
+      "Infeasible": 17.0
+    },
+    "numeric_features": [
+      "available_capital_lkr",
+      "loan_amount_lkr",
+      "monthly_budget_lkr",
+      "initial_inventory_cost_lkr",
+      "expected_price_lkr",
+      "expected_customers_per_day",
+      "customer_demand_score",
+      "expected_operating_days_per_month",
+      "entrepreneur_experience_years",
+      "location_suitability_score",
+      "available_staff_count",
+      "required_staff_count",
+      "available_equipment_score",
+      "required_equipment_score",
+      "supplier_availability_score"
+    ],
+    "categorical_features": [
+      "case_id",
+      "business_stage",
+      "business_category",
+      "business_description",
+      "district",
+      "province",
+      "location_type",
+      "proposed_action",
+      "competition_level",
+      "feasibility_label"
+    ],
+    "numerical_summary": {
+      "available_capital_lkr": {
+        "min": 2653.0,
+        "max": 899926.0,
+        "mean": 362309.45,
+        "std": 238323.08,
+        "median": 339457.5,
+        "zero_count": 0
+      },
+      "loan_amount_lkr": {
+        "min": 0.0,
+        "max": 112077.0,
+        "mean": 8571.98,
+        "std": 17445.92,
+        "median": 0.0,
+        "zero_count": 900
+      },
+      "monthly_budget_lkr": {
+        "min": 31650.0,
+        "max": 345573.0,
+        "mean": 194195.7,
+        "std": 75551.19,
+        "median": 185217.0,
+        "zero_count": 0
+      },
+      "initial_inventory_cost_lkr": {
+        "min": 4027.0,
+        "max": 219719.0,
+        "mean": 70780.01,
+        "std": 49339.53,
+        "median": 55000.0,
+        "zero_count": 0
+      },
+      "expected_price_lkr": {
+        "min": 180.0,
+        "max": 6453.0,
+        "mean": 2219.86,
+        "std": 1583.54,
+        "median": 1894.0,
+        "zero_count": 0
+      },
+      "expected_customers_per_day": {
+        "min": 1.0,
+        "max": 80.0,
+        "mean": 24.43,
+        "std": 16.19,
+        "median": 21.0,
+        "zero_count": 0
+      },
+      "customer_demand_score": {
+        "min": 35.0,
+        "max": 95.0,
+        "mean": 65.03,
+        "std": 12.34,
+        "median": 65.0,
+        "zero_count": 0
+      },
+      "expected_operating_days_per_month": {
+        "min": 24.0,
+        "max": 27.0,
+        "mean": 25.56,
+        "std": 1.13,
+        "median": 26.0,
+        "zero_count": 0
+      },
+      "entrepreneur_experience_years": {
+        "min": 0.0,
+        "max": 12.0,
+        "mean": 1.92,
+        "std": 2.25,
+        "median": 1.0,
+        "zero_count": 409
+      },
+      "location_suitability_score": {
+        "min": 2.0,
+        "max": 5.0,
+        "mean": 3.42,
+        "std": 0.73,
+        "median": 3.0,
+        "zero_count": 0
+      },
+      "available_staff_count": {
+        "min": 0.0,
+        "max": 5.0,
+        "mean": 0.79,
+        "std": 0.9,
+        "median": 1.0,
+        "zero_count": 555
+      },
+      "required_staff_count": {
+        "min": 0.0,
+        "max": 4.0,
+        "mean": 0.99,
+        "std": 0.92,
+        "median": 1.0,
+        "zero_count": 384
+      },
+      "available_equipment_score": {
+        "min": 1.0,
+        "max": 5.0,
+        "mean": 2.14,
+        "std": 1.1,
+        "median": 2.0,
+        "zero_count": 0
+      },
+      "required_equipment_score": {
+        "min": 1.0,
+        "max": 5.0,
+        "mean": 2.31,
+        "std": 0.81,
+        "median": 2.0,
+        "zero_count": 0
+      },
+      "supplier_availability_score": {
+        "min": 3.0,
+        "max": 5.0,
+        "mean": 3.87,
+        "std": 0.6,
+        "median": 4.0,
+        "zero_count": 0
+      }
+    },
+    "categorical_summary": {
+      "case_id": {
+        "n_unique": 1200,
+        "top_values": {
+          "C00001": 1,
+          "C00002": 1,
+          "C00003": 1,
+          "C00004": 1,
+          "C00005": 1
+        }
+      },
+      "business_stage": {
+        "n_unique": 2,
+        "top_values": {
+          "New": 843,
+          "Existing": 357
+        }
+      },
+      "business_category": {
+        "n_unique": 4,
+        "top_values": {
+          "Clothing/ Garment": 412,
+          "Grocery/Mini-Mart": 327,
+          "Bakery/Food/Grocery": 263,
+          "Beauty Saloon": 198
+        }
+      },
+      "business_description": {
+        "n_unique": 61,
+        "top_values": {
+          "small clothing retail business": 134,
+          "online and local clothing sales": 128,
+          "fashion items and garments": 121,
+          "Saloon": 100,
+          "home-based food production": 90
+        }
+      },
+      "district": {
+        "n_unique": 1,
+        "top_values": {
+          "Colombo": 1200
+        }
+      },
+      "province": {
+        "n_unique": 1,
+        "top_values": {
+          "Western": 1200
+        }
+      },
+      "location_type": {
+        "n_unique": 46,
+        "top_values": {
+          "Panagoda": 38,
+          "Godagama": 38,
+          "Pitipana": 37,
+          "Meegasmulla": 36,
+          "Kahathuduwa": 34
+        }
+      },
+      "proposed_action": {
+        "n_unique": 4,
+        "top_values": {
+          "start": 843,
+          "maintain": 127,
+          "expand": 119,
+          "improve": 111
+        }
+      },
+      "competition_level": {
+        "n_unique": 3,
+        "top_values": {
+          "Low": 525,
+          "Medium": 404,
+          "High": 271
+        }
+      },
+      "feasibility_label": {
+        "n_unique": 3,
+        "top_values": {
+          "Conditionally Feasible": 682,
+          "Feasible": 314,
+          "Infeasible": 204
+        }
+      }
+    }
+  },
+  "invoice_dataset_07": {
+    "dataset_directory": "data/Dataset/07",
+    "total_pdf_files": 70,
+    "text_extractable_files": 70,
+    "scanned_image_only_files": 0,
+    "identified_document_types": [
+      "Commercial / Service Invoice"
+    ],
+    "sample_files": [
+      {
+        "file": "Invoice INV-0097.pdf",
+        "pages": 1,
+        "has_extractable_text": true,
+        "text_char_count": 1035
+      },
+      {
+        "file": "Invoice INV-0098.pdf",
+        "pages": 1,
+        "has_extractable_text": true,
+        "text_char_count": 1035
+      },
+      {
+        "file": "Invoice INV-0099.pdf",
+        "pages": 1,
+        "has_extractable_text": true,
+        "text_char_count": 1068
+      }
+    ]
+  },
+  "invoice_dataset_06": {
+    "dataset_directory": "data/Dataset/06",
+    "total_pdf_files": 171,
+    "text_extractable_files": 53,
+    "scanned_image_only_files": 118,
+    "identified_document_types": [
+      "Commercial / Service Invoice",
+      "Unclassified Business Document",
+      "CUSDEC (Sri Lanka Customs Goods Declaration)"
+    ],
+    "sample_files": [
+      {
+        "file": "3278 BTFL.pdf",
+        "pages": 2,
+        "has_extractable_text": false,
+        "text_char_count": 0
+      },
+      {
+        "file": "3280 JD.pdf",
+        "pages": 2,
+        "has_extractable_text": false,
+        "text_char_count": 0
+      },
+      {
+        "file": "3281 OZ.pdf",
+        "pages": 3,
+        "has_extractable_text": false,
+        "text_char_count": 0
+      }
+    ]
+  }
+}

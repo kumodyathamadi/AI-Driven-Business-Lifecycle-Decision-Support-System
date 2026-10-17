@@ -1,0 +1,615 @@
+{
+  "validation_comparison": {
+    "Dummy (most_frequent)": {
+      "accuracy": 0.5667,
+      "macro_precision": 0.1889,
+      "macro_recall": 0.3333,
+      "macro_f1": 0.2411,
+      "weighted_f1": 0.4099,
+      "per_class": {
+        "Conditionally Feasible": {
+          "precision": 0.5667,
+          "recall": 1.0,
+          "f1_score": 0.7234,
+          "support": 102
+        },
+        "Feasible": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1_score": 0.0,
+          "support": 47
+        },
+        "Infeasible": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1_score": 0.0,
+          "support": 31
+        }
+      },
+      "confusion_matrix": [
+        [
+          102,
+          0,
+          0
+        ],
+        [
+          47,
+          0,
+          0
+        ],
+        [
+          31,
+          0,
+          0
+        ]
+      ],
+      "classes": [
+        "Conditionally Feasible",
+        "Feasible",
+        "Infeasible"
+      ]
+    },
+    "Dummy (stratified)": {
+      "accuracy": 0.4167,
+      "macro_precision": 0.3129,
+      "macro_recall": 0.3133,
+      "macro_f1": 0.313,
+      "weighted_f1": 0.4149,
+      "per_class": {
+        "Conditionally Feasible": {
+          "precision": 0.5865,
+          "recall": 0.598,
+          "f1_score": 0.5922,
+          "support": 102
+        },
+        "Feasible": {
+          "precision": 0.2273,
+          "recall": 0.2128,
+          "f1_score": 0.2198,
+          "support": 47
+        },
+        "Infeasible": {
+          "precision": 0.125,
+          "recall": 0.129,
+          "f1_score": 0.127,
+          "support": 31
+        }
+      },
+      "confusion_matrix": [
+        [
+          61,
+          25,
+          16
+        ],
+        [
+          25,
+          10,
+          12
+        ],
+        [
+          18,
+          9,
+          4
+        ]
+      ],
+      "classes": [
+        "Conditionally Feasible",
+        "Feasible",
+        "Infeasible"
+      ]
+    },
+    "Logistic Regression (balanced)": {
+      "accuracy": 0.6944,
+      "macro_precision": 0.6636,
+      "macro_recall": 0.7148,
+      "macro_f1": 0.6771,
+      "weighted_f1": 0.6977,
+      "per_class": {
+        "Conditionally Feasible": {
+          "precision": 0.8333,
+          "recall": 0.6373,
+          "f1_score": 0.7222,
+          "support": 102
+        },
+        "Feasible": {
+          "precision": 0.619,
+          "recall": 0.8298,
+          "f1_score": 0.7091,
+          "support": 47
+        },
+        "Infeasible": {
+          "precision": 0.5385,
+          "recall": 0.6774,
+          "f1_score": 0.6,
+          "support": 31
+        }
+      },
+      "confusion_matrix": [
+        [
+          65,
+          21,
+          16
+        ],
+        [
+          6,
+          39,
+          2
+        ],
+        [
+          7,
+          3,
+          21
+        ]
+      ],
+      "classes": [
+        "Conditionally Feasible",
+        "Feasible",
+        "Infeasible"
+      ]
+    },
+    "Logistic Regression (unweighted)": {
+      "accuracy": 0.7444,
+      "macro_precision": 0.7248,
+      "macro_recall": 0.6691,
+      "macro_f1": 0.6856,
+      "weighted_f1": 0.7353,
+      "per_class": {
+        "Conditionally Feasible": {
+          "precision": 0.7611,
+          "recall": 0.8431,
+          "f1_score": 0.8,
+          "support": 102
+        },
+        "Feasible": {
+          "precision": 0.7292,
+          "recall": 0.7447,
+          "f1_score": 0.7368,
+          "support": 47
+        },
+        "Infeasible": {
+          "precision": 0.6842,
+          "recall": 0.4194,
+          "f1_score": 0.52,
+          "support": 31
+        }
+      },
+      "confusion_matrix": [
+        [
+          86,
+          10,
+          6
+        ],
+        [
+          12,
+          35,
+          0
+        ],
+        [
+          15,
+          3,
+          13
+        ]
+      ],
+      "classes": [
+        "Conditionally Feasible",
+        "Feasible",
+        "Infeasible"
+      ]
+    },
+    "Random Forest (balanced)": {
+      "accuracy": 0.8611,
+      "macro_precision": 0.8446,
+      "macro_recall": 0.8619,
+      "macro_f1": 0.8505,
+      "weighted_f1": 0.8615,
+      "per_class": {
+        "Conditionally Feasible": {
+          "precision": 0.9149,
+          "recall": 0.8431,
+          "f1_score": 0.8776,
+          "support": 102
+        },
+        "Feasible": {
+          "precision": 0.7857,
+          "recall": 0.9362,
+          "f1_score": 0.8544,
+          "support": 47
+        },
+        "Infeasible": {
+          "precision": 0.8333,
+          "recall": 0.8065,
+          "f1_score": 0.8197,
+          "support": 31
+        }
+      },
+      "confusion_matrix": [
+        [
+          86,
+          11,
+          5
+        ],
+        [
+          3,
+          44,
+          0
+        ],
+        [
+          5,
+          1,
+          25
+        ]
+      ],
+      "classes": [
+        "Conditionally Feasible",
+        "Feasible",
+        "Infeasible"
+      ]
+    },
+    "Random Forest (unweighted)": {
+      "accuracy": 0.8389,
+      "macro_precision": 0.8351,
+      "macro_recall": 0.7925,
+      "macro_f1": 0.8082,
+      "weighted_f1": 0.8353,
+      "per_class": {
+        "Conditionally Feasible": {
+          "precision": 0.8426,
+          "recall": 0.8922,
+          "f1_score": 0.8667,
+          "support": 102
+        },
+        "Feasible": {
+          "precision": 0.8367,
+          "recall": 0.8723,
+          "f1_score": 0.8542,
+          "support": 47
+        },
+        "Infeasible": {
+          "precision": 0.8261,
+          "recall": 0.6129,
+          "f1_score": 0.7037,
+          "support": 31
+        }
+      },
+      "confusion_matrix": [
+        [
+          91,
+          7,
+          4
+        ],
+        [
+          6,
+          41,
+          0
+        ],
+        [
+          11,
+          1,
+          19
+        ]
+      ],
+      "classes": [
+        "Conditionally Feasible",
+        "Feasible",
+        "Infeasible"
+      ]
+    }
+  },
+  "selected_model": "Random Forest (balanced)",
+  "held_out_test_metrics": {
+    "accuracy": 0.8833,
+    "macro_precision": 0.8614,
+    "macro_recall": 0.897,
+    "macro_f1": 0.877,
+    "weighted_f1": 0.8839,
+    "per_class": {
+      "Conditionally Feasible": {
+        "precision": 0.9271,
+        "recall": 0.8641,
+        "f1_score": 0.8945,
+        "support": 103
+      },
+      "Feasible": {
+        "precision": 0.8571,
+        "recall": 0.8936,
+        "f1_score": 0.875,
+        "support": 47
+      },
+      "Infeasible": {
+        "precision": 0.8,
+        "recall": 0.9333,
+        "f1_score": 0.8615,
+        "support": 30
+      }
+    },
+    "confusion_matrix": [
+      [
+        89,
+        7,
+        7
+      ],
+      [
+        5,
+        42,
+        0
+      ],
+      [
+        2,
+        0,
+        28
+      ]
+    ],
+    "classes": [
+      "Conditionally Feasible",
+      "Feasible",
+      "Infeasible"
+    ]
+  },
+  "metadata": {
+    "model_name": "Random Forest (balanced)",
+    "model_class": "RandomForestClassifier",
+    "model_parameters": {
+      "bootstrap": true,
+      "ccp_alpha": 0.0,
+      "class_weight": "balanced",
+      "criterion": "gini",
+      "max_depth": null,
+      "max_features": "sqrt",
+      "max_leaf_nodes": null,
+      "max_samples": null,
+      "min_impurity_decrease": 0.0,
+      "min_samples_leaf": 1,
+      "min_samples_split": 2,
+      "min_weight_fraction_leaf": 0.0,
+      "monotonic_cst": null,
+      "n_estimators": 200,
+      "n_jobs": null,
+      "oob_score": false,
+      "random_state": 42,
+      "verbose": 0,
+      "warm_start": false
+    },
+    "random_state": 42,
+    "package_versions": {
+      "python": "3.13.7",
+      "sklearn": "1.9.1",
+      "pandas": "3.0.6",
+      "numpy": "2.5.3"
+    },
+    "dataset": {
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\raw\\Component_One_Core_Feasibility.csv",
+      "total_samples": 1200,
+      "train_samples": 840,
+      "val_samples": 180,
+      "test_samples": 180,
+      "classes": [
+        "Conditionally Feasible",
+        "Feasible",
+        "Infeasible"
+      ],
+      "train_class_counts": {
+        "Conditionally Feasible": 477,
+        "Feasible": 220,
+        "Infeasible": 143
+      },
+      "val_class_counts": {
+        "Conditionally Feasible": 102,
+        "Feasible": 47,
+        "Infeasible": 31
+      },
+      "test_class_counts": {
+        "Conditionally Feasible": 103,
+        "Feasible": 47,
+        "Infeasible": 30
+      }
+    },
+    "features": {
+      "numerical_features": [
+        "available_capital_lkr",
+        "loan_amount_lkr",
+        "monthly_budget_lkr",
+        "initial_inventory_cost_lkr",
+        "expected_price_lkr",
+        "expected_customers_per_day",
+        "customer_demand_score",
+        "expected_operating_days_per_month",
+        "entrepreneur_experience_years",
+        "location_suitability_score",
+        "available_staff_count",
+        "required_staff_count",
+        "available_equipment_score",
+        "required_equipment_score",
+        "supplier_availability_score"
+      ],
+      "categorical_features": [
+        "business_stage",
+        "business_category",
+        "location_type",
+        "proposed_action",
+        "competition_level"
+      ],
+      "excluded_columns": [
+        "case_id",
+        "district",
+        "province",
+        "business_description",
+        "feasibility_label"
+      ],
+      "processed_feature_count": 74,
+      "processed_feature_names": [
+        "num__available_capital_lkr",
+        "num__loan_amount_lkr",
+        "num__monthly_budget_lkr",
+        "num__initial_inventory_cost_lkr",
+        "num__expected_price_lkr",
+        "num__expected_customers_per_day",
+        "num__customer_demand_score",
+        "num__expected_operating_days_per_month",
+        "num__entrepreneur_experience_years",
+        "num__location_suitability_score",
+        "num__available_staff_count",
+        "num__required_staff_count",
+        "num__available_equipment_score",
+        "num__required_equipment_score",
+        "num__supplier_availability_score",
+        "cat__business_stage_Existing",
+        "cat__business_stage_New",
+        "cat__business_category_Bakery/Food/Grocery",
+        "cat__business_category_Beauty Saloon",
+        "cat__business_category_Clothing/ Garment",
+        "cat__business_category_Grocery/Mini-Mart",
+        "cat__location_type_Ambalangoda",
+        "cat__location_type_Arukwatta",
+        "cat__location_type_Bope",
+        "cat__location_type_Brahamnagama",
+        "cat__location_type_Diyagama",
+        "cat__location_type_Dolahena",
+        "cat__location_type_Godagama",
+        "cat__location_type_Habarakada",
+        "cat__location_type_Henpita",
+        "cat__location_type_Henpitiya",
+        "cat__location_type_Henwattha",
+        "cat__location_type_Hiripitiya",
+        "cat__location_type_Jalthara",
+        "cat__location_type_Kahathuduwa",
+        "cat__location_type_Kiriwattuduwa",
+        "cat__location_type_Kosgama",
+        "cat__location_type_Kottawa",
+        "cat__location_type_Malwana",
+        "cat__location_type_Mambulgoda",
+        "cat__location_type_Mattegoda",
+        "cat__location_type_Meegasmulla",
+        "cat__location_type_Meegoda",
+        "cat__location_type_Meepe",
+        "cat__location_type_Mullegama",
+        "cat__location_type_Nawagamuwa",
+        "cat__location_type_Ovitigama",
+        "cat__location_type_Pahala Hanwella",
+        "cat__location_type_Palagama",
+        "cat__location_type_Panagoda",
+        "cat__location_type_Panaluwa",
+        "cat__location_type_Pitipana",
+        "cat__location_type_Pitumpe",
+        "cat__location_type_Polgasowita",
+        "cat__location_type_Prasannanpura",
+        "cat__location_type_Puswelikanda",
+        "cat__location_type_Puwakpitiya",
+        "cat__location_type_Ranala",
+        "cat__location_type_Siddamulla",
+        "cat__location_type_Siyambalagoda",
+        "cat__location_type_Suwapudugama",
+        "cat__location_type_Thalduwa",
+        "cat__location_type_Udagama",
+        "cat__location_type_Uduwana",
+        "cat__location_type_Waga",
+        "cat__location_type_Watareka",
+        "cat__location_type_Weniwelkola",
+        "cat__proposed_action_expand",
+        "cat__proposed_action_improve",
+        "cat__proposed_action_maintain",
+        "cat__proposed_action_start",
+        "cat__competition_level_High",
+        "cat__competition_level_Low",
+        "cat__competition_level_Medium"
+      ]
+    },
+    "validation_selection_metrics": {
+      "accuracy": 0.8611,
+      "macro_precision": 0.8446,
+      "macro_recall": 0.8619,
+      "macro_f1": 0.8505,
+      "weighted_f1": 0.8615,
+      "per_class": {
+        "Conditionally Feasible": {
+          "precision": 0.9149,
+          "recall": 0.8431,
+          "f1_score": 0.8776,
+          "support": 102
+        },
+        "Feasible": {
+          "precision": 0.7857,
+          "recall": 0.9362,
+          "f1_score": 0.8544,
+          "support": 47
+        },
+        "Infeasible": {
+          "precision": 0.8333,
+          "recall": 0.8065,
+          "f1_score": 0.8197,
+          "support": 31
+        }
+      },
+      "confusion_matrix": [
+        [
+          86,
+          11,
+          5
+        ],
+        [
+          3,
+          44,
+          0
+        ],
+        [
+          5,
+          1,
+          25
+        ]
+      ],
+      "classes": [
+        "Conditionally Feasible",
+        "Feasible",
+        "Infeasible"
+      ]
+    },
+    "held_out_test_metrics": {
+      "accuracy": 0.8833,
+      "macro_precision": 0.8614,
+      "macro_recall": 0.897,
+      "macro_f1": 0.877,
+      "weighted_f1": 0.8839,
+      "per_class": {
+        "Conditionally Feasible": {
+          "precision": 0.9271,
+          "recall": 0.8641,
+          "f1_score": 0.8945,
+          "support": 103
+        },
+        "Feasible": {
+          "precision": 0.8571,
+          "recall": 0.8936,
+          "f1_score": 0.875,
+          "support": 47
+        },
+        "Infeasible": {
+          "precision": 0.8,
+          "recall": 0.9333,
+          "f1_score": 0.8615,
+          "support": 30
+        }
+      },
+      "confusion_matrix": [
+        [
+          89,
+          7,
+          7
+        ],
+        [
+          5,
+          42,
+          0
+        ],
+        [
+          2,
+          0,
+          28
+        ]
+      ],
+      "classes": [
+        "Conditionally Feasible",
+        "Feasible",
+        "Infeasible"
+      ]
+    }
+  }
+}

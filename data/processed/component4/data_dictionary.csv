@@ -1,0 +1,92 @@
+file,column,dtype,description
+business_profiles.csv,business_id,object,Identifier used to keep related records together
+business_profiles.csv,district,object,See README.md and dataset_manifest.json for interpretation.
+business_profiles.csv,province,object,See README.md and dataset_manifest.json for interpretation.
+business_profiles.csv,business_category,object,See README.md and dataset_manifest.json for interpretation.
+business_profiles.csv,business_stage,object,See README.md and dataset_manifest.json for interpretation.
+business_profiles.csv,employee_count,int64,See README.md and dataset_manifest.json for interpretation.
+business_profiles.csv,scenario_family_id,object,Identifier used to keep related records together
+business_profiles.csv,data_origin,object,Provenance marker; indicates simulated data
+business_profiles.csv,base_scenario_version,object,See README.md and dataset_manifest.json for interpretation.
+financial_snapshots.csv,business_id,object,Identifier used to keep related records together
+financial_snapshots.csv,snapshot_month,object,See README.md and dataset_manifest.json for interpretation.
+financial_snapshots.csv,district,object,See README.md and dataset_manifest.json for interpretation.
+financial_snapshots.csv,province,object,See README.md and dataset_manifest.json for interpretation.
+financial_snapshots.csv,business_category,object,See README.md and dataset_manifest.json for interpretation.
+financial_snapshots.csv,monthly_revenue_lkr,float64,See README.md and dataset_manifest.json for interpretation.
+financial_snapshots.csv,monthly_expenses_lkr,float64,See README.md and dataset_manifest.json for interpretation.
+financial_snapshots.csv,cash_reserves_lkr,float64,See README.md and dataset_manifest.json for interpretation.
+financial_snapshots.csv,outstanding_debt_lkr,float64,See README.md and dataset_manifest.json for interpretation.
+financial_snapshots.csv,monthly_debt_repayment_lkr,float64,See README.md and dataset_manifest.json for interpretation.
+financial_snapshots.csv,accounts_receivable_lkr,float64,See README.md and dataset_manifest.json for interpretation.
+financial_snapshots.csv,accounts_payable_lkr,float64,See README.md and dataset_manifest.json for interpretation.
+financial_snapshots.csv,working_capital_lkr,float64,See README.md and dataset_manifest.json for interpretation.
+financial_snapshots.csv,cash_runway_months,float64,See README.md and dataset_manifest.json for interpretation.
+financial_snapshots.csv,debt_service_ratio,float64,See README.md and dataset_manifest.json for interpretation.
+financial_snapshots.csv,supplier_concentration_share,float64,See README.md and dataset_manifest.json for interpretation.
+financial_snapshots.csv,customer_concentration_share,float64,See README.md and dataset_manifest.json for interpretation.
+financial_snapshots.csv,supplier_disruption_active,int64,See README.md and dataset_manifest.json for interpretation.
+financial_snapshots.csv,liquidity_stress_label,object,Identifier used to keep related records together
+financial_snapshots.csv,relationship_risk_label,object,See README.md and dataset_manifest.json for interpretation.
+financial_snapshots.csv,overall_risk_label,object,See README.md and dataset_manifest.json for interpretation.
+financial_snapshots.csv,scenario_family_id,object,Identifier used to keep related records together
+financial_snapshots.csv,label_source,object,Provenance marker; indicates simulated data
+financial_snapshots.csv,data_origin,object,Provenance marker; indicates simulated data
+financial_snapshots.csv,split,object,See README.md and dataset_manifest.json for interpretation.
+business_relationships.csv,source_id,object,Identifier used to keep related records together
+business_relationships.csv,target_id,object,Identifier used to keep related records together
+business_relationships.csv,relationship_type,object,See README.md and dataset_manifest.json for interpretation.
+business_relationships.csv,snapshot_month,object,See README.md and dataset_manifest.json for interpretation.
+business_relationships.csv,transaction_count,int64,See README.md and dataset_manifest.json for interpretation.
+business_relationships.csv,transaction_value_lkr,float64,See README.md and dataset_manifest.json for interpretation.
+business_relationships.csv,dependency_percentage,float64,See README.md and dataset_manifest.json for interpretation.
+business_relationships.csv,relationship_duration_months,int64,See README.md and dataset_manifest.json for interpretation.
+business_relationships.csv,payment_delay_days,int64,See README.md and dataset_manifest.json for interpretation.
+business_relationships.csv,disruption_status,object,See README.md and dataset_manifest.json for interpretation.
+business_relationships.csv,scenario_family_id,object,Identifier used to keep related records together
+business_relationships.csv,data_origin,object,Provenance marker; indicates simulated data
+business_relationships.csv,split,object,See README.md and dataset_manifest.json for interpretation.
+growth_actions.csv,action_id,object,Identifier used to keep related records together
+growth_actions.csv,business_id,object,Identifier used to keep related records together
+growth_actions.csv,action_type,object,See README.md and dataset_manifest.json for interpretation.
+growth_actions.csv,variant,object,See README.md and dataset_manifest.json for interpretation.
+growth_actions.csv,required_investment_lkr,float64,See README.md and dataset_manifest.json for interpretation.
+growth_actions.csv,additional_monthly_cost_lkr,float64,See README.md and dataset_manifest.json for interpretation.
+growth_actions.csv,expected_revenue_change_lkr,float64,See README.md and dataset_manifest.json for interpretation.
+growth_actions.csv,required_staff_count,int64,See README.md and dataset_manifest.json for interpretation.
+growth_actions.csv,available_capacity_score,float64,See README.md and dataset_manifest.json for interpretation.
+growth_actions.csv,mitigation_applied,int64,See README.md and dataset_manifest.json for interpretation.
+growth_actions.csv,mitigation_recommendation,object,See README.md and dataset_manifest.json for interpretation.
+growth_actions.csv,scenario_family_id,object,Identifier used to keep related records together
+growth_actions.csv,district,object,See README.md and dataset_manifest.json for interpretation.
+growth_actions.csv,province,object,See README.md and dataset_manifest.json for interpretation.
+growth_actions.csv,data_origin,object,Provenance marker; indicates simulated data
+risk_outcomes.csv,action_id,object,Identifier used to keep related records together
+risk_outcomes.csv,business_id,object,Identifier used to keep related records together
+risk_outcomes.csv,variant,object,See README.md and dataset_manifest.json for interpretation.
+risk_outcomes.csv,overall_risk_label,object,See README.md and dataset_manifest.json for interpretation.
+risk_outcomes.csv,liquidity_stress_label,object,Identifier used to keep related records together
+risk_outcomes.csv,relationship_risk_label,object,See README.md and dataset_manifest.json for interpretation.
+risk_outcomes.csv,growth_readiness_label,object,See README.md and dataset_manifest.json for interpretation.
+risk_outcomes.csv,risk_factor_codes,object,See README.md and dataset_manifest.json for interpretation.
+risk_outcomes.csv,mitigation_codes,object,See README.md and dataset_manifest.json for interpretation.
+risk_outcomes.csv,label_source,object,Provenance marker; indicates simulated data
+risk_outcomes.csv,scenario_family_id,object,Identifier used to keep related records together
+risk_outcomes.csv,split,object,See README.md and dataset_manifest.json for interpretation.
+risk_outcomes.csv,data_origin,object,Provenance marker; indicates simulated data
+graph_entities.csv,entity_id,object,Identifier used to keep related records together
+graph_entities.csv,entity_type,object,See README.md and dataset_manifest.json for interpretation.
+graph_entities.csv,district,object,See README.md and dataset_manifest.json for interpretation.
+graph_entities.csv,business_category,object,See README.md and dataset_manifest.json for interpretation.
+graph_entities.csv,data_origin,object,Provenance marker; indicates simulated data
+scenario_families_and_splits.csv,scenario_family_id,object,Identifier used to keep related records together
+scenario_families_and_splits.csv,business_id,object,Identifier used to keep related records together
+scenario_families_and_splits.csv,district,object,See README.md and dataset_manifest.json for interpretation.
+scenario_families_and_splits.csv,business_category,object,See README.md and dataset_manifest.json for interpretation.
+scenario_families_and_splits.csv,business_stage,object,See README.md and dataset_manifest.json for interpretation.
+scenario_families_and_splits.csv,supplier_concentration_control,float64,See README.md and dataset_manifest.json for interpretation.
+scenario_families_and_splits.csv,customer_concentration_control,float64,See README.md and dataset_manifest.json for interpretation.
+scenario_families_and_splits.csv,disruption_month,int64,See README.md and dataset_manifest.json for interpretation.
+scenario_families_and_splits.csv,split,object,See README.md and dataset_manifest.json for interpretation.
+scenario_families_and_splits.csv,label_source,object,Provenance marker; indicates simulated data
+scenario_families_and_splits.csv,data_origin,object,Provenance marker; indicates simulated data

@@ -1,0 +1,30 @@
+{
+  "business_count": 500,
+  "financial_snapshot_count": 6000,
+  "relationship_count": 5053,
+  "growth_action_rows": 2000,
+  "outcome_rows": 2000,
+  "entity_count": 5553,
+  "district_counts": {
+    "Colombo": 167,
+    "Gampaha": 167,
+    "Kalutara": 166
+  },
+  "overall_risk_distribution": {
+    "Medium": 804,
+    "High": 756,
+    "Low": 440
+  },
+  "readiness_distribution": {
+    "Modify": 804,
+    "Delay": 756,
+    "Proceed": 440
+  },
+  "split_counts": {
+    "train": 350,
+    "validation": 75,
+    "test": 75
+  },
+  "same_family_cross_split_violations": 0,
+  "all_provenance_marked": true
+}

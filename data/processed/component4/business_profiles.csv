@@ -1,0 +1,501 @@
+business_id,district,province,business_category,business_stage,employee_count,scenario_family_id,data_origin,base_scenario_version
+WP_SME_0001,Colombo,Western,Wholesale,Growing,24,FAM_0001,SIMULATED_SCENARIO,rules_v1
+WP_SME_0002,Gampaha,Western,Wholesale,Existing,16,FAM_0002,SIMULATED_SCENARIO,rules_v1
+WP_SME_0003,Kalutara,Western,Wholesale,Existing,2,FAM_0003,SIMULATED_SCENARIO,rules_v1
+WP_SME_0004,Colombo,Western,Food and Beverage,Existing,4,FAM_0004,SIMULATED_SCENARIO,rules_v1
+WP_SME_0005,Gampaha,Western,Food and Beverage,Growing,14,FAM_0005,SIMULATED_SCENARIO,rules_v1
+WP_SME_0006,Kalutara,Western,Retail,Existing,2,FAM_0006,SIMULATED_SCENARIO,rules_v1
+WP_SME_0007,Colombo,Western,Retail,Existing,8,FAM_0007,SIMULATED_SCENARIO,rules_v1
+WP_SME_0008,Gampaha,Western,Manufacturing,Existing,11,FAM_0008,SIMULATED_SCENARIO,rules_v1
+WP_SME_0009,Kalutara,Western,Transport and Logistics,Existing,19,FAM_0009,SIMULATED_SCENARIO,rules_v1
+WP_SME_0010,Colombo,Western,Retail,Growing,15,FAM_0010,SIMULATED_SCENARIO,rules_v1
+WP_SME_0011,Gampaha,Western,Transport and Logistics,Existing,16,FAM_0011,SIMULATED_SCENARIO,rules_v1
+WP_SME_0012,Kalutara,Western,Food and Beverage,Growing,4,FAM_0012,SIMULATED_SCENARIO,rules_v1
+WP_SME_0013,Colombo,Western,Professional Services,Growing,10,FAM_0013,SIMULATED_SCENARIO,rules_v1
+WP_SME_0014,Gampaha,Western,Professional Services,Existing,7,FAM_0014,SIMULATED_SCENARIO,rules_v1
+WP_SME_0015,Kalutara,Western,Personal Services,Existing,25,FAM_0015,SIMULATED_SCENARIO,rules_v1
+WP_SME_0016,Colombo,Western,Transport and Logistics,Existing,23,FAM_0016,SIMULATED_SCENARIO,rules_v1
+WP_SME_0017,Gampaha,Western,Transport and Logistics,Growing,19,FAM_0017,SIMULATED_SCENARIO,rules_v1
+WP_SME_0018,Kalutara,Western,Food and Beverage,Growing,24,FAM_0018,SIMULATED_SCENARIO,rules_v1
+WP_SME_0019,Colombo,Western,Food and Beverage,Existing,2,FAM_0019,SIMULATED_SCENARIO,rules_v1
+WP_SME_0020,Gampaha,Western,Retail,Existing,17,FAM_0020,SIMULATED_SCENARIO,rules_v1
+WP_SME_0021,Kalutara,Western,Food and Beverage,Existing,21,FAM_0021,SIMULATED_SCENARIO,rules_v1
+WP_SME_0022,Colombo,Western,Food and Beverage,Existing,3,FAM_0022,SIMULATED_SCENARIO,rules_v1
+WP_SME_0023,Gampaha,Western,Retail,Existing,16,FAM_0023,SIMULATED_SCENARIO,rules_v1
+WP_SME_0024,Kalutara,Western,Personal Services,Existing,25,FAM_0024,SIMULATED_SCENARIO,rules_v1
+WP_SME_0025,Colombo,Western,Personal Services,Growing,23,FAM_0025,SIMULATED_SCENARIO,rules_v1
+WP_SME_0026,Gampaha,Western,Personal Services,Growing,16,FAM_0026,SIMULATED_SCENARIO,rules_v1
+WP_SME_0027,Kalutara,Western,Manufacturing,Growing,18,FAM_0027,SIMULATED_SCENARIO,rules_v1
+WP_SME_0028,Colombo,Western,Wholesale,Existing,20,FAM_0028,SIMULATED_SCENARIO,rules_v1
+WP_SME_0029,Gampaha,Western,Transport and Logistics,Growing,15,FAM_0029,SIMULATED_SCENARIO,rules_v1
+WP_SME_0030,Kalutara,Western,Professional Services,Existing,11,FAM_0030,SIMULATED_SCENARIO,rules_v1
+WP_SME_0031,Colombo,Western,Professional Services,Growing,20,FAM_0031,SIMULATED_SCENARIO,rules_v1
+WP_SME_0032,Gampaha,Western,Transport and Logistics,Existing,21,FAM_0032,SIMULATED_SCENARIO,rules_v1
+WP_SME_0033,Kalutara,Western,Wholesale,Existing,14,FAM_0033,SIMULATED_SCENARIO,rules_v1
+WP_SME_0034,Colombo,Western,Professional Services,Growing,4,FAM_0034,SIMULATED_SCENARIO,rules_v1
+WP_SME_0035,Gampaha,Western,Retail,Growing,14,FAM_0035,SIMULATED_SCENARIO,rules_v1
+WP_SME_0036,Kalutara,Western,Retail,Existing,6,FAM_0036,SIMULATED_SCENARIO,rules_v1
+WP_SME_0037,Colombo,Western,Wholesale,Existing,9,FAM_0037,SIMULATED_SCENARIO,rules_v1
+WP_SME_0038,Gampaha,Western,Personal Services,Existing,21,FAM_0038,SIMULATED_SCENARIO,rules_v1
+WP_SME_0039,Kalutara,Western,Personal Services,Existing,19,FAM_0039,SIMULATED_SCENARIO,rules_v1
+WP_SME_0040,Colombo,Western,Personal Services,Existing,9,FAM_0040,SIMULATED_SCENARIO,rules_v1
+WP_SME_0041,Gampaha,Western,Retail,Existing,11,FAM_0041,SIMULATED_SCENARIO,rules_v1
+WP_SME_0042,Kalutara,Western,Manufacturing,Growing,11,FAM_0042,SIMULATED_SCENARIO,rules_v1
+WP_SME_0043,Colombo,Western,Personal Services,Existing,5,FAM_0043,SIMULATED_SCENARIO,rules_v1
+WP_SME_0044,Gampaha,Western,Food and Beverage,Existing,6,FAM_0044,SIMULATED_SCENARIO,rules_v1
+WP_SME_0045,Kalutara,Western,Wholesale,Growing,11,FAM_0045,SIMULATED_SCENARIO,rules_v1
+WP_SME_0046,Colombo,Western,Manufacturing,Growing,15,FAM_0046,SIMULATED_SCENARIO,rules_v1
+WP_SME_0047,Gampaha,Western,Personal Services,Existing,17,FAM_0047,SIMULATED_SCENARIO,rules_v1
+WP_SME_0048,Kalutara,Western,Manufacturing,Existing,7,FAM_0048,SIMULATED_SCENARIO,rules_v1
+WP_SME_0049,Colombo,Western,Retail,Existing,13,FAM_0049,SIMULATED_SCENARIO,rules_v1
+WP_SME_0050,Gampaha,Western,Wholesale,Existing,8,FAM_0050,SIMULATED_SCENARIO,rules_v1
+WP_SME_0051,Kalutara,Western,Personal Services,Existing,3,FAM_0051,SIMULATED_SCENARIO,rules_v1
+WP_SME_0052,Colombo,Western,Professional Services,Existing,12,FAM_0052,SIMULATED_SCENARIO,rules_v1
+WP_SME_0053,Gampaha,Western,Wholesale,Growing,4,FAM_0053,SIMULATED_SCENARIO,rules_v1
+WP_SME_0054,Kalutara,Western,Retail,Existing,9,FAM_0054,SIMULATED_SCENARIO,rules_v1
+WP_SME_0055,Colombo,Western,Retail,Existing,11,FAM_0055,SIMULATED_SCENARIO,rules_v1
+WP_SME_0056,Gampaha,Western,Personal Services,Existing,4,FAM_0056,SIMULATED_SCENARIO,rules_v1
+WP_SME_0057,Kalutara,Western,Personal Services,Growing,14,FAM_0057,SIMULATED_SCENARIO,rules_v1
+WP_SME_0058,Colombo,Western,Manufacturing,Existing,20,FAM_0058,SIMULATED_SCENARIO,rules_v1
+WP_SME_0059,Gampaha,Western,Professional Services,Existing,3,FAM_0059,SIMULATED_SCENARIO,rules_v1
+WP_SME_0060,Kalutara,Western,Wholesale,Existing,24,FAM_0060,SIMULATED_SCENARIO,rules_v1
+WP_SME_0061,Colombo,Western,Professional Services,Growing,18,FAM_0061,SIMULATED_SCENARIO,rules_v1
+WP_SME_0062,Gampaha,Western,Manufacturing,Growing,9,FAM_0062,SIMULATED_SCENARIO,rules_v1
+WP_SME_0063,Kalutara,Western,Professional Services,Growing,20,FAM_0063,SIMULATED_SCENARIO,rules_v1
+WP_SME_0064,Colombo,Western,Manufacturing,Growing,5,FAM_0064,SIMULATED_SCENARIO,rules_v1
+WP_SME_0065,Gampaha,Western,Wholesale,Existing,13,FAM_0065,SIMULATED_SCENARIO,rules_v1
+WP_SME_0066,Kalutara,Western,Wholesale,Existing,14,FAM_0066,SIMULATED_SCENARIO,rules_v1
+WP_SME_0067,Colombo,Western,Retail,Existing,15,FAM_0067,SIMULATED_SCENARIO,rules_v1
+WP_SME_0068,Gampaha,Western,Manufacturing,Existing,6,FAM_0068,SIMULATED_SCENARIO,rules_v1
+WP_SME_0069,Kalutara,Western,Retail,Growing,10,FAM_0069,SIMULATED_SCENARIO,rules_v1
+WP_SME_0070,Colombo,Western,Manufacturing,Existing,21,FAM_0070,SIMULATED_SCENARIO,rules_v1
+WP_SME_0071,Gampaha,Western,Wholesale,Existing,22,FAM_0071,SIMULATED_SCENARIO,rules_v1
+WP_SME_0072,Kalutara,Western,Professional Services,Existing,25,FAM_0072,SIMULATED_SCENARIO,rules_v1
+WP_SME_0073,Colombo,Western,Professional Services,Growing,16,FAM_0073,SIMULATED_SCENARIO,rules_v1
+WP_SME_0074,Gampaha,Western,Personal Services,Growing,3,FAM_0074,SIMULATED_SCENARIO,rules_v1
+WP_SME_0075,Kalutara,Western,Wholesale,Existing,14,FAM_0075,SIMULATED_SCENARIO,rules_v1
+WP_SME_0076,Colombo,Western,Manufacturing,Growing,23,FAM_0076,SIMULATED_SCENARIO,rules_v1
+WP_SME_0077,Gampaha,Western,Wholesale,Growing,20,FAM_0077,SIMULATED_SCENARIO,rules_v1
+WP_SME_0078,Kalutara,Western,Retail,Existing,6,FAM_0078,SIMULATED_SCENARIO,rules_v1
+WP_SME_0079,Colombo,Western,Food and Beverage,Existing,2,FAM_0079,SIMULATED_SCENARIO,rules_v1
+WP_SME_0080,Gampaha,Western,Wholesale,Existing,8,FAM_0080,SIMULATED_SCENARIO,rules_v1
+WP_SME_0081,Kalutara,Western,Transport and Logistics,Existing,23,FAM_0081,SIMULATED_SCENARIO,rules_v1
+WP_SME_0082,Colombo,Western,Manufacturing,Growing,18,FAM_0082,SIMULATED_SCENARIO,rules_v1
+WP_SME_0083,Gampaha,Western,Retail,Existing,24,FAM_0083,SIMULATED_SCENARIO,rules_v1
+WP_SME_0084,Kalutara,Western,Retail,Existing,9,FAM_0084,SIMULATED_SCENARIO,rules_v1
+WP_SME_0085,Colombo,Western,Food and Beverage,Existing,15,FAM_0085,SIMULATED_SCENARIO,rules_v1
+WP_SME_0086,Gampaha,Western,Transport and Logistics,Growing,18,FAM_0086,SIMULATED_SCENARIO,rules_v1
+WP_SME_0087,Kalutara,Western,Retail,Growing,6,FAM_0087,SIMULATED_SCENARIO,rules_v1
+WP_SME_0088,Colombo,Western,Food and Beverage,Existing,20,FAM_0088,SIMULATED_SCENARIO,rules_v1
+WP_SME_0089,Gampaha,Western,Professional Services,Growing,15,FAM_0089,SIMULATED_SCENARIO,rules_v1
+WP_SME_0090,Kalutara,Western,Transport and Logistics,Growing,2,FAM_0090,SIMULATED_SCENARIO,rules_v1
+WP_SME_0091,Colombo,Western,Professional Services,Existing,6,FAM_0091,SIMULATED_SCENARIO,rules_v1
+WP_SME_0092,Gampaha,Western,Wholesale,Growing,15,FAM_0092,SIMULATED_SCENARIO,rules_v1
+WP_SME_0093,Kalutara,Western,Food and Beverage,Existing,19,FAM_0093,SIMULATED_SCENARIO,rules_v1
+WP_SME_0094,Colombo,Western,Food and Beverage,Growing,21,FAM_0094,SIMULATED_SCENARIO,rules_v1
+WP_SME_0095,Gampaha,Western,Retail,Existing,19,FAM_0095,SIMULATED_SCENARIO,rules_v1
+WP_SME_0096,Kalutara,Western,Food and Beverage,Existing,11,FAM_0096,SIMULATED_SCENARIO,rules_v1
+WP_SME_0097,Colombo,Western,Food and Beverage,Existing,13,FAM_0097,SIMULATED_SCENARIO,rules_v1
+WP_SME_0098,Gampaha,Western,Wholesale,Existing,12,FAM_0098,SIMULATED_SCENARIO,rules_v1
+WP_SME_0099,Kalutara,Western,Professional Services,Existing,8,FAM_0099,SIMULATED_SCENARIO,rules_v1
+WP_SME_0100,Colombo,Western,Food and Beverage,Existing,8,FAM_0100,SIMULATED_SCENARIO,rules_v1
+WP_SME_0101,Gampaha,Western,Professional Services,Growing,10,FAM_0101,SIMULATED_SCENARIO,rules_v1
+WP_SME_0102,Kalutara,Western,Personal Services,Growing,14,FAM_0102,SIMULATED_SCENARIO,rules_v1
+WP_SME_0103,Colombo,Western,Food and Beverage,Existing,20,FAM_0103,SIMULATED_SCENARIO,rules_v1
+WP_SME_0104,Gampaha,Western,Food and Beverage,Growing,19,FAM_0104,SIMULATED_SCENARIO,rules_v1
+WP_SME_0105,Kalutara,Western,Retail,Existing,8,FAM_0105,SIMULATED_SCENARIO,rules_v1
+WP_SME_0106,Colombo,Western,Food and Beverage,Existing,20,FAM_0106,SIMULATED_SCENARIO,rules_v1
+WP_SME_0107,Gampaha,Western,Transport and Logistics,Existing,14,FAM_0107,SIMULATED_SCENARIO,rules_v1
+WP_SME_0108,Kalutara,Western,Food and Beverage,Existing,16,FAM_0108,SIMULATED_SCENARIO,rules_v1
+WP_SME_0109,Colombo,Western,Retail,Existing,6,FAM_0109,SIMULATED_SCENARIO,rules_v1
+WP_SME_0110,Gampaha,Western,Retail,Growing,2,FAM_0110,SIMULATED_SCENARIO,rules_v1
+WP_SME_0111,Kalutara,Western,Professional Services,Growing,5,FAM_0111,SIMULATED_SCENARIO,rules_v1
+WP_SME_0112,Colombo,Western,Retail,Growing,20,FAM_0112,SIMULATED_SCENARIO,rules_v1
+WP_SME_0113,Gampaha,Western,Food and Beverage,Existing,17,FAM_0113,SIMULATED_SCENARIO,rules_v1
+WP_SME_0114,Kalutara,Western,Wholesale,Existing,8,FAM_0114,SIMULATED_SCENARIO,rules_v1
+WP_SME_0115,Colombo,Western,Professional Services,Existing,12,FAM_0115,SIMULATED_SCENARIO,rules_v1
+WP_SME_0116,Gampaha,Western,Personal Services,Existing,22,FAM_0116,SIMULATED_SCENARIO,rules_v1
+WP_SME_0117,Kalutara,Western,Wholesale,Existing,18,FAM_0117,SIMULATED_SCENARIO,rules_v1
+WP_SME_0118,Colombo,Western,Retail,Existing,6,FAM_0118,SIMULATED_SCENARIO,rules_v1
+WP_SME_0119,Gampaha,Western,Personal Services,Existing,3,FAM_0119,SIMULATED_SCENARIO,rules_v1
+WP_SME_0120,Kalutara,Western,Manufacturing,Existing,9,FAM_0120,SIMULATED_SCENARIO,rules_v1
+WP_SME_0121,Colombo,Western,Manufacturing,Existing,6,FAM_0121,SIMULATED_SCENARIO,rules_v1
+WP_SME_0122,Gampaha,Western,Professional Services,Existing,3,FAM_0122,SIMULATED_SCENARIO,rules_v1
+WP_SME_0123,Kalutara,Western,Retail,Existing,19,FAM_0123,SIMULATED_SCENARIO,rules_v1
+WP_SME_0124,Colombo,Western,Manufacturing,Growing,10,FAM_0124,SIMULATED_SCENARIO,rules_v1
+WP_SME_0125,Gampaha,Western,Retail,Existing,19,FAM_0125,SIMULATED_SCENARIO,rules_v1
+WP_SME_0126,Kalutara,Western,Food and Beverage,Growing,11,FAM_0126,SIMULATED_SCENARIO,rules_v1
+WP_SME_0127,Colombo,Western,Retail,Growing,8,FAM_0127,SIMULATED_SCENARIO,rules_v1
+WP_SME_0128,Gampaha,Western,Professional Services,Existing,13,FAM_0128,SIMULATED_SCENARIO,rules_v1
+WP_SME_0129,Kalutara,Western,Professional Services,Existing,5,FAM_0129,SIMULATED_SCENARIO,rules_v1
+WP_SME_0130,Colombo,Western,Wholesale,Existing,14,FAM_0130,SIMULATED_SCENARIO,rules_v1
+WP_SME_0131,Gampaha,Western,Transport and Logistics,Growing,17,FAM_0131,SIMULATED_SCENARIO,rules_v1
+WP_SME_0132,Kalutara,Western,Transport and Logistics,Existing,11,FAM_0132,SIMULATED_SCENARIO,rules_v1
+WP_SME_0133,Colombo,Western,Retail,Existing,25,FAM_0133,SIMULATED_SCENARIO,rules_v1
+WP_SME_0134,Gampaha,Western,Retail,Existing,6,FAM_0134,SIMULATED_SCENARIO,rules_v1
+WP_SME_0135,Kalutara,Western,Food and Beverage,Existing,7,FAM_0135,SIMULATED_SCENARIO,rules_v1
+WP_SME_0136,Colombo,Western,Wholesale,Existing,2,FAM_0136,SIMULATED_SCENARIO,rules_v1
+WP_SME_0137,Gampaha,Western,Wholesale,Existing,17,FAM_0137,SIMULATED_SCENARIO,rules_v1
+WP_SME_0138,Kalutara,Western,Retail,Existing,4,FAM_0138,SIMULATED_SCENARIO,rules_v1
+WP_SME_0139,Colombo,Western,Food and Beverage,Existing,10,FAM_0139,SIMULATED_SCENARIO,rules_v1
+WP_SME_0140,Gampaha,Western,Transport and Logistics,Existing,11,FAM_0140,SIMULATED_SCENARIO,rules_v1
+WP_SME_0141,Kalutara,Western,Manufacturing,Growing,17,FAM_0141,SIMULATED_SCENARIO,rules_v1
+WP_SME_0142,Colombo,Western,Transport and Logistics,Existing,21,FAM_0142,SIMULATED_SCENARIO,rules_v1
+WP_SME_0143,Gampaha,Western,Retail,Existing,6,FAM_0143,SIMULATED_SCENARIO,rules_v1
+WP_SME_0144,Kalutara,Western,Professional Services,Existing,8,FAM_0144,SIMULATED_SCENARIO,rules_v1
+WP_SME_0145,Colombo,Western,Transport and Logistics,Existing,18,FAM_0145,SIMULATED_SCENARIO,rules_v1
+WP_SME_0146,Gampaha,Western,Professional Services,Growing,18,FAM_0146,SIMULATED_SCENARIO,rules_v1
+WP_SME_0147,Kalutara,Western,Manufacturing,Existing,22,FAM_0147,SIMULATED_SCENARIO,rules_v1
+WP_SME_0148,Colombo,Western,Professional Services,Existing,9,FAM_0148,SIMULATED_SCENARIO,rules_v1
+WP_SME_0149,Gampaha,Western,Transport and Logistics,Growing,19,FAM_0149,SIMULATED_SCENARIO,rules_v1
+WP_SME_0150,Kalutara,Western,Manufacturing,Existing,15,FAM_0150,SIMULATED_SCENARIO,rules_v1
+WP_SME_0151,Colombo,Western,Professional Services,Existing,11,FAM_0151,SIMULATED_SCENARIO,rules_v1
+WP_SME_0152,Gampaha,Western,Wholesale,Existing,25,FAM_0152,SIMULATED_SCENARIO,rules_v1
+WP_SME_0153,Kalutara,Western,Manufacturing,Existing,14,FAM_0153,SIMULATED_SCENARIO,rules_v1
+WP_SME_0154,Colombo,Western,Retail,Existing,19,FAM_0154,SIMULATED_SCENARIO,rules_v1
+WP_SME_0155,Gampaha,Western,Retail,Existing,20,FAM_0155,SIMULATED_SCENARIO,rules_v1
+WP_SME_0156,Kalutara,Western,Wholesale,Existing,24,FAM_0156,SIMULATED_SCENARIO,rules_v1
+WP_SME_0157,Colombo,Western,Retail,Existing,18,FAM_0157,SIMULATED_SCENARIO,rules_v1
+WP_SME_0158,Gampaha,Western,Retail,Existing,24,FAM_0158,SIMULATED_SCENARIO,rules_v1
+WP_SME_0159,Kalutara,Western,Wholesale,Existing,14,FAM_0159,SIMULATED_SCENARIO,rules_v1
+WP_SME_0160,Colombo,Western,Professional Services,Growing,8,FAM_0160,SIMULATED_SCENARIO,rules_v1
+WP_SME_0161,Gampaha,Western,Retail,Existing,10,FAM_0161,SIMULATED_SCENARIO,rules_v1
+WP_SME_0162,Kalutara,Western,Transport and Logistics,Existing,11,FAM_0162,SIMULATED_SCENARIO,rules_v1
+WP_SME_0163,Colombo,Western,Manufacturing,Existing,6,FAM_0163,SIMULATED_SCENARIO,rules_v1
+WP_SME_0164,Gampaha,Western,Manufacturing,Existing,12,FAM_0164,SIMULATED_SCENARIO,rules_v1
+WP_SME_0165,Kalutara,Western,Transport and Logistics,Existing,12,FAM_0165,SIMULATED_SCENARIO,rules_v1
+WP_SME_0166,Colombo,Western,Professional Services,Existing,14,FAM_0166,SIMULATED_SCENARIO,rules_v1
+WP_SME_0167,Gampaha,Western,Manufacturing,Growing,11,FAM_0167,SIMULATED_SCENARIO,rules_v1
+WP_SME_0168,Kalutara,Western,Wholesale,Existing,23,FAM_0168,SIMULATED_SCENARIO,rules_v1
+WP_SME_0169,Colombo,Western,Manufacturing,Existing,7,FAM_0169,SIMULATED_SCENARIO,rules_v1
+WP_SME_0170,Gampaha,Western,Retail,Existing,7,FAM_0170,SIMULATED_SCENARIO,rules_v1
+WP_SME_0171,Kalutara,Western,Transport and Logistics,Existing,12,FAM_0171,SIMULATED_SCENARIO,rules_v1
+WP_SME_0172,Colombo,Western,Retail,Existing,14,FAM_0172,SIMULATED_SCENARIO,rules_v1
+WP_SME_0173,Gampaha,Western,Wholesale,Growing,14,FAM_0173,SIMULATED_SCENARIO,rules_v1
+WP_SME_0174,Kalutara,Western,Manufacturing,Existing,4,FAM_0174,SIMULATED_SCENARIO,rules_v1
+WP_SME_0175,Colombo,Western,Wholesale,Existing,25,FAM_0175,SIMULATED_SCENARIO,rules_v1
+WP_SME_0176,Gampaha,Western,Retail,Existing,24,FAM_0176,SIMULATED_SCENARIO,rules_v1
+WP_SME_0177,Kalutara,Western,Wholesale,Existing,18,FAM_0177,SIMULATED_SCENARIO,rules_v1
+WP_SME_0178,Colombo,Western,Wholesale,Existing,24,FAM_0178,SIMULATED_SCENARIO,rules_v1
+WP_SME_0179,Gampaha,Western,Wholesale,Growing,6,FAM_0179,SIMULATED_SCENARIO,rules_v1
+WP_SME_0180,Kalutara,Western,Manufacturing,Existing,22,FAM_0180,SIMULATED_SCENARIO,rules_v1
+WP_SME_0181,Colombo,Western,Manufacturing,Growing,7,FAM_0181,SIMULATED_SCENARIO,rules_v1
+WP_SME_0182,Gampaha,Western,Retail,Growing,7,FAM_0182,SIMULATED_SCENARIO,rules_v1
+WP_SME_0183,Kalutara,Western,Retail,Existing,21,FAM_0183,SIMULATED_SCENARIO,rules_v1
+WP_SME_0184,Colombo,Western,Manufacturing,Existing,20,FAM_0184,SIMULATED_SCENARIO,rules_v1
+WP_SME_0185,Gampaha,Western,Wholesale,Existing,25,FAM_0185,SIMULATED_SCENARIO,rules_v1
+WP_SME_0186,Kalutara,Western,Food and Beverage,Existing,21,FAM_0186,SIMULATED_SCENARIO,rules_v1
+WP_SME_0187,Colombo,Western,Wholesale,Existing,10,FAM_0187,SIMULATED_SCENARIO,rules_v1
+WP_SME_0188,Gampaha,Western,Food and Beverage,Growing,13,FAM_0188,SIMULATED_SCENARIO,rules_v1
+WP_SME_0189,Kalutara,Western,Professional Services,Existing,16,FAM_0189,SIMULATED_SCENARIO,rules_v1
+WP_SME_0190,Colombo,Western,Manufacturing,Existing,21,FAM_0190,SIMULATED_SCENARIO,rules_v1
+WP_SME_0191,Gampaha,Western,Professional Services,Existing,23,FAM_0191,SIMULATED_SCENARIO,rules_v1
+WP_SME_0192,Kalutara,Western,Manufacturing,Existing,8,FAM_0192,SIMULATED_SCENARIO,rules_v1
+WP_SME_0193,Colombo,Western,Transport and Logistics,Growing,11,FAM_0193,SIMULATED_SCENARIO,rules_v1
+WP_SME_0194,Gampaha,Western,Transport and Logistics,Growing,19,FAM_0194,SIMULATED_SCENARIO,rules_v1
+WP_SME_0195,Kalutara,Western,Personal Services,Existing,15,FAM_0195,SIMULATED_SCENARIO,rules_v1
+WP_SME_0196,Colombo,Western,Transport and Logistics,Existing,3,FAM_0196,SIMULATED_SCENARIO,rules_v1
+WP_SME_0197,Gampaha,Western,Food and Beverage,Existing,13,FAM_0197,SIMULATED_SCENARIO,rules_v1
+WP_SME_0198,Kalutara,Western,Manufacturing,Existing,8,FAM_0198,SIMULATED_SCENARIO,rules_v1
+WP_SME_0199,Colombo,Western,Food and Beverage,Existing,8,FAM_0199,SIMULATED_SCENARIO,rules_v1
+WP_SME_0200,Gampaha,Western,Food and Beverage,Existing,18,FAM_0200,SIMULATED_SCENARIO,rules_v1
+WP_SME_0201,Kalutara,Western,Food and Beverage,Existing,6,FAM_0201,SIMULATED_SCENARIO,rules_v1
+WP_SME_0202,Colombo,Western,Retail,Existing,16,FAM_0202,SIMULATED_SCENARIO,rules_v1
+WP_SME_0203,Gampaha,Western,Transport and Logistics,Existing,19,FAM_0203,SIMULATED_SCENARIO,rules_v1
+WP_SME_0204,Kalutara,Western,Manufacturing,Existing,18,FAM_0204,SIMULATED_SCENARIO,rules_v1
+WP_SME_0205,Colombo,Western,Manufacturing,Existing,8,FAM_0205,SIMULATED_SCENARIO,rules_v1
+WP_SME_0206,Gampaha,Western,Transport and Logistics,Existing,21,FAM_0206,SIMULATED_SCENARIO,rules_v1
+WP_SME_0207,Kalutara,Western,Food and Beverage,Existing,21,FAM_0207,SIMULATED_SCENARIO,rules_v1
+WP_SME_0208,Colombo,Western,Professional Services,Growing,13,FAM_0208,SIMULATED_SCENARIO,rules_v1
+WP_SME_0209,Gampaha,Western,Professional Services,Growing,20,FAM_0209,SIMULATED_SCENARIO,rules_v1
+WP_SME_0210,Kalutara,Western,Wholesale,Growing,16,FAM_0210,SIMULATED_SCENARIO,rules_v1
+WP_SME_0211,Colombo,Western,Transport and Logistics,Existing,24,FAM_0211,SIMULATED_SCENARIO,rules_v1
+WP_SME_0212,Gampaha,Western,Professional Services,Existing,17,FAM_0212,SIMULATED_SCENARIO,rules_v1
+WP_SME_0213,Kalutara,Western,Personal Services,Existing,18,FAM_0213,SIMULATED_SCENARIO,rules_v1
+WP_SME_0214,Colombo,Western,Professional Services,Existing,13,FAM_0214,SIMULATED_SCENARIO,rules_v1
+WP_SME_0215,Gampaha,Western,Professional Services,Existing,5,FAM_0215,SIMULATED_SCENARIO,rules_v1
+WP_SME_0216,Kalutara,Western,Retail,Existing,25,FAM_0216,SIMULATED_SCENARIO,rules_v1
+WP_SME_0217,Colombo,Western,Retail,Existing,6,FAM_0217,SIMULATED_SCENARIO,rules_v1
+WP_SME_0218,Gampaha,Western,Retail,Growing,16,FAM_0218,SIMULATED_SCENARIO,rules_v1
+WP_SME_0219,Kalutara,Western,Food and Beverage,Growing,21,FAM_0219,SIMULATED_SCENARIO,rules_v1
+WP_SME_0220,Colombo,Western,Manufacturing,Growing,2,FAM_0220,SIMULATED_SCENARIO,rules_v1
+WP_SME_0221,Gampaha,Western,Retail,Existing,4,FAM_0221,SIMULATED_SCENARIO,rules_v1
+WP_SME_0222,Kalutara,Western,Retail,Existing,5,FAM_0222,SIMULATED_SCENARIO,rules_v1
+WP_SME_0223,Colombo,Western,Manufacturing,Existing,2,FAM_0223,SIMULATED_SCENARIO,rules_v1
+WP_SME_0224,Gampaha,Western,Retail,Existing,22,FAM_0224,SIMULATED_SCENARIO,rules_v1
+WP_SME_0225,Kalutara,Western,Manufacturing,Growing,17,FAM_0225,SIMULATED_SCENARIO,rules_v1
+WP_SME_0226,Colombo,Western,Food and Beverage,Existing,6,FAM_0226,SIMULATED_SCENARIO,rules_v1
+WP_SME_0227,Gampaha,Western,Retail,Growing,21,FAM_0227,SIMULATED_SCENARIO,rules_v1
+WP_SME_0228,Kalutara,Western,Transport and Logistics,Existing,6,FAM_0228,SIMULATED_SCENARIO,rules_v1
+WP_SME_0229,Colombo,Western,Professional Services,Growing,10,FAM_0229,SIMULATED_SCENARIO,rules_v1
+WP_SME_0230,Gampaha,Western,Wholesale,Growing,22,FAM_0230,SIMULATED_SCENARIO,rules_v1
+WP_SME_0231,Kalutara,Western,Food and Beverage,Existing,8,FAM_0231,SIMULATED_SCENARIO,rules_v1
+WP_SME_0232,Colombo,Western,Transport and Logistics,Growing,7,FAM_0232,SIMULATED_SCENARIO,rules_v1
+WP_SME_0233,Gampaha,Western,Manufacturing,Existing,8,FAM_0233,SIMULATED_SCENARIO,rules_v1
+WP_SME_0234,Kalutara,Western,Professional Services,Growing,23,FAM_0234,SIMULATED_SCENARIO,rules_v1
+WP_SME_0235,Colombo,Western,Manufacturing,Existing,2,FAM_0235,SIMULATED_SCENARIO,rules_v1
+WP_SME_0236,Gampaha,Western,Retail,Existing,8,FAM_0236,SIMULATED_SCENARIO,rules_v1
+WP_SME_0237,Kalutara,Western,Retail,Growing,21,FAM_0237,SIMULATED_SCENARIO,rules_v1
+WP_SME_0238,Colombo,Western,Wholesale,Existing,10,FAM_0238,SIMULATED_SCENARIO,rules_v1
+WP_SME_0239,Gampaha,Western,Wholesale,Existing,2,FAM_0239,SIMULATED_SCENARIO,rules_v1
+WP_SME_0240,Kalutara,Western,Professional Services,Existing,6,FAM_0240,SIMULATED_SCENARIO,rules_v1
+WP_SME_0241,Colombo,Western,Food and Beverage,Existing,24,FAM_0241,SIMULATED_SCENARIO,rules_v1
+WP_SME_0242,Gampaha,Western,Manufacturing,Existing,8,FAM_0242,SIMULATED_SCENARIO,rules_v1
+WP_SME_0243,Kalutara,Western,Professional Services,Growing,25,FAM_0243,SIMULATED_SCENARIO,rules_v1
+WP_SME_0244,Colombo,Western,Food and Beverage,Growing,21,FAM_0244,SIMULATED_SCENARIO,rules_v1
+WP_SME_0245,Gampaha,Western,Food and Beverage,Existing,8,FAM_0245,SIMULATED_SCENARIO,rules_v1
+WP_SME_0246,Kalutara,Western,Retail,Growing,16,FAM_0246,SIMULATED_SCENARIO,rules_v1
+WP_SME_0247,Colombo,Western,Wholesale,Existing,12,FAM_0247,SIMULATED_SCENARIO,rules_v1
+WP_SME_0248,Gampaha,Western,Manufacturing,Existing,23,FAM_0248,SIMULATED_SCENARIO,rules_v1
+WP_SME_0249,Kalutara,Western,Wholesale,Existing,14,FAM_0249,SIMULATED_SCENARIO,rules_v1
+WP_SME_0250,Colombo,Western,Wholesale,Growing,12,FAM_0250,SIMULATED_SCENARIO,rules_v1
+WP_SME_0251,Gampaha,Western,Manufacturing,Existing,17,FAM_0251,SIMULATED_SCENARIO,rules_v1
+WP_SME_0252,Kalutara,Western,Retail,Growing,4,FAM_0252,SIMULATED_SCENARIO,rules_v1
+WP_SME_0253,Colombo,Western,Wholesale,Existing,21,FAM_0253,SIMULATED_SCENARIO,rules_v1
+WP_SME_0254,Gampaha,Western,Manufacturing,Growing,16,FAM_0254,SIMULATED_SCENARIO,rules_v1
+WP_SME_0255,Kalutara,Western,Personal Services,Growing,6,FAM_0255,SIMULATED_SCENARIO,rules_v1
+WP_SME_0256,Colombo,Western,Manufacturing,Growing,5,FAM_0256,SIMULATED_SCENARIO,rules_v1
+WP_SME_0257,Gampaha,Western,Professional Services,Existing,21,FAM_0257,SIMULATED_SCENARIO,rules_v1
+WP_SME_0258,Kalutara,Western,Manufacturing,Existing,14,FAM_0258,SIMULATED_SCENARIO,rules_v1
+WP_SME_0259,Colombo,Western,Manufacturing,Existing,19,FAM_0259,SIMULATED_SCENARIO,rules_v1
+WP_SME_0260,Gampaha,Western,Retail,Existing,7,FAM_0260,SIMULATED_SCENARIO,rules_v1
+WP_SME_0261,Kalutara,Western,Manufacturing,Existing,5,FAM_0261,SIMULATED_SCENARIO,rules_v1
+WP_SME_0262,Colombo,Western,Retail,Existing,16,FAM_0262,SIMULATED_SCENARIO,rules_v1
+WP_SME_0263,Gampaha,Western,Professional Services,Existing,20,FAM_0263,SIMULATED_SCENARIO,rules_v1
+WP_SME_0264,Kalutara,Western,Wholesale,Existing,25,FAM_0264,SIMULATED_SCENARIO,rules_v1
+WP_SME_0265,Colombo,Western,Personal Services,Existing,6,FAM_0265,SIMULATED_SCENARIO,rules_v1
+WP_SME_0266,Gampaha,Western,Manufacturing,Existing,11,FAM_0266,SIMULATED_SCENARIO,rules_v1
+WP_SME_0267,Kalutara,Western,Wholesale,Existing,17,FAM_0267,SIMULATED_SCENARIO,rules_v1
+WP_SME_0268,Colombo,Western,Manufacturing,Existing,7,FAM_0268,SIMULATED_SCENARIO,rules_v1
+WP_SME_0269,Gampaha,Western,Food and Beverage,Existing,12,FAM_0269,SIMULATED_SCENARIO,rules_v1
+WP_SME_0270,Kalutara,Western,Retail,Existing,20,FAM_0270,SIMULATED_SCENARIO,rules_v1
+WP_SME_0271,Colombo,Western,Retail,Existing,5,FAM_0271,SIMULATED_SCENARIO,rules_v1
+WP_SME_0272,Gampaha,Western,Retail,Existing,21,FAM_0272,SIMULATED_SCENARIO,rules_v1
+WP_SME_0273,Kalutara,Western,Retail,Existing,8,FAM_0273,SIMULATED_SCENARIO,rules_v1
+WP_SME_0274,Colombo,Western,Personal Services,Growing,4,FAM_0274,SIMULATED_SCENARIO,rules_v1
+WP_SME_0275,Gampaha,Western,Personal Services,Existing,23,FAM_0275,SIMULATED_SCENARIO,rules_v1
+WP_SME_0276,Kalutara,Western,Retail,Growing,8,FAM_0276,SIMULATED_SCENARIO,rules_v1
+WP_SME_0277,Colombo,Western,Manufacturing,Existing,10,FAM_0277,SIMULATED_SCENARIO,rules_v1
+WP_SME_0278,Gampaha,Western,Manufacturing,Existing,22,FAM_0278,SIMULATED_SCENARIO,rules_v1
+WP_SME_0279,Kalutara,Western,Manufacturing,Growing,20,FAM_0279,SIMULATED_SCENARIO,rules_v1
+WP_SME_0280,Colombo,Western,Retail,Existing,12,FAM_0280,SIMULATED_SCENARIO,rules_v1
+WP_SME_0281,Gampaha,Western,Professional Services,Existing,16,FAM_0281,SIMULATED_SCENARIO,rules_v1
+WP_SME_0282,Kalutara,Western,Food and Beverage,Existing,4,FAM_0282,SIMULATED_SCENARIO,rules_v1
+WP_SME_0283,Colombo,Western,Food and Beverage,Existing,20,FAM_0283,SIMULATED_SCENARIO,rules_v1
+WP_SME_0284,Gampaha,Western,Manufacturing,Existing,25,FAM_0284,SIMULATED_SCENARIO,rules_v1
+WP_SME_0285,Kalutara,Western,Manufacturing,Existing,25,FAM_0285,SIMULATED_SCENARIO,rules_v1
+WP_SME_0286,Colombo,Western,Transport and Logistics,Growing,23,FAM_0286,SIMULATED_SCENARIO,rules_v1
+WP_SME_0287,Gampaha,Western,Personal Services,Existing,10,FAM_0287,SIMULATED_SCENARIO,rules_v1
+WP_SME_0288,Kalutara,Western,Food and Beverage,Growing,10,FAM_0288,SIMULATED_SCENARIO,rules_v1
+WP_SME_0289,Colombo,Western,Food and Beverage,Existing,8,FAM_0289,SIMULATED_SCENARIO,rules_v1
+WP_SME_0290,Gampaha,Western,Wholesale,Existing,13,FAM_0290,SIMULATED_SCENARIO,rules_v1
+WP_SME_0291,Kalutara,Western,Personal Services,Existing,23,FAM_0291,SIMULATED_SCENARIO,rules_v1
+WP_SME_0292,Colombo,Western,Professional Services,Existing,7,FAM_0292,SIMULATED_SCENARIO,rules_v1
+WP_SME_0293,Gampaha,Western,Manufacturing,Existing,19,FAM_0293,SIMULATED_SCENARIO,rules_v1
+WP_SME_0294,Kalutara,Western,Manufacturing,Existing,6,FAM_0294,SIMULATED_SCENARIO,rules_v1
+WP_SME_0295,Colombo,Western,Personal Services,Existing,23,FAM_0295,SIMULATED_SCENARIO,rules_v1
+WP_SME_0296,Gampaha,Western,Retail,Growing,18,FAM_0296,SIMULATED_SCENARIO,rules_v1
+WP_SME_0297,Kalutara,Western,Wholesale,Growing,20,FAM_0297,SIMULATED_SCENARIO,rules_v1
+WP_SME_0298,Colombo,Western,Transport and Logistics,Existing,8,FAM_0298,SIMULATED_SCENARIO,rules_v1
+WP_SME_0299,Gampaha,Western,Personal Services,Growing,22,FAM_0299,SIMULATED_SCENARIO,rules_v1
+WP_SME_0300,Kalutara,Western,Wholesale,Growing,22,FAM_0300,SIMULATED_SCENARIO,rules_v1
+WP_SME_0301,Colombo,Western,Manufacturing,Growing,7,FAM_0301,SIMULATED_SCENARIO,rules_v1
+WP_SME_0302,Gampaha,Western,Manufacturing,Growing,20,FAM_0302,SIMULATED_SCENARIO,rules_v1
+WP_SME_0303,Kalutara,Western,Transport and Logistics,Existing,3,FAM_0303,SIMULATED_SCENARIO,rules_v1
+WP_SME_0304,Colombo,Western,Professional Services,Existing,20,FAM_0304,SIMULATED_SCENARIO,rules_v1
+WP_SME_0305,Gampaha,Western,Professional Services,Existing,25,FAM_0305,SIMULATED_SCENARIO,rules_v1
+WP_SME_0306,Kalutara,Western,Professional Services,Growing,10,FAM_0306,SIMULATED_SCENARIO,rules_v1
+WP_SME_0307,Colombo,Western,Transport and Logistics,Existing,13,FAM_0307,SIMULATED_SCENARIO,rules_v1
+WP_SME_0308,Gampaha,Western,Manufacturing,Existing,22,FAM_0308,SIMULATED_SCENARIO,rules_v1
+WP_SME_0309,Kalutara,Western,Retail,Existing,5,FAM_0309,SIMULATED_SCENARIO,rules_v1
+WP_SME_0310,Colombo,Western,Professional Services,Growing,5,FAM_0310,SIMULATED_SCENARIO,rules_v1
+WP_SME_0311,Gampaha,Western,Retail,Growing,14,FAM_0311,SIMULATED_SCENARIO,rules_v1
+WP_SME_0312,Kalutara,Western,Manufacturing,Existing,4,FAM_0312,SIMULATED_SCENARIO,rules_v1
+WP_SME_0313,Colombo,Western,Transport and Logistics,Existing,12,FAM_0313,SIMULATED_SCENARIO,rules_v1
+WP_SME_0314,Gampaha,Western,Wholesale,Existing,24,FAM_0314,SIMULATED_SCENARIO,rules_v1
+WP_SME_0315,Kalutara,Western,Professional Services,Existing,14,FAM_0315,SIMULATED_SCENARIO,rules_v1
+WP_SME_0316,Colombo,Western,Wholesale,Existing,20,FAM_0316,SIMULATED_SCENARIO,rules_v1
+WP_SME_0317,Gampaha,Western,Transport and Logistics,Existing,11,FAM_0317,SIMULATED_SCENARIO,rules_v1
+WP_SME_0318,Kalutara,Western,Manufacturing,Growing,24,FAM_0318,SIMULATED_SCENARIO,rules_v1
+WP_SME_0319,Colombo,Western,Manufacturing,Growing,6,FAM_0319,SIMULATED_SCENARIO,rules_v1
+WP_SME_0320,Gampaha,Western,Manufacturing,Existing,12,FAM_0320,SIMULATED_SCENARIO,rules_v1
+WP_SME_0321,Kalutara,Western,Professional Services,Existing,2,FAM_0321,SIMULATED_SCENARIO,rules_v1
+WP_SME_0322,Colombo,Western,Wholesale,Existing,23,FAM_0322,SIMULATED_SCENARIO,rules_v1
+WP_SME_0323,Gampaha,Western,Professional Services,Existing,19,FAM_0323,SIMULATED_SCENARIO,rules_v1
+WP_SME_0324,Kalutara,Western,Personal Services,Existing,22,FAM_0324,SIMULATED_SCENARIO,rules_v1
+WP_SME_0325,Colombo,Western,Wholesale,Existing,18,FAM_0325,SIMULATED_SCENARIO,rules_v1
+WP_SME_0326,Gampaha,Western,Food and Beverage,Existing,19,FAM_0326,SIMULATED_SCENARIO,rules_v1
+WP_SME_0327,Kalutara,Western,Food and Beverage,Existing,14,FAM_0327,SIMULATED_SCENARIO,rules_v1
+WP_SME_0328,Colombo,Western,Manufacturing,Existing,12,FAM_0328,SIMULATED_SCENARIO,rules_v1
+WP_SME_0329,Gampaha,Western,Wholesale,Growing,16,FAM_0329,SIMULATED_SCENARIO,rules_v1
+WP_SME_0330,Kalutara,Western,Wholesale,Existing,4,FAM_0330,SIMULATED_SCENARIO,rules_v1
+WP_SME_0331,Colombo,Western,Wholesale,Existing,24,FAM_0331,SIMULATED_SCENARIO,rules_v1
+WP_SME_0332,Gampaha,Western,Retail,Existing,3,FAM_0332,SIMULATED_SCENARIO,rules_v1
+WP_SME_0333,Kalutara,Western,Food and Beverage,Growing,23,FAM_0333,SIMULATED_SCENARIO,rules_v1
+WP_SME_0334,Colombo,Western,Manufacturing,Existing,20,FAM_0334,SIMULATED_SCENARIO,rules_v1
+WP_SME_0335,Gampaha,Western,Manufacturing,Growing,22,FAM_0335,SIMULATED_SCENARIO,rules_v1
+WP_SME_0336,Kalutara,Western,Retail,Existing,14,FAM_0336,SIMULATED_SCENARIO,rules_v1
+WP_SME_0337,Colombo,Western,Professional Services,Existing,9,FAM_0337,SIMULATED_SCENARIO,rules_v1
+WP_SME_0338,Gampaha,Western,Professional Services,Existing,12,FAM_0338,SIMULATED_SCENARIO,rules_v1
+WP_SME_0339,Kalutara,Western,Personal Services,Existing,19,FAM_0339,SIMULATED_SCENARIO,rules_v1
+WP_SME_0340,Colombo,Western,Retail,Existing,6,FAM_0340,SIMULATED_SCENARIO,rules_v1
+WP_SME_0341,Gampaha,Western,Professional Services,Existing,12,FAM_0341,SIMULATED_SCENARIO,rules_v1
+WP_SME_0342,Kalutara,Western,Wholesale,Existing,23,FAM_0342,SIMULATED_SCENARIO,rules_v1
+WP_SME_0343,Colombo,Western,Wholesale,Existing,21,FAM_0343,SIMULATED_SCENARIO,rules_v1
+WP_SME_0344,Gampaha,Western,Manufacturing,Growing,11,FAM_0344,SIMULATED_SCENARIO,rules_v1
+WP_SME_0345,Kalutara,Western,Professional Services,Growing,24,FAM_0345,SIMULATED_SCENARIO,rules_v1
+WP_SME_0346,Colombo,Western,Retail,Existing,7,FAM_0346,SIMULATED_SCENARIO,rules_v1
+WP_SME_0347,Gampaha,Western,Manufacturing,Existing,13,FAM_0347,SIMULATED_SCENARIO,rules_v1
+WP_SME_0348,Kalutara,Western,Professional Services,Growing,12,FAM_0348,SIMULATED_SCENARIO,rules_v1
+WP_SME_0349,Colombo,Western,Professional Services,Growing,23,FAM_0349,SIMULATED_SCENARIO,rules_v1
+WP_SME_0350,Gampaha,Western,Wholesale,Existing,18,FAM_0350,SIMULATED_SCENARIO,rules_v1
+WP_SME_0351,Kalutara,Western,Food and Beverage,Growing,21,FAM_0351,SIMULATED_SCENARIO,rules_v1
+WP_SME_0352,Colombo,Western,Wholesale,Existing,12,FAM_0352,SIMULATED_SCENARIO,rules_v1
+WP_SME_0353,Gampaha,Western,Personal Services,Existing,8,FAM_0353,SIMULATED_SCENARIO,rules_v1
+WP_SME_0354,Kalutara,Western,Transport and Logistics,Growing,5,FAM_0354,SIMULATED_SCENARIO,rules_v1
+WP_SME_0355,Colombo,Western,Wholesale,Existing,8,FAM_0355,SIMULATED_SCENARIO,rules_v1
+WP_SME_0356,Gampaha,Western,Professional Services,Existing,11,FAM_0356,SIMULATED_SCENARIO,rules_v1
+WP_SME_0357,Kalutara,Western,Retail,Growing,18,FAM_0357,SIMULATED_SCENARIO,rules_v1
+WP_SME_0358,Colombo,Western,Wholesale,Existing,2,FAM_0358,SIMULATED_SCENARIO,rules_v1
+WP_SME_0359,Gampaha,Western,Retail,Existing,10,FAM_0359,SIMULATED_SCENARIO,rules_v1
+WP_SME_0360,Kalutara,Western,Retail,Growing,6,FAM_0360,SIMULATED_SCENARIO,rules_v1
+WP_SME_0361,Colombo,Western,Professional Services,Existing,20,FAM_0361,SIMULATED_SCENARIO,rules_v1
+WP_SME_0362,Gampaha,Western,Food and Beverage,Growing,6,FAM_0362,SIMULATED_SCENARIO,rules_v1
+WP_SME_0363,Kalutara,Western,Professional Services,Growing,20,FAM_0363,SIMULATED_SCENARIO,rules_v1
+WP_SME_0364,Colombo,Western,Retail,Existing,6,FAM_0364,SIMULATED_SCENARIO,rules_v1
+WP_SME_0365,Gampaha,Western,Retail,Existing,22,FAM_0365,SIMULATED_SCENARIO,rules_v1
+WP_SME_0366,Kalutara,Western,Manufacturing,Growing,25,FAM_0366,SIMULATED_SCENARIO,rules_v1
+WP_SME_0367,Colombo,Western,Wholesale,Existing,8,FAM_0367,SIMULATED_SCENARIO,rules_v1
+WP_SME_0368,Gampaha,Western,Personal Services,Existing,2,FAM_0368,SIMULATED_SCENARIO,rules_v1
+WP_SME_0369,Kalutara,Western,Retail,Existing,20,FAM_0369,SIMULATED_SCENARIO,rules_v1
+WP_SME_0370,Colombo,Western,Retail,Existing,22,FAM_0370,SIMULATED_SCENARIO,rules_v1
+WP_SME_0371,Gampaha,Western,Food and Beverage,Existing,4,FAM_0371,SIMULATED_SCENARIO,rules_v1
+WP_SME_0372,Kalutara,Western,Wholesale,Existing,17,FAM_0372,SIMULATED_SCENARIO,rules_v1
+WP_SME_0373,Colombo,Western,Professional Services,Existing,7,FAM_0373,SIMULATED_SCENARIO,rules_v1
+WP_SME_0374,Gampaha,Western,Transport and Logistics,Existing,14,FAM_0374,SIMULATED_SCENARIO,rules_v1
+WP_SME_0375,Kalutara,Western,Retail,Growing,13,FAM_0375,SIMULATED_SCENARIO,rules_v1
+WP_SME_0376,Colombo,Western,Transport and Logistics,Existing,16,FAM_0376,SIMULATED_SCENARIO,rules_v1
+WP_SME_0377,Gampaha,Western,Retail,Existing,9,FAM_0377,SIMULATED_SCENARIO,rules_v1
+WP_SME_0378,Kalutara,Western,Retail,Existing,21,FAM_0378,SIMULATED_SCENARIO,rules_v1
+WP_SME_0379,Colombo,Western,Professional Services,Existing,23,FAM_0379,SIMULATED_SCENARIO,rules_v1
+WP_SME_0380,Gampaha,Western,Wholesale,Growing,4,FAM_0380,SIMULATED_SCENARIO,rules_v1
+WP_SME_0381,Kalutara,Western,Transport and Logistics,Existing,3,FAM_0381,SIMULATED_SCENARIO,rules_v1
+WP_SME_0382,Colombo,Western,Manufacturing,Existing,25,FAM_0382,SIMULATED_SCENARIO,rules_v1
+WP_SME_0383,Gampaha,Western,Personal Services,Existing,10,FAM_0383,SIMULATED_SCENARIO,rules_v1
+WP_SME_0384,Kalutara,Western,Professional Services,Growing,19,FAM_0384,SIMULATED_SCENARIO,rules_v1
+WP_SME_0385,Colombo,Western,Transport and Logistics,Existing,7,FAM_0385,SIMULATED_SCENARIO,rules_v1
+WP_SME_0386,Gampaha,Western,Food and Beverage,Existing,17,FAM_0386,SIMULATED_SCENARIO,rules_v1
+WP_SME_0387,Kalutara,Western,Professional Services,Existing,8,FAM_0387,SIMULATED_SCENARIO,rules_v1
+WP_SME_0388,Colombo,Western,Retail,Existing,4,FAM_0388,SIMULATED_SCENARIO,rules_v1
+WP_SME_0389,Gampaha,Western,Professional Services,Growing,8,FAM_0389,SIMULATED_SCENARIO,rules_v1
+WP_SME_0390,Kalutara,Western,Professional Services,Existing,13,FAM_0390,SIMULATED_SCENARIO,rules_v1
+WP_SME_0391,Colombo,Western,Personal Services,Existing,21,FAM_0391,SIMULATED_SCENARIO,rules_v1
+WP_SME_0392,Gampaha,Western,Food and Beverage,Existing,14,FAM_0392,SIMULATED_SCENARIO,rules_v1
+WP_SME_0393,Kalutara,Western,Wholesale,Existing,19,FAM_0393,SIMULATED_SCENARIO,rules_v1
+WP_SME_0394,Colombo,Western,Manufacturing,Existing,22,FAM_0394,SIMULATED_SCENARIO,rules_v1
+WP_SME_0395,Gampaha,Western,Wholesale,Existing,25,FAM_0395,SIMULATED_SCENARIO,rules_v1
+WP_SME_0396,Kalutara,Western,Professional Services,Existing,24,FAM_0396,SIMULATED_SCENARIO,rules_v1
+WP_SME_0397,Colombo,Western,Professional Services,Growing,14,FAM_0397,SIMULATED_SCENARIO,rules_v1
+WP_SME_0398,Gampaha,Western,Manufacturing,Existing,14,FAM_0398,SIMULATED_SCENARIO,rules_v1
+WP_SME_0399,Kalutara,Western,Professional Services,Existing,20,FAM_0399,SIMULATED_SCENARIO,rules_v1
+WP_SME_0400,Colombo,Western,Retail,Growing,7,FAM_0400,SIMULATED_SCENARIO,rules_v1
+WP_SME_0401,Gampaha,Western,Wholesale,Existing,14,FAM_0401,SIMULATED_SCENARIO,rules_v1
+WP_SME_0402,Kalutara,Western,Retail,Growing,3,FAM_0402,SIMULATED_SCENARIO,rules_v1
+WP_SME_0403,Colombo,Western,Professional Services,Growing,16,FAM_0403,SIMULATED_SCENARIO,rules_v1
+WP_SME_0404,Gampaha,Western,Professional Services,Growing,22,FAM_0404,SIMULATED_SCENARIO,rules_v1
+WP_SME_0405,Kalutara,Western,Retail,Existing,8,FAM_0405,SIMULATED_SCENARIO,rules_v1
+WP_SME_0406,Colombo,Western,Professional Services,Existing,3,FAM_0406,SIMULATED_SCENARIO,rules_v1
+WP_SME_0407,Gampaha,Western,Retail,Existing,18,FAM_0407,SIMULATED_SCENARIO,rules_v1
+WP_SME_0408,Kalutara,Western,Personal Services,Growing,24,FAM_0408,SIMULATED_SCENARIO,rules_v1
+WP_SME_0409,Colombo,Western,Professional Services,Existing,3,FAM_0409,SIMULATED_SCENARIO,rules_v1
+WP_SME_0410,Gampaha,Western,Wholesale,Existing,3,FAM_0410,SIMULATED_SCENARIO,rules_v1
+WP_SME_0411,Kalutara,Western,Personal Services,Existing,8,FAM_0411,SIMULATED_SCENARIO,rules_v1
+WP_SME_0412,Colombo,Western,Food and Beverage,Existing,6,FAM_0412,SIMULATED_SCENARIO,rules_v1
+WP_SME_0413,Gampaha,Western,Retail,Existing,20,FAM_0413,SIMULATED_SCENARIO,rules_v1
+WP_SME_0414,Kalutara,Western,Retail,Existing,23,FAM_0414,SIMULATED_SCENARIO,rules_v1
+WP_SME_0415,Colombo,Western,Food and Beverage,Existing,11,FAM_0415,SIMULATED_SCENARIO,rules_v1
+WP_SME_0416,Gampaha,Western,Retail,Growing,19,FAM_0416,SIMULATED_SCENARIO,rules_v1
+WP_SME_0417,Kalutara,Western,Wholesale,Existing,8,FAM_0417,SIMULATED_SCENARIO,rules_v1
+WP_SME_0418,Colombo,Western,Retail,Existing,4,FAM_0418,SIMULATED_SCENARIO,rules_v1
+WP_SME_0419,Gampaha,Western,Food and Beverage,Existing,16,FAM_0419,SIMULATED_SCENARIO,rules_v1
+WP_SME_0420,Kalutara,Western,Food and Beverage,Existing,13,FAM_0420,SIMULATED_SCENARIO,rules_v1
+WP_SME_0421,Colombo,Western,Food and Beverage,Existing,11,FAM_0421,SIMULATED_SCENARIO,rules_v1
+WP_SME_0422,Gampaha,Western,Professional Services,Existing,21,FAM_0422,SIMULATED_SCENARIO,rules_v1
+WP_SME_0423,Kalutara,Western,Transport and Logistics,Existing,25,FAM_0423,SIMULATED_SCENARIO,rules_v1
+WP_SME_0424,Colombo,Western,Food and Beverage,Existing,20,FAM_0424,SIMULATED_SCENARIO,rules_v1
+WP_SME_0425,Gampaha,Western,Retail,Growing,8,FAM_0425,SIMULATED_SCENARIO,rules_v1
+WP_SME_0426,Kalutara,Western,Wholesale,Growing,6,FAM_0426,SIMULATED_SCENARIO,rules_v1
+WP_SME_0427,Colombo,Western,Manufacturing,Growing,20,FAM_0427,SIMULATED_SCENARIO,rules_v1
+WP_SME_0428,Gampaha,Western,Professional Services,Existing,20,FAM_0428,SIMULATED_SCENARIO,rules_v1
+WP_SME_0429,Kalutara,Western,Transport and Logistics,Existing,10,FAM_0429,SIMULATED_SCENARIO,rules_v1
+WP_SME_0430,Colombo,Western,Manufacturing,Growing,3,FAM_0430,SIMULATED_SCENARIO,rules_v1
+WP_SME_0431,Gampaha,Western,Retail,Growing,14,FAM_0431,SIMULATED_SCENARIO,rules_v1
+WP_SME_0432,Kalutara,Western,Professional Services,Existing,14,FAM_0432,SIMULATED_SCENARIO,rules_v1
+WP_SME_0433,Colombo,Western,Wholesale,Existing,17,FAM_0433,SIMULATED_SCENARIO,rules_v1
+WP_SME_0434,Gampaha,Western,Transport and Logistics,Growing,17,FAM_0434,SIMULATED_SCENARIO,rules_v1
+WP_SME_0435,Kalutara,Western,Retail,Existing,24,FAM_0435,SIMULATED_SCENARIO,rules_v1
+WP_SME_0436,Colombo,Western,Professional Services,Existing,2,FAM_0436,SIMULATED_SCENARIO,rules_v1
+WP_SME_0437,Gampaha,Western,Manufacturing,Existing,14,FAM_0437,SIMULATED_SCENARIO,rules_v1
+WP_SME_0438,Kalutara,Western,Food and Beverage,Existing,19,FAM_0438,SIMULATED_SCENARIO,rules_v1
+WP_SME_0439,Colombo,Western,Retail,Growing,24,FAM_0439,SIMULATED_SCENARIO,rules_v1
+WP_SME_0440,Gampaha,Western,Food and Beverage,Existing,8,FAM_0440,SIMULATED_SCENARIO,rules_v1
+WP_SME_0441,Kalutara,Western,Wholesale,Existing,17,FAM_0441,SIMULATED_SCENARIO,rules_v1
+WP_SME_0442,Colombo,Western,Manufacturing,Existing,19,FAM_0442,SIMULATED_SCENARIO,rules_v1
+WP_SME_0443,Gampaha,Western,Transport and Logistics,Existing,2,FAM_0443,SIMULATED_SCENARIO,rules_v1
+WP_SME_0444,Kalutara,Western,Professional Services,Existing,16,FAM_0444,SIMULATED_SCENARIO,rules_v1
+WP_SME_0445,Colombo,Western,Food and Beverage,Growing,22,FAM_0445,SIMULATED_SCENARIO,rules_v1
+WP_SME_0446,Gampaha,Western,Personal Services,Existing,4,FAM_0446,SIMULATED_SCENARIO,rules_v1
+WP_SME_0447,Kalutara,Western,Food and Beverage,Existing,22,FAM_0447,SIMULATED_SCENARIO,rules_v1
+WP_SME_0448,Colombo,Western,Manufacturing,Existing,6,FAM_0448,SIMULATED_SCENARIO,rules_v1
+WP_SME_0449,Gampaha,Western,Transport and Logistics,Growing,16,FAM_0449,SIMULATED_SCENARIO,rules_v1
+WP_SME_0450,Kalutara,Western,Professional Services,Existing,22,FAM_0450,SIMULATED_SCENARIO,rules_v1
+WP_SME_0451,Colombo,Western,Manufacturing,Existing,13,FAM_0451,SIMULATED_SCENARIO,rules_v1
+WP_SME_0452,Gampaha,Western,Professional Services,Existing,2,FAM_0452,SIMULATED_SCENARIO,rules_v1
+WP_SME_0453,Kalutara,Western,Professional Services,Growing,4,FAM_0453,SIMULATED_SCENARIO,rules_v1
+WP_SME_0454,Colombo,Western,Wholesale,Growing,21,FAM_0454,SIMULATED_SCENARIO,rules_v1
+WP_SME_0455,Gampaha,Western,Retail,Existing,15,FAM_0455,SIMULATED_SCENARIO,rules_v1
+WP_SME_0456,Kalutara,Western,Personal Services,Existing,24,FAM_0456,SIMULATED_SCENARIO,rules_v1
+WP_SME_0457,Colombo,Western,Retail,Existing,24,FAM_0457,SIMULATED_SCENARIO,rules_v1
+WP_SME_0458,Gampaha,Western,Retail,Existing,25,FAM_0458,SIMULATED_SCENARIO,rules_v1
+WP_SME_0459,Kalutara,Western,Transport and Logistics,Existing,14,FAM_0459,SIMULATED_SCENARIO,rules_v1
+WP_SME_0460,Colombo,Western,Retail,Existing,22,FAM_0460,SIMULATED_SCENARIO,rules_v1
+WP_SME_0461,Gampaha,Western,Personal Services,Existing,9,FAM_0461,SIMULATED_SCENARIO,rules_v1
+WP_SME_0462,Kalutara,Western,Wholesale,Existing,18,FAM_0462,SIMULATED_SCENARIO,rules_v1
+WP_SME_0463,Colombo,Western,Wholesale,Growing,15,FAM_0463,SIMULATED_SCENARIO,rules_v1
+WP_SME_0464,Gampaha,Western,Personal Services,Existing,14,FAM_0464,SIMULATED_SCENARIO,rules_v1
+WP_SME_0465,Kalutara,Western,Professional Services,Existing,20,FAM_0465,SIMULATED_SCENARIO,rules_v1
+WP_SME_0466,Colombo,Western,Manufacturing,Existing,17,FAM_0466,SIMULATED_SCENARIO,rules_v1
+WP_SME_0467,Gampaha,Western,Manufacturing,Existing,20,FAM_0467,SIMULATED_SCENARIO,rules_v1
+WP_SME_0468,Kalutara,Western,Wholesale,Existing,9,FAM_0468,SIMULATED_SCENARIO,rules_v1
+WP_SME_0469,Colombo,Western,Food and Beverage,Growing,22,FAM_0469,SIMULATED_SCENARIO,rules_v1
+WP_SME_0470,Gampaha,Western,Food and Beverage,Existing,17,FAM_0470,SIMULATED_SCENARIO,rules_v1
+WP_SME_0471,Kalutara,Western,Food and Beverage,Growing,24,FAM_0471,SIMULATED_SCENARIO,rules_v1
+WP_SME_0472,Colombo,Western,Food and Beverage,Existing,23,FAM_0472,SIMULATED_SCENARIO,rules_v1
+WP_SME_0473,Gampaha,Western,Professional Services,Existing,12,FAM_0473,SIMULATED_SCENARIO,rules_v1
+WP_SME_0474,Kalutara,Western,Food and Beverage,Existing,21,FAM_0474,SIMULATED_SCENARIO,rules_v1
+WP_SME_0475,Colombo,Western,Personal Services,Growing,21,FAM_0475,SIMULATED_SCENARIO,rules_v1
+WP_SME_0476,Gampaha,Western,Professional Services,Existing,18,FAM_0476,SIMULATED_SCENARIO,rules_v1
+WP_SME_0477,Kalutara,Western,Professional Services,Growing,20,FAM_0477,SIMULATED_SCENARIO,rules_v1
+WP_SME_0478,Colombo,Western,Retail,Existing,2,FAM_0478,SIMULATED_SCENARIO,rules_v1
+WP_SME_0479,Gampaha,Western,Food and Beverage,Existing,3,FAM_0479,SIMULATED_SCENARIO,rules_v1
+WP_SME_0480,Kalutara,Western,Manufacturing,Existing,8,FAM_0480,SIMULATED_SCENARIO,rules_v1
+WP_SME_0481,Colombo,Western,Manufacturing,Existing,21,FAM_0481,SIMULATED_SCENARIO,rules_v1
+WP_SME_0482,Gampaha,Western,Retail,Existing,13,FAM_0482,SIMULATED_SCENARIO,rules_v1
+WP_SME_0483,Kalutara,Western,Retail,Growing,23,FAM_0483,SIMULATED_SCENARIO,rules_v1
+WP_SME_0484,Colombo,Western,Wholesale,Existing,10,FAM_0484,SIMULATED_SCENARIO,rules_v1
+WP_SME_0485,Gampaha,Western,Personal Services,Existing,3,FAM_0485,SIMULATED_SCENARIO,rules_v1
+WP_SME_0486,Kalutara,Western,Wholesale,Growing,24,FAM_0486,SIMULATED_SCENARIO,rules_v1
+WP_SME_0487,Colombo,Western,Retail,Existing,6,FAM_0487,SIMULATED_SCENARIO,rules_v1
+WP_SME_0488,Gampaha,Western,Professional Services,Existing,19,FAM_0488,SIMULATED_SCENARIO,rules_v1
+WP_SME_0489,Kalutara,Western,Manufacturing,Existing,8,FAM_0489,SIMULATED_SCENARIO,rules_v1
+WP_SME_0490,Colombo,Western,Manufacturing,Existing,25,FAM_0490,SIMULATED_SCENARIO,rules_v1
+WP_SME_0491,Gampaha,Western,Manufacturing,Existing,22,FAM_0491,SIMULATED_SCENARIO,rules_v1
+WP_SME_0492,Kalutara,Western,Manufacturing,Existing,4,FAM_0492,SIMULATED_SCENARIO,rules_v1
+WP_SME_0493,Colombo,Western,Transport and Logistics,Existing,16,FAM_0493,SIMULATED_SCENARIO,rules_v1
+WP_SME_0494,Gampaha,Western,Manufacturing,Existing,24,FAM_0494,SIMULATED_SCENARIO,rules_v1
+WP_SME_0495,Kalutara,Western,Retail,Growing,13,FAM_0495,SIMULATED_SCENARIO,rules_v1
+WP_SME_0496,Colombo,Western,Professional Services,Existing,7,FAM_0496,SIMULATED_SCENARIO,rules_v1
+WP_SME_0497,Gampaha,Western,Professional Services,Existing,6,FAM_0497,SIMULATED_SCENARIO,rules_v1
+WP_SME_0498,Kalutara,Western,Professional Services,Growing,15,FAM_0498,SIMULATED_SCENARIO,rules_v1
+WP_SME_0499,Colombo,Western,Personal Services,Existing,11,FAM_0499,SIMULATED_SCENARIO,rules_v1
+WP_SME_0500,Gampaha,Western,Retail,Existing,15,FAM_0500,SIMULATED_SCENARIO,rules_v1

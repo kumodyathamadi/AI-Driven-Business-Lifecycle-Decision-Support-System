@@ -1,0 +1,24 @@
+{
+  "dataset_07": {
+    "total_documents": 70,
+    "unique_documents": 69,
+    "exact_duplicates": 0,
+    "semantic_duplicates": 1,
+    "verified_complete": 69,
+    "verified_partial": 0,
+    "unverified_scanned": 0,
+    "json_path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\dataset07_extracted_invoices.json",
+    "csv_path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\dataset07_extracted_invoices.csv"
+  },
+  "dataset_06": {
+    "total_documents": 171,
+    "unique_documents": 159,
+    "exact_duplicates": 12,
+    "semantic_duplicates": 0,
+    "verified_complete": 13,
+    "verified_partial": 37,
+    "unverified_scanned": 109,
+    "json_path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\dataset06_extracted_declarations.json",
+    "csv_path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\dataset06_extracted_declarations.csv"
+  }
+}
