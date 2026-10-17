@@ -31,7 +31,11 @@ from backend.app.compliance.rulebook_loader import get_obligations
 from backend.database import get_db
 from backend.models import ComplianceEvaluationRecord
 from engine.questions import generate_follow_up_questions
-from backend.app.compliance.action_predictor import predict_action_roadmap, predict_action_for_rule
+from backend.app.compliance.action_predictor import (
+    predict_action_roadmap,
+    predict_action_for_rule,
+    build_registration_guidance,
+)
 from backend.app.compliance.br_form_generator import generate_br_application_pdf
 
 logger = logging.getLogger(__name__)
@@ -112,6 +116,7 @@ class Component2EvaluationResponse(BaseModel):
     source_discovery: List[Component2EvidenceSource] = Field(default_factory=list)
     source_discovery_mode: str = "lexical_legal_source_candidates"
     action_roadmap: Optional[Dict[str, Any]] = None
+    registration_guidance: Optional[Dict[str, Any]] = None
     follow_up_questions: List[Dict[str, Any]]
     retrieval_mode: str
     disclaimer: str = (
@@ -359,6 +364,7 @@ def evaluate_compliance(
         "obligations": obligation_outputs,
         "guidance": guidance_outputs,
         "action_roadmap": action_roadmap,
+        "registration_guidance": build_registration_guidance(context),
         "source_discovery": source_discovery,
         "source_discovery_mode": candidate_result.get(
             "mode", "lexical_legal_source_candidates"

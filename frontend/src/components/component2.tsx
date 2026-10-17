@@ -78,6 +78,47 @@ export interface LegalSourceExcerpt {
   } | null;
 }
 
+export interface RegistrationStageItem {
+  stage_number: number;
+  title: string;
+  title_si: string;
+  authority: string;
+  action: string;
+  duration: string;
+  statutory_fee: string;
+}
+
+export interface RegistrationDocumentItem {
+  document_id: string;
+  name: string;
+  name_si: string;
+  is_mandatory: boolean;
+  purpose: string;
+  status: 'READY' | 'ACTION_REQUIRED';
+}
+
+export interface FormFieldGuideItem {
+  field_label: string;
+  description: string;
+  suggested_value: string;
+}
+
+export interface RegistrationGuidanceData {
+  recommended_legal_form: string;
+  pathway_key: 'sole_proprietorship' | 'partnership' | 'private_limited';
+  legal_basis: string;
+  governing_body: string;
+  target_office: string;
+  district: string;
+  reasoning: string;
+  official_form_name: string;
+  estimated_fees: string;
+  estimated_timeline: string;
+  stages: RegistrationStageItem[];
+  document_checklist: RegistrationDocumentItem[];
+  form_fields_guide: FormFieldGuideItem[];
+}
+
 export interface ComplianceAnalysisResponse {
   summary: AnalysisSummary;
   obligations: ObligationResult[];
@@ -97,6 +138,7 @@ export interface ComplianceAnalysisResponse {
     estimated_cost_lkr?: number;
     estimated_timeline_days?: number;
   } | null;
+  registration_guidance?: RegistrationGuidanceData | null;
   evaluation_id: string;
   retrieval_mode: string;
   business_context: Record<string, unknown>;
@@ -1978,6 +2020,227 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                           </li>
                         ))}
                       </ol>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* ----------------------------------------------------------------- */}
+              {/* COMPONENT 2 PILLAR: BUSINESS REGISTRATION GUIDANCE & ROADMAP     */}
+              {/* ----------------------------------------------------------------- */}
+              {result.registration_guidance && (
+                <section className="rounded-2xl border border-blue-200/90 bg-gradient-to-br from-blue-50/50 via-white to-indigo-50/30 p-5 shadow-xs space-y-5">
+                  {/* Header */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-blue-200/70 pb-3.5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm text-sm">
+                        <i className="fa-solid fa-landmark" />
+                      </span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-bold text-slate-900">
+                            AI-Assisted Business Registration Guidance &amp; Institutional Roadmap
+                          </h4>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800">
+                            <i className="fa-solid fa-brain text-[9px]" /> Registration Engine
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-600">
+                          Western Province Legal Framework (Statute No. 04 of 1990 &amp; Companies Act No. 07 of 2007)
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-semibold text-blue-900 bg-blue-100 px-3 py-1 rounded-full border border-blue-200">
+                        📍 {result.registration_guidance.district} District Jurisdiction
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 1. Legal Form Recommendation & Office Routing Banner */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 text-xs">
+                    {/* Legal Form */}
+                    <div className="bg-white p-3.5 rounded-xl border border-blue-100 shadow-xs space-y-1.5">
+                      <span className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">
+                        <i className="fa-solid fa-scale-balanced text-blue-600 mr-1" />
+                        Recommended Legal Form
+                      </span>
+                      <p className="font-bold text-blue-950 text-xs">
+                        {result.registration_guidance.recommended_legal_form}
+                      </p>
+                      <p className="text-[10px] text-slate-500 font-medium">
+                        {result.registration_guidance.legal_basis}
+                      </p>
+                      <p className="text-[11px] text-slate-700 leading-relaxed bg-blue-50/50 p-2 rounded-lg border border-blue-100/60 mt-1">
+                        {result.registration_guidance.reasoning}
+                      </p>
+                    </div>
+
+                    {/* Target Authority & Office */}
+                    <div className="bg-white p-3.5 rounded-xl border border-blue-100 shadow-xs space-y-1.5">
+                      <span className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">
+                        <i className="fa-solid fa-building-columns text-emerald-600 mr-1" />
+                        Target Authority &amp; Location
+                      </span>
+                      <p className="font-bold text-slate-900 text-xs">
+                        {result.registration_guidance.governing_body}
+                      </p>
+                      <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 space-y-1 mt-1">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase block">Responsible Office:</span>
+                        <p className="text-[11px] text-slate-800 font-medium flex items-start gap-1.5">
+                          <i className="fa-solid fa-location-dot text-red-500 text-[10px] mt-0.5" />
+                          <span>{result.registration_guidance.target_office}</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Statutory Fee & Timeline */}
+                    <div className="bg-white p-3.5 rounded-xl border border-blue-100 shadow-xs space-y-2">
+                      <span className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">
+                        <i className="fa-solid fa-receipt text-amber-600 mr-1" />
+                        Official Filing &amp; Cost Estimation
+                      </span>
+                      <div className="bg-amber-50/60 p-2.5 rounded-lg border border-amber-200/60 space-y-1">
+                        <span className="text-[10px] font-bold text-amber-900 block">Prescribed Application:</span>
+                        <p className="text-[11px] font-semibold text-slate-900">
+                          {result.registration_guidance.official_form_name}
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-center pt-0.5">
+                        <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+                          <span className="text-[9px] text-slate-500 uppercase font-bold block">Est. Cost</span>
+                          <span className="text-[11px] font-bold text-emerald-700">{result.registration_guidance.estimated_fees}</span>
+                        </div>
+                        <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+                          <span className="text-[9px] text-slate-500 uppercase font-bold block">Processing Time</span>
+                          <span className="text-[11px] font-bold text-blue-700">{result.registration_guidance.estimated_timeline}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. 5-Stage Chronological Registration Stepper */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                        <i className="fa-solid fa-list-ol text-blue-600" />
+                        5-Stage Official Registration Procedure (පියවරෙන් පියවර ක්‍රියාවලිය)
+                      </h5>
+                      <span className="text-[10px] font-medium text-slate-500">Chronological Flow</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-2.5">
+                      {result.registration_guidance.stages.map((stg) => (
+                        <div
+                          key={stg.stage_number}
+                          className="bg-white rounded-xl border border-slate-200 p-3 shadow-2xs space-y-2 flex flex-col justify-between hover:border-blue-300 transition-all"
+                        >
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-blue-800 font-extrabold text-[10px]">
+                                {stg.stage_number}
+                              </span>
+                              <span className="text-[9px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                                {stg.duration}
+                              </span>
+                            </div>
+
+                            <h6 className="font-bold text-slate-900 text-[11px] leading-tight">
+                              {stg.title}
+                            </h6>
+                            <p className="text-[10px] text-blue-800 font-medium">
+                              {stg.title_si}
+                            </p>
+                            <p className="text-[10px] text-slate-600 leading-relaxed pt-1">
+                              {stg.action}
+                            </p>
+                          </div>
+
+                          <div className="pt-2 border-t border-slate-100 text-[9px] text-slate-500">
+                            <span className="block font-semibold text-slate-700">Fee: {stg.statutory_fee}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 3. Document Readiness Audit & Form 1 Completion Assistant Grid */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-1">
+                    {/* Document Readiness Checklist */}
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <h5 className="font-bold text-slate-900 text-xs flex items-center gap-2">
+                          <i className="fa-solid fa-folder-closed text-blue-600" />
+                          Pre-Filing Document Readiness Audit (අවශ්‍ය ලියකියවිලි)
+                        </h5>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                          Verified for {result.registration_guidance.district}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        {result.registration_guidance.document_checklist.map((doc) => (
+                          <div
+                            key={doc.document_id}
+                            className="p-2.5 rounded-lg border border-slate-100 bg-slate-50/70 flex items-start justify-between gap-2.5 text-xs"
+                          >
+                            <div className="space-y-0.5">
+                              <span className="font-bold text-slate-900 text-[11px] block">
+                                {doc.name}
+                              </span>
+                              <span className="text-[10px] text-slate-500 block">
+                                {doc.name_si}
+                              </span>
+                              <p className="text-[10px] text-slate-600 pt-0.5">
+                                {doc.purpose}
+                              </p>
+                            </div>
+
+                            <span
+                              className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded border ${
+                                doc.status === 'READY'
+                                  ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                  : 'bg-amber-100 text-amber-800 border-amber-200'
+                              }`}
+                            >
+                              {doc.status === 'READY' ? '✓ Ready' : '⚠ Required'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Official Form Completion Assistant */}
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <h5 className="font-bold text-slate-900 text-xs flex items-center gap-2">
+                          <i className="fa-solid fa-pen-to-square text-teal-600" />
+                          Application Completion Assistant (ආකෘති පත්‍ර මාර්ගෝපදේශය)
+                        </h5>
+                        <span className="text-[10px] font-semibold text-slate-500">
+                          {result.registration_guidance.official_form_name.split('(')[0]}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2 text-xs">
+                        {result.registration_guidance.form_fields_guide.map((field, fIdx) => (
+                          <div key={fIdx} className="bg-slate-50/80 p-2.5 rounded-lg border border-slate-100 space-y-0.5">
+                            <span className="font-bold text-slate-800 text-[11px] block">
+                              {field.field_label}
+                            </span>
+                            <p className="text-[10px] text-slate-500">
+                              {field.description}
+                            </p>
+                            <div className="mt-1 flex items-center gap-1.5 bg-white px-2 py-1 rounded border border-slate-200 text-[11px] text-slate-700 font-medium">
+                              <span className="text-[9px] uppercase font-bold text-teal-700 bg-teal-50 px-1 py-0.5 rounded border border-teal-200">
+                                Suggested Value
+                              </span>
+                              <span className="truncate">{field.suggested_value}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </section>
