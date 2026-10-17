@@ -30,7 +30,7 @@ logger = logging.getLogger("ActionModelTrainer")
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATASET_PATH = os.path.join(
-    PROJECT_ROOT, "data", "compliance", "action_datasets", "sri_lanka_sme_action_dataset_600.csv"
+    PROJECT_ROOT, "data", "compliance", "action_datasets", "western_province_sme_action_dataset_360.csv"
 )
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, "models", "action_guidance_model")
 
@@ -48,9 +48,11 @@ def load_and_preprocess_data(dataset_path: str):
     df["activity"] = df["activity"].fillna("")
     df["business_context"] = df["business_context"].fillna("")
     df["user_question"] = df["user_question"].fillna("")
+    df["legal_source_files"] = df["legal_source_files"].fillna("")
 
     # Construct unified representation for rich feature representation
     df["composite_text"] = (
+        "Rules & Legal Sources: " + df["legal_source_files"] + ". " +
         "Business Type: " + df["business_type"] + ". " +
         "Scale: " + df["business_scale"] + ". " +
         "District: " + df["location_district"] + ". " +
@@ -63,16 +65,27 @@ def load_and_preprocess_data(dataset_path: str):
     return df
 
 
+
 def build_knowledge_index(df: pd.DataFrame) -> Dict[str, Any]:
     """
     Builds an authoritative procedural knowledge index grouped by action_type and category,
-    capturing concrete institutional authorities, required documents, and procedural steps.
+    capturing concrete institutional authorities, required documents, and procedural steps
+    for Western Province SMEs.
     """
     knowledge = {}
 
+    wp_offices = {
+        "business_registration": "Divisional Secretariat (Department of Business Names) / Registrar of Companies (eROC, Colombo)",
+        "food_business": "Local Authority Health Department (CMC / Municipal / Urban Council / Pradeshiya Sabha) & MOH / PHI Office",
+        "environmental_waste": "Central Environmental Authority (CEA Head Office Battaramulla / District Offices) & Local Authority",
+        "vehicle_repair_motor_trade": "Department of Motor Traffic (DMT Werahera / Narahenpita) & Local Authority Trade Licensing Unit",
+        "cosmetics_salon": "National Medicines Regulatory Authority (NMRA Colombo 10) & Local Authority Health Unit",
+        "data_protection_digital": "Data Protection Authority of Sri Lanka (DPA SL), Colombo",
+    }
+
     for action_type, group in df.groupby("action_type"):
-        # Select representative non-empty values
         sample = group.iloc[0]
+        cat = str(sample.get("category", ""))
 
         # Parse documents list from string (pipe-separated)
         docs_raw = str(sample.get("required_documents", ""))
@@ -86,18 +99,21 @@ def build_knowledge_index(df: pd.DataFrame) -> Dict[str, Any]:
         sources_raw = str(sample.get("legal_source_files", ""))
         legal_sources = [src.strip() for src in sources_raw.split("|") if src.strip()]
 
+        office_loc = wp_offices.get(cat, "Relevant District / Local Authority Office (Western Province)")
+
         knowledge[action_type] = {
             "action_type": action_type,
-            "category": str(sample.get("category", "")),
+            "category": cat,
             "required_action_name": str(sample.get("required_action_name", "")),
             "target_authority": str(sample.get("target_authority", "")),
-            "office_location": str(sample.get("office_location", "Relevant District / Local Authority Office")),
+            "office_location": office_loc,
             "action_urgency": str(sample.get("action_urgency", "Prior to commencing commercial activities")),
             "required_documents": documents,
             "procedural_steps": steps,
             "legal_sources": legal_sources,
             "applicability_status": str(sample.get("applicability_status", "UNKNOWN")),
             "review_instructions": str(sample.get("review_instructions", "")),
+            "province_scope": "Western Province (Colombo, Gampaha, Kalutara)",
         }
 
     return knowledge

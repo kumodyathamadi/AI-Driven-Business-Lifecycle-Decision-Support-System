@@ -279,11 +279,13 @@ def retrieve_evidence(query: str, top_k: int = 3) -> Dict[str, Any]:
     try:
         evidence = _vector_search(query, top_k)
         return {"mode": "chroma_sentence_transformers", "evidence": evidence}
-    except ImportError:
+    except Exception as exc:
         logger.warning(
-            "ChromaDB or SentenceTransformers is unavailable; using labeled lexical retrieval"
+            "ChromaDB or vector retrieval failed (%s); falling back to labeled lexical retrieval",
+            exc,
         )
         return {
             "mode": "lexical_fallback",
             "evidence": _lexical_search(query, top_k),
         }
+

@@ -64,6 +64,18 @@ export interface LegalSourceExcerpt {
   section_reference?: string | null;
   paragraph_number?: number | null;
   file_type?: 'pdf' | 'txt' | null;
+  action_guidance?: {
+    rule_title: string;
+    category: string;
+    predicted_action_type: string;
+    rule_purpose: string;
+    where_to_go: string;
+    office_location: string;
+    action_needed: string;
+    action_urgency: string;
+    required_documents: string[];
+    procedural_steps: string[];
+  } | null;
 }
 
 export interface ComplianceAnalysisResponse {
@@ -71,6 +83,20 @@ export interface ComplianceAnalysisResponse {
   obligations: ObligationResult[];
   follow_up_questions: FollowUpQuestion[];
   source_discovery: LegalSourceExcerpt[];
+  action_roadmap?: {
+    model_status: string;
+    predicted_action_type: string;
+    category: string;
+    target_authority: string;
+    office_location: string;
+    required_action_name: string;
+    action_urgency: string;
+    required_documents: string[];
+    procedural_steps: string[];
+    governing_laws: string[];
+    estimated_cost_lkr?: number;
+    estimated_timeline_days?: number;
+  } | null;
   evaluation_id: string;
   retrieval_mode: string;
   business_context: Record<string, unknown>;
@@ -680,6 +706,7 @@ export const RegistrationComplianceDashboard: React.FC = () => {
   React.useEffect(() => {
     fetchSamplePlansListAPI().then(setSamplePlans);
   }, []);
+
 
   const handlePdfFile = async (file: File) => {
     if (!file) return;
@@ -1854,41 +1881,255 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                 </div>
               )}
 
-              {result.source_discovery.length > 0 && (
-                <section className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
-                  <div className="mb-3">
-                    <p className="text-sm font-semibold text-amber-950">Related legal-source excerpts</p>
-                    <p className="mt-1 text-xs text-amber-900">
-                      Discovery evidence only. These extracts are not verified obligations or legal advice.
-                    </p>
+              {/* ------------------------------------------------------------- */}
+              {/* ACTIONABLE PROCEDURAL ROADMAP (TRAINED ON 600 SME SCENARIOS)  */}
+              {/* ------------------------------------------------------------- */}
+              {result.action_roadmap && (
+                <section className="rounded-2xl border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/70 p-5 shadow-sm space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-200/60 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm text-xs">
+                        <i className="fa-solid fa-route" />
+                      </span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-bold text-emerald-950">
+                            Actionable Compliance Roadmap
+                          </h4>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                            <i className="fa-solid fa-microchip text-[9px]" /> AI Model Recommended
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-emerald-800">
+                          Specific institutional destination, licence name, documents, and procedure for this business.
+                        </p>
+                      </div>
+                    </div>
+
+                    <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-100/80 px-2.5 py-1 rounded-full border border-emerald-300/40">
+                      Target: {result.action_roadmap.predicted_action_type.replace(/_/g, ' ')}
+                    </span>
                   </div>
-                  <div className="space-y-2">
+
+                  {/* Target Authority & Required License Banner */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div className="bg-white p-3.5 rounded-xl border border-emerald-100 shadow-xs">
+                      <span className="block font-bold text-slate-500 uppercase tracking-wider text-[10px] mb-1">
+                        <i className="fa-solid fa-building-columns text-emerald-600 mr-1.5" />
+                        Where to Go (Target Authority)
+                      </span>
+                      <p className="font-semibold text-slate-900 leading-snug">
+                        {result.action_roadmap.target_authority}
+                      </p>
+                      {result.action_roadmap.office_location && result.action_roadmap.office_location !== 'nan' && (
+                        <p className="text-[11px] text-slate-500 mt-1">
+                          <i className="fa-solid fa-location-dot text-red-500 mr-1" />
+                          {result.action_roadmap.office_location}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="bg-white p-3.5 rounded-xl border border-emerald-100 shadow-xs">
+                      <span className="block font-bold text-slate-500 uppercase tracking-wider text-[10px] mb-1">
+                        <i className="fa-solid fa-certificate text-amber-500 mr-1.5" />
+                        Required Approval / Licence Name
+                      </span>
+                      <p className="font-semibold text-slate-900 leading-snug">
+                        {result.action_roadmap.required_action_name}
+                      </p>
+                      <p className="text-[11px] text-amber-700 mt-1">
+                        <i className="fa-solid fa-clock text-amber-500 mr-1" />
+                        {result.action_roadmap.action_urgency}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Documents & Step-by-Step Procedure Grid */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs pt-1">
+                    {/* Left: Required Documents Checklist */}
+                    <div className="bg-white p-4 rounded-xl border border-emerald-100 shadow-xs">
+                      <h5 className="font-bold text-slate-800 text-xs flex items-center gap-2 mb-2.5">
+                        <i className="fa-solid fa-folder-open text-blue-600" />
+                        Mandatory Document Package Checklist:
+                      </h5>
+                      <ul className="space-y-1.5">
+                        {(result.action_roadmap.required_documents || []).map((doc, i) => (
+                          <li key={i} className="flex items-start gap-2 text-slate-700 text-[11px] bg-slate-50 p-2 rounded-lg border border-slate-100">
+                            <i className="fa-solid fa-circle-check text-emerald-500 mt-0.5 text-xs shrink-0" />
+                            <span>{doc}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Right: Procedural Workflow Steps */}
+                    <div className="bg-white p-4 rounded-xl border border-emerald-100 shadow-xs">
+                      <h5 className="font-bold text-slate-800 text-xs flex items-center gap-2 mb-2.5">
+                        <i className="fa-solid fa-list-check text-teal-600" />
+                        Step-by-Step Submission Procedure:
+                      </h5>
+                      <ol className="space-y-2">
+                        {(result.action_roadmap.procedural_steps || []).map((step, idx) => (
+                          <li key={idx} className="flex items-start gap-2.5 text-slate-700 text-[11px]">
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">
+                              {idx + 1}
+                            </span>
+                            <span className="leading-relaxed pt-0.5">{step}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {result.source_discovery.length > 0 && (
+                <section className="rounded-2xl border border-amber-300/80 bg-gradient-to-br from-amber-50/50 via-white to-amber-50/30 p-5 shadow-xs space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-200/80 pb-3">
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <i className="fa-solid fa-scale-balanced text-amber-600" />
+                        Applicable Legal Rules &amp; Institutional Actions
+                      </h4>
+                      <p className="mt-0.5 text-xs text-slate-600">
+                        AI-predicted institutional guidance answering: <em>What does this rule do? Where should you go? What action is required?</em>
+                      </p>
+                    </div>
+                    <span className="text-[11px] font-semibold text-amber-900 bg-amber-100 px-2.5 py-1 rounded-full border border-amber-200">
+                      {result.source_discovery.length} Identified Rules &amp; Policies
+                    </span>
+                  </div>
+
+                  <div className="space-y-4">
                     {result.source_discovery.map((source, index) => (
                       <article
                         key={`${source.source_id}-${source.page}-${index}`}
-                        className="rounded-lg border border-amber-100 bg-white p-3"
+                        className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3 transition-all hover:border-slate-300"
                       >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <strong className="text-xs text-slate-900">{source.title}</strong>
-                          <span className="text-[11px] font-semibold text-amber-800">
-                            Needs source verification
+                        {/* Title and Identification Header */}
+                        <div className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/60 mb-1 inline-block">
+                              Statutory Source #{index + 1}
+                            </span>
+                            <h5 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                              <i className="fa-solid fa-book-bookmark text-slate-500 text-xs" />
+                              {source.title}
+                            </h5>
+                            <p className="mt-0.5 text-[11px] text-slate-500">
+                              {source.source_id}
+                              {source.page
+                                ? ` · Page ${source.page}`
+                                : source.section_reference
+                                  ? ` · ${source.section_reference}`
+                                  : ''}
+                              {source.authority ? ` · Authority: ${source.authority}` : ''}
+                            </p>
+                          </div>
+
+                          <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
+                            Verification: {source.verification_status || 'Draft Template'}
                           </span>
                         </div>
-                        <p className="mt-1 text-[11px] text-slate-500">
-                          {source.source_id}
-                          {source.page
-                            ? ` · page ${source.page}`
-                            : source.section_reference
-                              ? ` · ${source.section_reference}${source.paragraph_number ? ` · paragraph ${source.paragraph_number}` : ''}`
-                              : source.file_type === 'txt'
-                                ? ' · text excerpt'
-                                : ''}
-                          {source.title_is_filename_guess ? ' · title from filename' : ''}
-                          {source.authority ? ` · ${source.authority}` : ''}
-                        </p>
-                        <blockquote className="mt-2 border-l-2 border-amber-300 pl-3 text-xs leading-relaxed text-slate-700">
-                          {source.excerpt}
-                        </blockquote>
+
+                        {/* ML Action Guidance (Where to go, what it does, what to do) */}
+                        {source.action_guidance && (
+                          <div className="rounded-xl bg-slate-50/90 border border-slate-200 p-3.5 space-y-3 text-xs">
+                            {/* 1. What this rule does */}
+                            <div className="flex items-start gap-2.5">
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-800 text-xs shadow-xs mt-0.5">
+                                <i className="fa-solid fa-lightbulb" />
+                              </span>
+                              <div>
+                                <span className="font-bold text-slate-800 text-[11px] uppercase tracking-wide block">
+                                  1. මේ නීතියෙන් වෙන්නේ කුමක්ද? (What This Rule Mandates):
+                                </span>
+                                <p className="text-slate-700 mt-0.5 leading-relaxed font-medium">
+                                  {source.action_guidance.rule_purpose}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* 2. Where to Go */}
+                            <div className="flex items-start gap-2.5">
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-800 text-xs shadow-xs mt-0.5">
+                                <i className="fa-solid fa-building-columns" />
+                              </span>
+                              <div>
+                                <span className="font-bold text-slate-800 text-[11px] uppercase tracking-wide block">
+                                  2. යන්න ඕනෙ ස්ථානය / කාර්යාලය කොහෙද? (Where to Go / Target Office):
+                                </span>
+                                <p className="text-blue-900 font-bold mt-0.5">
+                                  {source.action_guidance.where_to_go}
+                                </p>
+                                {source.action_guidance.office_location && source.action_guidance.office_location !== 'nan' && (
+                                  <p className="text-slate-600 text-[11px] mt-0.5 flex items-center gap-1">
+                                    <i className="fa-solid fa-location-dot text-red-500 text-[10px]" />
+                                    {source.action_guidance.office_location}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* 3. Action Needed */}
+                            <div className="flex items-start gap-2.5">
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 text-xs shadow-xs mt-0.5">
+                                <i className="fa-solid fa-file-circle-check" />
+                              </span>
+                              <div>
+                                <span className="font-bold text-slate-800 text-[11px] uppercase tracking-wide block">
+                                  3. ගත යුතු ක්‍රියාමාර්ගය (Action Needed / Required Licence):
+                                </span>
+                                <p className="text-emerald-900 font-bold mt-0.5">
+                                  {source.action_guidance.action_needed}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* 4. Documents & Steps Sub-grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1 text-[11px]">
+                              {/* Documents */}
+                              <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                                <span className="font-bold text-slate-700 block mb-1">
+                                  <i className="fa-solid fa-folder-closed text-slate-500 mr-1" />
+                                  ගෙනියන්න ඕනෙ ලියකියවිලි (Documents Checklist):
+                                </span>
+                                <ul className="space-y-1 text-slate-600">
+                                  {source.action_guidance.required_documents.slice(0, 4).map((doc, dIdx) => (
+                                    <li key={dIdx} className="flex items-start gap-1.5">
+                                      <i className="fa-solid fa-check text-emerald-600 text-[10px] mt-0.5" />
+                                      <span>{doc}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+
+                              {/* Steps */}
+                              <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                                <span className="font-bold text-slate-700 block mb-1">
+                                  <i className="fa-solid fa-list-ol text-slate-500 mr-1" />
+                                  පියවරෙන් පියවර (Procedural Steps):
+                                </span>
+                                <ol className="space-y-1 text-slate-600 list-decimal pl-3.5">
+                                  {source.action_guidance.procedural_steps.slice(0, 3).map((st, sIdx) => (
+                                    <li key={sIdx}>{st}</li>
+                                  ))}
+                                </ol>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Raw statutory excerpt (as secondary evidence quote) */}
+                        <details className="text-[11px] text-slate-500">
+                          <summary className="cursor-pointer hover:text-slate-800 font-medium">
+                            <i className="fa-solid fa-quote-left text-slate-400 mr-1" />
+                            View Raw Statutory Quote Excerpt from Source Document
+                          </summary>
+                          <blockquote className="mt-2 border-l-2 border-amber-300 pl-3 leading-relaxed text-slate-700 bg-amber-50/40 p-2 rounded-r-lg">
+                            {source.excerpt}
+                          </blockquote>
+                        </details>
                       </article>
                     ))}
                   </div>

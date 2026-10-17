@@ -1,7 +1,7 @@
 {
   "model_architecture": "TF-IDF(1,2) + LogisticRegression",
-  "train_samples": 480,
-  "test_samples": 120,
+  "train_samples": 288,
+  "test_samples": 72,
   "test_accuracy": 1.0,
   "macro_metrics": {
     "precision": 1.0,
@@ -26,13 +26,13 @@
       ]
     },
     "RandomForest": {
-      "mean_cv_f1_macro": 0.9874755141548309,
-      "std_cv": 0.007815880770081505,
+      "mean_cv_f1_macro": 1.0,
+      "std_cv": 0.0,
       "fold_scores": [
-        0.9895731508634734,
-        0.9895731508634734,
-        0.9790849673202615,
-        0.9791463017269469,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
         1.0
       ]
     },
@@ -53,50 +53,50 @@
       "precision": 1.0,
       "recall": 1.0,
       "f1-score": 1.0,
-      "support": 20.0
+      "support": 12.0
     },
     "CONFIRM_REGISTRATION_PATHWAY": {
       "precision": 1.0,
       "recall": 1.0,
       "f1-score": 1.0,
-      "support": 20.0
+      "support": 12.0
     },
     "DISTINGUISH_SALON_VS_PRODUCT_APPROVAL": {
       "precision": 1.0,
       "recall": 1.0,
       "f1-score": 1.0,
-      "support": 20.0
+      "support": 12.0
     },
     "VERIFY_ENVIRONMENTAL_APPLICABILITY": {
       "precision": 1.0,
       "recall": 1.0,
       "f1-score": 1.0,
-      "support": 20.0
+      "support": 12.0
     },
     "VERIFY_FOOD_PREMISES_REQUIREMENTS": {
       "precision": 1.0,
       "recall": 1.0,
       "f1-score": 1.0,
-      "support": 20.0
+      "support": 12.0
     },
     "VERIFY_MOTOR_TRADE_PATHWAY": {
       "precision": 1.0,
       "recall": 1.0,
       "f1-score": 1.0,
-      "support": 20.0
+      "support": 12.0
     },
     "accuracy": 1.0,
     "macro avg": {
       "precision": 1.0,
       "recall": 1.0,
       "f1-score": 1.0,
-      "support": 120.0
+      "support": 72.0
     },
     "weighted avg": {
       "precision": 1.0,
       "recall": 1.0,
       "f1-score": 1.0,
-      "support": 120.0
+      "support": 72.0
     }
   },
   "confusion_matrix": {
@@ -110,7 +110,7 @@
     ],
     "matrix": [
       [
-        20,
+        12,
         0,
         0,
         0,
@@ -119,7 +119,7 @@
       ],
       [
         0,
-        20,
+        12,
         0,
         0,
         0,
@@ -128,7 +128,7 @@
       [
         0,
         0,
-        20,
+        12,
         0,
         0,
         0
@@ -137,7 +137,7 @@
         0,
         0,
         0,
-        20,
+        12,
         0,
         0
       ],
@@ -146,7 +146,7 @@
         0,
         0,
         0,
-        20,
+        12,
         0
       ],
       [
@@ -155,7 +155,7 @@
         0,
         0,
         0,
-        20
+        12
       ]
     ]
   }

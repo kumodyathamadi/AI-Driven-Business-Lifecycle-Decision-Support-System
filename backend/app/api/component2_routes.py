@@ -31,7 +31,8 @@ from backend.app.compliance.rulebook_loader import get_obligations
 from backend.database import get_db
 from backend.models import ComplianceEvaluationRecord
 from engine.questions import generate_follow_up_questions
-from backend.app.compliance.action_predictor import predict_action_roadmap
+from backend.app.compliance.action_predictor import predict_action_roadmap, predict_action_for_rule
+from backend.app.compliance.br_form_generator import generate_br_application_pdf
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,7 @@ class Component2EvidenceSource(BaseModel):
     paragraph_number: Optional[int] = None
     file_type: Optional[str] = None
     source_file: Optional[str] = None
+    action_guidance: Optional[Dict[str, Any]] = None
 
 
 class Component2Obligation(BaseModel):
@@ -303,6 +305,12 @@ def evaluate_compliance(
             "contains_placeholder": item["metadata"]["contains_placeholder"],
             "verification_status": item["metadata"]["verification_status"],
             "title_is_filename_guess": item["metadata"]["title_is_filename_guess"],
+            "action_guidance": predict_action_for_rule(
+                rule_title=item["metadata"].get("source_title") or "",
+                source_id=item["metadata"].get("source_id") or "",
+                excerpt=item.get("text") or "",
+                business_context=context,
+            ),
         }
         for item in candidate_result["evidence"]
     ]
@@ -572,4 +580,79 @@ def extract_sample_plan(sample_id: str) -> PdfExtractionResponse:
         metadata=result["metadata"],
         raw_text_preview=full_text[:800],
     )
+
+
+class BrFormGenerationRequest(BaseModel):
+    business_name: Optional[str] = "CEYLON GREEN ESSENTIALS"
+    legal_form: Optional[str] = "sole_proprietorship"
+    sector: Optional[str] = "Food Manufacturing & Processing"
+    business_type: Optional[str] = None
+    district: Optional[str] = "Gampaha"
+    province: Optional[str] = "Western Province"
+    local_authority: Optional[str] = None
+    divisional_secretariat: Optional[str] = None
+    grama_niladhari: Optional[str] = None
+    address: Optional[str] = None
+    activities: List[str] = Field(default_factory=list)
+    products_services: List[str] = Field(default_factory=list)
+    employee_count: Optional[int] = 15
+    revenue: Optional[float] = 3500000.0
+    initial_capital: Optional[float] = None
+    owner_name: Optional[str] = "Dhananjaya Bandara"
+    owner_nic: Optional[str] = "199415802345"
+    phone: Optional[str] = "+94 77 123 4567"
+    email: Optional[str] = "applicant.business@sme.lk"
+    residence_address: Optional[str] = None
+    commencement_date: Optional[str] = None
+
+
+@router.post("/generate-br-form")
+def generate_business_registration_form(payload: BrFormGenerationRequest) -> Response:
+    """
+    Generates an auto-filled Official Sri Lanka Business Registration (BR) Form (Form 1)
+    as a downloadable PDF document based on user-provided or extracted business profile.
+    """
+    try:
+        data = payload.model_dump()
+        pdf_bytes = generate_br_application_pdf(data)
+        safe_name = "".join(c for c in (payload.business_name or "Business") if c.isalnum() or c in ("-", "_")).strip()
+        filename = f"BR_Application_Form1_{safe_name or 'Business'}.pdf"
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Access-Control-Expose-Headers": "Content-Disposition",
+            },
+        )
+    except Exception as exc:
+        logger.exception("Failed to generate BR Application Form PDF: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Failed to generate application form: {str(exc)}")
+
+
+@router.get("/sample-br-form/download")
+def download_sample_br_form(
+    business_name: str = "CEYLON GREEN ESSENTIALS",
+    legal_form: str = "sole_proprietorship",
+    district: str = "Gampaha",
+) -> Response:
+    """Downloads an official sample auto-filled Business Registration Form 1 PDF."""
+    sample_data = {
+        "business_name": business_name,
+        "legal_form": legal_form,
+        "district": district,
+        "sector": "Food Manufacturing & Processing",
+        "employee_count": 15,
+        "revenue": 3500000.0,
+    }
+    pdf_bytes = generate_br_application_pdf(sample_data)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="Sample_BR_Form1_{district}.pdf"',
+            "Access-Control-Expose-Headers": "Content-Disposition",
+        },
+    )
+
 

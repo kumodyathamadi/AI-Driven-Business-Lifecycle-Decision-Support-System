@@ -6,7 +6,7 @@
     "category": "food_business",
     "required_action_name": "Food premises registration/approval or other applicable food-safety approval — exact requirement to be verified",
     "target_authority": "Contact the relevant local authority and its authorised public-health/food-safety office for the exact premises; verify the competent officer and procedure.",
-    "office_location": "nan",
+    "office_location": "Local Authority Health Department (CMC / Municipal / Urban Council / Pradeshiya Sabha) & MOH / PHI Office",
     "action_urgency": "Confirm applicable requirements before starting the regulated activity or submitting an application; exact deadline is not established by this dataset.",
     "required_documents": [
       "Business and premises details",
@@ -29,6 +29,7 @@
       "National_Food_Safety_Policy.pdf"
     ],
     "applicability_status": "UNKNOWN",
-    "review_instructions": "Verify current law, exact authority, office, action/licence name, documents and procedure from official sources before approving this row for model training."
+    "review_instructions": "Verify current law, exact authority, office, action/licence name, documents and procedure from official sources before approving this row for model training.",
+    "province_scope": "Western Province (Colombo, Gampaha, Kalutara)"
   }
 }
