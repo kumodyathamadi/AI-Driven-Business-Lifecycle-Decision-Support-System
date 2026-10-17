@@ -27,6 +27,7 @@ BUSINESS_GOALS = {
         {"id": "Launch Digital Store", "label": "Launch Digital / E-Commerce Business", "description": "Focus on online and delivery-based operations."}
     ],
     "Existing": [
+        {"id": "Personalized Growth & Expansion", "label": "Personalized Business Growth", "description": "Identify and recommend tailored growth opportunities for your enterprise."},
         {"id": "Open New Branch", "label": "Expand / Open a New Branch", "description": "Set up an additional physical location or branch."},
         {"id": "Introduce New Product", "label": "Introduce a New Product / Service Line", "description": "Add new inventory, offerings, or service lines."}
     ]
@@ -67,9 +68,10 @@ def get_dynamic_field_config(business_stage: str, business_goal: str = "", busin
     """
     Evaluates dynamic field visibility rules based on Business Stage + Business Goal + Category.
     Returns dictionary mapping each field_key to state: 'required', 'optional', or 'hidden'.
+    Unifies all existing business growth opportunities into a single comprehensive configuration.
     """
     stage = "New" if "new" in business_stage.lower() or "start" in business_stage.lower() else "Existing"
-    goal = business_goal.strip() if business_goal else ("Establish New Business" if stage == "New" else "Open New Branch")
+    goal = business_goal.strip() if business_goal else ("Establish New Business" if stage == "New" else "Personalized Growth & Expansion")
 
     required_fields = set()
     optional_fields = set()
@@ -90,44 +92,20 @@ def get_dynamic_field_config(business_stage: str, business_goal: str = "", busin
             "available_equipment_score", "required_equipment_score", "supplier_availability_score",
             "location_suitability_score"
         ])
-        # N/A fields for new startups are none of the standard 22, but new startups don't require historical metrics
     
     else:
-        # Existing Business Flows
-        if "branch" in goal.lower() or "expand" in goal.lower():
-            # Existing + Open New Branch
-            required_fields.update([
-                "location_type", "monthly_budget_lkr", "expected_customers_per_day", 
-                "expected_price_lkr", "entrepreneur_experience_years", "required_staff_count", 
-                "required_equipment_score"
-            ])
-            optional_fields.update([
-                "loan_amount_lkr", "initial_inventory_cost_lkr", "competition_level", 
-                "customer_demand_score", "available_staff_count", "available_equipment_score", 
-                "supplier_availability_score", "location_suitability_score"
-            ])
-        elif "product" in goal.lower() or "service" in goal.lower():
-            # Existing + Introduce New Product
-            required_fields.update([
-                "initial_inventory_cost_lkr", "expected_price_lkr", "expected_customers_per_day", 
-                "customer_demand_score", "supplier_availability_score"
-            ])
-            optional_fields.update([
-                "monthly_budget_lkr", "available_capital_lkr", "loan_amount_lkr", 
-                "available_equipment_score", "required_equipment_score", "entrepreneur_experience_years"
-            ])
-            hidden_fields.update(["location_suitability_score", "location_type"])
-        else:
-            # Default Existing Business
-            required_fields.update([
-                "location_type", "monthly_budget_lkr", "expected_customers_per_day", 
-                "expected_price_lkr", "entrepreneur_experience_years"
-            ])
-            optional_fields.update([
-                "loan_amount_lkr", "initial_inventory_cost_lkr", "competition_level", 
-                "customer_demand_score", "available_staff_count", "required_staff_count", 
-                "available_equipment_score", "required_equipment_score", "supplier_availability_score"
-            ])
+        # Unified Existing Business Growth Plan Flow
+        # All relevant features are evaluated without arbitrary exclusion
+        required_fields.update([
+            "location_type", "monthly_budget_lkr", "expected_customers_per_day", 
+            "expected_price_lkr", "entrepreneur_experience_years"
+        ])
+        optional_fields.update([
+            "loan_amount_lkr", "initial_inventory_cost_lkr", "competition_level", 
+            "customer_demand_score", "available_staff_count", "required_staff_count", 
+            "available_equipment_score", "required_equipment_score", "supplier_availability_score",
+            "location_suitability_score", "expected_operating_days_per_month"
+        ])
 
     # Assemble complete field configuration
     field_config = {}

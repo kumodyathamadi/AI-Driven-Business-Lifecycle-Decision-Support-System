@@ -296,11 +296,11 @@ class BusinessPlanPDFGenerator:
         province = biz_id.get("province", "Western")
 
         is_new_startup = "new" in stage.lower() or "start" in stage.lower()
-        doc_title = metadata.get("document_title") or ("STRATEGIC BUSINESS PLAN" if is_new_startup else "STRATEGIC BUSINESS GROWTH & EXPANSION PLAN")
+        doc_title = metadata.get("document_title") or ("STRATEGIC BUSINESS PLAN" if is_new_startup else "PERSONALIZED BUSINESS GROWTH PLAN")
         doc_subtitle = metadata.get("document_subtitle") or (
             "A Comprehensive Feasibility, Strategic Direction & Implementation Blueprint"
             if is_new_startup else
-            "AI-Driven Business Growth, Expansion Feasibility & Investment Planning"
+            "A Tailored Strategic Growth & Decision Support Blueprint"
         )
 
         story.append(Paragraph(metadata.get("system_brand", "SME360 AI"), subtitle_style))
@@ -328,685 +328,30 @@ class BusinessPlanPDFGenerator:
 
         story.append(PageBreak())
 
-        # =========================================================================
-        # SECTION 01 — BUSINESS & MARKET OVERVIEW
-        # =========================================================================
-        sec_01 = report_data.get("section_01", {})
-        summary_info = sec_01.get("business_summary", {})
-        concept = sec_01.get("business_concept", {})
-        market = sec_01.get("market_overview", {})
-        comp = sec_01.get("competition", {})
-        loc = sec_01.get("location", {})
+        ctx = {
+            "h1_style": h1_style,
+            "h2_style": h2_style,
+            "h3_style": h3_style,
+            "body_style": body_style,
+            "bullet_style": bullet_style,
+            "table_header_style": table_header_style,
+            "table_cell_style": table_cell_style,
+            "primary_color": primary_color,
+            "accent_blue": accent_blue,
+            "dark_text": dark_text,
+            "muted_text": muted_text,
+            "card_bg": card_bg,
+            "card_border": card_border,
+            "grid_border": grid_border,
+            "create_callout_box": create_callout_box,
+            "create_metric_strip": create_metric_strip,
+        }
 
-        sec_01_name = sec_01.get("section_title")
-        if sec_01_name:
-            sec_01_display = f"SECTION {sec_01_name.upper()}" if not sec_01_name.upper().startswith("SECTION") else sec_01_name.upper()
+        new_startup_sections = report_data.get("new_startup_sections")
+        if is_new_startup and new_startup_sections:
+            BusinessPlanPDFGenerator._render_new_startup_sections(story, report_data, ctx)
         else:
-            sec_01_display = "SECTION 01 — BUSINESS & MARKET OVERVIEW" if is_new_startup else "SECTION 01 — ENTERPRISE BASELINE & EXPANSION SCOPE"
-        story.append(Paragraph(sec_01_display, h1_style))
-        story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
-
-        # 1.1 Business Overview Narrative
-        story.append(Paragraph("<b>1.1 Business Overview</b>", h2_style))
-        
-        is_new_startup = "new" in stage.lower()
-        model_str = summary_info.get("business_model") or "Direct Retail / Service"
-        
-        if is_new_startup:
-            p1 = (
-                f"<b>{biz_name}</b> is a proposed new startup venture within the <b>{category}</b> sector, "
-                f"planned for launch in {district}, {province} Province, Sri Lanka. The enterprise is structured under a "
-                f"<b>{model_str}</b> model, providing commercial offerings tailored to the local market catchment. "
-                f"As a new venture in its initial setup phase, commercial priorities center on establishing initial operations, "
-                f"building customer awareness, and maintaining disciplined operating expenditure."
-            )
-        else:
-            p1 = (
-                f"<b>{biz_name}</b> is an established enterprise operating within the <b>{category}</b> sector, "
-                f"located in {district}, {province} Province, Sri Lanka. Operating under a <b>{model_str}</b> business model, "
-                f"the enterprise aims to execute strategic growth and operational refinement."
-            )
-        story.append(Paragraph(p1, body_style))
-
-        desc_text = summary_info.get("business_description")
-        if desc_text and desc_text != "Information not provided":
-            p2 = f"Based on the operational details provided: {desc_text}"
-            story.append(Paragraph(p2, body_style))
-        else:
-            p2 = (
-                f"The business is structured to meet consumer demand in {district} through focused service execution, "
-                f"relying on founder oversight and targeted local promotions to establish commercial presence."
-            )
-            story.append(Paragraph(p2, body_style))
-
-        # 1.2 Business Concept
-        story.append(Spacer(1, 4))
-        story.append(Paragraph("<b>1.2 Business Concept & Objectives</b>", h2_style))
-        concept_overview = concept.get("concept_overview", f"Strategic plan for a proposed {category.lower()} in {district}.")
-        products_services = concept.get("products_services", f"Commercial offerings within {category}")
-        target_cust = concept.get("target_customers", f"Consumers and households in {district}")
-        objectives = concept.get("business_objectives", f"Establish a sustainable {category} enterprise in {district}.")
-
-        story.append(Paragraph(concept_overview, body_style))
-        story.append(Paragraph(f"• <b>Primary Commercial Offerings:</b> {products_services}", bullet_style))
-        story.append(Paragraph(f"• <b>Target Customer Profile:</b> {target_cust}", bullet_style))
-        story.append(Paragraph(f"• <b>Foundational Objectives:</b> {objectives}", bullet_style))
-
-        # 1.3 Market Opportunity
-        story.append(Spacer(1, 4))
-        story.append(Paragraph("<b>1.3 Market Opportunity & Demand Analysis</b>", h2_style))
-        
-        target_catchment = market.get("target_market", f"{district} Catchment")
-        cust_per_day = market.get("expected_customers_per_day", 0)
-        unit_price = market.get("expected_selling_price_lkr", 0.0)
-        op_days = market.get("operating_days_per_month", 26)
-        demand_score = market.get("customer_demand_score", "50/100")
-        monthly_volume = cust_per_day * op_days
-
-        p_mkt_1 = (
-            f"The proposed enterprise is positioned to serve the <b>{target_catchment}</b>. "
-            f"Based on the entrepreneur's planning assumptions, initial daily patronage is estimated at approximately "
-            f"<b>{cust_per_day} customers per day</b>, with an expected average unit price of <b>LKR {unit_price:,.2f}</b>. "
-            f"Operating across an estimated <b>{op_days} days per month</b>, the facility anticipates a monthly customer throughput "
-            f"of approximately <b>{monthly_volume:,} customer interactions</b>."
-        )
-        story.append(Paragraph(p_mkt_1, body_style))
-
-        p_mkt_2 = (
-            f"The recorded customer demand score for this business profile is <b>{demand_score}</b>. "
-            f"This indicates that demand development and neighborhood visibility will serve as important priorities during "
-            f"the initial launch phase, requiring active local marketing to capture and sustain the anticipated footfall volume."
-        )
-        story.append(Paragraph(p_mkt_2, body_style))
-
-        # 1.4 Competition & Location
-        story.append(Spacer(1, 4))
-        story.append(Paragraph("<b>1.4 Competition & Location Dynamics</b>", h2_style))
-        
-        comp_level = comp.get("competition_level", "Moderate")
-        comp_count = comp.get("competitor_count_nearby")
-        comp_pos = comp.get("competitive_positioning", "Localized service and operational differentiation.")
-        loc_suit = loc.get("location_suitability_score", "3/5")
-        loc_type = loc.get("location_type", "Commercial Area")
-        loc_notes = loc.get("location_considerations", f"Commercial density in {district}.")
-
-        if comp_count is not None and str(comp_count) not in ["0", "Not provided in current business input"]:
-            p_comp = (
-                f"The local competitive environment is characterized with a competition level of <b>{comp_level}</b>, "
-                f"with approximately <b>{comp_count} direct competitor(s)</b> noted in the business intake. "
-                f"To secure customer loyalty and avoid price discounting friction, the positioning strategy emphasizes: <i>{comp_pos}</i>"
-            )
-        else:
-            p_comp = (
-                f"The local competitive environment is recorded with a competition level of <b>{comp_level}</b>. "
-                f"Specific nearby direct competitor counts were not provided in current business inputs. "
-                f"To secure customer loyalty, the positioning strategy emphasizes: <i>{comp_pos}</i>"
-            )
-        story.append(Paragraph(p_comp, body_style))
-
-        p_loc = (
-            f"The operating location in {district} holds a suitability rating of <b>{loc_suit}</b> within a <b>{loc_type}</b> setting. "
-            f"{loc_notes} Commercial operations will focus on direct customer service, operational reliability, and targeted local engagement."
-        )
-        story.append(Paragraph(p_loc, body_style))
-
-        story.append(Spacer(1, 10))
-
-        # =========================================================================
-        # SECTION 02 — AI FEASIBILITY & KEY INSIGHTS
-        # =========================================================================
-        sec_02 = report_data.get("section_02", {})
-        feas = sec_02.get("feasibility_assessment", {})
-        pred_label = feas.get("final_predicted_label", "Conditionally Feasible")
-        conf_pct = feas.get("predicted_probability_percentage") or feas.get("confidence_percentage", "65.0%")
-        probs = feas.get("probabilities", {})
-        prob_feas = probs.get("Feasible", 0.0)
-        prob_cond = probs.get("Conditionally Feasible", 0.0)
-        prob_infeas = probs.get("Infeasible", 0.0)
-
-        sec_02_name = sec_02.get("section_title")
-        if sec_02_name:
-            sec_02_display = f"SECTION {sec_02_name.upper()}" if not sec_02_name.upper().startswith("SECTION") else sec_02_name.upper()
-        else:
-            sec_02_display = "SECTION 02 — AI FEASIBILITY & KEY INSIGHTS" if is_new_startup else "SECTION 02 — AI FEASIBILITY ASSESSMENT & EXPLANATION"
-        story.append(Paragraph(sec_02_display, h1_style))
-        story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
-
-        # 2.1 AI Feasibility Statement
-        story.append(Paragraph("<b>2.1 AI Feasibility Assessment</b>", h2_style))
-        
-        feas_intro = (
-            f"Based on the integrated evaluation of financial capital, market demand, operational staffing, and resource readiness, "
-            f"SME360 AI assesses <b>{biz_name}</b> as <b>{pred_label}</b> with a predicted class probability of <b>{conf_pct}</b>. "
-            f"The multi-class Random Forest feasibility model assigns a predicted probability of <b>{prob_cond:.1%}</b> to Conditionally Feasible, "
-            f"<b>{prob_feas:.1%}</b> to Feasible, and <b>{prob_infeas:.1%}</b> to Infeasible. "
-            f"The feasibility model developed in this study was trained and evaluated using the dataset used for this research. "
-            f"This classification indicates that while the business demonstrates commercial potential, specific operational hurdles "
-            f"and working capital safeguards should be addressed during setup."
-        )
-        story.append(Paragraph(feas_intro, body_style))
-
-        # Highlighted Feasibility Outcome Card
-        feas_badge_color = "#166534" if pred_label == "Feasible" else "#854d0e" if "Conditionally" in pred_label else "#991b1b"
-        feas_card_content = [
-            Paragraph(f"<font color='{feas_badge_color}' size='11'><b>ASSESSMENT VERDICT: {pred_label.upper()} (Predicted Class Probability: {conf_pct})</b></font>", body_style),
-            Spacer(1, 2),
-            Paragraph(f"<font color='#475569'>Class Probabilities: Feasible: <b>{prob_feas:.1%}</b>  |  Conditionally Feasible: <b>{prob_cond:.1%}</b>  |  Infeasible: <b>{prob_infeas:.1%}</b></font>", body_style)
-        ]
-        story.append(create_callout_box(feas_card_content, bg=colors.HexColor("#f8fafc"), border=card_border, padding=7))
-
-        # Embedded Probability Chart
-        try:
-            chart_bytes = BusinessPlanChartGenerator.generate_probability_chart(probs)
-            chart_img = Image(io.BytesIO(chart_bytes), width=480, height=130)
-            story.append(Spacer(1, 5))
-            story.append(chart_img)
-        except Exception:
-            pass
-
-        # 2.2 SHAP Explainability (Narrative, Not Tables)
-        story.append(Spacer(1, 4))
-        story.append(Paragraph("<b>2.2 Why Did the AI Reach This Assessment? (Explainable AI Attribution)</b>", h2_style))
-        
-        shap_intro = (
-            "To provide decision-support transparency, SME360 AI uses SHAP (SHapley Additive exPlanations) values to determine "
-            "how specific business parameters influenced the model's classification. Rather than claiming absolute causality, SHAP "
-            "identifies features that contributed positive supporting weight toward feasibility versus those that applied downward pressure "
-            "as operational hurdles."
-        )
-        story.append(Paragraph(shap_intro, body_style))
-
-        shap_info = sec_02.get("shap_explainability", {})
-        pos_drivers = shap_info.get("positive_enablers", [])
-        neg_drivers = shap_info.get("negative_hurdles", [])
-
-        # Positive Drivers Subsection
-        story.append(Spacer(1, 2))
-        story.append(Paragraph("<b>Primary Positive Supporting Factors:</b>", h3_style))
-        if pos_drivers:
-            for item in pos_drivers[:3]:
-                feat_name = item.get("feature", "Factor")
-                val_str = item.get("feature_value", "N/A")
-                interp = item.get("business_interpretation", "Contributed positive support to feasibility.")
-                story.append(Paragraph(f"• <b>{feat_name} ({val_str}):</b> {interp}", bullet_style))
-        else:
-            story.append(Paragraph("• Baseline capital and operating assumptions align with initial industry requirements.", bullet_style))
-
-        # Negative Drivers Subsection
-        story.append(Spacer(1, 2))
-        story.append(Paragraph("<b>Operational Hurdles Requiring Management Attention:</b>", h3_style))
-        if neg_drivers:
-            for item in neg_drivers[:3]:
-                feat_name = item.get("feature", "Constraint")
-                val_str = item.get("feature_value", "N/A")
-                interp = item.get("business_interpretation", "Exerted downward pressure, highlighting an operational hurdle.")
-                story.append(Paragraph(f"• <b>{feat_name} ({val_str}):</b> {interp}", bullet_style))
-        else:
-            story.append(Paragraph("• Working capital buffer and customer footfall should be closely monitored during the opening months.", bullet_style))
-
-        story.append(Spacer(1, 10))
-
-        # =========================================================================
-        # SECTION 03 — STRATEGIC RECOMMENDATIONS & DECISION SUPPORT
-        # =========================================================================
-        sec_03 = report_data.get("section_03", {})
-        hitl = sec_03.get("human_in_the_loop_selection", {})
-        is_sel = hitl.get("is_user_selected", False)
-        active_strat_title = hitl.get("selected_strategy_name", "Low-Cost, Low-Risk Start")
-        ai_strat = sec_03.get("ai_recommended_strategy", {})
-        strat_candidates = sec_03.get("available_strategic_alternatives", [])
-        ranked_list = sec_03.get("strategy_ranking", [])
-
-        sec_03_name = sec_03.get("section_title")
-        if sec_03_name:
-            sec_03_display = f"SECTION {sec_03_name.upper()}" if not sec_03_name.upper().startswith("SECTION") else sec_03_name.upper()
-        else:
-            sec_03_display = "SECTION 03 — STRATEGIC RECOMMENDATIONS & TOPSIS RANKING" if is_new_startup else "SECTION 03 — GROWTH STRATEGY PRIORITIZATION & TOPSIS RANKING"
-        story.append(Paragraph(sec_03_display, h1_style))
-        story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
-
-        # 3.1 Strategic Direction
-        story.append(Paragraph("<b>3.1 Strategic Alternatives & Direction</b>", h2_style))
-        strat_intro = (
-            f"Based on the feasibility diagnosis and identified operational constraints, SME360 AI formulated four tailored "
-            f"strategic pathways for <b>{biz_name}</b>. Rather than proposing a generic one-size-fits-all plan, each alternative "
-            f"represents a distinct operational philosophy balancing capital intensity, channel deployment, and resource constraints."
-        )
-        story.append(Paragraph(strat_intro, body_style))
-
-        # Individual Strategy Cards / Subsections
-        for s in strat_candidates[:4]:
-            s_name = s.get("strategy_name", "Strategy")
-            s_focus = s.get("strategic_focus", "Operational Execution")
-            s_approach = s.get("operational_approach", "Maintain disciplined operations.")
-            s_cap = s.get("estimated_capital_required_lkr", 0.0)
-            s_budget = s.get("estimated_monthly_budget_lkr", 0.0)
-            s_cust = s.get("target_daily_customers", 0)
-            s_score = s.get("topsis_score", "N/A")
-            s_rank = s.get("rank", "-")
-            s_impact = s.get("expected_feasibility_impact", "Controlled operations")
-
-            # Fallback lookup in ranked_list if rank or topsis_score is missing
-            if s_score in ["N/A", None] or s_rank in ["-", None]:
-                for r_item in ranked_list:
-                    if r_item.get("strategy_id") == s.get("strategy_id") or r_item.get("strategy_name") == s_name:
-                        s_rank = r_item.get("rank", s_rank)
-                        s_score = str(r_item.get("topsis_score", s_score))
-                        break
-
-            strat_box_elements = [
-                Paragraph(f"<b>Strategy #{s_rank}: {s_name}</b>", ParagraphStyle('StratHead', parent=body_style, fontName='Helvetica-Bold', fontSize=9.5, textColor=primary_color)),
-                Spacer(1, 2),
-                Paragraph(f"<b>Strategic Focus:</b> {s_focus} — {s_approach}", body_style),
-                Paragraph(f"<b>Expected Impact:</b> {s_impact}", body_style),
-                Spacer(1, 2),
-                Paragraph(
-                    f"<font color='#1e3a8a'><b>Target Capital:</b> LKR {s_cap:,.0f}</font>  |  "
-                    f"<b>Monthly Budget:</b> LKR {s_budget:,.0f}  |  "
-                    f"<b>Target Footfall:</b> {s_cust} Customers/Day  |  "
-                    f"<b>TOPSIS Closeness:</b> {s_score}",
-                    ParagraphStyle('StratMeta', parent=body_style, fontSize=7.5, textColor=dark_text)
-                )
-            ]
-            story.append(create_callout_box(strat_box_elements, bg=colors.HexColor("#f8fafc"), border=card_border, padding=6))
-            story.append(Spacer(1, 4))
-
-        # 3.2 TOPSIS Prioritization Table
-        story.append(Spacer(1, 4))
-        story.append(Paragraph("<b>3.2 Strategy Prioritization (TOPSIS Multi-Criteria Method)</b>", h2_style))
-        topsis_expl = (
-            "The strategic alternatives were evaluated using the TOPSIS (Technique for Order of Preference by "
-            "Similarity to Ideal Solution) decision methodology. The evaluation simultaneously weighed five validated criteria: "
-            "<b>Financial Viability (25%)</b>, <b>Implementation Feasibility (20%)</b>, <b>Market Demand Alignment (25%)</b>, "
-            "<b>Resource & Operational Friction (15%)</b>, and <b>Resource Efficiency (15%)</b>. The table below summarizes the multi-criteria ranking:"
-        )
-        story.append(Paragraph(topsis_expl, body_style))
-
-        comp_table_data = [
-            [
-                Paragraph("<b>Rank</b>", table_header_style),
-                Paragraph("<b>Strategy Alternative</b>", table_header_style),
-                Paragraph("<b>Strategic Focus</b>", table_header_style),
-                Paragraph("<b>Target Capital</b>", table_header_style),
-                Paragraph("<b>TOPSIS Score</b>", table_header_style),
-            ]
-        ]
-        for r in ranked_list[:4]:
-            comp_table_data.append([
-                Paragraph(f"<b>#{r.get('rank', '-')}</b>", table_cell_style),
-                Paragraph(f"<b>{r.get('strategy_name', '')}</b>", table_cell_style),
-                Paragraph(r.get("strategic_focus", "Execution"), table_cell_style),
-                Paragraph(f"LKR {r.get('estimated_capital_required_lkr', 0):,.0f}", table_cell_style),
-                Paragraph(str(r.get("topsis_score", "N/A")), table_cell_style),
-            ])
-        comp_table = Table(comp_table_data, colWidths=[35, 175, 155, 105, 70])
-        comp_table.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), primary_color),
-            ('PADDING', (0,0), (-1,-1), 4.5),
-            ('BOX', (0,0), (-1,-1), 1, card_border),
-            ('INNERGRID', (0,0), (-1,-1), 0.5, grid_border),
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ]))
-        story.append(comp_table)
-
-        ai_top_stmt = (
-            f"Under this multi-criteria analysis, <b>{ai_strat.get('strategy_name')}</b> attained the highest relative closeness score "
-            f"(<b>{ai_strat.get('topsis_score')}</b>), establishing it as the AI engine's preferred strategic recommendation."
-        )
-        story.append(Spacer(1, 4))
-        story.append(Paragraph(ai_top_stmt, body_style))
-
-        # 3.3 Human-in-the-Loop Selection Narrative
-        story.append(Spacer(1, 4))
-        story.append(Paragraph("<b>3.3 Entrepreneur Strategic Decision (Human-in-the-Loop Integration)</b>", h2_style))
-        if is_sel:
-            hitl_narrative = (
-                f"The entrepreneur reviewed the generated alternatives and selected <b>{active_strat_title}</b> to steer operations. "
-                f"While the AI system identified {ai_strat.get('strategy_name')} as the highest mathematical candidate under default weights, "
-                f"SME360 AI fully respects entrepreneur domain judgment and specific resource preferences. Consequently, all subsequent financial "
-                f"plans, operational structures, scenario stress-tests, and execution milestones across this report have been "
-                f"re-aligned with the entrepreneur's chosen strategy."
-            )
-        else:
-            hitl_narrative = (
-                f"The entrepreneur reviewed the alternatives and confirmed the adoption of the AI's highest-ranked recommendation, "
-                f"<b>{active_strat_title}</b> (TOPSIS Score: {ai_strat.get('topsis_score')}). The subsequent financial, operational, and "
-                f"implementation plans are directly calibrated to this strategy."
-            )
-        hitl_box = [
-            Paragraph(f"<b>ACTIVE OPERATING STRATEGY:</b> <font color='#1e3a8a'><b>{active_strat_title}</b></font> ({'Adopted by Entrepreneur' if is_sel else 'Matches AI Rank #1'})", body_style),
-            Spacer(1, 2),
-            Paragraph(hitl_narrative, body_style)
-        ]
-        story.append(create_callout_box(hitl_box, bg=colors.HexColor("#f0fdf4") if is_sel else colors.HexColor("#eff6ff"), border=colors.HexColor("#86efac") if is_sel else colors.HexColor("#93c5fd"), padding=7))
-
-        story.append(Spacer(1, 10))
-
-        # =========================================================================
-        # SECTION 04 — FINANCIAL & OPERATIONAL PLAN
-        # =========================================================================
-        sec_04 = report_data.get("section_04", {})
-        fin_plan = sec_04.get("monthly_financial_plan", {})
-        startup = sec_04.get("startup_investment", {})
-        funding = sec_04.get("funding_structure", {})
-        ops = sec_04.get("operational_plan", {})
-        staff = ops.get("staffing", {})
-        equip = ops.get("equipment", {})
-        supp = ops.get("suppliers", {})
-        mkt_plan = sec_04.get("marketing_plan", {})
-
-        target_cap = startup.get("strategy_target_capital_lkr", 0.0)
-        monthly_exp = fin_plan.get("monthly_operating_budget_lkr", 0.0)
-        est_gross_sales = fin_plan.get("estimated_monthly_gross_sales_lkr", fin_plan.get("estimated_monthly_revenue_lkr", 0.0))
-        
-        strat_coverage = funding.get("strategy_budget_coverage_months", funding.get("capital_runway_months", 0.0))
-        avail_coverage = funding.get("available_funds_coverage_months", funding.get("capital_runway_months", 0.0))
-        
-        avail_cap = funding.get("available_capital_lkr", funding.get("initial_available_capital_lkr", funding.get("equity_capital_lkr", 0.0)))
-        debt_cap = funding.get("debt_financing_lkr", 0.0)
-        total_funds = funding.get("total_available_funds_lkr", avail_cap + debt_cap)
-        gap_status = startup.get("funding_gap_status", "Fully funded")
-
-        sec_04_name = sec_04.get("section_title")
-        if sec_04_name:
-            sec_04_display = f"SECTION {sec_04_name.upper()}" if not sec_04_name.upper().startswith("SECTION") else sec_04_name.upper()
-        else:
-            sec_04_display = "SECTION 04 — FINANCIAL & OPERATIONAL PLAN" if is_new_startup else "SECTION 04 — EXPANSION FINANCIAL & OPERATIONAL PLAN"
-        story.append(Paragraph(sec_04_display, h1_style))
-        story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
-
-        # 4.1 Financial Overview Narrative
-        story.append(Paragraph(f"<b>4.1 Financial Overview — Aligned with {active_strat_title}</b>", h2_style))
-        
-        fin_p1 = (
-            f"To operationalize the chosen strategy, the enterprise establishes a target capital allocation of approximately "
-            f"<b>LKR {target_cap:,.0f}</b>. Under the baseline operating budget, recurring monthly operational expenditure is projected "
-            f"at <b>LKR {monthly_exp:,.0f}</b>, covering commercial rent, essential payroll, utilities, and routine replenishment inventory. "
-            f"With an expected customer throughput of <b>{cust_per_day} customers per day</b>, an expected unit price of <b>LKR {unit_price:,.2f}</b>, "
-            f"and an operating schedule of <b>{op_days} days per month</b>, estimated monthly gross sales total approximately "
-            f"<b>LKR {est_gross_sales:,.0f}</b>. "
-            f"<i>(Note: This is an estimated monthly gross sales calculation based on stated volume, price, and operating days. It does not account for variable costs or net profit.)</i>"
-        )
-        story.append(Paragraph(fin_p1, body_style))
-
-        # Key Financial Figures Metric Strip
-        story.append(Spacer(1, 2))
-        fin_metrics = [
-            ("Target Capital", f"LKR {target_cap:,.0f}", "Baseline Allocation"),
-            ("Monthly Budget", f"LKR {monthly_exp:,.0f}", "Operating Expenditure"),
-            ("Est. Gross Sales", f"LKR {est_gross_sales:,.0f}", "Volume × Price × Days"),
-            ("Budget Coverage", f"{strat_coverage} Mo (Strat)", "Simplified Budget Ratio")
-        ]
-        story.append(create_metric_strip(fin_metrics))
-        story.append(Spacer(1, 4))
-
-        # 4.2 Funding Position & Simplified Budget Coverage
-        story.append(Paragraph("<b>4.2 Funding Structure & Simplified Budget Coverage</b>", h3_style))
-        fin_p2 = (
-            f"The business financing structure comprises <b>LKR {avail_cap:,.0f}</b> in recorded available capital and "
-            f"<b>LKR {debt_cap:,.0f}</b> in external loan financing, delivering total initial funding of <b>LKR {total_funds:,.0f}</b>. "
-            f"Comparing available capital against the target requirement (LKR {target_cap:,.0f}) indicates that the venture is <b>{gap_status.lower()}</b>. "
-            f"Under the baseline operating budget, simplified budget coverage corresponds to approximately <b>{strat_coverage} months</b> "
-            f"for the strategy allocation and <b>{avail_coverage} months</b> for total recorded funds. "
-            f"<i>(Note: Simplified budget coverage represents a capital-to-budget ratio and does not constitute a guaranteed survival period, as it does not model cash flow cycles or unforeseen costs.)</i>"
-        )
-        story.append(Paragraph(fin_p2, body_style))
-
-        # Payback Analysis / Safeguards (For Existing Business Expansion)
-        payback_info = sec_04.get("payback_and_roi_analysis")
-        if payback_info:
-            story.append(Spacer(1, 4))
-            story.append(Paragraph("<b>4.2b Expansion Payback & Capital Recovery Analysis</b>", h3_style))
-            if payback_info.get("is_calculated"):
-                p_payback = (
-                    f"Based on the supplied one-time expansion CapEx and net operating profit baseline, the target investment "
-                    f"payback period is estimated at <b>~{payback_info.get('estimated_payback_months')} months</b>. "
-                    f"<i>(Note: This calculation assumes consistent net cash flow generation without unexpected working capital shocks.)</i>"
-                )
-            else:
-                missing_str = ", ".join(payback_info.get("missing_inputs", [])) if payback_info.get("missing_inputs") else "Expansion CapEx and Operating Net Profit"
-                p_payback = (
-                    f"<b>Payback Analysis Status:</b> <font color='#991b1b'><b>Insufficient data to calculate</b></font>. "
-                    f"The following required baseline inputs were not provided: <i>{missing_str}</i>. "
-                    f"To prevent misleading financial forecasts, payback period and return on investment are not estimated from gross sales alone."
-                )
-            story.append(Paragraph(p_payback, body_style))
-
-        # 4.3 Operational Plan Subsections
-        story.append(Spacer(1, 4))
-        story.append(Paragraph("<b>4.3 Operational Plan & Resource Allocation</b>", h2_style))
-        
-        avail_staff_num = staff.get("available_staff_count", 1)
-        req_staff_num = staff.get("required_staff_count", 1)
-        staff_cap_status = staff.get("capacity_status", "Balanced staffing")
-        equip_score = equip.get("available_equipment_score", "3/5")
-        equip_status = equip.get("readiness_status", "Meets operating baseline")
-        supp_score = supp.get("supplier_availability_score", "3/5")
-        supp_region = supp.get("network_region", f"Local supplier channels in {district}")
-
-        story.append(Paragraph("<b>Staffing & Workforce Management:</b>", h3_style))
-        p_staff = (
-            f"The enterprise currently deploys <b>{avail_staff_num} active staff member(s)</b> against an estimated requirement of "
-            f"<b>{req_staff_num}</b>, representing a <b>{staff_cap_status}</b>. Daily workflow will emphasize clear task specialization "
-            f"and cross-training across front-of-house customer relations and stock management to maintain service continuity during peak hours."
-        )
-        story.append(Paragraph(p_staff, body_style))
-
-        story.append(Paragraph("<b>Equipment Readiness & Facilities:</b>", h3_style))
-        p_equip = (
-            f"Available equipment readiness is rated at <b>{equip_score}</b>, currently satisfying operational requirements ({equip_status}). "
-            f"To avoid upfront capital strain, essential commercial fixtures will be prioritized during initial deployment, "
-            f"supplemented by preventive maintenance routines and supplier warranty coverage to avoid unscheduled downtime."
-        )
-        story.append(Paragraph(p_equip, body_style))
-
-        story.append(Paragraph("<b>Supplier Logistics & Sourcing Policy:</b>", h3_style))
-        p_supp = (
-            f"Regional supplier availability is rated at <b>{supp_score}</b> for {supp_region}. Sourcing strategy will establish "
-            f"commercial terms with reliable suppliers for critical inventory to safeguard against stockouts, while maintaining "
-            f"controlled initial order quantities to optimize working capital."
-        )
-        story.append(Paragraph(p_supp, body_style))
-
-        # 4.4 Marketing Plan
-        story.append(Spacer(1, 4))
-        story.append(Paragraph("<b>4.4 Marketing & Customer Acquisition Strategy</b>", h2_style))
-        mkt_channel = mkt_plan.get("marketing_channel", "Word of Mouth & Local Channels")
-        p_mkt_strat = (
-            f"Customer acquisition will concentrate on building awareness within the {district} catchment through <b>{mkt_channel}</b>. "
-            f"The marketing framework pairs local community engagement with selective promotional tactics designed to encourage trial and repeat patronage:"
-        )
-        story.append(Paragraph(p_mkt_strat, body_style))
-
-        tactics = mkt_plan.get("promotional_tactics", [])
-        if tactics:
-            for t in tactics[:4]:
-                story.append(Paragraph(f"• {t}", bullet_style))
-        else:
-            story.append(Paragraph("• Deploy localized awareness campaigns and neighborhood outreach within the commercial catchment.", bullet_style))
-            story.append(Paragraph("• Introduce introductory trial bundles and promotional discounts during opening weeks.", bullet_style))
-            story.append(Paragraph("• Implement a customer loyalty program to incentivize repeat visits and patron retention.", bullet_style))
-            story.append(Paragraph("• Maintain active digital messaging channels for customer inquiries, bookings, and updates.", bullet_style))
-
-        story.append(Spacer(1, 10))
-
-        # =========================================================================
-        # SECTION 05 — SCENARIO ANALYSIS & ACTION ROADMAP
-        # =========================================================================
-        sec_05 = report_data.get("section_05", {})
-        scen_list = sec_05.get("what_if_analysis", {}).get("scenarios", [])
-        cf = sec_05.get("counterfactual_analysis", {})
-        rm = sec_05.get("personalized_action_roadmap", {})
-        kpis = sec_05.get("management_monitoring_measures") or sec_05.get("measurable_kpis", [])
-        constraints = sec_05.get("operational_constraints_and_management_considerations") or sec_05.get("business_constraints_and_mitigation", [])
-
-        sec_05_name = sec_05.get("section_title")
-        if sec_05_name:
-            sec_05_display = f"SECTION {sec_05_name.upper()}" if not sec_05_name.upper().startswith("SECTION") else sec_05_name.upper()
-        else:
-            sec_05_display = "SECTION 05 — SCENARIO ANALYSIS & ACTION ROADMAP" if is_new_startup else "SECTION 05 — PERSONALIZED GROWTH ROADMAP & MONITORING"
-        story.append(Paragraph(sec_05_display, h1_style))
-        story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
-
-        # 5.1 What-If Scenarios
-        story.append(Paragraph("<b>5.1 What-If Scenario Sensitivity Analysis</b>", h2_style))
-        scen_intro = (
-            "To evaluate business resilience before committing capital, SME360 AI simulated four prospective operational shifts. "
-            "These scenarios represent sensitivity simulations rather than guaranteed future outcomes, highlighting how adjustments in "
-            "capital, credit, footfall, and operating costs alter the feasibility prediction:"
-        )
-        story.append(Paragraph(scen_intro, body_style))
-
-        for sc in scen_list[:4]:
-            sc_title = sc.get("title") or sc.get("scenario_name", "Scenario")
-            sc_rat = sc.get("rationale", "Sensitivity test.")
-            sc_pred = sc.get("new_prediction", "Conditionally Feasible")
-            sc_vdelta = sc.get("viability_delta", 0.0)
-            sc_impact = sc.get("impact_summary", "Stable sensitivity.")
-            
-            shifts_pp = sc.get("class_shifts_percentage_points", {})
-            if shifts_pp:
-                f_pp = shifts_pp.get("Feasible", "0.0 pp")
-                c_pp = shifts_pp.get("Conditionally Feasible", "0.0 pp")
-                i_pp = shifts_pp.get("Infeasible", "0.0 pp")
-                shifts_str = f"Feasible Δ: <b>{f_pp}</b> | Conditionally Feasible Δ: <b>{c_pp}</b> | Infeasible Δ: <b>{i_pp}</b>"
-            else:
-                sc_fdelta = sc.get("feasibility_delta", 0.0) * 100
-                shifts_str = f"Feasible Δ: <b>{sc_fdelta:+.1f} percentage points</b>"
-
-            tree_note = sc.get("tree_partition_note", "")
-
-            sc_box = [
-                Paragraph(f"<b>Scenario: {sc_title}</b>", ParagraphStyle('ScHead', parent=body_style, fontName='Helvetica-Bold', fontSize=9, textColor=primary_color)),
-                Spacer(1, 1),
-                Paragraph(f"<b>Simulation Objective:</b> {sc_rat}", body_style),
-                Paragraph(f"<b>Model Impact:</b> Predicted Class: <b>{sc_pred}</b>  |  Viability Index Shift: <b>{sc_vdelta:+.1%}</b>", body_style),
-                Paragraph(f"<b>Class Shifts (Percentage Points):</b> {shifts_str}", body_style),
-                Paragraph(f"<b>Analytical Takeaway:</b> {sc_impact}", body_style)
-            ]
-            if tree_note:
-                sc_box.append(Paragraph(f"<i>{tree_note}</i>", ParagraphStyle('TreeNote', parent=body_style, fontSize=7.5, textColor=muted_text)))
-
-            story.append(create_callout_box(sc_box, bg=colors.HexColor("#f8fafc"), border=card_border, padding=6))
-            story.append(Spacer(1, 3))
-
-        # 5.2 Counterfactual Analysis
-        story.append(Spacer(1, 3))
-        story.append(Paragraph("<b>5.2 Capital Boundary Search (Counterfactual Simulation)</b>", h2_style))
-        cf_rec = cf.get("recommendation", "Multiple operational dimensions require joint enhancement.")
-        cf_box = [
-            Paragraph(f"<b>Boundary Search Finding:</b> {cf_rec}", body_style),
-            Spacer(1, 1),
-            Paragraph(
-                "<i>Insight: Under the tested scenario assumptions, parameter boundary search explores capital adjustments associated with class shifts. "
-                "Adjusting capital alone does not guarantee a higher classification, as viability depends jointly on demand volume, equipment readiness, and cost discipline. "
-                "This search identifies sensitivity boundaries under tested conditions and does not represent a global optimum.</i>",
-                ParagraphStyle('CfNote', parent=body_style, fontSize=7.5, textColor=muted_text)
-            )
-        ]
-        story.append(create_callout_box(cf_box, bg=colors.HexColor("#f8fafc"), border=card_border, padding=6))
-
-        # 5.3 Action Roadmap
-        story.append(Spacer(1, 4))
-        story.append(Paragraph("<b>5.3 Time-Phased Execution Roadmap & Milestones</b>", h2_style))
-        roadmap_intro = "The implementation roadmap translates strategic recommendations into time-phased execution milestones across four distinct operational horizons:"
-        story.append(Paragraph(roadmap_intro, body_style))
-
-        phases = [
-            ("Phase 1: Operational Setup & Supplier Sourcing (0 – 30 Days)", rm.get("phase_0_to_30_days", [])),
-            ("Phase 2: Customer Acquisition & Burn Control (30 – 90 Days)", rm.get("phase_30_to_90_days", [])),
-            ("Phase 3: Operational Stabilization & Review (3 – 6 Months)", rm.get("phase_3_to_6_months", [])),
-            ("Phase 4: Commercial Scale & Strategy Review (6 – 12 Months)", rm.get("phase_6_to_12_months", []))
-        ]
-
-        for p_title, p_items in phases:
-            story.append(Paragraph(f"<b>{p_title}:</b>", h3_style))
-            if p_items:
-                for item in p_items:
-                    story.append(Paragraph(f"• {item}", bullet_style))
-            else:
-                story.append(Paragraph("• Finalize operational setup and monitor performance metrics.", bullet_style))
-
-        # 5.4 Management Monitoring Measures
-        story.append(Spacer(1, 4))
-        story.append(Paragraph("<b>5.4 Key Management Monitoring Measures</b>", h2_style))
-        story.append(Paragraph("To track operational reality against planning assumptions, management should monitor these operational indicators regularly (Note: These represent management monitoring measures, not model predictions):", body_style))
-
-        if kpis:
-            kpi_table_data = [
-                [
-                    Paragraph("<b>Monitoring Measure</b>", table_header_style),
-                    Paragraph("<b>Target Metric</b>", table_header_style),
-                    Paragraph("<b>Review Frequency</b>", table_header_style),
-                    Paragraph("<b>Focus Category</b>", table_header_style)
-                ]
-            ]
-            for k in kpis[:5]:
-                kpi_table_data.append([
-                    Paragraph(f"<b>{k.get('measure_name') or k.get('kpi_name', '')}</b>", table_cell_style),
-                    Paragraph(str(k.get("target", "")), table_cell_style),
-                    Paragraph(k.get("frequency", "Monthly"), table_cell_style),
-                    Paragraph(k.get("category") or k.get("type", "Operational"), table_cell_style)
-                ])
-            kpi_table = Table(kpi_table_data, colWidths=[150, 160, 110, 120])
-            kpi_table.setStyle(TableStyle([
-                ('BACKGROUND', (0,0), (-1,0), primary_color),
-                ('PADDING', (0,0), (-1,-1), 4.5),
-                ('BOX', (0,0), (-1,-1), 1, card_border),
-                ('INNERGRID', (0,0), (-1,-1), 0.5, grid_border),
-                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ]))
-            story.append(kpi_table)
-
-        # 5.5 Operational Constraints
-        story.append(Spacer(1, 4))
-        story.append(Paragraph("<b>5.5 Operational Constraints & Practical Management Considerations</b>", h2_style))
-        for c in constraints[:4]:
-            c_name = c.get("constraint", "Constraint")
-            c_action = c.get("management_action") or c.get("mitigation", "Management action.")
-            story.append(Paragraph(f"• <b>{c_name}:</b> {c_action}", bullet_style))
-
-        story.append(Spacer(1, 10))
-
-        # =========================================================================
-        # FINAL AI RECOMMENDATION & EXECUTIVE SUMMARY
-        # =========================================================================
-        final_box = report_data.get("final_recommendation", {})
-        story.append(Paragraph("FINAL AI DECISION RECOMMENDATION", h1_style))
-        story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
-
-        verdict_val = final_box.get("ai_feasibility_verdict", pred_label)
-        rec_strat_val = final_box.get("ai_recommended_strategy", ai_strat.get("strategy_name", ""))
-        chosen_strat_val = final_box.get("entrepreneur_selected_strategy", active_strat_title)
-        pos_enabler_val = final_box.get("main_positive_strength", "Available Capital")
-        hurdle_val = final_box.get("main_operational_constraint", "Staff Capacity & Burn Control")
-        next_step_val = final_box.get("recommended_immediate_next_step", "Confirm initial supplier arrangements, configure ordering channels, and prepare operating workspace.")
-
-        final_summary_narrative = (
-            f"Following comprehensive evaluation across financial, market, operational, and algorithmic criteria, SME360 AI assesses "
-            f"<b>{biz_name}</b> as <b>{verdict_val}</b>. The entrepreneur has selected <b>{chosen_strat_val}</b> to guide execution, "
-            f"establishing a realistic operating framework attuned to current capital and market capacity. "
-            f"The primary positive enabler supporting the enterprise is <b>{pos_enabler_val}</b>, while the primary operational hurdle "
-            f"requiring proactive management is <b>{hurdle_val}</b>. "
-            f"The recommended immediate action is to <b>{next_step_val.lower() if next_step_val.endswith('.') else next_step_val.lower() + '.'}</b>"
-        )
-        story.append(Paragraph(final_summary_narrative, body_style))
-
-        # Highlighted Final Recommendation Summary Card
-        rec_card_items = [
-            Paragraph(f"<b>AI FEASIBILITY ASSESSMENT:</b> <font color='{feas_badge_color}'><b>{verdict_val.upper()} (Predicted Class Probability: {conf_pct})</b></font>", body_style),
-            Paragraph(f"<b>AI RECOMMENDED STRATEGY:</b> {rec_strat_val}", body_style),
-            Paragraph(f"<b>ENTREPRENEUR SELECTED STRATEGY:</b> <b>{chosen_strat_val}</b> ({'Adopted Choice' if is_sel else 'Matches AI Rank #1'})", body_style),
-            Paragraph(f"<b>PRIMARY POSITIVE ENABLER:</b> {pos_enabler_val}", body_style),
-            Paragraph(f"<b>PRIMARY OPERATIONAL HURDLE:</b> {hurdle_val}", body_style),
-            Paragraph(f"<b>IMMEDIATE ACTION STEP:</b> <b>{next_step_val}</b>", body_style)
-        ]
-        story.append(create_callout_box(rec_card_items, bg=colors.HexColor("#f8fafc"), border=card_border, padding=8))
-
-        story.append(Spacer(1, 10))
-        story.append(Paragraph("<b>Assumptions & Analytical Disclosures:</b>", h3_style))
-        for a in report_data.get("assumptions_and_considerations", []):
-            story.append(Paragraph(f"• {a}", bullet_style))
+            BusinessPlanPDFGenerator._render_unified_growth_sections(story, report_data, ctx)
 
         # Build PDF document
         def canvas_maker(*args, **kwargs):
@@ -1016,3 +361,1308 @@ class BusinessPlanPDFGenerator:
         doc.build(story, canvasmaker=canvas_maker)
         buffer.seek(0)
         return buffer.getvalue()
+
+    @staticmethod
+    def _render_new_startup_sections(story, report_data: dict, ctx: dict):
+        h1_style = ctx["h1_style"]
+        h2_style = ctx["h2_style"]
+        h3_style = ctx["h3_style"]
+        body_style = ctx["body_style"]
+        bullet_style = ctx["bullet_style"]
+        table_header_style = ctx["table_header_style"]
+        table_cell_style = ctx["table_cell_style"]
+        primary_color = ctx["primary_color"]
+        accent_blue = ctx["accent_blue"]
+        dark_text = ctx["dark_text"]
+        muted_text = ctx["muted_text"]
+        card_border = ctx["card_border"]
+        grid_border = ctx["grid_border"]
+        create_callout_box = ctx["create_callout_box"]
+        create_metric_strip = ctx["create_metric_strip"]
+
+        sec_dict = report_data.get("new_startup_sections", {})
+        biz_id = report_data.get("business_identity", {})
+        biz_name = biz_id.get("business_name", "Enterprise")
+        category = biz_id.get("business_category", "SME Business")
+        district = biz_id.get("district", "Colombo")
+        province = biz_id.get("province", "Western")
+
+        # =====================================================================
+        # SECTION 01 — EXECUTIVE SUMMARY
+        # =====================================================================
+        s1 = sec_dict.get("section_1_executive_summary", {})
+        story.append(Paragraph("SECTION 01 — EXECUTIVE SUMMARY", h1_style))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
+
+        # 1.1 Business Idea Overview
+        story.append(Paragraph("<b>1.1 Business Idea Overview</b>", h2_style))
+        s1_bio = s1.get("business_idea_overview", {})
+        story.append(Paragraph(
+            f"<b>{biz_name}</b> is a proposed new startup venture within the <b>{category}</b> industry, "
+            f"planned for commercial launch in {district}, {province} Province, Sri Lanka. "
+            f"{s1_bio.get('summary_text', '')}",
+            body_style
+        ))
+
+        # 1.2 AI Feasibility Result
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>1.2 AI Feasibility Result</b>", h2_style))
+        s1_feas = s1.get("ai_feasibility_result", {})
+        pred_label = s1_feas.get("predicted_label", "Conditionally Feasible")
+        conf_pct = s1_feas.get("confidence_percentage", "65.0%")
+        probs = s1_feas.get("probabilities", {})
+        prob_feas = probs.get("Feasible", 0.0)
+        prob_cond = probs.get("Conditionally Feasible", 0.0)
+        prob_infeas = probs.get("Infeasible", 0.0)
+        badge_color = "#166534" if pred_label == "Feasible" else "#854d0e" if "Conditionally" in pred_label else "#991b1b"
+
+        feas_box_content = [
+            Paragraph(f"<font color='{badge_color}' size='11'><b>ASSESSMENT VERDICT: {pred_label.upper()} (Predicted Class Probability: {conf_pct})</b></font>", body_style),
+            Spacer(1, 2),
+            Paragraph(f"<font color='#475569'>Multi-Class Model Distribution: Feasible: <b>{prob_feas:.1%}</b>  |  Conditionally Feasible: <b>{prob_cond:.1%}</b>  |  Infeasible: <b>{prob_infeas:.1%}</b></font>", body_style),
+            Spacer(1, 2),
+            Paragraph(s1_feas.get("interpretation", ""), body_style)
+        ]
+        story.append(create_callout_box(feas_box_content, bg=colors.HexColor("#f8fafc"), border=card_border, padding=8))
+
+        # 1.3 Recommended Strategy
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>1.3 Recommended Strategy</b>", h2_style))
+        s1_strat = s1.get("recommended_strategy", {})
+        strat_name = s1_strat.get("strategy_name", "Lean Bootstrapped Start")
+        strat_focus = s1_strat.get("strategic_focus", "Capital Protection & Phased Scale")
+        topsis_score = s1_strat.get("topsis_score", "N/A")
+        align_note = s1_strat.get("alignment_note", "")
+        story.append(Paragraph(
+            f"Based on algorithmic multi-criteria ranking, the system identifies <b>{strat_name}</b> "
+            f"(TOPSIS Closeness Score: <b>{topsis_score}</b>) as the strategic direction for this venture. "
+            f"<b>Strategic Focus:</b> {strat_focus}. {align_note}",
+            body_style
+        ))
+
+        # 1.4 Required Investment and Funding Summary
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>1.4 Required Investment and Funding Summary</b>", h2_style))
+        s1_fund = s1.get("investment_funding_summary", {})
+        target_cap = s1_fund.get("strategy_target_capital_lkr", 0.0)
+        avail_cap = s1_fund.get("available_capital_lkr", 0.0)
+        loan_amt = s1_fund.get("loan_amount_lkr", 0.0)
+        total_funds = s1_fund.get("total_available_funds_lkr", avail_cap + loan_amt)
+        monthly_budget = s1_fund.get("monthly_operating_budget_lkr", 0.0)
+        runway = s1_fund.get("capital_runway_months", 0.0)
+        fund_status = s1_fund.get("funding_status", "Fully funded")
+
+        fin_metrics = [
+            ("Target Capital", f"LKR {target_cap:,.0f}", "Baseline Allocation"),
+            ("Available Capital", f"LKR {avail_cap:,.0f}", f"Loan: LKR {loan_amt:,.0f}"),
+            ("Monthly Budget", f"LKR {monthly_budget:,.0f}", "Operating Ceiling"),
+            ("Budget Coverage", f"{runway} Months", "Capital-to-Budget Ratio")
+        ]
+        story.append(create_metric_strip(fin_metrics))
+        story.append(Spacer(1, 3))
+        story.append(Paragraph(
+            f"The initial target capital requirement is <b>LKR {target_cap:,.0f}</b>. With <b>LKR {avail_cap:,.0f}</b> in recorded available capital "
+            f"and <b>LKR {loan_amt:,.0f}</b> in external loan financing, total available liquidity stands at <b>LKR {total_funds:,.0f}</b> ({fund_status}). "
+            f"Under the baseline operating budget ceiling of <b>LKR {monthly_budget:,.0f}/month</b>, this provides approximately <b>{runway} months</b> "
+            f"of simplified budget coverage.",
+            body_style
+        ))
+
+        # PageBreak at end of Section 1
+        story.append(PageBreak())
+
+        # =====================================================================
+        # SECTION 02 — BUSINESS OVERVIEW
+        # =====================================================================
+        s2 = sec_dict.get("section_2_business_overview", {})
+        story.append(Paragraph("SECTION 02 — BUSINESS OVERVIEW", h1_style))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
+
+        # 2.1 Business Concept and Objectives
+        story.append(Paragraph("<b>2.1 Business Concept & Objectives</b>", h2_style))
+        s2_co = s2.get("concept_and_objectives", {})
+        concept_desc = s2_co.get("business_concept", "")
+        biz_model = s2_co.get("business_model", "Direct Retail / Service")
+        story.append(Paragraph(
+            f"<b>{biz_name}</b> is structured under a <b>{biz_model}</b> operational model. {concept_desc}",
+            body_style
+        ))
+        story.append(Paragraph("<b>Core Foundational Objectives:</b>", h3_style))
+        for obj in s2_co.get("primary_objectives", []):
+            story.append(Paragraph(f"• {obj}", bullet_style))
+
+        # 2.2 Business Location Analysis
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>2.2 Business Location Analysis</b>", h2_style))
+        s2_loc = s2.get("business_location", {})
+        loc_type = s2_loc.get("location_type", "Commercial Hub")
+        loc_score = s2_loc.get("location_suitability_score", "3/5")
+        loc_ctx = s2_loc.get("location_context", "")
+        loc_addr = s2_loc.get("address", "Information not provided in intake")
+        story.append(Paragraph(
+            f"The venture is proposed for operation in <b>{district}, {province} Province, Sri Lanka</b>, "
+            f"situated within a <b>{loc_type}</b> environment. The location holds a suitability score of <b>{loc_score}</b>. "
+            f"{loc_ctx} Registered premise reference: <i>{loc_addr}</i>.",
+            body_style
+        ))
+
+        # 2.3 Products or Services
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>2.3 Products or Services</b>", h2_style))
+        s2_prod = s2.get("products_or_services", {})
+        offering = s2_prod.get("offerings_summary", "")
+        op_details = s2_prod.get("operational_details", "")
+        exp_price = s2_prod.get("expected_price_lkr", 0.0)
+        story.append(Paragraph(
+            f"{offering} Operations are designed to deliver reliable customer satisfaction through consistent service execution: {op_details} "
+            f"Initial offerings are priced around an expected baseline transaction value of <b>LKR {exp_price:,.2f}</b>.",
+            body_style
+        ))
+
+        # 2.4 Target Customers
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>2.4 Target Customers & Demand Assessment</b>", h2_style))
+        s2_cust = s2.get("target_customers", {})
+        target_prof = s2_cust.get("target_profile", f"Consumers in {district}")
+        cust_dem_score = s2_cust.get("customer_demand_score", "50/100")
+        dem_assess = s2_cust.get("demand_assessment", "")
+        story.append(Paragraph(
+            f"The primary target clientele comprises <b>{target_prof}</b>. "
+            f"The recorded customer demand score for this profile is <b>{cust_dem_score}</b>. {dem_assess}",
+            body_style
+        ))
+
+        # 2.5 Relevant Market Context
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>2.5 Relevant Market Context & Competitive Landscape</b>", h2_style))
+        s2_mkt = s2.get("relevant_market_context", {})
+        comp_level = s2_mkt.get("competition_level", "Moderate")
+        comp_cnt = s2_mkt.get("competitor_count_nearby")
+        comp_info = s2_mkt.get("competitor_information", "")
+        pos_strat = s2_mkt.get("positioning_strategy", "")
+        story.append(Paragraph(
+            f"Local market competition is characterized as <b>{comp_level}</b>. Nearby competitor count is recorded as "
+            f"<b>{comp_cnt}</b> ({comp_info}). To establish a viable market share, {pos_strat}",
+            body_style
+        ))
+
+        # PageBreak at end of Section 2
+        story.append(PageBreak())
+
+        # =====================================================================
+        # SECTION 03 — FEASIBILITY ASSESSMENT AND KEY FINDINGS
+        # =====================================================================
+        s3 = sec_dict.get("section_3_feasibility_findings", {})
+        story.append(Paragraph("SECTION 03 — FEASIBILITY ASSESSMENT AND KEY FINDINGS", h1_style))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
+
+        # 3.1 ML Feasibility Prediction
+        story.append(Paragraph("<b>3.1 Machine Learning Feasibility Classification</b>", h2_style))
+        s3_pred = s3.get("ml_feasibility_prediction", {})
+        pred_label_s3 = s3_pred.get("predicted_label", pred_label)
+        conf_pct_s3 = s3_pred.get("confidence_percentage", conf_pct)
+        probs_s3 = s3_pred.get("probabilities", probs)
+        p_feas_s3 = probs_s3.get("Feasible", 0.0)
+        p_cond_s3 = probs_s3.get("Conditionally Feasible", 0.0)
+        p_inf_s3 = probs_s3.get("Infeasible", 0.0)
+        method_disc = s3_pred.get("methodology_disclosure", "")
+
+        story.append(Paragraph(
+            f"The business profile was evaluated using SME360 AI's trained Random Forest classification model. "
+            f"The model classifies <b>{biz_name}</b> as <b>{pred_label_s3}</b> with a predicted class probability of <b>{conf_pct_s3}</b> "
+            f"(Feasible: <b>{p_feas_s3:.1%}</b>, Conditionally Feasible: <b>{p_cond_s3:.1%}</b>, Infeasible: <b>{p_inf_s3:.1%}</b>). "
+            f"<i>{method_disc}</i>",
+            body_style
+        ))
+
+        # Embedded Probability Chart
+        try:
+            chart_bytes = BusinessPlanChartGenerator.generate_probability_chart(probs_s3)
+            chart_img = Image(io.BytesIO(chart_bytes), width=480, height=125)
+            story.append(Spacer(1, 3))
+            story.append(chart_img)
+            story.append(Spacer(1, 3))
+        except Exception:
+            pass
+
+        # 3.2 Factors Influencing the Prediction (SHAP)
+        story.append(Paragraph("<b>3.2 Factors Influencing Prediction (SHAP Explainable AI)</b>", h2_style))
+        story.append(Paragraph(
+            "To understand what features drove this classification, SHAP (SHapley Additive exPlanations) values decompose the model's output into specific positive enablers and operational hurdles:",
+            body_style
+        ))
+        s3_factors = s3.get("factors_influencing_prediction", {})
+        pos_enablers = s3_factors.get("positive_enablers", [])
+        hurdles = s3_factors.get("operational_hurdles", [])
+
+        story.append(Paragraph("<b>Positive Enablers Supporting Feasibility:</b>", h3_style))
+        if pos_enablers:
+            for item in pos_enablers[:3]:
+                feat = item.get("feature", "Factor")
+                val = item.get("feature_value", "N/A")
+                exp = item.get("impact_explanation", "Contributed positive support.")
+                story.append(Paragraph(f"• <b>{feat} ({val}):</b> {exp}", bullet_style))
+        else:
+            story.append(Paragraph("• Baseline capital and operating assumptions align with initial industry requirements.", bullet_style))
+
+        story.append(Paragraph("<b>Operational Hurdles Requiring Management Attention:</b>", h3_style))
+        if hurdles:
+            for item in hurdles[:3]:
+                feat = item.get("feature", "Constraint")
+                val = item.get("feature_value", "N/A")
+                exp = item.get("impact_explanation", "Contributed downward pressure.")
+                story.append(Paragraph(f"• <b>{feat} ({val}):</b> {exp}", bullet_style))
+        else:
+            story.append(Paragraph("• Operating budget discipline and customer footfall should be closely monitored during early trading.", bullet_style))
+
+        # 3.3 Available-Resource and Affordability Gaps
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>3.3 Available-Resource & Affordability Gaps</b>", h2_style))
+        s3_gaps = s3.get("resource_and_affordability_gaps", {})
+        story.append(Paragraph(s3_gaps.get("affordability_assessment", ""), body_style))
+
+        # 3.4 Key Findings
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>3.4 Key Findings Summary</b>", h2_style))
+        for kf in s3.get("key_findings", []):
+            story.append(Paragraph(f"• {kf}", bullet_style))
+
+        # PageBreak at end of Section 3
+        story.append(PageBreak())
+
+        # =====================================================================
+        # SECTION 04 — PERSONALIZED BUSINESS STRATEGY
+        # =====================================================================
+        s4 = sec_dict.get("section_4_personalized_strategy", {})
+        story.append(Paragraph("SECTION 04 — PERSONALIZED BUSINESS STRATEGY", h1_style))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
+
+        # 4.1 Recommended Strategy Direction
+        story.append(Paragraph("<b>4.1 Recommended Strategy Direction</b>", h2_style))
+        s4_rec = s4.get("recommended_strategy", {})
+        rec_name = s4_rec.get("strategy_name", strat_name)
+        rec_focus = s4_rec.get("strategic_focus", "Operational Discipline")
+        rec_cust = s4_rec.get("target_daily_customers", 35)
+        rec_cap = s4_rec.get("estimated_capital_required_lkr", target_cap)
+        rec_bud = s4_rec.get("estimated_monthly_budget_lkr", monthly_budget)
+        rec_app = s4_rec.get("operational_approach", "")
+
+        strat_card = [
+            Paragraph(f"<b>RECOMMENDED OPERATING PATH: {rec_name.upper()}</b>", ParagraphStyle('RecHead', parent=body_style, fontName='Helvetica-Bold', fontSize=10, textColor=primary_color)),
+            Spacer(1, 2),
+            Paragraph(f"<b>Strategic Focus:</b> {rec_focus}", body_style),
+            Paragraph(f"<b>Operational Approach:</b> {rec_app}", body_style),
+            Spacer(1, 2),
+            Paragraph(
+                f"<font color='#1e3a8a'><b>Target Capital:</b> LKR {rec_cap:,.0f}</font>  |  "
+                f"<b>Monthly Operating Budget:</b> LKR {rec_bud:,.0f}  |  "
+                f"<b>Target Daily Footfall:</b> {rec_cust} Customers/Day",
+                ParagraphStyle('RecMeta', parent=body_style, fontSize=8, textColor=dark_text)
+            )
+        ]
+        story.append(create_callout_box(strat_card, bg=colors.HexColor("#f8fafc"), border=card_border, padding=8))
+
+        # 4.2 Reasons for Recommendation (TOPSIS)
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>4.2 Multi-Criteria Evaluation & Selection Rationale (TOPSIS Method)</b>", h2_style))
+        s4_reasons = s4.get("reasons_for_recommendation", {})
+        story.append(Paragraph(s4_reasons.get("topsis_rationale", ""), body_style))
+        story.append(Paragraph(s4_reasons.get("alignment_summary", ""), body_style))
+
+        # 4.3 Practical Actions Tailored to the Business
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>4.3 Tailored Implementation Actions</b>", h2_style))
+        for act in s4.get("practical_actions", []):
+            story.append(Paragraph(f"• {act}", bullet_style))
+
+        # 4.4 Alternative Strategies Considered
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>4.4 Alternative Strategies Evaluated (TOPSIS Ranking Table)</b>", h2_style))
+        story.append(Paragraph("The system evaluated four distinct strategic pathways against the five multi-criteria dimensions. Below is the comparative ranking:", body_style))
+
+        alt_strats = s4.get("alternative_strategies", [])
+        if alt_strats:
+            topsis_table_data = [
+                [
+                    Paragraph("<b>Rank</b>", table_header_style),
+                    Paragraph("<b>Strategy Alternative</b>", table_header_style),
+                    Paragraph("<b>Strategic Focus</b>", table_header_style),
+                    Paragraph("<b>Target Capital</b>", table_header_style),
+                    Paragraph("<b>TOPSIS Score</b>", table_header_style)
+                ]
+            ]
+            for s in alt_strats[:4]:
+                s_rank = s.get("rank", "-")
+                s_n = s.get("strategy_name", "")
+                s_f = s.get("strategic_focus", "")
+                s_c = s.get("estimated_capital_required_lkr", 0.0)
+                s_sc = str(s.get("topsis_score", "N/A"))
+                topsis_table_data.append([
+                    Paragraph(f"<b>#{s_rank}</b>", table_cell_style),
+                    Paragraph(f"<b>{s_n}</b>", table_cell_style),
+                    Paragraph(s_f, table_cell_style),
+                    Paragraph(f"LKR {s_c:,.0f}", table_cell_style),
+                    Paragraph(s_sc, table_cell_style)
+                ])
+            t_tbl = Table(topsis_table_data, colWidths=[35, 175, 155, 105, 70])
+            t_tbl.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), primary_color),
+                ('PADDING', (0,0), (-1,-1), 4.5),
+                ('BOX', (0,0), (-1,-1), 1, card_border),
+                ('INNERGRID', (0,0), (-1,-1), 0.5, grid_border),
+                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ]))
+            story.append(t_tbl)
+
+        # PageBreak at end of Section 4
+        story.append(PageBreak())
+
+        # =====================================================================
+        # SECTION 05 — MARKETING AND SALES PLAN
+        # =====================================================================
+        s5 = sec_dict.get("section_5_marketing_sales", {})
+        story.append(Paragraph("SECTION 05 — MARKETING AND SALES PLAN", h1_style))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
+
+        # 5.1 Customer Acquisition Methods
+        story.append(Paragraph("<b>5.1 Customer Acquisition Methods</b>", h2_style))
+        story.append(Paragraph(f"Customer acquisition activities focus on establishing immediate awareness and localized trial in {district}:", body_style))
+        for m in s5.get("customer_acquisition_methods", []):
+            story.append(Paragraph(f"• {m}", bullet_style))
+
+        # 5.2 Suitable Promotional Activities
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>5.2 Promotional Activities & Launch Campaign</b>", h2_style))
+        for p in s5.get("suitable_promotional_activities", []):
+            story.append(Paragraph(f"• {p}", bullet_style))
+
+        # 5.3 Pricing Approach
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>5.3 Pricing Approach & Commercial Rationale</b>", h2_style))
+        s5_price = s5.get("pricing_approach", {})
+        exp_u_price = s5_price.get("expected_unit_price_lkr", 0.0)
+        p_strat = s5_price.get("pricing_strategy", "Competitive Value-Based Pricing")
+        p_rat = s5_price.get("rationale", "")
+        story.append(Paragraph(
+            f"The business adopts a <b>{p_strat}</b> methodology with a target average spend of <b>LKR {exp_u_price:,.2f}</b> per customer. {p_rat}",
+            body_style
+        ))
+
+        # 5.4 Sales and Distribution Channels
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>5.4 Sales & Distribution Channels</b>", h2_style))
+        for ch in s5.get("sales_distribution_channels", []):
+            story.append(Paragraph(f"• {ch}", bullet_style))
+
+        # 5.5 Initial Sales Targets and Milestones
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>5.5 Initial Sales Targets & Gross Sales Calculation</b>", h2_style))
+        s5_sales = s5.get("initial_sales_targets", {})
+        cust_d = s5_sales.get("target_customers_per_day", 0)
+        op_d = s5_sales.get("operating_days_per_month", 26)
+        tot_interactions = s5_sales.get("monthly_customer_interactions", cust_d * op_d)
+        est_m_sales = s5_sales.get("estimated_monthly_gross_sales_lkr", 0.0)
+        formula_str = s5_sales.get("calculation_formula", "")
+        disc_str = s5_sales.get("assumption_disclosure", "")
+
+        sales_box = [
+            Paragraph(f"<b>Estimated Monthly Gross Sales Target:</b> <font color='#1e3a8a' size='11'><b>LKR {est_m_sales:,.2f}</b></font>", body_style),
+            Spacer(1, 2),
+            Paragraph(f"<b>Operating Parameters:</b> {cust_d} Customers/Day × {op_d} Operating Days/Month = <b>{tot_interactions:,} Customer Interactions/Month</b>", body_style),
+            Paragraph(f"<b>Calculation Formula:</b> <i>{formula_str}</i>", body_style),
+            Spacer(1, 2),
+            Paragraph(f"<i>Disclosure: {disc_str}</i>", ParagraphStyle('SalesDisc', parent=body_style, fontSize=7.5, textColor=muted_text))
+        ]
+        story.append(create_callout_box(sales_box, bg=colors.HexColor("#f8fafc"), border=card_border, padding=8))
+
+        # PageBreak at end of Section 5
+        story.append(PageBreak())
+
+        # =====================================================================
+        # SECTION 06 — FINANCIAL AND RESOURCE PLAN
+        # =====================================================================
+        s6 = sec_dict.get("section_6_financial_resource", {})
+        story.append(Paragraph("SECTION 06 — FINANCIAL AND RESOURCE PLAN", h1_style))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
+
+        # 6.1 Estimated Startup Costs
+        story.append(Paragraph("<b>6.1 Estimated Startup Costs Breakdown</b>", h2_style))
+        s6_costs = s6.get("estimated_startup_costs", {})
+        inv_c = s6_costs.get("initial_inventory_cost_lkr", 0.0)
+        eq_c = s6_costs.get("equipment_and_setup_lkr", 0.0)
+        res_c = s6_costs.get("working_capital_reserve_lkr", 0.0)
+        tot_c = s6_costs.get("total_initial_startup_cost_lkr", 0.0)
+
+        cost_tbl_data = [
+            [Paragraph("<b>Cost Category</b>", table_header_style), Paragraph("<b>Estimated Amount (LKR)</b>", table_header_style), Paragraph("<b>Budget Allocation Notes</b>", table_header_style)],
+            [Paragraph("Initial Opening Inventory Stock", table_cell_style), Paragraph(f"LKR {inv_c:,.2f}", table_cell_style), Paragraph("Opening wholesale inventory procured prior to launch", table_cell_style)],
+            [Paragraph("Equipment, Fixtures & Premise Setup", table_cell_style), Paragraph(f"LKR {eq_c:,.2f}", table_cell_style), Paragraph("Essential counter, shelving, and operational tools", table_cell_style)],
+            [Paragraph("Working Capital Reserve Buffer", table_cell_style), Paragraph(f"LKR {res_c:,.2f}", table_cell_style), Paragraph("Liquidity buffer covering baseline operational ramp-up", table_cell_style)],
+            [Paragraph("<b>Total Initial Startup Cost</b>", table_cell_style), Paragraph(f"<b>LKR {tot_c:,.2f}</b>", table_cell_style), Paragraph("<b>Calibrated baseline startup requirement</b>", table_cell_style)],
+        ]
+        cost_tbl = Table(cost_tbl_data, colWidths=[180, 140, 220])
+        cost_tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), primary_color),
+            ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor("#f1f5f9")),
+            ('PADDING', (0,0), (-1,-1), 4.5),
+            ('BOX', (0,0), (-1,-1), 1, card_border),
+            ('INNERGRID', (0,0), (-1,-1), 0.5, grid_border),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ]))
+        story.append(cost_tbl)
+
+        # 6.2 Available Capital and Funding Requirements
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>6.2 Available Capital & Funding Requirements</b>", h2_style))
+        s6_fund = s6.get("available_capital_and_funding", {})
+        story.append(Paragraph(
+            f"The venture is supported by <b>LKR {s6_fund.get('available_capital_lkr', 0):,.2f}</b> in recorded available equity capital and "
+            f"<b>LKR {s6_fund.get('loan_amount_lkr', 0):,.2f}</b> in external loan financing, providing total available funding of "
+            f"<b>LKR {s6_fund.get('total_available_funds_lkr', 0):,.2f}</b> against a target capital requirement of "
+            f"<b>LKR {s6_fund.get('strategy_target_capital_lkr', 0):,.2f}</b> ({s6_fund.get('funding_gap_status', 'Fully funded')}).",
+            body_style
+        ))
+
+        # 6.3 Equipment and Resource Requirements
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>6.3 Equipment & Resource Requirements</b>", h2_style))
+        s6_eq = s6.get("equipment_and_resource_requirements", {})
+        story.append(Paragraph(
+            f"Equipment readiness is scored at <b>{s6_eq.get('available_equipment_score', '3/5')}</b> against a required baseline of "
+            f"<b>{s6_eq.get('required_equipment_score', '3/5')}</b> ({s6_eq.get('readiness_status', '')}). Regional supplier availability score is "
+            f"<b>{s6_eq.get('supplier_availability_score', '')}</b>.",
+            body_style
+        ))
+
+        # 6.4 Staffing Requirements
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>6.4 Staffing Requirements & Roles</b>", h2_style))
+        s6_st = s6.get("staffing_requirements", {})
+        story.append(Paragraph(
+            f"Current available workforce stands at <b>{s6_st.get('available_staff_count', 1)} staff member(s)</b> against an estimated requirement of "
+            f"<b>{s6_st.get('required_staff_count', 1)}</b> ({s6_st.get('capacity_status', '')}).",
+            body_style
+        ))
+        for r in s6_st.get("key_roles", []):
+            story.append(Paragraph(f"• {r}", bullet_style))
+
+        # 6.5 Operating Expenses
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>6.5 Operating Expenses & Working Capital Runway</b>", h2_style))
+        s6_exp = s6.get("operating_expenses", {})
+        story.append(Paragraph(
+            f"Monthly operating budget is established at <b>LKR {s6_exp.get('monthly_operating_budget_lkr', 0):,.2f}</b>. "
+            f"This provides approximately <b>{s6_exp.get('strategy_capital_runway_months', 0)} months</b> of strategy budget coverage and "
+            f"<b>{s6_exp.get('total_funds_runway_months', 0)} months</b> of total funds liquidity runway. "
+            f"{s6_exp.get('expense_guidance', '')}",
+            body_style
+        ))
+
+        # 6.6 Financial Projections Table
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>6.6 Financial Projections Summary</b>", h2_style))
+        s6_proj = s6.get("financial_projections", [])
+        if s6_proj:
+            proj_tbl_data = [
+                [Paragraph("<b>Financial Metric</b>", table_header_style), Paragraph("<b>Projected Target</b>", table_header_style), Paragraph("<b>Basis of Projection</b>", table_header_style)]
+            ]
+            for p in s6_proj:
+                proj_tbl_data.append([
+                    Paragraph(f"<b>{p.get('metric', '')}</b>", table_cell_style),
+                    Paragraph(p.get("value", ""), table_cell_style),
+                    Paragraph(p.get("basis", ""), table_cell_style)
+                ])
+            proj_tbl = Table(proj_tbl_data, colWidths=[160, 140, 240])
+            proj_tbl.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), primary_color),
+                ('PADDING', (0,0), (-1,-1), 4.5),
+                ('BOX', (0,0), (-1,-1), 1, card_border),
+                ('INNERGRID', (0,0), (-1,-1), 0.5, grid_border),
+                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ]))
+            story.append(proj_tbl)
+
+        # PageBreak at end of Section 6
+        story.append(PageBreak())
+
+        # =====================================================================
+        # SECTION 07 — IMPLEMENTATION ROADMAP
+        # =====================================================================
+        s7 = sec_dict.get("section_7_implementation_roadmap", {})
+        story.append(Paragraph("SECTION 07 — IMPLEMENTATION ROADMAP", h1_style))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
+
+        # 7.1 Prioritized Actions
+        story.append(Paragraph("<b>7.1 Prioritized Pre-Launch Actions</b>", h2_style))
+        for act in s7.get("prioritized_actions", []):
+            story.append(Paragraph(f"• {act}", bullet_style))
+
+        # 7.2 Implementation Timeline (4 Phases)
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>7.2 Implementation Timeline (Four Operational Horizons)</b>", h2_style))
+        for ph in s7.get("implementation_timeline", []):
+            story.append(Paragraph(f"<b>{ph.get('phase_name', '')} ({ph.get('timeframe', '')}):</b>", h3_style))
+            story.append(Paragraph(ph.get("focus_actions", ""), body_style))
+
+        # 7.3 Launch Milestones Table
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>7.3 Launch Milestones & Success Criteria</b>", h2_style))
+        s7_ms = s7.get("launch_milestones", [])
+        if s7_ms:
+            ms_tbl_data = [
+                [Paragraph("<b>Milestone Name</b>", table_header_style), Paragraph("<b>Target Timeline</b>", table_header_style), Paragraph("<b>Measurable Success Criteria</b>", table_header_style)]
+            ]
+            for m in s7_ms:
+                ms_tbl_data.append([
+                    Paragraph(f"<b>{m.get('milestone', '')}</b>", table_cell_style),
+                    Paragraph(m.get("target_timeframe", ""), table_cell_style),
+                    Paragraph(m.get("success_criteria", ""), table_cell_style)
+                ])
+            ms_tbl = Table(ms_tbl_data, colWidths=[150, 90, 300])
+            ms_tbl.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), primary_color),
+                ('PADDING', (0,0), (-1,-1), 4.5),
+                ('BOX', (0,0), (-1,-1), 1, card_border),
+                ('INNERGRID', (0,0), (-1,-1), 0.5, grid_border),
+                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ]))
+            story.append(ms_tbl)
+
+        # 7.4 Operational Responsibilities
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>7.4 Operational Responsibilities Matrix</b>", h2_style))
+        s7_resp = s7.get("responsibilities", [])
+        if s7_resp:
+            resp_tbl_data = [
+                [Paragraph("<b>Operating Role</b>", table_header_style), Paragraph("<b>Core Accountabilities & Responsibilities</b>", table_header_style)]
+            ]
+            for r in s7_resp:
+                resp_tbl_data.append([
+                    Paragraph(f"<b>{r.get('role', '')}</b>", table_cell_style),
+                    Paragraph(r.get("accountabilities", ""), table_cell_style)
+                ])
+            resp_tbl = Table(resp_tbl_data, colWidths=[160, 380])
+            resp_tbl.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), primary_color),
+                ('PADDING', (0,0), (-1,-1), 4.5),
+                ('BOX', (0,0), (-1,-1), 1, card_border),
+                ('INNERGRID', (0,0), (-1,-1), 0.5, grid_border),
+                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ]))
+            story.append(resp_tbl)
+
+        # PageBreak at end of Section 7
+        story.append(PageBreak())
+
+        # =====================================================================
+        # SECTION 08 — EXPECTED OUTCOMES AND KEY ASSUMPTIONS
+        # =====================================================================
+        s8 = sec_dict.get("section_8_outcomes_assumptions", {})
+        story.append(Paragraph("SECTION 08 — EXPECTED OUTCOMES AND KEY ASSUMPTIONS", h1_style))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
+
+        # 8.1 Expected Business Outcomes
+        story.append(Paragraph("<b>8.1 Expected Business Outcomes</b>", h2_style))
+        for eo in s8.get("expected_business_outcomes", []):
+            story.append(Paragraph(f"• {eo}", bullet_style))
+
+        # 8.2 Measurable Targets and Monitoring KPIs
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>8.2 Measurable Targets & Key Performance Indicators (KPIs)</b>", h2_style))
+        story.append(Paragraph("Management should monitor the following operational indicators regularly (Note: These represent monitoring metrics, not model predictions):", body_style))
+        s8_kpis = s8.get("measurable_targets", [])
+        if s8_kpis:
+            kpi_tbl_data = [
+                [Paragraph("<b>KPI / Monitoring Metric</b>", table_header_style), Paragraph("<b>Target Metric</b>", table_header_style), Paragraph("<b>Frequency</b>", table_header_style), Paragraph("<b>Focus Area</b>", table_header_style)]
+            ]
+            for k in s8_kpis:
+                kpi_tbl_data.append([
+                    Paragraph(f"<b>{k.get('kpi_name', '')}</b>", table_cell_style),
+                    Paragraph(str(k.get("target_value", "")), table_cell_style),
+                    Paragraph(k.get("monitoring_frequency", "Monthly"), table_cell_style),
+                    Paragraph(k.get("focus_area", "Operations"), table_cell_style)
+                ])
+            kpi_tbl = Table(kpi_tbl_data, colWidths=[140, 150, 100, 150])
+            kpi_tbl.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), primary_color),
+                ('PADDING', (0,0), (-1,-1), 4.5),
+                ('BOX', (0,0), (-1,-1), 1, card_border),
+                ('INNERGRID', (0,0), (-1,-1), 0.5, grid_border),
+                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ]))
+            story.append(kpi_tbl)
+
+        # 8.3 Important Business Assumptions
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>8.3 Important Business Assumptions</b>", h2_style))
+        for asm in s8.get("important_business_assumptions", []):
+            story.append(Paragraph(f"• {asm}", bullet_style))
+
+        # 8.4 Data Limitations and Validation Disclosures
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>8.4 Data Limitations & Methodological Disclosures</b>", h2_style))
+        for lim in s8.get("data_limitations_and_validation", []):
+            story.append(Paragraph(f"• {lim}", bullet_style))
+
+    @staticmethod
+    def _render_unified_growth_sections(story, report_data: dict, ctx: dict):
+        h1_style = ctx["h1_style"]
+        h2_style = ctx["h2_style"]
+        h3_style = ctx["h3_style"]
+        body_style = ctx["body_style"]
+        bullet_style = ctx["bullet_style"]
+        table_header_style = ctx["table_header_style"]
+        table_cell_style = ctx["table_cell_style"]
+        primary_color = ctx["primary_color"]
+        accent_blue = ctx["accent_blue"]
+        dark_text = ctx["dark_text"]
+        muted_text = ctx["muted_text"]
+        card_border = ctx["card_border"]
+        grid_border = ctx["grid_border"]
+        create_callout_box = ctx["create_callout_box"]
+        create_metric_strip = ctx["create_metric_strip"]
+
+        sec_dict = report_data.get("unified_growth_sections") or report_data.get("existing_growth_sections") or {}
+        biz_id = report_data.get("business_identity", {})
+        biz_name = biz_id.get("business_name", "Enterprise")
+        category = biz_id.get("business_category", "SME Business")
+        district = biz_id.get("district", "Colombo")
+        province = biz_id.get("province", "Western")
+
+        # =====================================================================
+        # EXECUTIVE SUMMARY
+        # =====================================================================
+        s_exec = sec_dict.get("executive_summary", {})
+        story.append(Paragraph("EXECUTIVE SUMMARY", h1_style))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
+
+        # Business & Growth Purpose
+        story.append(Paragraph("<b>Existing Enterprise Overview & Growth Purpose</b>", h2_style))
+        story.append(Paragraph(s_exec.get("business_summary", f"{biz_name} is an established enterprise operating in {district}."), body_style))
+        story.append(Paragraph(f"<b>Core Growth Objectives:</b> {s_exec.get('growth_objectives', '')}", body_style))
+
+        # AI Feasibility Finding
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>AI Feasibility Assessment & Model Confidence</b>", h2_style))
+        feas = s_exec.get("ai_feasibility_result", {})
+        pred_label = feas.get("predicted_label", "Conditionally Feasible")
+        conf_pct = feas.get("confidence_percentage", "65.0%")
+        probs = feas.get("probabilities", {})
+        prob_feas = probs.get("Feasible", 0.0)
+        prob_cond = probs.get("Conditionally Feasible", 0.0)
+        prob_infeas = probs.get("Infeasible", 0.0)
+        badge_color = "#166534" if pred_label == "Feasible" else "#854d0e" if "Conditionally" in pred_label else "#991b1b"
+
+        feas_box_content = [
+            Paragraph(f"<font color='{badge_color}' size='11'><b>ASSESSMENT VERDICT: {pred_label.upper()} (Predicted Class Probability: {conf_pct})</b></font>", body_style),
+            Spacer(1, 2),
+            Paragraph(f"<font color='#475569'>Multi-Class Model Distribution: Feasible: <b>{prob_feas:.1%}</b>  |  Conditionally Feasible: <b>{prob_cond:.1%}</b>  |  Infeasible: <b>{prob_infeas:.1%}</b></font>", body_style),
+            Spacer(1, 2),
+            Paragraph(feas.get("interpretation", ""), body_style)
+        ]
+        story.append(create_callout_box(feas_box_content, bg=colors.HexColor("#f8fafc"), border=card_border, padding=8))
+
+        # Recommended Growth Strategy & Investment Summary
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>Recommended Growth Strategy & Capital Plan</b>", h2_style))
+        s_strat = s_exec.get("recommended_strategy", {})
+        strat_name = s_strat.get("strategy_name", "Capital-Protected Phased Growth")
+        strat_focus = s_strat.get("strategic_focus", "Operational Efficiency")
+        topsis_score = s_strat.get("topsis_score", "N/A")
+        align_note = s_strat.get("alignment_note", "")
+        story.append(Paragraph(
+            f"Based on multi-criteria TOPSIS evaluation and algorithmic decision support, the system identifies <b>{strat_name}</b> "
+            f"(TOPSIS Closeness Score: <b>{topsis_score}</b>) as the optimal growth pathway. "
+            f"<b>Strategic Focus:</b> {strat_focus}. {align_note}",
+            body_style
+        ))
+
+        s_fund = s_exec.get("investment_funding_summary", {})
+        target_cap = s_fund.get("estimated_growth_capital_lkr", 0.0)
+        avail_cap = s_fund.get("available_capital_lkr", 0.0)
+        loan_amt = s_fund.get("loan_amount_lkr", 0.0)
+        total_funds = s_fund.get("total_available_funds_lkr", avail_cap + loan_amt)
+        monthly_exp = s_fund.get("monthly_operating_budget_lkr", 0.0)
+        gap_status = s_fund.get("funding_gap_status", "Fully funded")
+
+        story.append(Spacer(1, 2))
+        exec_metrics = [
+            ("Target Growth Capital", f"LKR {target_cap:,.0f}", "Baseline Requirement"),
+            ("Available Capital", f"LKR {avail_cap:,.0f}", f"+ LKR {loan_amt:,.0f} Loan"),
+            ("Monthly Budget", f"LKR {monthly_exp:,.0f}", "Operating Ceiling"),
+            ("Funding Status", gap_status, f"Total Funds: LKR {total_funds:,.0f}")
+        ]
+        story.append(create_metric_strip(exec_metrics))
+
+        # Expected Outcomes Summary
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>Expected Key Outcomes</b>", h2_style))
+        for out in s_exec.get("expected_outcomes", []):
+            story.append(Paragraph(f"• {out}", bullet_style))
+
+        # Every section starts on a new page!
+        story.append(PageBreak())
+
+        # =====================================================================
+        # 1. EXISTING BUSINESS OVERVIEW AND GROWTH OBJECTIVES
+        # =====================================================================
+        s1 = sec_dict.get("section_1_overview_objectives", {})
+        story.append(Paragraph("1. EXISTING BUSINESS OVERVIEW AND GROWTH OBJECTIVES", h1_style))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
+
+        # 1.1 Business Profile & Operating Background
+        story.append(Paragraph("<b>1.1 Business Profile & Operating Background</b>", h2_style))
+        b_id = s1.get("business_identity", {})
+        story.append(Paragraph(
+            f"<b>{biz_name}</b> is an established enterprise operating within the <b>{category}</b> industry, "
+            f"located in {district}, {province} Province, Sri Lanka (Location: {b_id.get('location_address', district)}). "
+            f"The business operates in a <b>{b_id.get('location_type', 'Commercial Hub')}</b> setting with a location suitability score of "
+            f"<b>{b_id.get('location_suitability_score', '3/5')}</b>. Unlike a startup venture, {biz_name} possesses active operational history, "
+            f"an existing customer base, and established supplier linkages.",
+            body_style
+        ))
+
+        # 1.2 Existing Products & Services
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>1.2 Existing Products & Services</b>", h2_style))
+        story.append(Paragraph(s1.get("existing_products_and_services", ""), body_style))
+
+        # 1.3 Current Operating Situation & Available Resources
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>1.3 Current Operating Situation & Available Resources</b>", h2_style))
+        res = s1.get("current_business_situation_and_resources", {})
+        story.append(Paragraph(
+            f"The business currently operates with <b>{res.get('current_staff_count', 1)} active staff member(s)</b> against an estimated requirement of "
+            f"<b>{res.get('required_staff_count', 1)}</b>. Equipment readiness is scored at <b>{res.get('equipment_readiness_score', '3/5')}</b> (target requirement: {res.get('required_equipment_score', '3/5')}), "
+            f"while local supplier availability is rated at <b>{res.get('supplier_availability_score', '3/5')}</b>. "
+            f"The business owner brings <b>{res.get('entrepreneur_experience_years', '3 Years')}</b> of commercial experience, supporting operational resilience.",
+            body_style
+        ))
+        res_metrics = [
+            ("Available Capital", f"LKR {res.get('available_capital_lkr', 0):,.0f}", "Owner Equity"),
+            ("Monthly Budget", f"LKR {res.get('monthly_operating_budget_lkr', 0):,.0f}", "Current Working Cap"),
+            ("Active Workforce", f"{res.get('current_staff_count', 1)} Staff", f"Req: {res.get('required_staff_count', 1)}"),
+            ("Equipment Score", res.get('equipment_readiness_score', '3/5'), f"Target: {res.get('required_equipment_score', '3/5')}")
+        ]
+        story.append(create_metric_strip(res_metrics))
+
+        # 1.4 Business Owner's Growth Objectives & Intended Outcomes
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>1.4 Business Owner's Growth Objectives & Intended Outcomes</b>", h2_style))
+        story.append(Paragraph(s1.get("growth_objectives", ""), body_style))
+        story.append(Paragraph("<b>Intended Outcomes of Proposed Growth:</b>", h3_style))
+        for io_item in s1.get("intended_outcomes", []):
+            story.append(Paragraph(f"• {io_item}", bullet_style))
+
+        # 1.5 Important Business Constraints & Improvement Needs
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>1.5 Important Business Constraints & Improvement Needs</b>", h2_style))
+        for cn in s1.get("constraints_and_improvement_needs", []):
+            story.append(Paragraph(f"• {cn}", bullet_style))
+
+        # Every section starts on a new page!
+        story.append(PageBreak())
+
+        # =====================================================================
+        # 2. MARKET AND GROWTH OPPORTUNITY ANALYSIS
+        # =====================================================================
+        s2 = sec_dict.get("section_2_market_opportunities", {})
+        story.append(Paragraph("2. MARKET AND GROWTH OPPORTUNITY ANALYSIS", h1_style))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
+
+        # 2.1 Market Catchment & Baseline Demand Dynamics
+        story.append(Paragraph("<b>2.1 Market Catchment & Baseline Demand Dynamics</b>", h2_style))
+        mkt = s2.get("market_catchment", {})
+        cust_per_day = mkt.get("expected_customers_per_day", 0)
+        unit_price = mkt.get("expected_selling_price_lkr", 0.0)
+        op_days = mkt.get("operating_days_per_month", 26)
+        monthly_vol = cust_per_day * op_days
+        demand_score = mkt.get("customer_demand_score", "50/100")
+        gross_sales = mkt.get("monthly_gross_sales_estimate", 0.0)
+
+        story.append(Paragraph(
+            f"The business serves the <b>{mkt.get('target_market', district)}</b> commercial catchment area, targeting <b>{mkt.get('customer_profile', 'local patrons')}</b>. "
+            f"Baseline operations capture approximately <b>{cust_per_day} customer transactions per day</b> at an average unit price of "
+            f"<b>LKR {unit_price:,.2f}</b> across <b>{op_days} operating days per month</b>. This generates an estimated monthly throughput of "
+            f"<b>{monthly_vol:,} customer interactions</b> and an estimated monthly gross sales volume of <b>LKR {gross_sales:,.2f}</b>. "
+            f"The evaluated customer demand index stands at <b>{demand_score}</b>.",
+            body_style
+        ))
+
+        # 2.2 Relevant Growth Opportunities
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>2.2 Identification of Relevant Growth Opportunities</b>", h2_style))
+        story.append(Paragraph(
+            "Rather than assuming a mandatory expansion pathway or enforcing a branch/product dichotomy, SME360 AI evaluated seven "
+            "potential growth avenues against the business's actual capital runway, equipment readiness, staffing, and local demand score. "
+            "The opportunities below are prioritized based on verified data suitability:",
+            body_style
+        ))
+
+        for opp in s2.get("identified_growth_opportunities", []):
+            opp_name = opp.get("opportunity_area", "Growth Avenue")
+            opp_app = opp.get("applicability", "Relevant")
+            opp_act = opp.get("strategic_action", "")
+            
+            app_color = "#166534" if "Primary" in opp_app or "Immediate" in opp_app else "#854d0e" if "Secondary" in opp_app or "Disciplined" in opp_app else "#64748b"
+            
+            opp_box = [
+                Paragraph(f"<b>{opp_name}</b> — <font color='{app_color}'><b>[{opp_app.upper()}]</b></font>", ParagraphStyle('OppHead', parent=body_style, fontName='Helvetica-Bold', fontSize=9, textColor=primary_color)),
+                Spacer(1, 1),
+                Paragraph(opp_act, body_style)
+            ]
+            story.append(create_callout_box(opp_box, bg=colors.HexColor("#f8fafc"), border=card_border, padding=6))
+            story.append(Spacer(1, 3))
+
+        # 2.3 Competitive Dynamics & Local Market Positioning
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>2.3 Competitive Dynamics & Local Market Positioning</b>", h2_style))
+        comp = s2.get("competitive_environment", {})
+        story.append(Paragraph(
+            f"The local competitive environment is recorded at a <b>{comp.get('competition_level', 'Moderate')}</b> competition level "
+            f"({comp.get('competitor_count_nearby', 'Nearby competitor count')} | {comp.get('competitor_information', '')}). "
+            f"To secure patron retention and defend gross margins, the enterprise's recommended market positioning is: "
+            f"<i>{comp.get('positioning_strategy', 'Consistent operational execution and service differentiation.')}</i>",
+            body_style
+        ))
+
+        # 2.4 Evidence Basis & Market Assumptions
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>2.4 Evidence Basis & Market Validation Disclosures</b>", h2_style))
+        for m_assump in s2.get("market_assumptions_and_validation", []):
+            story.append(Paragraph(f"• {m_assump}", bullet_style))
+
+        # Every section starts on a new page!
+        story.append(PageBreak())
+
+        # =====================================================================
+        # 3. FEASIBILITY ASSESSMENT AND KEY FINDINGS
+        # =====================================================================
+        s3 = sec_dict.get("section_3_feasibility_findings", {})
+        story.append(Paragraph("3. FEASIBILITY ASSESSMENT AND KEY FINDINGS", h1_style))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
+
+        # 3.1 AI Feasibility Classification & Model Prediction
+        story.append(Paragraph("<b>3.1 AI Feasibility Classification & Model Prediction</b>", h2_style))
+        ml_feas = s3.get("ml_feasibility_classification", {})
+        f_pred = ml_feas.get("predicted_label", pred_label)
+        f_conf = ml_feas.get("confidence_percentage", conf_pct)
+        f_probs = ml_feas.get("probabilities", probs)
+        f_badge_color = "#166534" if f_pred == "Feasible" else "#854d0e" if "Conditionally" in f_pred else "#991b1b"
+
+        f_box = [
+            Paragraph(f"<font color='{f_badge_color}' size='11'><b>ASSESSMENT VERDICT: {f_pred.upper()} (Model Confidence: {f_conf})</b></font>", body_style),
+            Spacer(1, 2),
+            Paragraph(f"<font color='#475569'>Probability Distribution: Feasible: <b>{f_probs.get('Feasible', 0.0):.1%}</b> | Conditionally Feasible: <b>{f_probs.get('Conditionally Feasible', 0.0):.1%}</b> | Infeasible: <b>{f_probs.get('Infeasible', 0.0):.1%}</b></font>", body_style),
+            Spacer(1, 2),
+            Paragraph(ml_feas.get("interpretation", ""), body_style)
+        ]
+        story.append(create_callout_box(f_box, bg=colors.HexColor("#f8fafc"), border=card_border, padding=8))
+
+        # Chart
+        try:
+            chart_bytes = BusinessPlanChartGenerator.generate_probability_chart(f_probs)
+            chart_img = Image(io.BytesIO(chart_bytes), width=480, height=125)
+            story.append(Spacer(1, 4))
+            story.append(chart_img)
+        except Exception:
+            pass
+
+        # 3.2 Key Factors Influencing the Prediction (SHAP Explainability)
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>3.2 Key Factors Influencing the Prediction (SHAP Explainability)</b>", h2_style))
+        story.append(Paragraph(
+            "To ensure transparent decision support, SHAP (SHapley Additive exPlanations) values decompose the model's prediction into "
+            "individual feature contributions, highlighting positive business strengths versus operational friction points:",
+            body_style
+        ))
+
+        story.append(Paragraph("<b>Primary Positive Supporting Factors:</b>", h3_style))
+        pos_drivers = s3.get("key_positive_drivers", [])
+        if pos_drivers:
+            for p_drv in pos_drivers:
+                story.append(Paragraph(f"• <b>{p_drv.get('feature', '')} ({p_drv.get('feature_value', '')}):</b> {p_drv.get('business_interpretation', '')}", bullet_style))
+        else:
+            story.append(Paragraph("• Available capital and customer demand score align positively with baseline operational requirements.", bullet_style))
+
+        story.append(Spacer(1, 2))
+        story.append(Paragraph("<b>Operational Hurdles Requiring Management Attention:</b>", h3_style))
+        neg_hurdles = s3.get("key_negative_hurdles", [])
+        if neg_hurdles:
+            for n_hrd in neg_hurdles:
+                story.append(Paragraph(f"• <b>{n_hrd.get('feature', '')} ({n_hrd.get('feature_value', '')}):</b> {n_hrd.get('business_interpretation', '')}", bullet_style))
+        else:
+            story.append(Paragraph("• Working capital buffer and peak customer throughput should be monitored to avoid cash strain.", bullet_style))
+
+        # 3.3 Resource Availability & Operational Readiness
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>3.3 Resource Availability & Operational Readiness</b>", h2_style))
+        res_avail = s3.get("resource_availability_assessment", {})
+        story.append(Paragraph(f"• <b>Staffing Balance:</b> {res_avail.get('staffing_balance', '')}", bullet_style))
+        story.append(Paragraph(f"• <b>Equipment Readiness:</b> {res_avail.get('equipment_readiness', '')}", bullet_style))
+        story.append(Paragraph(f"• <b>Supplier Access:</b> {res_avail.get('supplier_access', '')}", bullet_style))
+        story.append(Paragraph(f"• <b>Location Suitability:</b> {res_avail.get('location_suitability', '')}", bullet_style))
+
+        # 3.4 Identified Affordability Gaps & Strategic Findings
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>3.4 Identified Affordability Gaps & Key Findings</b>", h2_style))
+        aff_gaps = s3.get("affordability_gaps_and_findings", {})
+        story.append(Paragraph(
+            f"The business growth strategy targets a capital requirement of <b>LKR {aff_gaps.get('strategy_target_capital_lkr', 0):,.2f}</b>. "
+            f"Recorded available funding equals <b>LKR {aff_gaps.get('total_available_funds_lkr', 0):,.2f}</b> (Available Equity: LKR {aff_gaps.get('available_capital_lkr', 0):,.2f} + Loan: LKR {aff_gaps.get('loan_amount_lkr', 0):,.2f}), "
+            f"placing the enterprise in a <b>{aff_gaps.get('funding_gap_status', 'Fully funded')}</b> position. "
+            f"Liquidity runway provides approximately <b>{aff_gaps.get('capital_runway_months', 0)} months</b> of strategy budget coverage. "
+            f"{aff_gaps.get('key_findings_summary', '')}",
+            body_style
+        ))
+
+        # Every section starts on a new page!
+        story.append(PageBreak())
+
+        # =====================================================================
+        # 4. PERSONALIZED GROWTH STRATEGY
+        # =====================================================================
+        s4 = sec_dict.get("section_4_growth_strategy", {})
+        story.append(Paragraph("4. PERSONALIZED GROWTH STRATEGY", h1_style))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
+
+        # 4.1 Recommended Growth Approach
+        story.append(Paragraph("<b>4.1 Recommended Strategic Growth Approach</b>", h2_style))
+        rec_app = s4.get("recommended_growth_approach", {})
+        story.append(Paragraph(
+            f"SME360 AI recommends <b>{rec_app.get('strategy_name', 'Capital-Protected Phased Growth')}</b> "
+            f"(Strategic Focus: <i>{rec_app.get('strategic_focus', 'Controlled Phased Growth')}</i>, "
+            f"TOPSIS Closeness Score: <b>{rec_app.get('topsis_score', 'N/A')}</b>) as the primary growth vehicle for {biz_name}. "
+            f"{rec_app.get('selection_status', '')}",
+            body_style
+        ))
+        story.append(Paragraph(rec_app.get("operational_approach", ""), body_style))
+
+        # Strategy Suitability Rationale
+        story.append(Spacer(1, 3))
+        story.append(Paragraph("<b>Strategic Suitability Rationale:</b>", h3_style))
+        story.append(Paragraph(s4.get("strategy_suitability_rationale", ""), body_style))
+
+        # 4.2 Multi-Criteria Comparison of Strategic Alternatives (TOPSIS Ranking)
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>4.2 Multi-Criteria Comparison of Strategic Alternatives (TOPSIS Ranking)</b>", h2_style))
+        story.append(Paragraph(
+            "To avoid subjective bias, four strategic pathways were evaluated using the Technique for Order of Preference by "
+            "Similarity to Ideal Solution (TOPSIS). The evaluation balanced five validated dimensions: "
+            "<b>Financial Viability (25%)</b>, <b>Market Demand Alignment (25%)</b>, <b>Implementation Feasibility (20%)</b>, "
+            "<b>Operational Risk (15%)</b>, and <b>Resource Efficiency (15%)</b>:",
+            body_style
+        ))
+
+        strat_table_data = [
+            [
+                Paragraph("<b>Rank</b>", table_header_style),
+                Paragraph("<b>Strategy Pathway</b>", table_header_style),
+                Paragraph("<b>Strategic Focus</b>", table_header_style),
+                Paragraph("<b>Target Capital</b>", table_header_style),
+                Paragraph("<b>TOPSIS Score</b>", table_header_style),
+            ]
+        ]
+        alt_comp = s4.get("alternatives_comparison", {})
+        for r_strat in alt_comp.get("ranked_strategies", []):
+            strat_table_data.append([
+                Paragraph(f"<b>#{r_strat.get('rank', '-')}</b>", table_cell_style),
+                Paragraph(f"<b>{r_strat.get('strategy_name', '')}</b>", table_cell_style),
+                Paragraph(r_strat.get("strategic_focus", "Growth"), table_cell_style),
+                Paragraph(f"LKR {r_strat.get('estimated_capital_required_lkr', 0):,.0f}", table_cell_style),
+                Paragraph(str(r_strat.get("topsis_score", "N/A")), table_cell_style),
+            ])
+        strat_table = Table(strat_table_data, colWidths=[35, 175, 155, 105, 70])
+        strat_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), primary_color),
+            ('PADDING', (0,0), (-1,-1), 4.5),
+            ('BOX', (0,0), (-1,-1), 1, card_border),
+            ('INNERGRID', (0,0), (-1,-1), 0.5, grid_border),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ]))
+        story.append(strat_table)
+
+        # 4.3 Practical & Prioritized Actions
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>4.3 Practical & Prioritized Growth Actions</b>", h2_style))
+        for act in s4.get("prioritized_practical_actions", []):
+            story.append(Paragraph(f"• {act}", bullet_style))
+
+        # 4.4 Addressing Identified Resource & Operational Gaps
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>4.4 Addressing Resource & Operational Gaps</b>", h2_style))
+        for gap in s4.get("gap_mitigation_plan", []):
+            story.append(Paragraph(f"• {gap}", bullet_style))
+
+        # 4.5 Sensitivity & Resilience Testing (What-If Scenario Analysis)
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>4.5 Sensitivity & Resilience Testing (What-If Scenarios)</b>", h2_style))
+        story.append(Paragraph(
+            "To stress-test business resilience before executing growth actions, SME360 AI simulated prospective operational shocks "
+            "through the trained model. These sensitivity scenarios identify how fluctuations in demand, budget, and capital impact feasibility:",
+            body_style
+        ))
+
+        for sc in s4.get("what_if_sensitivity_analysis", [])[:3]:
+            sc_name = sc.get("title") or sc.get("scenario_name", "Scenario")
+            sc_summary = sc.get("impact_summary") or sc.get("analytical_takeaway", "Simulation completed.")
+            sc_deltas = sc.get("class_shifts_percentage_points") or sc.get("probability_deltas_pp", {})
+            f_delta = sc_deltas.get("Feasible", "0.0 pp")
+            c_delta = sc_deltas.get("Conditionally Feasible", "0.0 pp")
+            i_delta = sc_deltas.get("Infeasible", "0.0 pp")
+
+            sc_box = [
+                Paragraph(f"<b>Scenario: {sc_name}</b>", ParagraphStyle('ScHead2', parent=body_style, fontName='Helvetica-Bold', fontSize=9, textColor=primary_color)),
+                Spacer(1, 1),
+                Paragraph(f"<b>Model Impact:</b> Feasible Δ: <b>{f_delta}</b> | Conditionally Feasible Δ: <b>{c_delta}</b> | Infeasible Δ: <b>{i_delta}</b>", body_style),
+                Paragraph(f"<b>Analytical Takeaway:</b> {sc_summary}", body_style)
+            ]
+            story.append(create_callout_box(sc_box, bg=colors.HexColor("#f8fafc"), border=card_border, padding=6))
+            story.append(Spacer(1, 3))
+
+        # Every section starts on a new page!
+        story.append(PageBreak())
+
+        # =====================================================================
+        # 5. FINANCIAL AND RESOURCE PLAN
+        # =====================================================================
+        s5 = sec_dict.get("section_5_financial_resource", {})
+        story.append(Paragraph("5. FINANCIAL AND RESOURCE PLAN", h1_style))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
+
+        # 5.1 Estimated Cost of Recommended Growth Actions
+        story.append(Paragraph("<b>5.1 Estimated Cost of Recommended Growth Actions</b>", h2_style))
+        costs = s5.get("estimated_growth_costs", {})
+        capex_val = costs.get("capex_and_tooling_upgrades_lkr", 0.0)
+        inv_val = costs.get("inventory_replenishment_cost_lkr", 0.0)
+        buf_val = costs.get("working_capital_reserve_lkr", 0.0)
+        tot_val = costs.get("total_estimated_growth_capital_lkr", 0.0)
+
+        cost_tbl_data = [
+            [Paragraph("<b>Growth Investment Component</b>", table_header_style), Paragraph("<b>Estimated Capital (LKR)</b>", table_header_style), Paragraph("<b>Strategic Purpose & Description</b>", table_header_style)],
+            [Paragraph("CapEx & Fixture/Tooling Upgrades", table_cell_style), Paragraph(f"LKR {capex_val:,.2f}", table_cell_style), Paragraph("Physical workspace optimization and equipment upgrades", table_cell_style)],
+            [Paragraph("Initial Inventory & Wholesale Stock", table_cell_style), Paragraph(f"LKR {inv_val:,.2f}", table_cell_style), Paragraph("Stock replenishment to support anticipated customer footfall", table_cell_style)],
+            [Paragraph("Working Capital Reserve Buffer", table_cell_style), Paragraph(f"LKR {buf_val:,.2f}", table_cell_style), Paragraph("Liquidity buffer covering baseline operational ramp-up", table_cell_style)],
+            [Paragraph("<b>Total Estimated Growth Capital</b>", table_cell_style), Paragraph(f"<b>LKR {tot_val:,.2f}</b>", table_cell_style), Paragraph("<b>Calibrated baseline target growth allocation</b>", table_cell_style)],
+        ]
+        cost_tbl = Table(cost_tbl_data, colWidths=[180, 140, 220])
+        cost_tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), primary_color),
+            ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor("#f1f5f9")),
+            ('PADDING', (0,0), (-1,-1), 4.5),
+            ('BOX', (0,0), (-1,-1), 1, card_border),
+            ('INNERGRID', (0,0), (-1,-1), 0.5, grid_border),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ]))
+        story.append(cost_tbl)
+
+        # 5.2 Capital Structure & Funding Requirements
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>5.2 Capital Structure, Funding Requirements & Liquidity Runway</b>", h2_style))
+        fund_data = s5.get("available_capital_and_funding", {})
+        story.append(Paragraph(
+            f"The business is supported by <b>LKR {fund_data.get('available_capital_lkr', 0):,.2f}</b> in recorded available capital and "
+            f"<b>LKR {fund_data.get('loan_amount_lkr', 0):,.2f}</b> in external debt financing, delivering total available funds of "
+            f"<b>LKR {fund_data.get('total_available_funds_lkr', 0):,.2f}</b> against a target growth capital requirement of "
+            f"<b>LKR {fund_data.get('strategy_target_capital_lkr', 0):,.2f}</b> ({fund_data.get('funding_gap_status', 'Fully funded')}).",
+            body_style
+        ))
+
+        # 5.3 Resource & Staffing Requirements
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>5.3 Staffing & Equipment Resource Plan</b>", h2_style))
+        st_data = s5.get("resource_and_staffing_requirements", {})
+        story.append(Paragraph(
+            f"Current staff allocation stands at <b>{st_data.get('available_staff_count', 1)} staff member(s)</b> against an estimated requirement of "
+            f"<b>{st_data.get('required_staff_count', 1)}</b> ({st_data.get('capacity_status', '')}). "
+            f"Equipment readiness status: <b>{st_data.get('equipment_status', '3/5')}</b>. Local supplier access: <b>{st_data.get('supplier_access', '')}</b>.",
+            body_style
+        ))
+
+        # 5.4 Operating Expenses & Revenue Projections
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>5.4 Operating Expenses & Financial Projections</b>", h2_style))
+        op_data = s5.get("operating_expenses", {})
+        story.append(Paragraph(
+            f"Monthly operating budget is established at <b>LKR {op_data.get('monthly_operating_budget_lkr', 0):,.2f}</b>, providing approximately "
+            f"<b>{op_data.get('strategy_capital_runway_months', 0)} months</b> of strategy budget coverage and "
+            f"<b>{op_data.get('total_funds_runway_months', 0)} months</b> of total funds liquidity runway. "
+            f"{op_data.get('expense_guidance', '')}",
+            body_style
+        ))
+
+        # Financial Projections Table
+        story.append(Spacer(1, 3))
+        f_proj = s5.get("financial_projections", [])
+        if f_proj:
+            proj_tbl_data = [
+                [Paragraph("<b>Financial Metric</b>", table_header_style), Paragraph("<b>Projected Target</b>", table_header_style), Paragraph("<b>Basis of Projection</b>", table_header_style)]
+            ]
+            for p in f_proj:
+                proj_tbl_data.append([
+                    Paragraph(f"<b>{p.get('metric', '')}</b>", table_cell_style),
+                    Paragraph(p.get("value", ""), table_cell_style),
+                    Paragraph(p.get("basis", ""), table_cell_style)
+                ])
+            proj_tbl = Table(proj_tbl_data, colWidths=[160, 140, 240])
+            proj_tbl.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), primary_color),
+                ('PADDING', (0,0), (-1,-1), 4.5),
+                ('BOX', (0,0), (-1,-1), 1, card_border),
+                ('INNERGRID', (0,0), (-1,-1), 0.5, grid_border),
+                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ]))
+            story.append(proj_tbl)
+
+        # 5.5 Investment Recovery & Payback Analysis
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>5.5 Investment Recovery & Payback Safeguards</b>", h2_style))
+        pb = s5.get("payback_and_affordability_analysis", {})
+        if pb.get("is_calculated"):
+            p_pb = (
+                f"Based on stated one-time growth CapEx and operating net cash flow baseline, the target investment "
+                f"payback period is estimated at approximately <b>~{pb.get('estimated_payback_months')} months</b>. "
+                f"<i>(Note: Assumes sustained monthly net profit without unexpected commodity cost inflation.)</i>"
+            )
+        else:
+            p_pb = (
+                f"<b>Payback Calculation Status:</b> <font color='#854d0e'><b>Baseline Net Profit Input Pending</b></font>. "
+                f"To maintain professional accounting integrity, payback period and ROI are not fabricated or derived from gross sales turnover alone. "
+                f"{pb.get('affordability_note', '')}"
+            )
+        story.append(Paragraph(p_pb, body_style))
+
+        # Every section starts on a new page!
+        story.append(PageBreak())
+
+        # =====================================================================
+        # 6. IMPLEMENTATION ROADMAP
+        # =====================================================================
+        s6 = sec_dict.get("section_6_implementation_roadmap", {})
+        story.append(Paragraph("6. IMPLEMENTATION ROADMAP", h1_style))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
+
+        # 6.1 Prioritized Growth Implementation Actions
+        story.append(Paragraph("<b>6.1 Prioritized Growth Implementation Actions</b>", h2_style))
+        for p_act in s6.get("prioritized_actions", []):
+            story.append(Paragraph(f"• {p_act}", bullet_style))
+
+        # 6.2 Recommended Implementation Stages (Four Horizons)
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>6.2 Recommended Implementation Stages (Four Operational Horizons)</b>", h2_style))
+        for stg in s6.get("implementation_stages", []):
+            story.append(Paragraph(f"<b>{stg.get('stage_name', '')} ({stg.get('timeframe', '')}):</b>", h3_style))
+            story.append(Paragraph(stg.get("focus_actions", ""), body_style))
+
+        # 6.3 Key Growth Milestones & Success Criteria
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>6.3 Key Growth Milestones & Success Criteria</b>", h2_style))
+        ms_list = s6.get("launch_milestones", [])
+        if ms_list:
+            ms_tbl_data = [
+                [Paragraph("<b>Milestone Name</b>", table_header_style), Paragraph("<b>Target Timeline</b>", table_header_style), Paragraph("<b>Measurable Success Criteria</b>", table_header_style)]
+            ]
+            for m in ms_list:
+                ms_tbl_data.append([
+                    Paragraph(f"<b>{m.get('milestone', '')}</b>", table_cell_style),
+                    Paragraph(m.get("target_timeframe", ""), table_cell_style),
+                    Paragraph(m.get("success_criteria", ""), table_cell_style)
+                ])
+            ms_tbl = Table(ms_tbl_data, colWidths=[150, 90, 300])
+            ms_tbl.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), primary_color),
+                ('PADDING', (0,0), (-1,-1), 4.5),
+                ('BOX', (0,0), (-1,-1), 1, card_border),
+                ('INNERGRID', (0,0), (-1,-1), 0.5, grid_border),
+                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ]))
+            story.append(ms_tbl)
+
+        # 6.4 Operational Responsibilities Matrix
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>6.4 Operational Responsibilities Matrix</b>", h2_style))
+        resp_list = s6.get("responsibilities", [])
+        if resp_list:
+            resp_tbl_data = [
+                [Paragraph("<b>Operating Role</b>", table_header_style), Paragraph("<b>Core Accountabilities & Responsibilities</b>", table_header_style)]
+            ]
+            for r in resp_list:
+                resp_tbl_data.append([
+                    Paragraph(f"<b>{r.get('role', '')}</b>", table_cell_style),
+                    Paragraph(r.get("accountabilities", ""), table_cell_style)
+                ])
+            resp_tbl = Table(resp_tbl_data, colWidths=[160, 380])
+            resp_tbl.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), primary_color),
+                ('PADDING', (0,0), (-1,-1), 4.5),
+                ('BOX', (0,0), (-1,-1), 1, card_border),
+                ('INNERGRID', (0,0), (-1,-1), 0.5, grid_border),
+                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ]))
+            story.append(resp_tbl)
+
+        # 6.5 Progress Monitoring & Governance
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>6.5 Progress Monitoring & Governance Cadence</b>", h2_style))
+        story.append(Paragraph(s6.get("progress_monitoring", "Management should conduct regular cash reconciliations and strategy reviews."), body_style))
+
+        # Every section starts on a new page!
+        story.append(PageBreak())
+
+        # =====================================================================
+        # 7. EXPECTED OUTCOMES AND SUCCESS INDICATORS
+        # =====================================================================
+        s7 = sec_dict.get("section_7_outcomes_indicators", {})
+        story.append(Paragraph("7. EXPECTED OUTCOMES AND SUCCESS INDICATORS", h1_style))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=accent_blue, spaceBefore=0, spaceAfter=8))
+
+        # 7.1 Expected Business Improvements & Outcomes
+        story.append(Paragraph("<b>7.1 Expected Business Improvements & Outcomes</b>", h2_style))
+        for outcome in s7.get("expected_business_outcomes", []):
+            story.append(Paragraph(f"• {outcome}", bullet_style))
+
+        # 7.2 Measurable Business Targets & KPIs
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>7.2 Measurable Business Targets & Key Performance Indicators</b>", h2_style))
+        kpi_list = s7.get("measurable_targets_kpis", [])
+        if kpi_list:
+            kpi_tbl_data = [
+                [Paragraph("<b>Performance Indicator</b>", table_header_style), Paragraph("<b>Target Objective</b>", table_header_style), Paragraph("<b>Tracking Frequency</b>", table_header_style), Paragraph("<b>Focus Area</b>", table_header_style)]
+            ]
+            for k in kpi_list:
+                kpi_tbl_data.append([
+                    Paragraph(f"<b>{k.get('kpi_name', '')}</b>", table_cell_style),
+                    Paragraph(str(k.get("target_value", "")), table_cell_style),
+                    Paragraph(k.get("monitoring_frequency", "Monthly"), table_cell_style),
+                    Paragraph(k.get("focus_area", "Operational"), table_cell_style)
+                ])
+            kpi_tbl = Table(kpi_tbl_data, colWidths=[140, 160, 110, 130])
+            kpi_tbl.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), primary_color),
+                ('PADDING', (0,0), (-1,-1), 4.5),
+                ('BOX', (0,0), (-1,-1), 1, card_border),
+                ('INNERGRID', (0,0), (-1,-1), 0.5, grid_border),
+                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ]))
+            story.append(kpi_tbl)
+
+        # 7.3 Suggested Methods for Tracking Progress
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>7.3 Suggested Methods for Tracking Progress</b>", h2_style))
+        for mth in s7.get("suggested_methods_for_tracking_progress", []):
+            story.append(Paragraph(f"• {mth}", bullet_style))
+
+        # 7.4 Important Business Assumptions & Methodological Disclosures
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<b>7.4 Important Business Assumptions & Planning Limitations</b>", h2_style))
+        story.append(Paragraph("<b>Planning Assumptions:</b>", h3_style))
+        for asm in s7.get("important_business_assumptions", []):
+            story.append(Paragraph(f"• {asm}", bullet_style))
+
+        story.append(Spacer(1, 2))
+        story.append(Paragraph("<b>Data Limitations & Methodological Disclosures:</b>", h3_style))
+        for lim in s7.get("data_limitations_and_validation", []):
+            story.append(Paragraph(f"• {lim}", bullet_style))
+
+    _render_existing_business_sections = _render_unified_growth_sections
+

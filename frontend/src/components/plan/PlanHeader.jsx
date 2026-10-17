@@ -32,6 +32,8 @@ export default function PlanHeader({
   const businessName = businessInput.business_name || 'Your Business';
   const category = businessInput.business_category || 'SME Business';
   const stage = businessInput.business_stage || 'Startup';
+  const isNewStartup = stage.toLowerCase().includes('new') || stage.toLowerCase().includes('start');
+  const planTypeTitle = isNewStartup ? 'Strategic Business Plan' : 'Personalized Business Growth Plan';
   const district = businessInput.district || 'Sri Lanka';
   const address = businessInput.address ? `${businessInput.address}, ` : '';
   const isAdopted = executiveOverview.is_user_selected;
@@ -79,7 +81,7 @@ export default function PlanHeader({
             {businessName}
           </h1>
           <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#38bdf8', marginTop: '0.15rem' }}>
-            Strategic Business Plan
+            {planTypeTitle}
           </div>
 
           <p className="bp-hero-subtitle">

@@ -186,8 +186,8 @@ def test_report_titles_and_stage_selection():
     report_growth = BusinessPlanReportBuilder.build_report_data(res_growth)
 
     # 7. Existing Business Title & Subtitle
-    assert report_growth["metadata"]["document_title"] == "STRATEGIC BUSINESS GROWTH & EXPANSION PLAN"
-    assert report_growth["metadata"]["document_subtitle"] == "AI-Driven Business Growth, Expansion Feasibility & Investment Planning"
+    assert report_growth["metadata"]["document_title"] == "PERSONALIZED BUSINESS GROWTH PLAN"
+    assert report_growth["metadata"]["document_subtitle"] == "A Tailored Strategic Growth & Decision Support Blueprint"
     assert "Enterprise Baseline" in report_growth["section_01"]["section_title"]
     assert "Expansion Financial" in report_growth["section_04"]["section_title"]
 

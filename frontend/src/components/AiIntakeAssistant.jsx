@@ -125,10 +125,8 @@ export default function AiIntakeAssistant({
     let welcomeText = '';
     if (stage === 'New') {
       welcomeText = "Hello! I'm your **SME360 AI Business Intake Assistant**.\n\nTell me about the business you want to start in Sri Lanka! You can describe it in your own words:\n• What products or services you plan to offer (e.g. Grocery, Bakery, Garments, or Salon)\n• Where you want to locate it (e.g. Homagama, Negombo, Panadura)\n• Your starting capital and expected monthly budget\n• Any experience, staffing, or customer expectations you have\n\n*Feel free to write in English, Singlish, or mixed phrasing. You can click **Continue to Form** at any time to review and edit your prefilled details.*";
-    } else if (goal === 'Open New Branch') {
-      welcomeText = "Welcome! Let's plan your **Branch Expansion**.\n\nTell me about your existing business and the new branch you are planning:\n• Your current business name and category\n• Target district and location for your new branch\n• Allocated expansion capital and expected monthly operating budget\n• Expected daily footfall and additional staff required\n\n*Describe in natural language, and click **Continue to Form** whenever you are ready.*";
     } else {
-      welcomeText = "Welcome! Let's plan your **New Product or Service Line** expansion.\n\nTell me about the new offerings you want to add to your current enterprise:\n• The new product or service line you want to introduce\n• Initial inventory investment and supplier availability\n• Target customers and expected price points\n\n*Describe in natural language, and click **Continue to Form** whenever you are ready.*";
+      welcomeText = "Welcome! Let's craft your **Personalized Business Growth Plan**.\n\nTell me about your existing business and how you would like to grow:\n• Your current business name, category, and location in Sri Lanka\n• Existing products or services you offer\n• Your growth vision (e.g. attracting new customers, improving sales & marketing, expanding reach, adding offerings, improving capacity, or opening locations)\n• Available growth capital and monthly operating budget\n• Current team size, equipment readiness, and operational hurdles\n\n*Describe in natural language, and click **Continue to Form** whenever you are ready.*";
     }
 
     setChatMessages([
@@ -146,7 +144,7 @@ export default function AiIntakeAssistant({
       ...prev,
       business_stage: stage,
       proposed_action: stage === 'Existing'
-        ? (goal === 'Open New Branch' ? 'Expand / Open a New Branch' : 'Introduce a New Product / Service Line')
+        ? (goal === 'Open New Branch' ? 'Expand / Open a New Branch' : (goal === 'Introduce New Product' ? 'Introduce a New Product / Service Line' : 'Personalized Strategic Growth & Expansion'))
         : 'Establish New Business'
     }));
 
@@ -158,12 +156,9 @@ export default function AiIntakeAssistant({
     startConversationalIntake('New', 'Establish New Business');
   };
 
-  // Handler: Select Grow an Existing Business -> Go to expansion sub-type
+  // Handler: Select Grow an Existing Business -> Directly start unified Personalized Growth intake
   const handleSelectExpansion = () => {
-    setSelectedStage('Existing');
-    setStageSelectedByUser(true);
-    setIntakeStep('expansion_select');
-    setChatError('');
+    startConversationalIntake('Existing', 'Personalized Growth & Expansion');
   };
 
   // Handler: Select Expansion Goal -> Go to Chat
@@ -559,7 +554,7 @@ export default function AiIntakeAssistant({
                       Grow an Existing Business
                     </h4>
                     <p style={{ fontSize: '0.86rem', color: '#94a3b8', lineHeight: 1.5, margin: 0 }}>
-                      Plan strategic growth for an active enterprise — from opening a new location to introducing new products or services.
+                      Generate a personalized Business Growth Plan tailored to your current resources, market opportunities, and objectives.
                     </p>
                   </div>
 
@@ -584,7 +579,7 @@ export default function AiIntakeAssistant({
                 </div>
 
                 <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#c084fc', fontSize: '0.88rem', fontWeight: 700, paddingTop: '1rem' }}>
-                  <span>Select Growth Path</span>
+                  <span>Start Growth Conversation</span>
                   <ArrowRight size={16} />
                 </div>
               </div>

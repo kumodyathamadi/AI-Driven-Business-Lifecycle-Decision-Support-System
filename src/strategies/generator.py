@@ -95,10 +95,10 @@ class SMEStrategyGenerator:
             # =====================================================================
             # EXISTING BUSINESS GROWTH STRATEGIES
             # =====================================================================
-            # Strategy A: Step-by-Step Staged Expansion (Capital-Guarded)
+            # Strategy A: Phased Modular Expansion (Capital-Guarded)
             strategies.append({
                 "strategy_id": "STRAT_01",
-                "strategy_name": f"Step-by-Step Staged Expansion ({display_name})",
+                "strategy_name": f"Phased Modular Expansion ({display_name})",
                 "strategic_focus": "Capital Protection & Phased Scale",
                 "operational_approach": (
                     f"Execute a staged expansion for {display_name}, validating initial branch or service capacity "
@@ -119,10 +119,10 @@ class SMEStrategyGenerator:
                 "criteria_rationale": "Staged rollout preserves parent enterprise cash flow while proving expansion demand."
             })
 
-            # Strategy B: Full-Scale Capacity Growth
+            # Strategy B: Capacity & Scale Expansion
             strategies.append({
                 "strategy_id": "STRAT_02",
-                "strategy_name": f"Full-Scale Capacity Growth ({display_name})",
+                "strategy_name": f"Capacity & Scale Expansion ({display_name})",
                 "strategic_focus": "High Volume & Capacity Scaling",
                 "operational_approach": (
                     f"Rapidly expand customer-serving capacity, equipment throughput, and team size for {display_name} "
@@ -143,10 +143,10 @@ class SMEStrategyGenerator:
                 "criteria_rationale": "Aggressive capacity scale maximizes market capture; requires structured operational oversight."
             })
 
-            # Strategy C: Online Ordering & Delivery Expansion
+            # Strategy C: Omnichannel Delivery & Digital Expansion
             strategies.append({
                 "strategy_id": "STRAT_03",
-                "strategy_name": "Online Ordering & Delivery Expansion",
+                "strategy_name": f"Omnichannel Delivery & Digital Expansion ({display_name})",
                 "strategic_focus": "Multi-Channel Orders & Shared Hub Efficiency",
                 "operational_approach": (
                     f"Leverage {display_name}'s existing commercial infrastructure and supplier network through "
@@ -167,10 +167,10 @@ class SMEStrategyGenerator:
                 "criteria_rationale": "Shared facilities and digital fulfillment enhance margin without heavy duplicate overhead."
             })
 
-            # Strategy D: New Products & Service Additions
+            # Strategy D: Product / Service-Line Extension
             strategies.append({
                 "strategy_id": "STRAT_04",
-                "strategy_name": "New Products & Service Additions",
+                "strategy_name": f"Product / Service-Line Extension ({display_name})",
                 "strategic_focus": "Higher Margins via New Offerings",
                 "operational_approach": (
                     f"Introduce complementary, high-margin product offerings or specialized service packages within "
@@ -195,10 +195,10 @@ class SMEStrategyGenerator:
             # =====================================================================
             # NEW STARTUP LAUNCH STRATEGIES (Business-Friendly Practical Titles)
             # =====================================================================
-            # Strategy 1: Low-Cost, Low-Risk Start
+            # Strategy 1: Lean Bootstrapped Start
             strategies.append({
                 "strategy_id": "STRAT_01",
-                "strategy_name": f"Low-Cost, Low-Risk Start ({display_name})",
+                "strategy_name": f"Lean Bootstrapped Start ({display_name})",
                 "strategic_focus": "Capital Protection & Essential Setup",
                 "operational_approach": (
                     f"Start with essential equipment and minimal initial inventory for {display_name}. Focus on lean operations "
@@ -219,10 +219,10 @@ class SMEStrategyGenerator:
                 "criteria_rationale": "Minimal initial investment and low fixed costs safeguard cash reserves during early operations."
             })
 
-            # Strategy 2: High-Volume Local Promotion
+            # Strategy 2: Customer Acquisition & Local Promotion
             strategies.append({
                 "strategy_id": "STRAT_02",
-                "strategy_name": f"High-Volume Local Promotion ({display_name})",
+                "strategy_name": f"Customer Acquisition & Local Promotion ({display_name})",
                 "strategic_focus": "Rapid Customer Reach & Opening Discounts",
                 "operational_approach": (
                     f"Invest in active local flyers, introductory discounts, and neighborhood visibility for {display_name} to stand out against {competition} "
