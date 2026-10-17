@@ -565,6 +565,7 @@ export const App: React.FC = () => {
                         <th className="py-3 px-3 font-semibold">Enforcing Authority</th>
                         <th className="py-3 px-3 font-semibold">Key Cited Sections</th>
                         <th className="py-3 px-3 font-semibold">Verification Status</th>
+                        <th className="py-3 px-3 font-semibold text-right">Official Document</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -590,6 +591,17 @@ export const App: React.FC = () => {
                               <i className="fa-solid fa-check-double text-[10px]"></i>
                               Verified Law
                             </span>
+                          </td>
+                          <td className="py-3 px-3 text-right whitespace-nowrap">
+                            <a
+                              href={`http://localhost:8000/api/v1/component2/legal-documents/${s.pdf_query || s.source_id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 font-semibold text-[11px] transition-colors shadow-2xs"
+                            >
+                              <i className="fa-solid fa-file-pdf text-red-500 text-xs"></i>
+                              <span>View PDF Act</span>
+                            </a>
                           </td>
                         </tr>
                       ))}

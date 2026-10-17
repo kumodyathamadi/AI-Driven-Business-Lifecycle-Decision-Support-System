@@ -742,12 +742,83 @@ export const RegistrationComplianceDashboard: React.FC = () => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [extractedProfileEdit, setExtractedProfileEdit] = useState<any | null>(null);
   const [newProductTag, setNewProductTag] = useState('');
+  const [isDownloadingDossier, setIsDownloadingDossier] = useState(false);
+  const [isDownloadingForm1, setIsDownloadingForm1] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // Load available sample business plans on mount
   React.useEffect(() => {
     fetchSamplePlansListAPI().then(setSamplePlans);
   }, []);
+
+  const handleDownloadDossier = async () => {
+    if (!result) return;
+    setIsDownloadingDossier(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/component2/download-compliance-dossier`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(result),
+      });
+      if (!res.ok) throw new Error('Failed to generate compliance dossier');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `SME_Compliance_Registration_Dossier_${result.registration_guidance?.district || 'WP'}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to download compliance dossier PDF');
+    } finally {
+      setIsDownloadingDossier(false);
+    }
+  };
+
+  const handleDownloadForm1 = async () => {
+    if (!result) return;
+    setIsDownloadingForm1(true);
+    try {
+      const bContext = (result.business_context || {}) as Record<string, any>;
+      const bGuidance = result.registration_guidance || ({} as any);
+      const payload = {
+        business_name: bContext.business_name || `${bContext.business_type || 'SME'} Enterprise`,
+        legal_form: bGuidance.pathway_key || 'sole_proprietorship',
+        district: bGuidance.district || 'Colombo',
+        sector: bContext.sector || bContext.business_type || 'Retail',
+        address: bContext.location || `Commercial Premises, ${bGuidance.district || 'Colombo'}`,
+        activities: bContext.products_services || [bContext.business_type || 'Commercial Enterprise'],
+        employee_count: bContext.number_of_employees || 5,
+        revenue: bContext.revenue || 1500000.0,
+        initial_capital: 500000.0,
+        owner_name: 'Dhananjaya Bandara',
+        owner_nic: '199415802345',
+      };
+      const res = await fetch(`${API_BASE}/api/v1/component2/generate-br-form`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('Failed to generate Form 1 PDF');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Western_Province_BR_Form1_${payload.district}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to download Form 1 application PDF');
+    } finally {
+      setIsDownloadingForm1(false);
+    }
+  };
 
 
   const handlePdfFile = async (file: File) => {
@@ -2058,6 +2129,48 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Official Export & PDF Generation Banner */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-blue-200 shadow-xs">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
+                        <i className="fa-solid fa-file-pdf text-base text-red-500" />
+                      </span>
+                      <div>
+                        <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                          Official Regulatory Documentation Packages
+                          <span className="text-[9px] uppercase font-extrabold bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200">
+                            Print-Ready
+                          </span>
+                        </span>
+                        <p className="text-[11px] text-slate-500">
+                          Generate formal, submission-ready compliance documentation and official application forms.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleDownloadDossier}
+                        disabled={isDownloadingDossier}
+                        className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                      >
+                        <i className={`fa-solid ${isDownloadingDossier ? 'fa-spinner fa-spin' : 'fa-file-shield'}`} />
+                        <span>{isDownloadingDossier ? 'Generating Dossier...' : 'Download Compliance Dossier (PDF)'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleDownloadForm1}
+                        disabled={isDownloadingForm1}
+                        className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                      >
+                        <i className={`fa-solid ${isDownloadingForm1 ? 'fa-spinner fa-spin' : 'fa-file-signature'}`} />
+                        <span>{isDownloadingForm1 ? 'Preparing Form 1...' : 'Download Official Form 1 (PDF)'}</span>
+                      </button>
+                    </div>
+                  </div>
+
                   {/* 1. Legal Form Recommendation & Office Routing Banner */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 text-xs">
                     {/* Legal Form */}
@@ -2290,9 +2403,21 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                             </p>
                           </div>
 
-                          <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
-                            Verification: {source.verification_status || 'Draft Template'}
-                          </span>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
+                              Verification: {source.verification_status || 'Draft Template'}
+                            </span>
+                            <a
+                              href={`${API_BASE}/api/v1/component2/legal-documents/${encodeURIComponent(source.source_file || source.source_id || source.title)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 border border-blue-200 transition-colors shadow-xs"
+                              title="View and download official Sri Lankan Act / Gazette / By-law (PDF)"
+                            >
+                              <i className="fa-solid fa-file-pdf text-red-500 text-xs" />
+                              <span>View Official PDF</span>
+                            </a>
+                          </div>
                         </div>
 
                         {/* ML Action Guidance (Where to go, what it does, what to do) */}
