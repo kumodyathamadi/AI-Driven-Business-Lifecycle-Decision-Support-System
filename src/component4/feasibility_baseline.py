@@ -49,7 +49,7 @@ DEFAULT_REPORT_DIR = os.path.abspath(
 
 
 def evaluate_predictions(
-    y_true: pd.Series, y_pred: np.ndarray, classes: List[str]
+    y_true: pd.Series, y_pred: Any, classes: List[str]
 ) -> Dict[str, Any]:
     """Computes comprehensive multi-class classification metrics."""
     acc = accuracy_score(y_true, y_pred)
@@ -59,10 +59,16 @@ def evaluate_predictions(
     weighted_f1 = f1_score(y_true, y_pred, average="weighted", zero_division=0)
 
     # Per-class breakdown
-    prec_per_class = precision_score(y_true, y_pred, average=None, labels=classes, zero_division=0)
-    rec_per_class = recall_score(y_true, y_pred, average=None, labels=classes, zero_division=0)
-    f1_per_class = f1_score(y_true, y_pred, average=None, labels=classes, zero_division=0)
-    support_per_class = [int((y_true == cls_name).sum().item()) for cls_name in classes]
+    prec_per_class: Any = precision_score(
+        y_true, y_pred, average=None, labels=classes, zero_division=0
+    )
+    rec_per_class: Any = recall_score(
+        y_true, y_pred, average=None, labels=classes, zero_division=0
+    )
+    f1_per_class: Any = f1_score(
+        y_true, y_pred, average=None, labels=classes, zero_division=0
+    )
+    support_per_class = [int((y_true == cls_name).sum()) for cls_name in classes]
 
     per_class_metrics = {}
     for i, cls_name in enumerate(classes):
@@ -116,15 +122,15 @@ def train_and_evaluate_baselines(
     # Fit preprocessor exclusively on training data
     print("Fitting preprocessor exclusively on training data...")
     preprocessor = FeasibilityPreprocessor()
-    X_train_proc = preprocessor.fit_transform(X_train)
-    X_val_proc = preprocessor.transform(X_val)
-    X_test_proc = preprocessor.transform(X_test)
+    X_train_proc: Any = preprocessor.fit_transform(X_train)
+    X_val_proc: Any = preprocessor.transform(X_val)
+    X_test_proc: Any = preprocessor.transform(X_test)
 
     feature_names = preprocessor.get_feature_names_out()
     print(f"Transformed features dimension: {X_train_proc.shape[1]}")
 
     # Baseline Candidate Models
-    candidate_models = {
+    candidate_models: Dict[str, Any] = {
         "Dummy (most_frequent)": DummyClassifier(strategy="most_frequent"),
         "Dummy (stratified)": DummyClassifier(strategy="stratified", random_state=random_state),
         "Logistic Regression (balanced)": LogisticRegression(
@@ -141,8 +147,8 @@ def train_and_evaluate_baselines(
         ),
     }
 
-    validation_results = {}
-    fitted_models = {}
+    validation_results: Dict[str, Any] = {}
+    fitted_models: Dict[str, Any] = {}
 
     print("\n--- Training Candidates & Evaluating on Validation Set ---")
     for name, model in candidate_models.items():
