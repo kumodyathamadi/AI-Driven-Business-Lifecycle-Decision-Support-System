@@ -13,6 +13,7 @@ interface LegalSourceItem {
   effective_date: string;
   key_sections: string;
   status: 'verified' | 'needs_verification';
+  pdf_query?: string;
 }
 
 const STATUTORY_REGISTER: LegalSourceItem[] = [
@@ -25,6 +26,7 @@ const STATUTORY_REGISTER: LegalSourceItem[] = [
     effective_date: '1990-06-15',
     key_sections: 'Section 3(1), Section 7 (Registration within 14 days)',
     status: 'verified',
+    pdf_query: 'companies_act',
   },
   {
     source_id: 'SRC-MCO-1976',
@@ -35,6 +37,7 @@ const STATUTORY_REGISTER: LegalSourceItem[] = [
     effective_date: '1976-11-20',
     key_sections: 'Section 247A (Annual Trade Tax & Commercial Operating License)',
     status: 'verified',
+    pdf_query: 'motor_traffic',
   },
   {
     source_id: 'SRC-FOOD-ACT-1980',
@@ -45,6 +48,7 @@ const STATUTORY_REGISTER: LegalSourceItem[] = [
     effective_date: '1980-08-01',
     key_sections: 'Section 2(1) (Food premises licensing), Reg 14 (PHI Medical Clearance)',
     status: 'verified',
+    pdf_query: 'food_act',
   },
   {
     source_id: 'SRC-NMRA-COSMETICS-2015',
@@ -55,6 +59,7 @@ const STATUTORY_REGISTER: LegalSourceItem[] = [
     effective_date: '2015-07-01',
     key_sections: 'Part IV Regulation 12 (Cosmetic chemical handling & salon registration)',
     status: 'verified',
+    pdf_query: 'cosmetics',
   },
   {
     source_id: 'SRC-CEA-ENV-2008',
@@ -65,6 +70,7 @@ const STATUTORY_REGISTER: LegalSourceItem[] = [
     effective_date: '2008-02-01',
     key_sections: 'Schedule List B (Hazardous waste lubricant & spent battery storage)',
     status: 'verified',
+    pdf_query: 'environmental_act',
   },
   {
     source_id: 'SRC-LA-TRADE-1980',
@@ -75,6 +81,7 @@ const STATUTORY_REGISTER: LegalSourceItem[] = [
     effective_date: '1980-01-15',
     key_sections: 'Section 4 (Textile / Garment commercial safety clearance)',
     status: 'needs_verification',
+    pdf_query: 'motor_traffic',
   },
 ];
 
