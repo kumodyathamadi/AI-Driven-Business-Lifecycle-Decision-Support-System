@@ -51,22 +51,24 @@ RULE_PURPOSE_EXPLANATIONS = {
 }
 
 
-def _load_artifacts():
+def _load_artifacts(force_reload: bool = False):
     global _pipeline, _knowledge_index
-    if _pipeline is None and os.path.exists(PIPELINE_PATH):
-        try:
-            _pipeline = joblib.load(PIPELINE_PATH)
-            logger.info("Action guidance pipeline loaded successfully.")
-        except Exception as exc:
-            logger.error("Failed to load action guidance pipeline: %s", exc)
+    if force_reload or _pipeline is None:
+        if os.path.exists(PIPELINE_PATH):
+            try:
+                _pipeline = joblib.load(PIPELINE_PATH)
+                logger.info("Action guidance pipeline loaded successfully.")
+            except Exception as exc:
+                logger.error("Failed to load action guidance pipeline: %s", exc)
 
-    if not _knowledge_index and os.path.exists(KNOWLEDGE_PATH):
-        try:
-            with open(KNOWLEDGE_PATH, "r", encoding="utf-8") as f:
-                _knowledge_index = json.load(f)
-            logger.info("Action knowledge index loaded successfully.")
-        except Exception as exc:
-            logger.error("Failed to load action knowledge index: %s", exc)
+    if force_reload or not _knowledge_index:
+        if os.path.exists(KNOWLEDGE_PATH):
+            try:
+                with open(KNOWLEDGE_PATH, "r", encoding="utf-8") as f:
+                    _knowledge_index = json.load(f)
+                logger.info("Action knowledge index loaded successfully.")
+            except Exception as exc:
+                logger.error("Failed to load action knowledge index: %s", exc)
 
 
 def predict_action_for_rule(
@@ -81,6 +83,7 @@ def predict_action_for_rule(
     2. 'යන්න ඕනෙ ස්ථානය / කාර්යාලය කොහෙද?' (Where to Go / Target Authority & Office)
     3. 'ගත යුතු පියවර / බලපත්‍රය කුමක්ද?' (Required Action & Documents)
     4. 'පියවරෙන් පියවර උපදෙස්' (Procedural Steps)
+    grounded in Western Province institutional structures.
     """
     _load_artifacts()
     business_context = business_context or {}
@@ -95,6 +98,10 @@ def predict_action_for_rule(
     elif isinstance(loc, str) and loc:
         district = loc
     else:
+        district = "Colombo"
+
+    # Default to Western Province district if not Colombo/Gampaha/Kalutara
+    if district not in ["Colombo", "Gampaha", "Kalutara"]:
         district = "Colombo"
 
     rule_text = f"{rule_title} {source_id} {excerpt}".lower()
@@ -144,18 +151,19 @@ def predict_action_for_rule(
         f"Statutory compliance requirement applicable to commercial activities under {rule_title}."
     )
 
-    # Specific authority enhancements based on district & authority
-    target_auth = action_data.get("target_authority", "Relevant Competent Local Authority")
-    office_loc = action_data.get("office_location", f"District Secretariat / Local Council Office ({district})")
-    if "environmental" in category:
-        target_auth = "Central Environmental Authority (CEA) / Local Council Environment Unit"
-        office_loc = f"CEA Provincial/District Office ({district}) or Local Council Environment Unit"
-    elif "food" in category:
-        target_auth = f"Public Health Department / PHI Office ({district} Municipal Council or MOH Office)"
-        office_loc = f"Town Hall / Chief Medical Officer of Health (MOH) Office, {district}"
-    elif "business_registration" in category:
-        target_auth = "Department of Business Names (Provincial Council) / Registrar of Companies"
-        office_loc = f"District Secretariat / Registrar of Companies (eROC), {district}"
+    # Concrete target authority from Western Province dataset
+    target_auth = action_data.get("target_authority") or "Relevant Competent Local Authority"
+
+    # District-specific Western Province office routing
+    wp_office_by_cat = {
+        "business_registration": f"Divisional Secretariat ({district}) / Registrar of Companies (eROC), Colombo 10",
+        "food_business": f"Local Authority Health Department (CMC / Municipal / Urban Council / Pradeshiya Sabha) & MOH Office ({district})",
+        "environmental_waste": f"Central Environmental Authority (CEA Head Office Battaramulla / {district} District Office)",
+        "vehicle_repair_motor_trade": f"Department of Motor Traffic (Werahera / Narahenpita) & Local Council Trade Unit ({district})",
+        "cosmetics_salon": f"National Medicines Regulatory Authority (NMRA Colombo 10) & Local Council Health Dept ({district})",
+        "data_protection_digital": "Data Protection Authority of Sri Lanka (DPA SL), Colombo",
+    }
+    office_loc = wp_office_by_cat.get(category, action_data.get("office_location", f"District Secretariat / Local Authority ({district})"))
 
 
     return {
