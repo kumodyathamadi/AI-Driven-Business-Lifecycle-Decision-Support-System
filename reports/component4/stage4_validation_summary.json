@@ -1,0 +1,362 @@
+{
+  "stage": "Stage 4 \u2014 Dataset Integration and Validation",
+  "overall_status": "PASSED",
+  "geographic_scope": "Western Province, Sri Lanka (Colombo, Gampaha, Kalutara)",
+  "feasibility_dataset": {
+    "name": "raw_feasibility_dataset",
+    "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\raw\\Component_One_Core_Feasibility.csv",
+    "data_origin": "ANONYMIZED_SURVEY",
+    "is_real_observed": true,
+    "rows": 1200,
+    "columns": 25,
+    "null_values": 0,
+    "duplicate_rows": 0,
+    "identifier_unique": true,
+    "classes": [
+      "Conditionally Feasible",
+      "Feasible",
+      "Infeasible"
+    ],
+    "class_distribution": {
+      "Conditionally Feasible": 682,
+      "Feasible": 314,
+      "Infeasible": 204
+    },
+    "districts": [
+      "Colombo"
+    ],
+    "provinces": [
+      "Western"
+    ],
+    "status": "VALID"
+  },
+  "invoice_datasets": {
+    "dataset07_invoices": {
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\dataset07_extracted_invoices.csv",
+      "data_origin": "DOCUMENT_EXTRACTED",
+      "is_real_observed": true,
+      "rows": 70,
+      "columns": 21,
+      "unique_invoices": 69,
+      "duplicate_invoices": 1,
+      "duplicate_breakdown": {
+        "UNIQUE": 69,
+        "SEMANTIC_CONTENT_DUPLICATE": 1
+      },
+      "status": "VALID"
+    },
+    "dataset06_declarations": {
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\dataset06_extracted_declarations.csv",
+      "data_origin": "DOCUMENT_EXTRACTED",
+      "is_real_observed": true,
+      "rows": 171,
+      "columns": 22,
+      "unique_documents": 159,
+      "exact_binary_duplicates": 12,
+      "verification_breakdown": {
+        "UNVERIFIED_SCANNED": 109,
+        "VERIFIED_PARTIAL": 37,
+        "VERIFIED_COMPLETE": 13,
+        "DUPLICATE_OMITTED": 12
+      },
+      "status": "VALID"
+    }
+  },
+  "scenario_datasets": {
+    "business_profiles": {
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\business_profiles.csv",
+      "data_origin": "SIMULATED_SCENARIO",
+      "is_real_observed": false,
+      "rows": 500,
+      "columns": 9,
+      "column_names": [
+        "business_id",
+        "district",
+        "province",
+        "business_category",
+        "business_stage",
+        "employee_count",
+        "scenario_family_id",
+        "data_origin",
+        "base_scenario_version"
+      ],
+      "null_counts": {},
+      "total_nulls": 0,
+      "status": "VALID"
+    },
+    "financial_snapshots": {
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\financial_snapshots.csv",
+      "data_origin": "SIMULATED_SCENARIO",
+      "is_real_observed": false,
+      "rows": 6000,
+      "columns": 25,
+      "column_names": [
+        "business_id",
+        "snapshot_month",
+        "district",
+        "province",
+        "business_category",
+        "monthly_revenue_lkr",
+        "monthly_expenses_lkr",
+        "cash_reserves_lkr",
+        "outstanding_debt_lkr",
+        "monthly_debt_repayment_lkr",
+        "accounts_receivable_lkr",
+        "accounts_payable_lkr",
+        "working_capital_lkr",
+        "cash_runway_months",
+        "debt_service_ratio",
+        "supplier_concentration_share",
+        "customer_concentration_share",
+        "supplier_disruption_active",
+        "liquidity_stress_label",
+        "relationship_risk_label",
+        "overall_risk_label",
+        "scenario_family_id",
+        "label_source",
+        "data_origin",
+        "split"
+      ],
+      "null_counts": {},
+      "total_nulls": 0,
+      "status": "VALID"
+    },
+    "business_relationships": {
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\business_relationships.csv",
+      "data_origin": "SIMULATED_SCENARIO",
+      "is_real_observed": false,
+      "rows": 5053,
+      "columns": 13,
+      "column_names": [
+        "source_id",
+        "target_id",
+        "relationship_type",
+        "snapshot_month",
+        "transaction_count",
+        "transaction_value_lkr",
+        "dependency_percentage",
+        "relationship_duration_months",
+        "payment_delay_days",
+        "disruption_status",
+        "scenario_family_id",
+        "data_origin",
+        "split"
+      ],
+      "null_counts": {
+        "dependency_percentage": 500
+      },
+      "total_nulls": 500,
+      "status": "VALID"
+    },
+    "growth_actions": {
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\growth_actions.csv",
+      "data_origin": "SIMULATED_SCENARIO",
+      "is_real_observed": false,
+      "rows": 2000,
+      "columns": 15,
+      "column_names": [
+        "action_id",
+        "business_id",
+        "action_type",
+        "variant",
+        "required_investment_lkr",
+        "additional_monthly_cost_lkr",
+        "expected_revenue_change_lkr",
+        "required_staff_count",
+        "available_capacity_score",
+        "mitigation_applied",
+        "mitigation_recommendation",
+        "scenario_family_id",
+        "district",
+        "province",
+        "data_origin"
+      ],
+      "null_counts": {
+        "mitigation_recommendation": 1000
+      },
+      "total_nulls": 1000,
+      "status": "VALID"
+    },
+    "risk_outcomes": {
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\risk_outcomes.csv",
+      "data_origin": "SIMULATED_SCENARIO",
+      "is_real_observed": false,
+      "rows": 2000,
+      "columns": 13,
+      "column_names": [
+        "action_id",
+        "business_id",
+        "variant",
+        "overall_risk_label",
+        "liquidity_stress_label",
+        "relationship_risk_label",
+        "growth_readiness_label",
+        "risk_factor_codes",
+        "mitigation_codes",
+        "label_source",
+        "scenario_family_id",
+        "split",
+        "data_origin"
+      ],
+      "null_counts": {
+        "mitigation_codes": 1000
+      },
+      "total_nulls": 1000,
+      "status": "VALID"
+    },
+    "graph_entities": {
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\graph_entities.csv",
+      "data_origin": "SIMULATED_SCENARIO",
+      "is_real_observed": false,
+      "rows": 5553,
+      "columns": 5,
+      "column_names": [
+        "entity_id",
+        "entity_type",
+        "district",
+        "business_category",
+        "data_origin"
+      ],
+      "null_counts": {
+        "business_category": 5053
+      },
+      "total_nulls": 5053,
+      "status": "VALID"
+    },
+    "scenario_families_and_splits": {
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\scenario_families_and_splits.csv",
+      "data_origin": "SIMULATED_SCENARIO",
+      "is_real_observed": false,
+      "rows": 500,
+      "columns": 11,
+      "column_names": [
+        "scenario_family_id",
+        "business_id",
+        "district",
+        "business_category",
+        "business_stage",
+        "supplier_concentration_control",
+        "customer_concentration_control",
+        "disruption_month",
+        "split",
+        "label_source",
+        "data_origin"
+      ],
+      "null_counts": {},
+      "total_nulls": 0,
+      "status": "VALID"
+    }
+  },
+  "geographic_validation": {
+    "status": "PASSED",
+    "enforced_province": "Western",
+    "observed_provinces": [
+      "Western"
+    ],
+    "enforced_districts": [
+      "Colombo",
+      "Gampaha",
+      "Kalutara"
+    ],
+    "observed_districts": [
+      "Colombo",
+      "Gampaha",
+      "Kalutara"
+    ],
+    "district_business_distribution": {
+      "Colombo": 167,
+      "Gampaha": 167,
+      "Kalutara": 166
+    },
+    "all_records_western_province": true
+  },
+  "leakage_and_split_validation": {
+    "status": "PASSED",
+    "is_leak_free": true,
+    "scenario_families_total": 500,
+    "split_breakdown_families": {
+      "train": 350,
+      "validation": 75,
+      "test": 75
+    },
+    "split_percentages_families": {
+      "train_pct": 70.0,
+      "validation_pct": 15.0,
+      "test_pct": 15.0
+    },
+    "cross_split_overlaps": {
+      "train_val_overlap": 0,
+      "train_test_overlap": 0,
+      "val_test_overlap": 0
+    },
+    "multi_split_scenario_families": 0,
+    "multi_split_paired_actions": 0,
+    "snapshots_split_distribution": {
+      "train": 4200,
+      "validation": 900,
+      "test": 900
+    },
+    "outcomes_split_distribution": {
+      "train": 1400,
+      "validation": 300,
+      "test": 300
+    },
+    "relationships_split_distribution": {
+      "train": 3503,
+      "validation": 780,
+      "test": 770
+    }
+  },
+  "cross_dataset_isolation_validation": {
+    "status": "PASSED",
+    "is_strictly_disjoint": true,
+    "feasibility_id_count": 1200,
+    "scenario_business_id_count": 500,
+    "invoice_entity_id_count": 11,
+    "cross_dataset_overlaps": {
+      "feasibility_vs_scenario": 0,
+      "feasibility_vs_invoice": 0,
+      "scenario_vs_invoice": 0
+    },
+    "scientific_conclusion": "Datasets are 100% disjoint. Feasibility survey records, invoice entities, and synthetic scenarios must NOT be joined into a merged table."
+  },
+  "target_label_validation": {
+    "status": "PASSED",
+    "overall_risk_distribution": {
+      "Medium": 804,
+      "High": 756,
+      "Low": 440
+    },
+    "growth_readiness_distribution": {
+      "Modify": 804,
+      "Delay": 756,
+      "Proceed": 440
+    },
+    "liquidity_stress_distribution": {
+      "High": 1236,
+      "Low": 588,
+      "Medium": 176
+    },
+    "relationship_risk_distribution": {
+      "Medium": 804,
+      "Low": 748,
+      "High": 448
+    },
+    "readiness_by_variant": {
+      "Delay": {
+        "BASELINE": 756,
+        "MITIGATED": 0
+      },
+      "Modify": {
+        "BASELINE": 78,
+        "MITIGATED": 726
+      },
+      "Proceed": {
+        "BASELINE": 166,
+        "MITIGATED": 274
+      }
+    },
+    "labels_are_simulated_rule_targets": true,
+    "provenance_statement": "Labels are deterministic outcomes of SIMULATOR_RULES_V1. They are NOT historical default, insolvency, or bankruptcy records."
+  }
+}

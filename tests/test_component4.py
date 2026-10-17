@@ -39,6 +39,7 @@ from component4.anonymization import (
 )
 from component4.invoice_extraction import InvoiceExtractor
 from component4.graph_construction import InvoiceGraphBuilder
+from component4.dataset_validation import DatasetValidator
 
 from sklearn.dummy import DummyClassifier
 from sklearn.linear_model import LogisticRegression
@@ -373,6 +374,72 @@ class TestComponent4Stage3(unittest.TestCase):
 
         self.assertIn("topological_classification", m07["gnn_experimentation_feasibility"])
         self.assertIn("topological_classification", m06["gnn_experimentation_feasibility"])
+
+
+class TestComponent4Stage4(unittest.TestCase):
+    """
+    Unit and integration tests for Stage 4: Dataset Integration and Validation.
+    Verifies data integrity, schema consistency, Western Province geographic scope,
+    leakage-free split grouping, and cross-dataset non-mergability.
+    """
+
+    def setUp(self):
+        self.validator = DatasetValidator()
+
+    def test_stage4_full_validation_suite(self):
+        """Verify the complete validation pipeline passes without errors."""
+        summary = self.validator.run_all_validations()
+        self.assertEqual(summary["overall_status"], "PASSED")
+        self.assertEqual(summary["geographic_scope"], "Western Province, Sri Lanka (Colombo, Gampaha, Kalutara)")
+
+    def test_stage4_geographic_scope_western_province(self):
+        """Verify all scenario records are strictly confined to Western Province districts."""
+        geo_result = self.validator.validate_geographic_scope()
+        self.assertEqual(geo_result["status"], "PASSED")
+        self.assertTrue(geo_result["all_records_western_province"])
+        self.assertEqual(geo_result["enforced_province"], "Western")
+        self.assertEqual(set(geo_result["observed_districts"]), {"Colombo", "Gampaha", "Kalutara"})
+
+    def test_stage4_leak_free_family_split_grouping(self):
+        """Verify that splits group strictly by scenario_family_id with zero cross-split leakage."""
+        split_result = self.validator.validate_leakage_and_splits()
+        self.assertEqual(split_result["status"], "PASSED")
+        self.assertTrue(split_result["is_leak_free"])
+        self.assertEqual(split_result["scenario_families_total"], 500)
+        self.assertEqual(split_result["split_percentages_families"]["train_pct"], 70.0)
+        self.assertEqual(split_result["split_percentages_families"]["validation_pct"], 15.0)
+        self.assertEqual(split_result["split_percentages_families"]["test_pct"], 15.0)
+        self.assertEqual(split_result["cross_split_overlaps"]["train_val_overlap"], 0)
+        self.assertEqual(split_result["cross_split_overlaps"]["train_test_overlap"], 0)
+        self.assertEqual(split_result["cross_split_overlaps"]["val_test_overlap"], 0)
+        self.assertEqual(split_result["multi_split_scenario_families"], 0)
+        self.assertEqual(split_result["multi_split_paired_actions"], 0)
+
+    def test_stage4_target_labels_and_classes(self):
+        """Verify that risk outcomes contain valid labels and correct de-escalation dynamics."""
+        label_result = self.validator.validate_target_labels()
+        self.assertEqual(label_result["status"], "PASSED")
+        self.assertTrue(label_result["labels_are_simulated_rule_targets"])
+
+        overall_counts = label_result["overall_risk_distribution"]
+        self.assertEqual(set(overall_counts.keys()), {"Low", "Medium", "High"})
+
+        readiness_counts = label_result["growth_readiness_distribution"]
+        self.assertEqual(set(readiness_counts.keys()), {"Proceed", "Modify", "Delay"})
+
+        # In mitigated variants, Delay count must be 0
+        readiness_by_variant = label_result["readiness_by_variant"]
+        self.assertEqual(readiness_by_variant["Delay"]["MITIGATED"], 0)
+        self.assertGreater(readiness_by_variant["Proceed"]["MITIGATED"], readiness_by_variant["Proceed"]["BASELINE"])
+
+    def test_stage4_cross_dataset_isolation_and_non_mergability(self):
+        """Verify that feasibility cases, invoice entities, and scenario businesses are mutually disjoint."""
+        iso_result = self.validator.validate_cross_dataset_isolation()
+        self.assertEqual(iso_result["status"], "PASSED")
+        self.assertTrue(iso_result["is_strictly_disjoint"])
+        self.assertEqual(iso_result["cross_dataset_overlaps"]["feasibility_vs_scenario"], 0)
+        self.assertEqual(iso_result["cross_dataset_overlaps"]["feasibility_vs_invoice"], 0)
+        self.assertEqual(iso_result["cross_dataset_overlaps"]["scenario_vs_invoice"], 0)
 
 
 if __name__ == "__main__":
