@@ -57,7 +57,7 @@ export default function StrategyCard({
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+              <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
                 {strategy.strategy_name}
               </h4>
               {isActive && (
@@ -87,7 +87,7 @@ export default function StrategyCard({
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span style={{ 
             fontSize: '0.8rem', 
-            background: '#0f172a', 
+            background: 'var(--bg-card-solid)', 
             color: '#60a5fa', 
             padding: '0.35rem 0.85rem', 
             borderRadius: '20px', 
@@ -119,15 +119,15 @@ export default function StrategyCard({
         <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
           <div>
             <span>Est. Capital: </span>
-            <strong style={{ color: '#ffffff' }}>LKR {Number(strategy.estimated_capital_required_lkr || 0).toLocaleString()}</strong>
+            <strong style={{ color: 'var(--text-primary)' }}>LKR {Number(strategy.estimated_capital_required_lkr || 0).toLocaleString()}</strong>
           </div>
           <div>
             <span>Monthly Budget: </span>
-            <strong style={{ color: '#ffffff' }}>LKR {Number(strategy.estimated_monthly_budget_lkr || 0).toLocaleString()}</strong>
+            <strong style={{ color: 'var(--text-primary)' }}>LKR {Number(strategy.estimated_monthly_budget_lkr || 0).toLocaleString()}</strong>
           </div>
           <div>
             <span>Target Volume: </span>
-            <strong style={{ color: '#ffffff' }}>{strategy.target_daily_customers || 0} / day</strong>
+            <strong style={{ color: 'var(--text-primary)' }}>{strategy.target_daily_customers || 0} / day</strong>
           </div>
           <div>
             <span>Expected Impact: </span>

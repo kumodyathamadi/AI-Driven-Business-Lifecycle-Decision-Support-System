@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { TrendingUp, AlertOctagon, HelpCircle, ChevronDown, ChevronUp, Cpu } from 'lucide-react';
+import { TrendingUp, AlertOctagon, HelpCircle } from 'lucide-react';
 import { resolveDriverValue } from '../utils/formatters';
 
 export default function ShapExplanation({ shapData: propData }) {
   const ctx = useOutletContext();
   const shapData = propData || ctx?.profile?.explainability;
-  const [showTechnical, setShowTechnical] = useState(false);
 
   if (!shapData) return null;
 
@@ -32,7 +31,7 @@ export default function ShapExplanation({ shapData: propData }) {
       
       {/* Header */}
       <div>
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <HelpCircle size={22} style={{ color: '#60a5fa' }} />
           Key Insights — What Is Influencing {businessName ? `${businessName}'s` : 'Your'} Business Feasibility?
         </h3>
@@ -52,15 +51,15 @@ export default function ShapExplanation({ shapData: propData }) {
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {positive_drivers.map((driver, idx) => (
-              <div key={idx} style={{ background: 'rgba(15, 23, 42, 0.85)', padding: '0.85rem', borderRadius: '8px', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
+              <div key={idx} className="shap-driver-item positive" style={{ padding: '0.85rem', borderRadius: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', fontWeight: 600 }}>
-                  <span style={{ color: '#ffffff' }}>{formatFeatureLabel(driver.feature)}</span>
+                  <span style={{ color: 'var(--text-primary)' }}>{formatFeatureLabel(driver.feature)}</span>
                   <span style={{ color: '#4ade80', fontWeight: 700, background: 'rgba(34, 197, 94, 0.15)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem' }}>
                     Strong Positive Impact
                   </span>
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.35rem' }}>
-                  Recorded Value: <strong style={{ color: '#cbd5e1' }}>{resolveDriverValue(driver, businessInput)}</strong>
+                  Recorded Value: <strong style={{ color: 'var(--text-primary)' }}>{resolveDriverValue(driver, businessInput)}</strong>
                 </div>
               </div>
             ))}
@@ -76,74 +75,21 @@ export default function ShapExplanation({ shapData: propData }) {
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {negative_drivers.map((driver, idx) => (
-              <div key={idx} style={{ background: 'rgba(15, 23, 42, 0.85)', padding: '0.85rem', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+              <div key={idx} className="shap-driver-item negative" style={{ padding: '0.85rem', borderRadius: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', fontWeight: 600 }}>
-                  <span style={{ color: '#ffffff' }}>{formatFeatureLabel(driver.feature)}</span>
+                  <span style={{ color: 'var(--text-primary)' }}>{formatFeatureLabel(driver.feature)}</span>
                   <span style={{ color: '#fca5a5', fontWeight: 700, background: 'rgba(239, 68, 68, 0.15)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem' }}>
                     Risk Hurdle
                   </span>
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.35rem' }}>
-                  Recorded Value: <strong style={{ color: '#cbd5e1' }}>{resolveDriverValue(driver, businessInput)}</strong>
+                  Recorded Value: <strong style={{ color: 'var(--text-primary)' }}>{resolveDriverValue(driver, businessInput)}</strong>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-      </div>
-
-      {/* Optional Academic / Technical Transparency Accordion */}
-      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
-        <button 
-          onClick={() => setShowTechnical(!showTechnical)}
-          style={{ 
-            background: 'rgba(30, 41, 59, 0.5)', 
-            border: '1px solid var(--border-color)', 
-            borderRadius: '8px', 
-            padding: '0.6rem 1rem', 
-            color: '#94a3b8', 
-            fontSize: '0.8rem', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between', 
-            width: '100%',
-            cursor: 'pointer'
-          }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Cpu size={16} style={{ color: '#60a5fa' }} />
-            Academic & Research Technical Explanation (SHAP TreeExplainer Attribution Vector)
-          </span>
-          {showTechnical ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </button>
-
-        {showTechnical && (
-          <div style={{ marginTop: '0.75rem', padding: '1rem', background: '#0f172a', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.3)', fontSize: '0.8rem' }}>
-            <div style={{ color: '#60a5fa', fontWeight: 700, marginBottom: '0.5rem' }}>
-              Methodology & Mathematical Attribution Summary
-            </div>
-            <p style={{ color: '#cbd5e1', lineHeight: '1.5', marginBottom: '0.75rem' }}>
-              SHAP (SHapley Additive exPlanations) uses game-theoretic Shapley values to compute the marginal contribution of each operational feature vector against the base value of the trained Random Forest classifier.
-            </p>
-            
-            <div className="grid-2" style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
-              <div>
-                <div style={{ color: '#4ade80', fontWeight: 700 }}>Positive SHAP Values:</div>
-                {positive_drivers.map((d, i) => (
-                  <div key={i} style={{ color: '#94a3b8' }}>{d.feature}: +{(typeof d.impact_score === 'number' ? d.impact_score : parseFloat(d.impact_score)).toFixed(4)}</div>
-                ))}
-              </div>
-
-              <div>
-                <div style={{ color: '#fca5a5', fontWeight: 700 }}>Negative SHAP Values:</div>
-                {negative_drivers.map((d, i) => (
-                  <div key={i} style={{ color: '#94a3b8' }}>{d.feature}: {(typeof d.impact_score === 'number' ? d.impact_score : parseFloat(d.impact_score)).toFixed(4)}</div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
     </div>

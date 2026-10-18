@@ -33,13 +33,47 @@ export default function FeasibilityCard({ feasibilityData: propFeas }) {
 
   const formatFeatureLabel = (featureStr) => {
     if (!featureStr) return 'Business Factor';
-    return featureStr
+    let clean = String(featureStr)
+      .replace(/\(\(LKR\)\)/gi, '')
+      .replace(/\(LKR\)/gi, '')
+      .replace(/_lkr\b/gi, '')
+      .replace(/^num__|^cat__/, '')
       .replace(/_/g, ' ')
-      .replace(/\blkr\b/i, '(LKR)')
-      .replace(/\bper day\b/i, '/ Day')
-      .replace(/\bcount\b/i, 'Count')
-      .replace(/\bscore\b/i, 'Index')
-      .replace(/\b(\w)/g, (c) => c.toUpperCase());
+      .trim();
+
+    const lower = clean.toLowerCase();
+    if (lower.includes('available capital') || lower === 'capital') return 'Available Capital';
+    if (lower.includes('loan amount') || lower === 'loan') return 'Requested Loan Amount';
+    if (lower.includes('monthly budget') || lower === 'budget') return 'Monthly Operating Budget';
+    if (lower.includes('initial inventory') || lower.includes('inventory cost')) return 'Initial Inventory Cost';
+    if (lower.includes('expected price') || lower === 'price') return 'Expected Product Price';
+    if (lower.includes('customer') && lower.includes('day')) return 'Expected Daily Customers';
+    if (lower.includes('customer demand') || lower.includes('demand score')) return 'Customer Demand Index (1–100)';
+    if (lower.includes('experience')) return 'Entrepreneur Experience';
+    if (lower.includes('available equipment')) return 'Available Equipment Readiness (1–5)';
+    if (lower.includes('required equipment')) return 'Required Equipment Readiness (1–5)';
+    if (lower.includes('supplier availability') || lower.includes('supplier')) return 'Supplier Availability Index (1–5)';
+    if (lower.includes('location suitability') || lower.includes('location score')) return 'Location Suitability Index (1–5)';
+    if (lower.includes('available staff')) return 'Available Staff Count';
+    if (lower.includes('required staff')) return 'Required Staff Count';
+    if (lower.includes('business stage') || lower === 'stage') return 'Business Stage';
+    if (lower.includes('proposed action') || lower === 'action') return 'Proposed Action';
+    if (lower.includes('competition level') || lower === 'competition') return 'Competition Level';
+    if (lower.includes('operating days')) return 'Operating Days / Month';
+    if (lower.includes('district')) return 'District Location';
+
+    return clean.replace(/\b(\w)/g, (c) => c.toUpperCase());
+  };
+
+  const formatDisplayValue = (val) => {
+    if (!val || val === 'null' || val === 'undefined') return 'N/A';
+    const s = String(val).trim();
+    if (s.toLowerCase() === 'start') return 'Start New Enterprise';
+    if (s.toLowerCase() === 'expand') return 'Expand / New Branch';
+    if (s.toLowerCase() === 'product') return 'New Product / Service Line';
+    if (s.toLowerCase() === 'new') return 'New Startup';
+    if (s.toLowerCase() === 'existing') return 'Existing Business';
+    return s;
   };
 
   return (
@@ -77,22 +111,27 @@ export default function FeasibilityCard({ feasibilityData: propFeas }) {
 
       {/* Factor Contributions Explainability Section (Why the score is what it is) */}
       {(positiveDrivers.length > 0 || negativeDrivers.length > 0) && (
-        <div className="glass-card feasibility-explainability-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
-            <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <HelpCircle size={18} style={{ color: '#3b82f6' }} />
-                Explainability: Why This Score Was Predicted
-              </h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                Operational, financial, and market factor contributions identified by our ML explainability model.
-              </p>
+        <div className="feasibility-explainability-card">
+          {/* Header Row */}
+          <div className="feasibility-explainability-header">
+            <div className="feasibility-explainability-title-group">
+              <div className="feasibility-header-icon-box">
+                <HelpCircle size={20} />
+              </div>
+              <div>
+                <h3 className="feasibility-explainability-title">
+                  Explainability: Why This Score Was Predicted
+                </h3>
+                <p className="feasibility-explainability-subtitle">
+                  Operational, financial, and market factor contributions identified by our ML explainability model.
+                </p>
+              </div>
             </div>
 
             {id && (
               <Link 
                 to={`/businesses/${id}/insights`}
-                style={{ fontSize: '0.78rem', color: '#3b82f6', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', textDecoration: 'none', fontWeight: 600 }}
+                className="feasibility-explainability-link"
               >
                 <span>Full Technical Attribution</span>
                 <ArrowRight size={14} />
@@ -100,50 +139,93 @@ export default function FeasibilityCard({ feasibilityData: propFeas }) {
             )}
           </div>
 
-          <div className="grid-2" style={{ gap: '1rem' }}>
-            {/* Positive Drivers */}
+          {/* 2-Column Factors Grid */}
+          <div className="feasibility-drivers-grid">
+            {/* Column 1: Positive Drivers */}
             <div className="feasibility-drivers-box positive">
-              <h4 className="feasibility-drivers-heading positive">
-                <TrendingUp size={16} />
-                Key Supporting Factors (+)
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                {positiveDrivers.slice(0, 3).map((driver, idx) => (
-                  <div key={idx} className="feasibility-driver-item positive">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', fontWeight: 600 }}>
-                      <span className="feasibility-driver-name">{formatFeatureLabel(driver.feature)}</span>
-                      <span className="feasibility-driver-badge positive">
-                        + Positive Driver
-                      </span>
-                    </div>
-                    <div className="feasibility-driver-value">
-                      Value: <strong>{resolveDriverValue(driver, businessInput)}</strong>
-                    </div>
+              <div className="feasibility-drivers-box-header positive">
+                <div className="feasibility-box-header-title">
+                  <div className="feasibility-box-icon positive">
+                    <TrendingUp size={16} />
                   </div>
-                ))}
+                  <h4>Key Supporting Factors</h4>
+                </div>
+                <span className="feasibility-count-pill positive">
+                  {positiveDrivers.slice(0, 3).length} Positive Drivers
+                </span>
+              </div>
+
+              <div className="feasibility-driver-items-list">
+                {positiveDrivers.slice(0, 3).map((driver, idx) => {
+                  const label = formatFeatureLabel(driver.feature);
+                  const rawVal = resolveDriverValue(driver, businessInput);
+                  const displayVal = formatDisplayValue(rawVal);
+                  const impact = driver.impact_score !== undefined ? Number(driver.impact_score) : null;
+
+                  return (
+                    <div key={idx} className="feasibility-driver-item positive">
+                      <div className="feasibility-driver-item-top">
+                        <span className="feasibility-driver-name">{label}</span>
+                        <span className="feasibility-driver-badge positive">
+                          + Positive Driver
+                        </span>
+                      </div>
+                      <div className="feasibility-driver-item-bottom">
+                        <span className="feasibility-driver-val-label">Value:</span>
+                        <strong className="feasibility-driver-val-text">{displayVal}</strong>
+                        {impact !== null && (
+                          <span className="feasibility-driver-impact positive" title="SHAP Impact Contribution">
+                            +{Math.abs(impact).toFixed(3)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Negative Risk Drivers */}
+            {/* Column 2: Negative Risk Drivers */}
             <div className="feasibility-drivers-box negative">
-              <h4 className="feasibility-drivers-heading negative">
-                <AlertOctagon size={16} />
-                Key Risk Hurdles (-)
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                {negativeDrivers.slice(0, 3).map((driver, idx) => (
-                  <div key={idx} className="feasibility-driver-item negative">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', fontWeight: 600 }}>
-                      <span className="feasibility-driver-name">{formatFeatureLabel(driver.feature)}</span>
-                      <span className="feasibility-driver-badge negative">
-                        - Risk Factor
-                      </span>
-                    </div>
-                    <div className="feasibility-driver-value">
-                      Value: <strong>{resolveDriverValue(driver, businessInput)}</strong>
-                    </div>
+              <div className="feasibility-drivers-box-header negative">
+                <div className="feasibility-box-header-title">
+                  <div className="feasibility-box-icon negative">
+                    <AlertOctagon size={16} />
                   </div>
-                ))}
+                  <h4>Key Risk Hurdles</h4>
+                </div>
+                <span className="feasibility-count-pill negative">
+                  {negativeDrivers.slice(0, 3).length} Risk Factors
+                </span>
+              </div>
+
+              <div className="feasibility-driver-items-list">
+                {negativeDrivers.slice(0, 3).map((driver, idx) => {
+                  const label = formatFeatureLabel(driver.feature);
+                  const rawVal = resolveDriverValue(driver, businessInput);
+                  const displayVal = formatDisplayValue(rawVal);
+                  const impact = driver.impact_score !== undefined ? Number(driver.impact_score) : null;
+
+                  return (
+                    <div key={idx} className="feasibility-driver-item negative">
+                      <div className="feasibility-driver-item-top">
+                        <span className="feasibility-driver-name">{label}</span>
+                        <span className="feasibility-driver-badge negative">
+                          - Risk Factor
+                        </span>
+                      </div>
+                      <div className="feasibility-driver-item-bottom">
+                        <span className="feasibility-driver-val-label">Value:</span>
+                        <strong className="feasibility-driver-val-text">{displayVal}</strong>
+                        {impact !== null && (
+                          <span className="feasibility-driver-impact negative" title="SHAP Impact Contribution">
+                            -{Math.abs(impact).toFixed(3)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

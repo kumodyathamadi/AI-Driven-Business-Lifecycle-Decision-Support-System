@@ -61,13 +61,13 @@ export default function AnalysisPage({ initialSection = 'overview' }) {
             gap: '0.6rem',
             marginBottom: '1rem',
             paddingBottom: '0.5rem',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+            borderBottom: '1px solid var(--border-color)'
           }}
         >
           <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'rgba(99, 102, 241, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818cf8' }}>
             <Layers size={16} />
           </div>
-          <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+          <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
             Business Overview
           </h2>
         </div>
@@ -84,13 +84,13 @@ export default function AnalysisPage({ initialSection = 'overview' }) {
             gap: '0.6rem',
             marginBottom: '1rem',
             paddingBottom: '0.5rem',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+            borderBottom: '1px solid var(--border-color)'
           }}
         >
           <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#34d399' }}>
             <CheckCircle2 size={16} />
           </div>
-          <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+          <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
             Feasibility Assessment
           </h2>
         </div>
@@ -109,14 +109,14 @@ export default function AnalysisPage({ initialSection = 'overview' }) {
             gap: '0.6rem',
             marginBottom: '1rem',
             paddingBottom: '0.5rem',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+            borderBottom: '1px solid var(--border-color)'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'rgba(56, 189, 248, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#38bdf8' }}>
               <TrendingUp size={16} />
             </div>
-            <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+            <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
               Key Insights & Attribution Factors
             </h2>
           </div>

@@ -120,7 +120,7 @@ export default function PlanSection03Recommendations({ profile }) {
                       transition: 'background 0.2s ease'
                     }}
                   >
-                    <td style={{ padding: '0.65rem 0.5rem', fontWeight: 700, color: isAiTop ? '#0284c7' : '#64748b' }}>
+                    <td style={{ padding: '0.65rem 0.5rem', fontWeight: 700, color: isAiTop ? 'var(--accent-blue, #38bdf8)' : 'var(--text-muted, #94a3b8)' }}>
                       #{strat.rank || idx + 1}
                     </td>
                     <td className="bp-topsis-strat-name" style={{ padding: '0.65rem 0.5rem', fontWeight: 700 }}>
@@ -129,23 +129,23 @@ export default function PlanSection03Recommendations({ profile }) {
                     <td className="bp-topsis-focus" style={{ padding: '0.65rem 0.5rem' }}>
                       {strat.strategic_focus || 'Operational Growth'}
                     </td>
-                    <td style={{ padding: '0.65rem 0.5rem', textAlign: 'right', color: '#0284c7', fontWeight: 600 }}>
+                    <td style={{ padding: '0.65rem 0.5rem', textAlign: 'right', color: 'var(--text-primary)', fontWeight: 600 }}>
                       {formatCurrency(strat.estimated_capital_required_lkr)}
                     </td>
-                    <td style={{ padding: '0.65rem 0.5rem', textAlign: 'right', fontWeight: 700, color: '#4f46e5', fontFamily: 'monospace' }}>
+                    <td style={{ padding: '0.65rem 0.5rem', textAlign: 'right', fontWeight: 700, color: 'var(--accent-blue, #818cf8)', fontFamily: 'monospace' }}>
                       {strat.topsis_score || 'N/A'}
                     </td>
                     <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>
                       {isThisActive ? (
-                        <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.55rem', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.15)', color: '#059669', fontWeight: 700, border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                        <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.55rem', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', fontWeight: 700, border: '1px solid rgba(16, 185, 129, 0.3)' }}>
                           Active Plan
                         </span>
                       ) : isAiTop ? (
-                        <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.55rem', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.15)', color: '#2563eb', fontWeight: 700, border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                        <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.55rem', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', fontWeight: 700, border: '1px solid rgba(59, 130, 246, 0.3)' }}>
                           AI #1
                         </span>
                       ) : (
-                        <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #94a3b8)' }}>
                           Alternative
                         </span>
                       )}

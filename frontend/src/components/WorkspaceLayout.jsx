@@ -383,8 +383,8 @@ export default function WorkspaceLayout({ onProfileLoaded }) {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '1.1rem 1.4rem',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-                background: 'rgba(15, 23, 42, 0.9)'
+                borderBottom: '1px solid var(--border-color)',
+                background: 'var(--bg-card-solid)'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -392,7 +392,7 @@ export default function WorkspaceLayout({ onProfileLoaded }) {
                   <UserCheck size={18} />
                 </div>
                 <div>
-                  <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                  <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
                     Business Profile & Specifications
                   </h2>
                   <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0.1rem 0 0 0' }}>

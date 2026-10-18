@@ -4,7 +4,6 @@ import {
   Sparkles, 
   Layers, 
   BarChart2, 
-  Cpu, 
   ChevronDown, 
   ChevronUp, 
   CheckCircle2, 
@@ -31,7 +30,6 @@ export default function RecommendationsView({ profile: propProfile }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [targetStrategy, setTargetStrategy] = useState(null);
   const [isAdopting, setIsAdopting] = useState(false);
-  const [showTechnical, setShowTechnical] = useState(false);
   const [justAdopted, setJustAdopted] = useState(null);
 
   if (!profile) return null;
@@ -115,7 +113,7 @@ export default function RecommendationsView({ profile: propProfile }) {
       
       {/* Page Header */}
       <div>
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Sparkles size={22} style={{ color: '#c084fc' }} />
           Strategic Recommendations & Evaluated Options {businessName ? `for ${businessName}` : ''}
         </h3>
@@ -146,7 +144,7 @@ export default function RecommendationsView({ profile: propProfile }) {
               <CheckCircle2 size={20} />
             </div>
             <div>
-              <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#ffffff' }}>
+              <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 Business Plan Successfully Regenerated!
               </div>
               <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '0.15rem' }}>
@@ -221,7 +219,7 @@ export default function RecommendationsView({ profile: propProfile }) {
               }}>
                 {isCustomAdopted ? 'Entrepreneur-Selected Active Strategy' : 'AI-Recommended Primary Strategy'}
               </span>
-              <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', margin: '0.15rem 0 0.15rem 0' }}>
+              <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0.15rem 0 0.15rem 0' }}>
                 {activeStrategy.strategy_name}
               </h4>
               <span style={{ fontSize: '0.78rem', color: '#cbd5e1' }}>
@@ -269,7 +267,7 @@ export default function RecommendationsView({ profile: propProfile }) {
       <div id="recommendations" className="workspace-scroll-section" style={{ scrollMarginTop: '150px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
           <div>
-            <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, flexWrap: 'wrap' }}>
+            <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, flexWrap: 'wrap' }}>
               <Layers size={18} style={{ color: '#60a5fa' }} />
               <span>Evaluated Strategic Pathways</span>
               <span className="tab-pill-badge tab-pill-blue" style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem' }}>TOPSIS</span>
@@ -307,7 +305,7 @@ export default function RecommendationsView({ profile: propProfile }) {
       {/* Section 2: Decision Matrix Evaluation Criteria & Weights */}
       <div id="options" className="glass-card workspace-scroll-section" style={{ scrollMarginTop: '150px' }}>
         <div style={{ marginBottom: '1rem' }}>
-          <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+          <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
             <BarChart2 size={18} style={{ color: '#c084fc' }} />
             <span>Decision Matrix Evaluation Criteria & Model Weights</span>
           </h4>
@@ -329,7 +327,7 @@ export default function RecommendationsView({ profile: propProfile }) {
             <tbody>
               {evaluationCriteria.map((c, idx) => (
                 <tr key={idx}>
-                  <td style={{ fontWeight: 700, color: '#ffffff' }}>{c.criterion}</td>
+                  <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{c.criterion}</td>
                   <td>
                     <span style={{ 
                       padding: '0.2rem 0.6rem', 
@@ -351,79 +349,6 @@ export default function RecommendationsView({ profile: propProfile }) {
             </tbody>
           </table>
         </div>
-      </div>
-
-      {/* Section 3: Academic & Research Technical Methodology Accordion */}
-      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem' }}>
-        <button 
-          onClick={() => setShowTechnical(!showTechnical)}
-          style={{ 
-            background: 'rgba(30, 41, 59, 0.5)', 
-            border: '1px solid var(--border-color)', 
-            borderRadius: '8px', 
-            padding: '0.65rem 1rem', 
-            color: '#cbd5e1', 
-            fontSize: '0.8rem', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between', 
-            width: '100%',
-            cursor: 'pointer',
-            transition: 'all 0.2s'
-          }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
-            <Cpu size={16} style={{ color: '#c084fc' }} />
-            Academic & Research Methodology: TOPSIS Multi-Criteria Decision Science
-          </span>
-          {showTechnical ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </button>
-
-        {showTechnical && (
-          <div style={{ 
-            marginTop: '0.75rem', 
-            padding: '1.25rem', 
-            background: '#0f172a', 
-            borderRadius: '8px', 
-            border: '1px solid rgba(168, 85, 247, 0.3)', 
-            fontSize: '0.8rem', 
-            color: '#cbd5e1', 
-            lineHeight: '1.6' 
-          }}>
-            <div style={{ color: '#c084fc', fontWeight: 700, marginBottom: '0.5rem', fontSize: '0.875rem' }}>
-              TOPSIS (Technique for Order Preference by Similarity to Ideal Solution)
-            </div>
-            <p style={{ margin: '0 0 0.75rem 0' }}>
-              The recommendation engine uses the TOPSIS algorithm to rank candidate operational business models for Sri Lankan SMEs. It avoids subjective cognitive bias by assessing multiple conflicting objectives simultaneously (cost minimization vs. revenue and demand maximization).
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.75rem', marginTop: '0.75rem' }}>
-              <div style={{ background: 'rgba(30, 41, 59, 0.6)', padding: '0.75rem', borderRadius: '6px' }}>
-                <strong style={{ color: '#60a5fa' }}>1. Vector Normalization</strong>
-                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
-                  Raw metrics (capital, budget, customers, risk) are normalized onto a uniform Euclidean dimensionless scale: <code>r_ij = x_ij / √(∑ x_kj²)</code>.
-                </p>
-              </div>
-              <div style={{ background: 'rgba(30, 41, 59, 0.6)', padding: '0.75rem', borderRadius: '6px' }}>
-                <strong style={{ color: '#60a5fa' }}>2. Objective Weighting</strong>
-                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
-                  Weighted normalized decision matrix: <code>v_ij = w_j · r_ij</code>, reflecting economic importance (e.g. 25% capital, 20% risk).
-                </p>
-              </div>
-              <div style={{ background: 'rgba(30, 41, 59, 0.6)', padding: '0.75rem', borderRadius: '6px' }}>
-                <strong style={{ color: '#60a5fa' }}>3. Ideal Solution Distances</strong>
-                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
-                  Calculates Euclidean geometric distances to the Positive-Ideal Solution (S⁺) and Negative-Ideal Solution (S⁻).
-                </p>
-              </div>
-              <div style={{ background: 'rgba(30, 41, 59, 0.6)', padding: '0.75rem', borderRadius: '6px' }}>
-                <strong style={{ color: '#60a5fa' }}>4. Relative Closeness Score</strong>
-                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
-                  Relative closeness index: <code>C_i* = S_i⁻ / (S_i⁺ + S_i⁻)</code>. The strategy closest to ideal receives Rank #1.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Trade-Off & Risk Advisory Modal */}

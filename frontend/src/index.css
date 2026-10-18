@@ -4,12 +4,12 @@
   --bg-dark: #090d16;
   --bg-card: rgba(30, 41, 59, 0.7);
   --bg-card-solid: #1e293b;
-  --border-color: rgba(255, 255, 255, 0.1);
-  --border-accent: rgba(59, 130, 246, 0.4);
+  --border-color: rgba(255, 255, 255, 0.12);
+  --border-accent: rgba(59, 130, 246, 0.45);
 
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --text-primary: #ffffff;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
 
   --accent-blue: #3b82f6;
   --accent-blue-hover: #2563eb;
@@ -26,11 +26,30 @@
   --modal-bg: #0c121e;
   --modal-surface: #131b2a;
   --modal-input-bg: #090e18;
-  --modal-input-border: rgba(255, 255, 255, 0.08);
+  --modal-input-border: rgba(255, 255, 255, 0.12);
 
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
+}
+
+[data-theme="dark"],
+.theme-dark,
+.dark {
+  --bg-dark: #090d16;
+  --bg-card: rgba(30, 41, 59, 0.7);
+  --bg-card-solid: #1e293b;
+  --border-color: rgba(255, 255, 255, 0.12);
+  --border-accent: rgba(59, 130, 246, 0.45);
+
+  --text-primary: #ffffff;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+
+  --modal-bg: #0c121e;
+  --modal-surface: #131b2a;
+  --modal-input-bg: #090e18;
+  --modal-input-border: rgba(255, 255, 255, 0.12);
 }
 
 [data-theme="light"] {
@@ -1401,7 +1420,7 @@ body {
   border-radius: 8px;
   font-size: 0.8rem;
   font-weight: 500;
-  color: #94a3b8;
+  color: #cbd5e1;
   text-decoration: none;
   white-space: nowrap;
   transition: all 0.18s ease;
@@ -1409,14 +1428,78 @@ body {
 }
 
 .template-tab-link:hover {
-  color: #f1f5f9;
-  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .template-tab-link.active {
   color: #ffffff;
-  font-weight: 600;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Sticky Sub-Navigation Bar */
+.workspace-subnav-sticky {
+  position: sticky;
+  top: 64px;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.65rem;
+  margin: -0.5rem 0 1.5rem 0;
+  border-radius: 9999px;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.subnav-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #cbd5e1;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.subnav-pill-btn:hover {
+  color: #ffffff;
   background: rgba(255, 255, 255, 0.08);
+}
+
+.subnav-pill-btn.active {
+  color: #ffffff;
+  font-weight: 700;
+  background: rgba(99, 102, 241, 0.28);
+  border-color: rgba(99, 102, 241, 0.55);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
+}
+
+/* SHAP Driver Card Items */
+.shap-driver-item {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.15s ease;
+}
+
+.shap-driver-item.positive {
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.shap-driver-item.negative {
+  border-color: rgba(239, 68, 68, 0.35);
 }
 
 .tab-active-dot {
@@ -4756,6 +4839,56 @@ body[data-theme="light"] {
   font-weight: 700 !important;
 }
 
+[data-theme="light"] .workspace-subnav-sticky,
+.theme-light .workspace-subnav-sticky,
+.light .workspace-subnav-sticky {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .subnav-pill-btn,
+.theme-light .subnav-pill-btn,
+.light .subnav-pill-btn {
+  color: #64748b !important;
+}
+
+[data-theme="light"] .subnav-pill-btn:hover,
+.theme-light .subnav-pill-btn:hover,
+.light .subnav-pill-btn:hover {
+  color: #0f172a !important;
+  background: #f1f5f9 !important;
+}
+
+[data-theme="light"] .subnav-pill-btn.active,
+.theme-light .subnav-pill-btn.active,
+.light .subnav-pill-btn.active {
+  color: #ffffff !important;
+  background: #3b82f6 !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3) !important;
+}
+
+[data-theme="light"] .shap-driver-item,
+.theme-light .shap-driver-item,
+.light .shap-driver-item {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
+}
+
+[data-theme="light"] .shap-driver-item.positive,
+.theme-light .shap-driver-item.positive,
+.light .shap-driver-item.positive {
+  border-color: #bbf7d0 !important;
+}
+
+[data-theme="light"] .shap-driver-item.negative,
+.theme-light .shap-driver-item.negative,
+.light .shap-driver-item.negative {
+  border-color: #fecaca !important;
+}
+
 [data-theme="light"] .badge-pill-slate,
 .theme-light .badge-pill-slate,
 .light .badge-pill-slate {
@@ -5497,10 +5630,168 @@ body[data-theme="light"] {
 }
 
 /* Feasibility Explainability Section */
+/* ==========================================================================
+   FEASIBILITY EXPLAINABILITY CARD (PROFESSIONAL & CLEAN REDESIGN)
+   ========================================================================== */
+.feasibility-explainability-card {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  transition: all 0.2s ease;
+}
+
 [data-theme="light"] .feasibility-explainability-card,
 .theme-light .feasibility-explainability-card,
 .light .feasibility-explainability-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05) !important;
+}
+
+.feasibility-explainability-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="light"] .feasibility-explainability-header,
+.theme-light .feasibility-explainability-header,
+.light .feasibility-explainability-header {
+  border-bottom-color: #f1f5f9 !important;
+}
+
+.feasibility-explainability-title-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.feasibility-header-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+[data-theme="light"] .feasibility-header-icon-box,
+.theme-light .feasibility-header-icon-box,
+.light .feasibility-header-icon-box {
+  background: #eff6ff !important;
+  color: #2563eb !important;
   border-color: #bfdbfe !important;
+}
+
+.feasibility-explainability-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary, #ffffff);
+  margin: 0;
+  line-height: 1.3;
+}
+
+[data-theme="light"] .feasibility-explainability-title,
+.theme-light .feasibility-explainability-title,
+.light .feasibility-explainability-title {
+  color: #0f172a !important;
+}
+
+.feasibility-explainability-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted, #94a3b8);
+  margin: 0.25rem 0 0 0;
+  line-height: 1.4;
+}
+
+[data-theme="light"] .feasibility-explainability-subtitle,
+.theme-light .feasibility-explainability-subtitle,
+.light .feasibility-explainability-subtitle {
+  color: #64748b !important;
+}
+
+.feasibility-explainability-link {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #60a5fa;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.feasibility-explainability-link:hover {
+  background: rgba(59, 130, 246, 0.22);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.45);
+}
+
+[data-theme="light"] .feasibility-explainability-link,
+.theme-light .feasibility-explainability-link,
+.light .feasibility-explainability-link {
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+  border-color: #bfdbfe !important;
+}
+
+[data-theme="light"] .feasibility-explainability-link:hover,
+.theme-light .feasibility-explainability-link:hover,
+.light .feasibility-explainability-link:hover {
+  background: #dbeafe !important;
+  color: #1e40af !important;
+}
+
+/* Drivers Grid */
+.feasibility-drivers-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+}
+
+@media (max-width: 820px) {
+  .feasibility-drivers-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Box Column Container */
+.feasibility-drivers-box {
+  border-radius: 12px;
+  padding: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.feasibility-drivers-box.positive {
+  background: rgba(16, 185, 129, 0.06);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+}
+
+.feasibility-drivers-box.negative {
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.22);
 }
 
 [data-theme="light"] .feasibility-drivers-box.positive,
@@ -5508,39 +5799,6 @@ body[data-theme="light"] {
 .light .feasibility-drivers-box.positive {
   background: #f0fdf4 !important;
   border: 1px solid #bbf7d0 !important;
-  padding: 1rem;
-  border-radius: 10px;
-}
-
-[data-theme="light"] .feasibility-drivers-heading.positive,
-.theme-light .feasibility-drivers-heading.positive,
-.light .feasibility-drivers-heading.positive {
-  color: #15803d !important;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-bottom: 0.75rem;
-}
-
-[data-theme="light"] .feasibility-driver-item.positive,
-.theme-light .feasibility-driver-item.positive,
-.light .feasibility-driver-item.positive {
-  background: #ffffff !important;
-  border: 1px solid #dcfce7 !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
-  padding: 0.65rem 0.85rem;
-  border-radius: 6px;
-}
-
-[data-theme="light"] .feasibility-driver-badge.positive,
-.theme-light .feasibility-driver-badge.positive,
-.light .feasibility-driver-badge.positive {
-  background: #dcfce7 !important;
-  color: #15803d !important;
-  font-size: 0.72rem;
-  padding: 0.1rem 0.4rem;
-  border-radius: 4px;
 }
 
 [data-theme="light"] .feasibility-drivers-box.negative,
@@ -5548,29 +5806,239 @@ body[data-theme="light"] {
 .light .feasibility-drivers-box.negative {
   background: #fef2f2 !important;
   border: 1px solid #fecaca !important;
-  padding: 1rem;
-  border-radius: 10px;
 }
 
-[data-theme="light"] .feasibility-drivers-heading.negative,
-.theme-light .feasibility-drivers-heading.negative,
-.light .feasibility-drivers-heading.negative {
-  color: #b91c1c !important;
-  font-weight: 700;
+/* Box Header */
+.feasibility-drivers-box-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.feasibility-drivers-box-header.positive {
+  border-bottom-color: rgba(16, 185, 129, 0.2);
+}
+
+.feasibility-drivers-box-header.negative {
+  border-bottom-color: rgba(239, 68, 68, 0.2);
+}
+
+[data-theme="light"] .feasibility-drivers-box-header.positive,
+.theme-light .feasibility-drivers-box-header.positive,
+.light .feasibility-drivers-box-header.positive {
+  border-bottom-color: #dcfce7 !important;
+}
+
+[data-theme="light"] .feasibility-drivers-box-header.negative,
+.theme-light .feasibility-drivers-box-header.negative,
+.light .feasibility-drivers-box-header.negative {
+  border-bottom-color: #fee2e2 !important;
+}
+
+.feasibility-box-header-title {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  margin-bottom: 0.75rem;
+  gap: 0.55rem;
 }
 
-[data-theme="light"] .feasibility-driver-item.negative,
-.theme-light .feasibility-driver-item.negative,
-.light .feasibility-driver-item.negative {
+.feasibility-box-header-title h4 {
+  font-size: 0.98rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.feasibility-drivers-box.positive .feasibility-box-header-title h4 {
+  color: #34d399;
+}
+
+.feasibility-drivers-box.negative .feasibility-box-header-title h4 {
+  color: #f87171;
+}
+
+[data-theme="light"] .feasibility-drivers-box.positive .feasibility-box-header-title h4,
+.theme-light .feasibility-drivers-box.positive .feasibility-box-header-title h4,
+.light .feasibility-drivers-box.positive .feasibility-box-header-title h4 {
+  color: #15803d !important;
+}
+
+[data-theme="light"] .feasibility-drivers-box.negative .feasibility-box-header-title h4,
+.theme-light .feasibility-drivers-box.negative .feasibility-box-header-title h4,
+.light .feasibility-drivers-box.negative .feasibility-box-header-title h4 {
+  color: #b91c1c !important;
+}
+
+.feasibility-box-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.feasibility-box-icon.positive {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+}
+
+.feasibility-box-icon.negative {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+}
+
+[data-theme="light"] .feasibility-box-icon.positive,
+.theme-light .feasibility-box-icon.positive,
+.light .feasibility-box-icon.positive {
+  background: #dcfce7 !important;
+  color: #16a34a !important;
+}
+
+[data-theme="light"] .feasibility-box-icon.negative,
+.theme-light .feasibility-box-icon.negative,
+.light .feasibility-box-icon.negative {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+}
+
+.feasibility-count-pill {
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+}
+
+.feasibility-count-pill.positive {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.feasibility-count-pill.negative {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+[data-theme="light"] .feasibility-count-pill.positive,
+.theme-light .feasibility-count-pill.positive,
+.light .feasibility-count-pill.positive {
+  background: #dcfce7 !important;
+  color: #15803d !important;
+  border-color: #bbf7d0 !important;
+}
+
+[data-theme="light"] .feasibility-count-pill.negative,
+.theme-light .feasibility-count-pill.negative,
+.light .feasibility-count-pill.negative {
+  background: #fee2e2 !important;
+  color: #b91c1c !important;
+  border-color: #fecaca !important;
+}
+
+/* Driver Items List */
+.feasibility-driver-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.feasibility-driver-item {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.feasibility-driver-item:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.feasibility-driver-item.positive:hover {
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.feasibility-driver-item.negative:hover {
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+[data-theme="light"] .feasibility-driver-item,
+.theme-light .feasibility-driver-item,
+.light .feasibility-driver-item {
   background: #ffffff !important;
-  border: 1px solid #fee2e2 !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
-  padding: 0.65rem 0.85rem;
-  border-radius: 6px;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05) !important;
+}
+
+[data-theme="light"] .feasibility-driver-item.positive:hover,
+.theme-light .feasibility-driver-item.positive:hover,
+.light .feasibility-driver-item.positive:hover {
+  border-color: #86efac !important;
+  box-shadow: 0 3px 10px rgba(16, 185, 129, 0.12) !important;
+}
+
+[data-theme="light"] .feasibility-driver-item.negative:hover,
+.theme-light .feasibility-driver-item.negative:hover,
+.light .feasibility-driver-item.negative:hover {
+  border-color: #fca5a5 !important;
+  box-shadow: 0 3px 10px rgba(239, 68, 68, 0.12) !important;
+}
+
+/* Item Top: Name + Badge */
+.feasibility-driver-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.feasibility-driver-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-primary, #ffffff);
+  line-height: 1.3;
+}
+
+[data-theme="light"] .feasibility-driver-name,
+.theme-light .feasibility-driver-name,
+.light .feasibility-driver-name {
+  color: #1e293b !important;
+}
+
+.feasibility-driver-badge {
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.feasibility-driver-badge.positive {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.feasibility-driver-badge.negative {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+[data-theme="light"] .feasibility-driver-badge.positive,
+.theme-light .feasibility-driver-badge.positive,
+.light .feasibility-driver-badge.positive {
+  background: #dcfce7 !important;
+  color: #15803d !important;
+  border: 1px solid #bbf7d0 !important;
 }
 
 [data-theme="light"] .feasibility-driver-badge.negative,
@@ -5578,9 +6046,86 @@ body[data-theme="light"] {
 .light .feasibility-driver-badge.negative {
   background: #fee2e2 !important;
   color: #b91c1c !important;
+  border: 1px solid #fecaca !important;
+}
+
+/* Item Bottom: Recorded Value + Optional Impact */
+.feasibility-driver-item-bottom {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--text-muted, #94a3b8);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 0.45rem;
+}
+
+[data-theme="light"] .feasibility-driver-item-bottom,
+.theme-light .feasibility-driver-item-bottom,
+.light .feasibility-driver-item-bottom {
+  border-top-color: #f1f5f9 !important;
+  color: #64748b !important;
+}
+
+.feasibility-driver-val-label {
+  font-size: 0.78rem;
+  color: var(--text-muted, #94a3b8);
+  font-weight: 500;
+}
+
+[data-theme="light"] .feasibility-driver-val-label,
+.theme-light .feasibility-driver-val-label,
+.light .feasibility-driver-val-label {
+  color: #64748b !important;
+}
+
+.feasibility-driver-val-text {
+  color: var(--text-primary, #ffffff);
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+[data-theme="light"] .feasibility-driver-val-text,
+.theme-light .feasibility-driver-val-text,
+.light .feasibility-driver-val-text {
+  color: #0f172a !important;
+}
+
+.feasibility-driver-impact {
+  margin-left: auto;
   font-size: 0.72rem;
-  padding: 0.1rem 0.4rem;
-  border-radius: 4px;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+}
+
+.feasibility-driver-impact.positive {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.feasibility-driver-impact.negative {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+[data-theme="light"] .feasibility-driver-impact.positive,
+.theme-light .feasibility-driver-impact.positive,
+.light .feasibility-driver-impact.positive {
+  color: #16a34a !important;
+  background: #f0fdf4 !important;
+  border-color: #bbf7d0 !important;
+}
+
+[data-theme="light"] .feasibility-driver-impact.negative,
+.theme-light .feasibility-driver-impact.negative,
+.light .feasibility-driver-impact.negative {
+  color: #dc2626 !important;
+  background: #fef2f2 !important;
+  border-color: #fecaca !important;
 }
 
 [data-theme="light"] .feasibility-driver-name,

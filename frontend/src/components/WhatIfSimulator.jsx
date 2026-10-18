@@ -194,7 +194,7 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
       
       {/* Header */}
       <div>
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
           <Sliders size={22} style={{ color: '#60a5fa' }} />
           <span>Scenario Explorer & Live What-If Simulator</span>
           <span className="tab-pill-badge tab-pill-purple" style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem' }}>Interactive</span>
@@ -226,7 +226,7 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
               <CheckCircle2 size={22} />
             </div>
             <div>
-              <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#ffffff' }}>
+              <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                 Scenario Applied & Business Plan Regenerated!
               </div>
               <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '0.2rem' }}>
@@ -280,7 +280,7 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
               <span style={{ fontSize: '0.7rem', color: '#a5b4fc', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>
                 Simulating Evaluated Strategy
               </span>
-              <h4 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+              <h4 style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
                 {paramStrategyName}
               </h4>
             </div>
@@ -305,7 +305,7 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
             <span style={{ fontSize: '0.72rem', color: '#60a5fa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
               Real-Time Model Comparison
             </span>
-            <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', marginTop: '0.15rem' }}>
+            <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.15rem' }}>
               {currentInput?.business_name ? `${currentInput.business_name}: Baseline vs. Modified` : 'Baseline vs. Modified Scenario'}
             </h4>
           </div>
@@ -357,14 +357,14 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
               <FeasibilityBadge label={baselineLabel} showScore={false} size="sm" />
             </div>
 
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.5rem' }}>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
               {(baselineScore * 100).toFixed(1)}% <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 500 }}>Confidence</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.78rem', color: '#cbd5e1', paddingTop: '0.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
-              <div>Capital: <strong style={{ color: '#ffffff' }}>{formatCurrency(baselineCapital)}</strong></div>
-              <div>Demand: <strong style={{ color: '#ffffff' }}>{formatCustomersPerDay(baselineCustomers)}</strong></div>
-              <div>Unit Price: <strong style={{ color: '#ffffff' }}>LKR {baselinePrice}</strong></div>
+              <div>Capital: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(baselineCapital)}</strong></div>
+              <div>Demand: <strong style={{ color: 'var(--text-primary)' }}>{formatCustomersPerDay(baselineCustomers)}</strong></div>
+              <div>Unit Price: <strong style={{ color: 'var(--text-primary)' }}>LKR {baselinePrice}</strong></div>
             </div>
           </div>
 
@@ -446,7 +446,7 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
               <FeasibilityBadge label={scenarioLabel} showScore={false} size="sm" />
             </div>
 
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.5rem' }}>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
               {(scenarioScore * 100).toFixed(1)}% <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 500 }}>Live Score</span>
             </div>
 
@@ -484,7 +484,7 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
       {/* Interactive Sliders Panel */}
       <div className="glass-card" style={{ border: '1px solid rgba(59, 130, 246, 0.35)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
-          <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Sparkles size={18} style={{ color: '#60a5fa' }} />
             Dynamic Scenario Sliders
           </h4>
@@ -671,14 +671,14 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
       {/* Pre-calculated Research Scenarios */}
       {what_if_simulations.length > 0 && (
         <div>
-          <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.75rem' }}>
+          <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>
             Pre-Evaluated Stress-Test Scenarios
           </h4>
           <div className="grid-2" style={{ gap: '1rem' }}>
             {what_if_simulations.map((sim, idx) => (
               <div key={idx} className="glass-card" style={{ padding: '1rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.825rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-                  <span style={{ color: '#ffffff' }}>{sim.title}</span>
+                  <span style={{ color: 'var(--text-primary)' }}>{sim.title}</span>
                   <span style={{ 
                     padding: '0.2rem 0.5rem', 
                     borderRadius: '4px', 
@@ -752,7 +752,7 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
                 <Sparkles size={22} />
               </div>
               <div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
                   Apply Scenario & Update Business Plan
                 </h3>
                 <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>

@@ -118,7 +118,7 @@ export default function Dashboard({ activeProfile, onAnalysisComplete }) {
               style={{ 
                 fontSize: '2.25rem', 
                 fontWeight: 800, 
-                color: '#ffffff', 
+                color: 'var(--text-primary)', 
                 lineHeight: 1.22, 
                 letterSpacing: '-0.5px', 
                 margin: '0 0 0.85rem 0' 
@@ -323,7 +323,7 @@ export default function Dashboard({ activeProfile, onAnalysisComplete }) {
                 >
                   <ShieldCheck size={20} />
                 </div>
-                <h3 style={{ fontSize: '1.08rem', fontWeight: 700, color: '#ffffff', margin: 0, letterSpacing: '-0.2px' }}>
+                <h3 style={{ fontSize: '1.08rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.2px' }}>
                   Feasibility & Viability Analysis
                 </h3>
               </div>
@@ -383,7 +383,7 @@ export default function Dashboard({ activeProfile, onAnalysisComplete }) {
                 >
                   <Lightbulb size={20} />
                 </div>
-                <h3 style={{ fontSize: '1.08rem', fontWeight: 700, color: '#ffffff', margin: 0, letterSpacing: '-0.2px' }}>
+                <h3 style={{ fontSize: '1.08rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.2px' }}>
                   Financial Forecasts & Insights
                 </h3>
               </div>
@@ -443,7 +443,7 @@ export default function Dashboard({ activeProfile, onAnalysisComplete }) {
                 >
                   <FileText size={20} />
                 </div>
-                <h3 style={{ fontSize: '1.08rem', fontWeight: 700, color: '#ffffff', margin: 0, letterSpacing: '-0.2px' }}>
+                <h3 style={{ fontSize: '1.08rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.2px' }}>
                   Investor-Ready Business Plan
                 </h3>
               </div>
