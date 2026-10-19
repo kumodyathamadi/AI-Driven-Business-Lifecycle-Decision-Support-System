@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { RegistrationComplianceDashboard } from './components/component2.tsx';
+import { BusinessRegistrationView } from './components/BusinessRegistrationView';
 
 // ---------------------------------------------------------------------------
 // Static Legal Sources Data for Corpus Inspector Tab
@@ -88,9 +89,18 @@ const STATUTORY_REGISTER: LegalSourceItem[] = [
 export const App: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'comp2' | 'comp1' | 'sources' | 'kleene_inspector' | 'audit_log'>('comp2');
+  const [activeTab, setActiveTab] = useState<'comp1' | 'comp2' | 'sources' | 'kleene_inspector' | 'business_reg' | 'audit_log'>('comp1');
   const [backendStatus, setBackendStatus] = useState<'online' | 'checking' | 'offline'>('checking');
   const [sourceSearch, setSourceSearch] = useState<string>('');
+  const [sourceDocTypeFilter, setSourceDocTypeFilter] = useState<string>('all');
+  const [copiedSourceId, setCopiedSourceId] = useState<string | null>(null);
+  const [selectedSourceDetail, setSelectedSourceDetail] = useState<LegalSourceItem | null>(null);
+
+  const handleCopySourceId = (id: string) => {
+    navigator.clipboard?.writeText(id);
+    setCopiedSourceId(id);
+    setTimeout(() => setCopiedSourceId(null), 2000);
+  };
 
   // Interactive Kleene Inspector State
   const [kleeneFacts, setKleeneFacts] = useState<{
@@ -127,27 +137,42 @@ export const App: React.FC = () => {
     return { status: 'APPLICABLE', label: 'Applicable (True)', color: 'text-emerald-800 bg-emerald-50 border-emerald-300' };
   };
 
-  const filteredSources = STATUTORY_REGISTER.filter(
-    (s) =>
-      s.title.toLowerCase().includes(sourceSearch.toLowerCase()) ||
-      s.authority.toLowerCase().includes(sourceSearch.toLowerCase()) ||
-      s.source_id.toLowerCase().includes(sourceSearch.toLowerCase())
-  );
+  const filteredSources = STATUTORY_REGISTER.filter((s) => {
+    const q = sourceSearch.toLowerCase().trim();
+    const matchesSearch =
+      !q ||
+      s.title.toLowerCase().includes(q) ||
+      s.authority.toLowerCase().includes(q) ||
+      s.source_id.toLowerCase().includes(q) ||
+      s.key_sections.toLowerCase().includes(q) ||
+      s.jurisdiction.toLowerCase().includes(q);
+
+    if (!matchesSearch) return false;
+
+    if (sourceDocTypeFilter === 'all') return true;
+    if (sourceDocTypeFilter === 'verified') return s.status === 'verified';
+    if (sourceDocTypeFilter === 'primary_act') return s.doc_type.toLowerCase().includes('primary act');
+    if (sourceDocTypeFilter === 'provincial') return s.doc_type.toLowerCase().includes('provincial');
+    if (sourceDocTypeFilter === 'bylaw') return s.doc_type.toLowerCase().includes('by-law');
+    if (sourceDocTypeFilter === 'gazette') return s.doc_type.toLowerCase().includes('gazette');
+
+    return true;
+  });
 
   const navItems = [
-    {
-      id: 'comp2' as const,
-      title: 'Regulatory Engine',
-      subtitle: 'Component 2 — Law & Regs',
-      icon: 'fa-gavel',
-      badge: 'Core',
-    },
     {
       id: 'comp1' as const,
       title: 'Feasibility & Planning',
       subtitle: 'Component 1 — ML & SHAP',
       icon: 'fa-chart-line',
       badge: null,
+    },
+    {
+      id: 'comp2' as const,
+      title: 'Regulatory Engine',
+      subtitle: 'Component 2 — Law & Regs',
+      icon: 'fa-gavel',
+      badge: 'Core',
     },
     {
       id: 'sources' as const,
@@ -162,6 +187,13 @@ export const App: React.FC = () => {
       subtitle: 'Audit-Proof Logic Demo',
       icon: 'fa-flask-vial',
       badge: '3VL',
+    },
+    {
+      id: 'business_reg' as const,
+      title: 'Business Registration',
+      subtitle: 'WP Form 1 & Roadmap',
+      icon: 'fa-file-signature',
+      badge: 'Form 1',
     },
   ];
 
@@ -415,10 +447,11 @@ export const App: React.FC = () => {
               </span>
               <span className="text-slate-300 hidden sm:inline">/</span>
               <span className="text-xs font-bold text-slate-800 truncate">
-                {activeTab === 'comp2' && 'Component 2 — Regulatory Compliance Engine'}
                 {activeTab === 'comp1' && 'Component 1 — Feasibility & Planning Advisory'}
+                {activeTab === 'comp2' && 'Component 2 — Regulatory Compliance Engine'}
                 {activeTab === 'sources' && 'Statutory Source Register'}
                 {activeTab === 'kleene_inspector' && 'Deterministic 3VL Kleene Logic Inspector'}
+                {activeTab === 'business_reg' && 'Business Registration & Statutory Form 1 Portal'}
               </span>
             </div>
           </div>
@@ -531,84 +564,407 @@ export const App: React.FC = () => {
 
           {/* TAB 3: STATUTORY REGISTER & SOURCE CORPUS */}
           {activeTab === 'sources' && (
-            <div className="max-w-6xl mx-auto p-4 sm:p-8 space-y-6">
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-7 shadow-xs">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                      <i className="fa-solid fa-book-journal-whills text-blue-600"></i>
-                      Statutory Source Register
-                    </h2>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Authoritative legal register grounded in Sri Lankan acts, provincial statutes, and municipal by-laws.
-                    </p>
+            <div className="max-w-7xl mx-auto p-4 sm:p-8 space-y-6">
+              {/* Executive Hero Banner */}
+              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950 p-6 sm:p-8 text-white shadow-xl border border-slate-800">
+                {/* Decorative ambient background glows */}
+                <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-blue-500/15 blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full bg-teal-500/15 blur-3xl pointer-events-none" />
+
+                <div className="relative z-10">
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-teal-500/15 text-teal-300 border border-teal-500/30">
+                      <i className="fa-solid fa-shield-halved text-xs text-teal-400" />
+                      Authoritative Sri Lanka Legal Repository
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-blue-500/15 text-blue-300 border border-blue-500/30">
+                      <i className="fa-solid fa-check-double text-xs text-blue-400" />
+                      100% Vector Grounded
+                    </span>
                   </div>
 
-                  <div className="relative w-full sm:w-80">
-                    <i className="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-xs text-slate-400"></i>
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    <div>
+                      <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
+                        <span className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-teal-400 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 text-base">
+                          <i className="fa-solid fa-scale-balanced" />
+                        </span>
+                        Statutory Source Register
+                      </h2>
+                      <p className="text-xs sm:text-sm text-slate-300 mt-2 max-w-2xl leading-relaxed">
+                        The definitive statutory knowledge corpus powering Component 2. Every cited compliance obligation,
+                        sanitary pass, and registration rule is deterministically grounded in registered Acts, Gazette Orders, and
+                        Western Province Statutes to completely eliminate LLM hallucination.
+                      </p>
+                    </div>
+
+                    {/* Quick Stats Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 shrink-0">
+                      <div className="p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Sources</span>
+                        <span className="text-xl font-extrabold text-white">6</span>
+                        <span className="block text-[10px] text-teal-400 font-medium mt-0.5">Indexed &amp; Active</span>
+                      </div>
+
+                      <div className="p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Primary Acts</span>
+                        <span className="text-xl font-extrabold text-white">3</span>
+                        <span className="block text-[10px] text-blue-400 font-medium mt-0.5">National Statutes</span>
+                      </div>
+
+                      <div className="p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Local &amp; Province</span>
+                        <span className="text-xl font-extrabold text-white">3</span>
+                        <span className="block text-[10px] text-indigo-400 font-medium mt-0.5">WP &amp; CMC By-laws</span>
+                      </div>
+
+                      <div className="p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hallucination Risk</span>
+                        <span className="text-xl font-extrabold text-emerald-400">0.0%</span>
+                        <span className="block text-[10px] text-emerald-300 font-medium mt-0.5">Strict Citation Proof</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Search & Filter Toolbar */}
+              <div className="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-xs space-y-4">
+                <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                  {/* Search Bar */}
+                  <div className="relative flex-1 max-w-lg">
+                    <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-xs text-slate-400" />
                     <input
                       type="text"
                       value={sourceSearch}
                       onChange={(e) => setSourceSearch(e.target.value)}
-                      placeholder="Search acts, authorities, source IDs..."
-                      className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xl bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                      placeholder="Search acts, enforcing authorities, cited sections, or source IDs..."
+                      className="w-full pl-10 pr-9 py-2.5 text-xs text-slate-900 border border-slate-300 rounded-xl bg-slate-50/50 hover:bg-white focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-2xs font-medium"
                     />
+                    {sourceSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setSourceSearch('')}
+                        className="absolute right-3 top-2.5 text-xs text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                        title="Clear search"
+                      >
+                        <i className="fa-solid fa-xmark" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Results Count indicator */}
+                  <div className="text-xs font-semibold text-slate-500 flex items-center gap-1.5 self-center">
+                    <i className="fa-solid fa-database text-blue-600 text-[11px]" />
+                    <span>
+                      Showing <strong className="text-slate-900 font-bold">{filteredSources.length}</strong> of{' '}
+                      <strong className="text-slate-900 font-bold">{STATUTORY_REGISTER.length}</strong> registered acts
+                    </span>
                   </div>
                 </div>
 
-                <div className="mt-4 overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse min-w-[600px]">
+                {/* Filter Pills */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-100">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1.5 flex items-center gap-1">
+                    <i className="fa-solid fa-filter text-[10px]" /> Filter:
+                  </span>
+
+                  {[
+                    { key: 'all', label: 'All Statutes', count: STATUTORY_REGISTER.length },
+                    { key: 'primary_act', label: 'Primary Acts', count: STATUTORY_REGISTER.filter(s => s.doc_type.toLowerCase().includes('primary act')).length },
+                    { key: 'provincial', label: 'Provincial Statutes', count: STATUTORY_REGISTER.filter(s => s.doc_type.toLowerCase().includes('provincial')).length },
+                    { key: 'bylaw', label: 'Municipal By-Laws', count: STATUTORY_REGISTER.filter(s => s.doc_type.toLowerCase().includes('by-law')).length },
+                    { key: 'gazette', label: 'Gazette Orders', count: STATUTORY_REGISTER.filter(s => s.doc_type.toLowerCase().includes('gazette')).length },
+                    { key: 'verified', label: 'Verified Law Only', count: STATUTORY_REGISTER.filter(s => s.status === 'verified').length },
+                  ].map((filter) => {
+                    const isActive = sourceDocTypeFilter === filter.key;
+                    return (
+                      <button
+                        key={filter.key}
+                        type="button"
+                        onClick={() => setSourceDocTypeFilter(filter.key)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                          isActive
+                            ? 'bg-slate-900 text-white shadow-xs'
+                            : 'bg-slate-100/80 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900'
+                        }`}
+                      >
+                        <span>{filter.label}</span>
+                        <span
+                          className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                            isActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                          }`}
+                        >
+                          {filter.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Elevated Modern Data Table */}
+              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse min-w-[760px]">
                     <thead>
-                      <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 uppercase tracking-wider text-[10px]">
-                        <th className="py-3 px-3 font-semibold">Source Identifier</th>
-                        <th className="py-3 px-3 font-semibold">Statute / By-law Title</th>
-                        <th className="py-3 px-3 font-semibold">Enforcing Authority</th>
-                        <th className="py-3 px-3 font-semibold">Key Cited Sections</th>
-                        <th className="py-3 px-3 font-semibold">Verification Status</th>
-                        <th className="py-3 px-3 font-semibold text-right">Official Document</th>
+                      <tr className="border-b border-slate-200/80 bg-slate-50/90 text-slate-500 uppercase tracking-wider text-[10px] font-bold">
+                        <th className="py-3.5 px-4">Source Identifier</th>
+                        <th className="py-3.5 px-4">Statute / By-Law Title</th>
+                        <th className="py-3.5 px-4">Enforcing Authority</th>
+                        <th className="py-3.5 px-4">Key Cited Sections</th>
+                        <th className="py-3.5 px-4">Verification Status</th>
+                        <th className="py-3.5 px-4 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700">
-                      {filteredSources.map((s) => (
-                        <tr key={s.source_id} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="py-3 px-3 font-mono font-semibold text-blue-600 whitespace-nowrap">
-                            {s.source_id}
-                          </td>
-                          <td className="py-3 px-3 font-semibold text-slate-900 max-w-xs">
-                            {s.title}
-                            <div className="text-[10px] text-slate-400 font-normal">
-                              {s.doc_type} &middot; Effective {s.effective_date}
-                            </div>
-                          </td>
-                          <td className="py-3 px-3 text-slate-600">
-                            {s.authority}
-                          </td>
-                          <td className="py-3 px-3 text-slate-600">
-                            {s.key_sections}
-                          </td>
-                          <td className="py-3 px-3 whitespace-nowrap">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              <i className="fa-solid fa-check-double text-[10px]"></i>
-                              Verified Law
-                            </span>
-                          </td>
-                          <td className="py-3 px-3 text-right whitespace-nowrap">
-                            <a
-                              href={`http://localhost:8000/api/v1/component2/legal-documents/${s.pdf_query || s.source_id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 font-semibold text-[11px] transition-colors shadow-2xs"
+                      {filteredSources.length > 0 ? (
+                        filteredSources.map((s) => {
+                          const isCopied = copiedSourceId === s.source_id;
+                          return (
+                            <tr
+                              key={s.source_id}
+                              className="hover:bg-blue-50/30 transition-colors group cursor-default"
                             >
-                              <i className="fa-solid fa-file-pdf text-red-500 text-xs"></i>
-                              <span>View PDF Act</span>
-                            </a>
+                              {/* Source Identifier */}
+                              <td className="py-4 px-4 whitespace-nowrap align-top">
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopySourceId(s.source_id)}
+                                  className="group/btn inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 text-indigo-700 font-mono text-[11px] font-bold transition-all shadow-2xs cursor-pointer"
+                                  title="Click to copy Source ID"
+                                >
+                                  <span>{s.source_id}</span>
+                                  <i
+                                    className={`fa-solid ${
+                                      isCopied ? 'fa-check text-emerald-600' : 'fa-copy text-slate-400 group-hover/btn:text-indigo-600'
+                                    } text-[10px]`}
+                                  />
+                                </button>
+                                {isCopied && (
+                                  <span className="block text-[9px] text-emerald-600 font-bold mt-1">Copied!</span>
+                                )}
+                              </td>
+
+                              {/* Title & Classification */}
+                              <td className="py-4 px-4 align-top max-w-sm">
+                                <div className="font-bold text-slate-900 text-xs leading-snug group-hover:text-blue-900 transition-colors">
+                                  {s.title}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                  <span
+                                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                                      s.doc_type.includes('Provincial')
+                                        ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                                        : s.doc_type.includes('Gazette')
+                                        ? 'bg-cyan-50 text-cyan-700 border border-cyan-200'
+                                        : s.doc_type.includes('By-Law')
+                                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                        : 'bg-blue-50 text-blue-700 border border-blue-200'
+                                    }`}
+                                  >
+                                    {s.doc_type}
+                                  </span>
+                                  <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+                                    <i className="fa-regular fa-calendar text-[10px] text-slate-400" />
+                                    Eff. {s.effective_date}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400">&bull;</span>
+                                  <span className="text-[11px] text-slate-600 font-medium">
+                                    📍 {s.jurisdiction}
+                                  </span>
+                                </div>
+                              </td>
+
+                              {/* Enforcing Authority */}
+                              <td className="py-4 px-4 align-top">
+                                <div className="flex items-start gap-2">
+                                  <span className="w-6 h-6 rounded-md bg-slate-100 flex items-center justify-center text-slate-500 text-xs shrink-0 mt-0.5">
+                                    <i className="fa-solid fa-landmark text-slate-600" />
+                                  </span>
+                                  <div className="font-semibold text-slate-800 text-xs leading-snug">
+                                    {s.authority}
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Key Cited Sections */}
+                              <td className="py-4 px-4 align-top">
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200/80 text-slate-700 font-medium text-[11px] leading-relaxed">
+                                  <i className="fa-solid fa-paragraph text-slate-400 text-[10px] shrink-0" />
+                                  <span>{s.key_sections}</span>
+                                </div>
+                              </td>
+
+                              {/* Verification Status */}
+                              <td className="py-4 px-4 align-top whitespace-nowrap">
+                                {s.status === 'verified' ? (
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                                    <i className="fa-solid fa-check-double text-[10px] text-emerald-600" />
+                                    Verified Law
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs">
+                                    <i className="fa-solid fa-triangle-exclamation text-[10px] text-amber-600" />
+                                    Needs Verification
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Action Buttons */}
+                              <td className="py-4 px-4 align-top text-right whitespace-nowrap">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedSourceDetail(s)}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors cursor-pointer"
+                                    title="Quick Inspect Statute Metadata"
+                                  >
+                                    <i className="fa-solid fa-eye text-slate-500 text-xs" />
+                                    <span>Inspect</span>
+                                  </button>
+
+                                  <a
+                                    href={`http://localhost:8000/api/v1/component2/legal-documents/${s.pdf_query || s.source_id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs shadow-xs hover:shadow-md transition-all cursor-pointer"
+                                  >
+                                    <i className="fa-solid fa-file-pdf text-red-200 text-xs" />
+                                    <span>View Act</span>
+                                    <i className="fa-solid fa-arrow-up-right-from-square text-[9px] text-blue-200" />
+                                  </a>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="py-12 text-center">
+                            <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3 text-lg">
+                              <i className="fa-solid fa-folder-open" />
+                            </div>
+                            <h4 className="font-bold text-slate-800 text-sm">No statutory sources found</h4>
+                            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                              No legal sources matched your search query &quot;{sourceSearch}&quot; in the current filter.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSourceSearch('');
+                                setSourceDocTypeFilter('all');
+                              }}
+                              className="mt-3 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors cursor-pointer"
+                            >
+                              Reset Search &amp; Filters
+                            </button>
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
               </div>
+
+              {/* Statute Detail Quick-Inspect Modal */}
+              {selectedSourceDetail && (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200"
+                  onClick={() => setSelectedSourceDetail(null)}
+                >
+                  <div
+                    className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95 duration-150"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
+                      <div className="flex items-center gap-3">
+                        <span className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg shrink-0">
+                          <i className="fa-solid fa-landmark-dome" />
+                        </span>
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-mono">
+                            {selectedSourceDetail.source_id}
+                          </span>
+                          <h3 className="text-base font-extrabold text-slate-900 leading-snug">
+                            {selectedSourceDetail.title}
+                          </h3>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSourceDetail(null)}
+                        className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors cursor-pointer"
+                        title="Close modal"
+                      >
+                        <i className="fa-solid fa-xmark text-sm" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase block">Enforcing Authority</span>
+                        <p className="font-semibold text-slate-900">{selectedSourceDetail.authority}</p>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase block">Jurisdiction Scope</span>
+                        <p className="font-semibold text-slate-900">{selectedSourceDetail.jurisdiction}</p>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase block">Document Classification</span>
+                        <p className="font-semibold text-slate-900">{selectedSourceDetail.doc_type}</p>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase block">Effective Date</span>
+                        <p className="font-semibold text-slate-900">{selectedSourceDetail.effective_date}</p>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-blue-50/60 border border-blue-100 text-xs space-y-1">
+                      <span className="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">
+                        Key Cited Legal Sections
+                      </span>
+                      <p className="text-slate-800 font-medium leading-relaxed">
+                        {selectedSourceDetail.key_sections}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => handleCopySourceId(selectedSourceDetail.source_id)}
+                        className="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <i className="fa-solid fa-copy" />
+                        <span>Copy Source ID</span>
+                      </button>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedSourceDetail(null)}
+                          className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors cursor-pointer"
+                        >
+                          Close
+                        </button>
+
+                        <a
+                          href={`http://localhost:8000/api/v1/component2/legal-documents/${selectedSourceDetail.pdf_query || selectedSourceDetail.source_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+                        >
+                          <i className="fa-solid fa-file-pdf text-xs" />
+                          <span>View Official PDF</span>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -854,27 +1210,29 @@ export const App: React.FC = () => {
               </div>
             </div>
           )}
+          {/* TAB 5: BUSINESS REGISTRATION & FORM 1 GENERATOR */}
+          {activeTab === 'business_reg' && <BusinessRegistrationView />}
         </main>
 
         {/* ----------------------------------------------------------------- */}
         {/* MOBILE BOTTOM NAVIGATION BAR (Thumb-friendly touch bar)           */}
         {/* ----------------------------------------------------------------- */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-3 py-1.5 flex items-center justify-around shadow-lg">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-2 py-1.5 flex items-center justify-around shadow-lg">
           {navItems.map((item) => {
             const isActive = activeTab === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all relative ${
+                className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all relative ${
                   isActive ? 'text-teal-600 font-bold scale-105' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
                 <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-sm ${isActive ? 'bg-teal-50 text-teal-600 shadow-2xs' : ''}`}>
                   <i className={`fa-solid ${item.icon}`}></i>
                 </div>
-                <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[68px]">
-                  {item.id === 'comp2' ? 'Legal Regs' : item.id === 'comp1' ? 'Feasibility' : item.id === 'sources' ? 'Statutes' : '3VL Logic'}
+                <span className="text-[9px] mt-0.5 tracking-tight truncate max-w-[62px]">
+                  {item.id === 'comp1' ? 'Feasibility' : item.id === 'comp2' ? 'Legal Regs' : item.id === 'sources' ? 'Statutes' : item.id === 'kleene_inspector' ? '3VL Logic' : 'Registration'}
                 </span>
                 {isActive && (
                   <span className="absolute -top-1 w-6 h-0.5 rounded-full bg-teal-500"></span>

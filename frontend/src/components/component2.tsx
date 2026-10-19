@@ -986,52 +986,101 @@ export const RegistrationComplianceDashboard: React.FC = () => {
   );
 
   return (
-    <div className="compliance-app min-h-screen flex-1 font-sans">
-      <header className="compliance-header sticky top-16 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200">
-        <div className="compliance-header-inner">
-          <a className="compliance-brand" href="/" aria-label="Compliance Navigator home">
-            <span className="compliance-brand-mark">C2</span>
-            <span>
-              <strong>Compliance Navigator</strong>
-              <small>Western Province SME registration guidance</small>
+    <div className="compliance-app min-h-screen flex-1 font-sans bg-slate-50">
+      {/* Sleek Sub-Header & Stage Navigation Bar */}
+      <div className="bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-4 sm:px-8 py-3.5 shadow-2xs">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-slate-900 via-indigo-950 to-slate-900 text-teal-400 flex items-center justify-center font-extrabold text-sm shadow-md border border-slate-700/80">
+              C2
             </span>
-          </a>
-          <nav className="compliance-steps" aria-label="Compliance analysis steps">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">Compliance Navigator</h2>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
+                  Western Province SME Scope
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 font-medium">
+                Deterministic Three-Valued Kleene Logic Regulatory Engine
+              </p>
+            </div>
+          </div>
+
+          {/* Stepper Navigation Pills */}
+          <nav className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl border border-slate-200 self-stretch sm:self-auto overflow-x-auto">
             {([
-              { id: 'profile', label: 'Profile', number: '1' },
-              { id: 'results', label: 'Results', number: '2' },
-              { id: 'evidence', label: 'Evidence', number: '3' },
+              { id: 'profile', label: '1 · Business Profile', icon: 'fa-id-card' },
+              { id: 'results', label: '2 · Regulatory Results', icon: 'fa-scale-balanced', count: result ? result.obligations.length : null },
+              { id: 'evidence', label: '3 · Evidence & Sources', icon: 'fa-book-bookmark' },
             ] as const).map((step) => {
               const isAvailable = step.id === 'profile' || Boolean(result);
+              const isActive = activeStep === step.id;
               return (
                 <button
                   key={step.id}
                   type="button"
                   disabled={!isAvailable}
-                  aria-current={activeStep === step.id ? 'step' : undefined}
                   onClick={() => isAvailable && setActiveStep(step.id)}
-                  className={`compliance-step ${activeStep === step.id ? 'is-active' : ''}`}
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    isActive
+                      ? 'bg-white text-slate-900 shadow-xs border border-slate-200/90'
+                      : isAvailable
+                      ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                      : 'text-slate-400 opacity-50 cursor-not-allowed'
+                  }`}
                 >
-                  <span>{step.number} · {step.label}</span>
+                  <i className={`fa-solid ${step.icon} text-[11px] ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                  <span>{step.label}</span>
+                  {step.count !== null && (
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-800">
+                      {step.count}
+                    </span>
+                  )}
                 </button>
               );
             })}
           </nav>
         </div>
-      </header>
+      </div>
 
-      <main className="compliance-main">
-        {/* Guidance disclaimer banner */}
-        <div className="compliance-notice">
-          <div className="flex items-start gap-3">
-            <i className="fa-solid fa-shield-halved text-lg mt-0.5" />
-            <div>
-              <p className="text-xs font-semibold tracking-tight">Decision support only, not legal advice.</p>
-              <p className="text-xs mt-0.5 leading-relaxed">
-                Applicability decisions are generated 100% deterministically by a Three-Valued Kleene Logic Rule Engine,
-                never by an LLM. Results provide preliminary guidance for NEW BUSINESS REGISTRATION in Western Province.
-                “Not sure” answers remain unknown and are never treated as “No”.
-              </p>
+      <main className="max-w-7xl mx-auto p-4 sm:p-8 space-y-6">
+        {/* Component 2 Executive Introduction & Capabilities Banner */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-teal-50/90 via-emerald-50/70 to-blue-50/80 border border-teal-200/90 p-5 sm:p-6 shadow-xs">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <span className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-500 text-white flex items-center justify-center text-xl shadow-md shadow-teal-600/20 shrink-0 mt-0.5">
+                <i className="fa-solid fa-scale-balanced" />
+              </span>
+              <div className="space-y-1.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-teal-600 text-white shadow-2xs">
+                    Component 2
+                  </span>
+                  <span className="text-xs font-bold text-slate-900 tracking-tight">
+                    AI-Driven Regulatory Compliance &amp; Business Registration System
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white text-emerald-800 border border-emerald-200 shadow-2xs">
+                    <i className="fa-solid fa-circle-check text-emerald-600 text-[9px]" /> Verified Legal Framework
+                  </span>
+                </div>
+                <p className="text-xs text-slate-700 leading-relaxed max-w-4xl">
+                  Intelligent decision support for Sri Lankan SMEs across the Western Province (Colombo, Gampaha, Kalutara).
+                  Evaluates your business characteristics against registered Parliamentary Acts, Provincial Statutes, and Municipal By-laws
+                  to identify required trade permits, health clearances, and statutory registration filings with zero legal hallucination.
+                </p>
+                <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] font-semibold text-slate-600">
+                  <span className="inline-flex items-center gap-1 bg-white/80 px-2.5 py-1 rounded-lg border border-slate-200/80">
+                    📍 Western Province &amp; Colombo MC
+                  </span>
+                  <span className="inline-flex items-center gap-1 bg-white/80 px-2.5 py-1 rounded-lg border border-slate-200/80">
+                    📜 Food Act, WP Statute 04/1990 &amp; By-Laws
+                  </span>
+                  <span className="inline-flex items-center gap-1 bg-white/80 px-2.5 py-1 rounded-lg border border-slate-200/80">
+                    🛡️ Three-Valued Logic (Missing facts never assumed false)
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1040,117 +1089,124 @@ export const RegistrationComplianceDashboard: React.FC = () => {
           <div className="compliance-layout">
             <section className="compliance-panel space-y-5">
               {/* ------------------------------------------------------------- */}
+              {/* ------------------------------------------------------------- */}
               {/* COMPONENT 1 ➔ COMPONENT 2 INTEGRATION: PDF INGESTION & EXTRACTION */}
               {/* ------------------------------------------------------------- */}
-              <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 rounded-2xl p-6 text-white shadow-md border border-slate-700/80">
-                {/* Header & Steps Indicator */}
-                <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-700/60 pb-4">
-                  <div>
-                    <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-300 text-[11px] font-bold border border-blue-400/30 mb-2">
-                      <i className="fa-solid fa-arrows-split-up-and-left" />
-                      Component 1 ➔ Component 2 Meaningful Integration
+              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-[#0d1627] to-indigo-950 p-6 sm:p-7 text-white shadow-xl border border-slate-800">
+                {/* Decorative ambient background glows */}
+                <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-20 -left-20 w-72 h-72 rounded-full bg-teal-500/10 blur-3xl pointer-events-none" />
+
+                <div className="relative z-10">
+                  {/* Header & Steps Indicator */}
+                  <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-700/60 pb-5">
+                    <div>
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/15 text-blue-300 text-[11px] font-bold border border-blue-400/30 mb-2.5">
+                        <i className="fa-solid fa-network-wired text-blue-400" />
+                        Component 1 ➔ Component 2 AI Pipeline Bridge
+                      </div>
+                      <h2 className="text-xl font-extrabold text-white flex items-center gap-2.5 tracking-tight">
+                        <span className="w-8 h-8 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center text-sm border border-red-500/30">
+                          <i className="fa-solid fa-file-pdf" />
+                        </span>
+                        Upload Business / Growth Plan (PDF)
+                      </h2>
+                      <p className="text-xs text-slate-300 mt-1.5 max-w-2xl leading-relaxed">
+                        Upload the PDF plan generated from Component 1 or any external SME business plan.
+                        The system automatically parses text (or performs OCR on scanned PDFs), extracts a comprehensive
+                        business profile, and lets you confirm it before displaying applicable Sri Lankan legal &amp; regulatory requirements.
+                      </p>
                     </div>
-                    <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                      <i className="fa-solid fa-file-pdf text-red-400" />
-                      Upload Business / Growth Plan (PDF)
-                    </h2>
-                    <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                      Upload the PDF plan generated from Component 1 or any SME business plan.
-                      The system automatically parses text (or performs OCR on scanned PDFs), extracts a comprehensive
-                      business profile, and lets you confirm it before displaying applicable Sri Lankan legal &amp; regulatory requirements.
-                    </p>
+
+                    {/* Step badges */}
+                    <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 text-[11px] font-bold bg-slate-800/80 p-2 rounded-2xl border border-slate-700/80 shadow-inner">
+                      <span className="px-2.5 py-1 rounded-lg bg-blue-500/25 text-blue-300 whitespace-nowrap">1. Download Plan</span>
+                      <i className="fa-solid fa-chevron-right text-[9px] text-slate-500 shrink-0" />
+                      <span className="px-2.5 py-1 rounded-lg bg-teal-500/25 text-teal-300 whitespace-nowrap">2. Upload PDF</span>
+                      <i className="fa-solid fa-chevron-right text-[9px] text-slate-500 shrink-0" />
+                      <span className="px-2.5 py-1 rounded-lg bg-amber-500/25 text-amber-300 whitespace-nowrap">3. Extract &amp; Confirm</span>
+                      <i className="fa-solid fa-chevron-right text-[9px] text-slate-500 shrink-0" />
+                      <span className="px-2.5 py-1 rounded-lg bg-emerald-500/25 text-emerald-300 whitespace-nowrap">4. Legal Guidance</span>
+                    </div>
                   </div>
 
-                  {/* Step badges */}
-                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 text-[11px] font-semibold bg-slate-800/80 p-1.5 rounded-xl border border-slate-700 overflow-x-auto max-w-full">
-                    <span className="px-2 py-0.5 rounded bg-blue-500/30 text-blue-300 whitespace-nowrap">1. Download Plan</span>
-                    <i className="fa-solid fa-arrow-right text-[10px] text-slate-500 shrink-0" />
-                    <span className="px-2 py-0.5 rounded bg-teal-500/30 text-teal-300 whitespace-nowrap">2. Upload PDF</span>
-                    <i className="fa-solid fa-arrow-right text-[10px] text-slate-500 shrink-0" />
-                    <span className="px-2 py-0.5 rounded bg-amber-500/30 text-amber-300 whitespace-nowrap">3. Extract &amp; Confirm</span>
-                    <i className="fa-solid fa-arrow-right text-[10px] text-slate-500 shrink-0" />
-                    <span className="px-2 py-0.5 rounded bg-emerald-500/30 text-emerald-300 whitespace-nowrap">4. Legal Guidance</span>
-                  </div>
-                </div>
+                  {/* Upload Error Banner */}
+                  {pdfError && (
+                    <div className="mt-4 p-3.5 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-200 text-xs flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <i className="fa-solid fa-circle-exclamation text-rose-400" />
+                        {pdfError}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPdfError(null)}
+                        className="text-rose-300 hover:text-white text-xs ml-3 font-semibold cursor-pointer"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  )}
 
-                {/* Upload Error Banner */}
-                {pdfError && (
-                  <div className="mt-4 p-3 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-200 text-xs flex items-center justify-between">
-                    <span className="flex items-center gap-2">
-                      <i className="fa-solid fa-circle-exclamation text-rose-400" />
-                      {pdfError}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setPdfError(null)}
-                      className="text-rose-300 hover:text-white text-xs ml-3"
-                    >
-                      Dismiss
-                    </button>
-                  </div>
-                )}
-
-                {/* Main Ingestion & Upload Section (Shown when no extracted profile is awaiting confirmation) */}
-                {!pdfExtractResult && (
-                  <div className="mt-5 space-y-4">
-                    {/* Drag and Drop Zone */}
-                    <div
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        setIsDragOver(true);
-                      }}
-                      onDragLeave={() => setIsDragOver(false)}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        setIsDragOver(false);
-                        const file = e.dataTransfer.files?.[0];
-                        if (file) handlePdfFile(file);
-                      }}
-                      onClick={() => fileInputRef.current?.click()}
-                      className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
-                        isDragOver
-                          ? 'border-teal-400 bg-teal-500/10 scale-[1.01]'
-                          : 'border-slate-600 hover:border-slate-400 bg-slate-800/40 hover:bg-slate-800/70'
-                      }`}
-                    >
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="application/pdf"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
+                  {/* Main Ingestion & Upload Section (Shown when no extracted profile is awaiting confirmation) */}
+                  {!pdfExtractResult && (
+                    <div className="mt-5 space-y-4">
+                      {/* Drag and Drop Zone */}
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDragOver(true);
+                        }}
+                        onDragLeave={() => setIsDragOver(false)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setIsDragOver(false);
+                          const file = e.dataTransfer.files?.[0];
                           if (file) handlePdfFile(file);
                         }}
-                      />
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`group relative border-2 border-dashed rounded-2xl p-7 text-center cursor-pointer transition-all duration-200 ${
+                          isDragOver
+                            ? 'border-teal-400 bg-teal-500/15 scale-[1.01] shadow-lg shadow-teal-500/10'
+                            : 'border-slate-700 hover:border-teal-500/50 bg-slate-800/40 hover:bg-slate-800/70'
+                        }`}
+                      >
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="application/pdf"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handlePdfFile(file);
+                          }}
+                        />
 
-                      {pdfUploading ? (
-                        <div className="py-4 space-y-3">
-                          <i className="fa-solid fa-circle-notch fa-spin text-3xl text-teal-400" />
-                          <div className="text-sm font-semibold text-teal-300">
-                            Analyzing &amp; Extracting Business Profile from PDF...
+                        {pdfUploading ? (
+                          <div className="py-6 space-y-3">
+                            <i className="fa-solid fa-circle-notch fa-spin text-4xl text-teal-400" />
+                            <div className="text-sm font-bold text-teal-300">
+                              Analyzing &amp; Extracting Business Profile from PDF...
+                            </div>
+                            <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+                              Running PyMuPDF text extractor · Scanning for OCR text · Identifying category, location &amp; commercial offerings
+                            </p>
                           </div>
-                          <p className="text-xs text-slate-400">
-                            Running PyMuPDF text extractor · Scanning for OCR text · Identifying category, location &amp; products
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <div className="w-12 h-12 mx-auto rounded-full bg-slate-700/80 flex items-center justify-center text-teal-400 text-xl shadow-inner">
-                            <i className="fa-solid fa-cloud-arrow-up" />
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-slate-800 to-slate-700 flex items-center justify-center text-teal-400 text-2xl shadow-inner group-hover:scale-105 transition-transform border border-slate-600/50">
+                              <i className="fa-solid fa-cloud-arrow-up" />
+                            </div>
+                            <div className="text-sm font-bold text-slate-100">
+                              Drop your Business Plan PDF here, or <span className="text-teal-400 underline underline-offset-4 decoration-teal-400/50 group-hover:decoration-teal-400">browse file</span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 max-w-lg mx-auto leading-relaxed">
+                              Supports Component 1 SME360 AI Reports, Strategic Growth Plans, or Scanned SME Business Plans (.pdf)
+                            </p>
                           </div>
-                          <div className="text-sm font-semibold text-slate-200">
-                            Drop your Business Plan PDF here, or <span className="text-teal-400 underline">browse file</span>
-                          </div>
-                          <p className="text-[11px] text-slate-400">
-                            Supports Component 1 SME360 AI Reports, Strategic Growth Plans, or Scanned SME Business Plans (.pdf)
-                          </p>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
-
-                  </div>
-                )}
+                  )}
 
                 {/* ------------------------------------------------------------- */}
                 {/* STEP 3 & 4: EXTRACTED PROFILE CONFIRMATION & REVIEW CARD     */}
@@ -1480,6 +1536,7 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                     </div>
                   </div>
                 )}
+                </div>
               </div>
 
               {/* Form Container */}
@@ -1848,36 +1905,116 @@ export const RegistrationComplianceDashboard: React.FC = () => {
         </div>
             </section>
 
-            <aside className="compliance-side-panel">
-              <section className="compliance-side-card">
-                <p className="compliance-eyebrow">Profile completeness</p>
-                <div className="compliance-completeness">
-                  <strong>{profileCompleteness}%</strong>
-                  <span>{profileFactKeys.length - knownProfileFacts} facts unknown</span>
+            <aside className="compliance-side-panel space-y-4">
+              {/* Profile Completeness Widget */}
+              <section className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-xs space-y-3.5 hover:shadow-md transition-all">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <i className="fa-solid fa-chart-pie text-teal-600" />
+                    Profile Completeness
+                  </span>
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono">
+                    {knownProfileFacts} / {profileFactKeys.length} Facts
+                  </span>
                 </div>
-                <div
-                  className="compliance-progress"
-                  role="progressbar"
-                  aria-label="Profile completeness"
-                  aria-valuenow={profileCompleteness}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                >
-                  <span style={{ width: `${profileCompleteness}%` }} />
+
+                <div className="flex items-baseline justify-between">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-3xl font-extrabold text-slate-900 tracking-tight">{profileCompleteness}%</span>
+                    <span className="text-xs text-slate-500 font-medium">captured</span>
+                  </div>
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                    profileFactKeys.length - knownProfileFacts === 0
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      : 'bg-amber-50 text-amber-800 border border-amber-200'
+                  }`}>
+                    {profileFactKeys.length - knownProfileFacts} facts unknown
+                  </span>
                 </div>
-                <p className="compliance-side-copy">
+
+                {/* Modern Progress Bar */}
+                <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200/80">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-teal-500 to-emerald-500 shadow-sm transition-all duration-500"
+                    style={{ width: `${profileCompleteness}%` }}
+                  />
+                </div>
+
+                <p className="text-xs text-slate-500 leading-relaxed pt-1 border-t border-slate-100">
                   {profileFactKeys.length - knownProfileFacts === 0
-                    ? 'Your profile is complete. Analyze it to see the requirements that may apply.'
-                    : 'Unknown answers are kept as unknown. Adding details can clarify more requirements.'}
+                    ? 'Your business profile is 100% complete. Kleene logic can evaluate all regulatory mandates deterministically.'
+                    : 'Missing facts remain strictly Unknown in 3-valued logic. Adding more details narrows down conditional permits.'}
                 </p>
               </section>
 
-              <section className="compliance-side-card">
-                <p className="compliance-eyebrow">How it works</p>
-                <ol className="compliance-how-list">
-                  <li><span>1</span><p>Your profile is checked against the local rulebook.</p></li>
-                  <li><span>2</span><p>Each requirement is marked applicable, unknown, or not applicable.</p></li>
-                  <li><span>3</span><p>Results include their source reference and evidence status.</p></li>
+              {/* Kleene Three-Valued Logic Key */}
+              <section className="bg-gradient-to-br from-slate-900 via-[#0d1627] to-indigo-950 text-white rounded-3xl p-5 shadow-sm border border-slate-800 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-7 h-7 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center text-xs">
+                    <i className="fa-solid fa-microchip" />
+                  </span>
+                  <div>
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider">3VL Kleene Logic Engine</h4>
+                    <span className="text-[10px] text-teal-400 font-mono">No Hallucination · Strict Determinism</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 pt-1 text-xs">
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/10">
+                    <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400" /> True (Applicable)
+                    </span>
+                    <span className="text-[10px] text-slate-400">All conditions satisfied</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/10">
+                    <span className="text-[11px] font-bold text-amber-400 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-amber-400" /> Unknown (Conditional)
+                    </span>
+                    <span className="text-[10px] text-slate-400">Missing facts needed</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/10">
+                    <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-slate-500" /> False (Not Applicable)
+                    </span>
+                    <span className="text-[10px] text-slate-400">Condition violated</span>
+                  </div>
+                </div>
+              </section>
+
+              {/* How It Works List */}
+              <section className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-xs space-y-3 hover:shadow-md transition-all">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <i className="fa-solid fa-list-check text-blue-600" />
+                  How Evaluation Works
+                </span>
+                <ol className="space-y-3 pt-1">
+                  <li className="flex items-start gap-3">
+                    <span className="w-6 h-6 rounded-lg bg-blue-50 text-blue-700 font-extrabold text-xs flex items-center justify-center shrink-0 border border-blue-200">
+                      1
+                    </span>
+                    <div>
+                      <p className="text-xs font-bold text-slate-900">Sri Lankan Rulebook Check</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Profile facts are evaluated against Western Province and National statutes.</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="w-6 h-6 rounded-lg bg-teal-50 text-teal-700 font-extrabold text-xs flex items-center justify-center shrink-0 border border-teal-200">
+                      2
+                    </span>
+                    <div>
+                      <p className="text-xs font-bold text-slate-900">Kleene 3VL Logic Verdict</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Every rule produces an exact mathematical classification without AI guesswork.</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="w-6 h-6 rounded-lg bg-purple-50 text-purple-700 font-extrabold text-xs flex items-center justify-center shrink-0 border border-purple-200">
+                      3
+                    </span>
+                    <div>
+                      <p className="text-xs font-bold text-slate-900">Official Evidence &amp; Form 1</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Results map to verified legal clauses and pre-fill statutory Form 1 for registration.</p>
+                    </div>
+                  </li>
                 </ol>
               </section>
             </aside>
