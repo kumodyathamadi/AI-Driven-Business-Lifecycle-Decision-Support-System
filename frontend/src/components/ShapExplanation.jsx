@@ -36,7 +36,7 @@ export default function ShapExplanation({ shapData: propData }) {
           Key Insights — What Is Influencing {businessName ? `${businessName}'s` : 'Your'} Business Feasibility?
         </h3>
         <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginTop: '0.25rem', lineHeight: '1.5' }}>
-          Our AI model analyzes {businessName ? `${businessName}'s` : 'your'} operational, financial, and market inputs to identify the primary drivers strengthening feasibility as well as key risk hurdles requiring strategic attention.
+          Our AI model analyzes {businessName ? `${businessName}'s` : 'your'} operational, financial, and market inputs to identify the primary drivers strengthening feasibility as well as main business challenges requiring strategic attention.
         </p>
       </div>
 
@@ -70,7 +70,7 @@ export default function ShapExplanation({ shapData: propData }) {
         <div style={{ background: 'rgba(127, 29, 29, 0.2)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '1.25rem', borderRadius: '12px' }}>
           <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fca5a5', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(239, 68, 68, 0.3)' }}>
             <AlertOctagon size={18} />
-            Areas Needing Mitigation (-)
+            Main Business Challenges (-)
           </h4>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -79,7 +79,7 @@ export default function ShapExplanation({ shapData: propData }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', fontWeight: 600 }}>
                   <span style={{ color: 'var(--text-primary)' }}>{formatFeatureLabel(driver.feature)}</span>
                   <span style={{ color: '#fca5a5', fontWeight: 700, background: 'rgba(239, 68, 68, 0.15)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem' }}>
-                    Risk Hurdle
+                    Main Challenge
                   </span>
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.35rem' }}>

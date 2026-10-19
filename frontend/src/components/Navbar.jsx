@@ -10,7 +10,7 @@ export default function Navbar({ currentProfile }) {
   const { isDarkMode, toggleTheme, setDarkMode, setLightMode } = useTheme();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef(null);
-  const userName = 'SME Decision Maker';
+  const userName = 'Kumodya';
 
   const handleSetLight = (e) => {
     if (e && e.stopPropagation) e.stopPropagation();
@@ -86,9 +86,9 @@ export default function Navbar({ currentProfile }) {
         <div className="brand-title-group">
           <h1>
             <span>SME360 AI</span>
-            <span className="tag-component">
+            {/* <span className="tag-component">
               AI Business Plan Generator
-            </span>
+            </span> */}
           </h1>
           <div className="brand-subtitle">
             From idea to investor-ready plan in minutes
@@ -332,7 +332,7 @@ export default function Navbar({ currentProfile }) {
                   }}
                 >
                   <Shield size={14} />
-                  <span>SaaS Workspace</span>
+                  <span>Home Page</span>
                 </Link>
               </div>
             </div>

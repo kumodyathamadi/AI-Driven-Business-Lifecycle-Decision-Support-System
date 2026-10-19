@@ -192,10 +192,10 @@ export default function FeasibilityCard({ feasibilityData: propFeas }) {
                   <div className="feasibility-box-icon negative">
                     <AlertOctagon size={16} />
                   </div>
-                  <h4>Key Risk Hurdles</h4>
+                  <h4>Main Business Challenges</h4>
                 </div>
                 <span className="feasibility-count-pill negative">
-                  {negativeDrivers.slice(0, 3).length} Risk Factors
+                  {negativeDrivers.slice(0, 3).length} Challenges
                 </span>
               </div>
 

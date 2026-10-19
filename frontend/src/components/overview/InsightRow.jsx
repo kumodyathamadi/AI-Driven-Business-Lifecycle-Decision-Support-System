@@ -1,10 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
-  HelpCircle,
-  X,
-  TrendingUp,
-  TrendingDown,
-  Sparkles,
   MapPin,
   Percent,
   DollarSign,
@@ -30,15 +25,13 @@ function getFactorIcon(featureStr, isPositive) {
 }
 
 export default function InsightRow({ driver, isPositive, context }) {
-  const [showPopover, setShowPopover] = useState(false);
-
   const rawFeature = driver?.feature || '';
   const shapVal = Number(driver?.impact_score ?? (isPositive ? 0.05 : -0.04));
   const absShap = Math.abs(shapVal);
 
   const impactLevel = absShap >= 0.045 ? 'High' : absShap >= 0.02 ? 'Medium' : 'Low';
 
-  const { title, description } = resolveFeatureInsight({
+  const { title } = resolveFeatureInsight({
     rawFeature,
     isPositive,
     context: {
@@ -48,7 +41,6 @@ export default function InsightRow({ driver, isPositive, context }) {
   });
 
   const IconComponent = getFactorIcon(rawFeature, isPositive);
-  const formattedShap = shapVal > 0 ? `+${shapVal.toFixed(4)}` : shapVal.toFixed(4);
 
   return (
     <div className="insight-row-item">
@@ -64,63 +56,6 @@ export default function InsightRow({ driver, isPositive, context }) {
         <span className={`insight-impact-chip ${isPositive ? 'positive' : 'negative'} ${impactLevel.toLowerCase()}`}>
           {impactLevel}
         </span>
-
-        {/* Why? Popover Trigger */}
-        <div className="insight-popover-trigger-wrap">
-          <button
-            type="button"
-            className="btn-why-compact"
-            onClick={() => setShowPopover(!showPopover)}
-            aria-label={`Why does ${title} impact feasibility?`}
-            aria-expanded={showPopover}
-          >
-            Why?
-          </button>
-
-          {showPopover && (
-            <div
-              className="insight-row-popover"
-              role="tooltip"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="insight-popover-top">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Sparkles size={13} style={{ color: isPositive ? '#34d399' : '#fbbf24' }} />
-                  <strong>{title}</strong>
-                </div>
-                <button
-                  type="button"
-                  className="insight-popover-close-btn"
-                  onClick={() => setShowPopover(false)}
-                  aria-label="Close"
-                >
-                  <X size={13} />
-                </button>
-              </div>
-
-              <p className="insight-popover-desc">
-                {description}
-              </p>
-
-              <div className="insight-popover-meta">
-                <div className="insight-meta-field">
-                  <span>SHAP Contribution:</span>
-                  <strong style={{ color: isPositive ? '#34d399' : '#fbbf24' }}>
-                    {formattedShap}
-                  </strong>
-                </div>
-                <div className="insight-meta-field">
-                  <span>ML Feature:</span>
-                  <code>{rawFeature || 'business_metric'}</code>
-                </div>
-              </div>
-
-              <div className="insight-popover-footer">
-                Benchmark: CBSL Western Province SME baseline
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

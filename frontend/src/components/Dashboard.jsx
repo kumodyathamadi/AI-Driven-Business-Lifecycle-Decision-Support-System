@@ -111,7 +111,7 @@ export default function Dashboard({ activeProfile, onAnalysisComplete }) {
               }}
             >
               <Sparkles size={14} style={{ color: '#38bdf8' }} /> 
-              <span>Free AI Business Plan Generator</span>
+              <span>Built for accessible, collaborative, and AI-assisted business planning</span>
             </div>
             
             <h1 
@@ -180,10 +180,10 @@ export default function Dashboard({ activeProfile, onAnalysisComplete }) {
                 <Target size={14} style={{ color: '#34d399' }} />
                 <span><span className="highlight">90%+</span> Feasibility Accuracy</span>
               </div>
-              <div className="hero-trust-item">
+              {/* <div className="hero-trust-item">
                 <Award size={14} style={{ color: '#c084fc' }} />
                 <span><span className="highlight">CBSL</span> SME Benchmarked</span>
-              </div>
+              </div> */}
             </div>
           </div>
 

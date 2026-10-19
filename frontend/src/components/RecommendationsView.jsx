@@ -4,13 +4,10 @@ import {
   Sparkles, 
   Layers, 
   BarChart2, 
-  ChevronDown, 
-  ChevronUp, 
   CheckCircle2, 
   ArrowRight, 
   FileText, 
   Award, 
-  BookOpen, 
   Eye
 } from 'lucide-react';
 import SegmentedControl from './strategy/SegmentedControl';
@@ -32,9 +29,6 @@ export default function RecommendationsView({ profile: propProfile }) {
 
   // View state: 'explore' (master-detail) vs 'compare' (side-by-side table)
   const [viewMode, setViewMode] = useState('explore');
-
-  // Academic methodology collapsed state
-  const [showMethodology, setShowMethodology] = useState(false);
 
   // Adoption modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -389,87 +383,7 @@ export default function RecommendationsView({ profile: propProfile }) {
         </div>
       </div>
 
-      {/* 6. Collapsed Academic & Research Methodology Panel */}
-      <div style={{
-        background: 'var(--bg-card-solid)',
-        border: '1px solid var(--border-color)',
-        borderRadius: '12px',
-        overflow: 'hidden',
-        marginTop: '0.5rem'
-      }}>
-        <button
-          type="button"
-          onClick={() => setShowMethodology(!showMethodology)}
-          aria-expanded={showMethodology}
-          style={{
-            width: '100%',
-            padding: '1rem 1.25rem',
-            textAlign: 'left',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <BookOpen size={16} style={{ color: 'var(--text-muted)' }} />
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Academic & Research Methodology: TOPSIS Multi-Criteria Decision Science
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-            <span>{showMethodology ? 'Collapse details' : 'View methodology'}</span>
-            {showMethodology ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </div>
-        </button>
 
-        {showMethodology && (
-          <div style={{
-            padding: '1.25rem',
-            borderTop: '1px solid var(--border-color)',
-            background: 'var(--bg-dark, #090d16)',
-            fontSize: '0.825rem',
-            color: 'var(--text-secondary)',
-            lineHeight: 1.6,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem'
-          }}>
-            <p style={{ margin: 0 }}>
-              The <strong>TOPSIS</strong> (Technique for Order of Preference by Similarity to Ideal Solution) algorithm is a multi-criteria decision analysis method originally developed by Hwang and Yoon (1981). In SME360 AI, it calculates an objective ranking index based on the geometric distance of each strategy to an ideal best benchmark and an ideal worst benchmark.
-            </p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem', paddingTop: '0.5rem' }}>
-              <div style={{ padding: '0.85rem', background: 'var(--bg-card-solid)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '0.25rem' }}>1. Vector Normalization</strong>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
-                  Normalizes disparate units (LKR capital, monthly rupees, customer volume, risk points) onto a standardized dimensionless scale between 0.0 and 1.0.
-                </p>
-              </div>
-
-              <div style={{ padding: '0.85rem', background: 'var(--bg-card-solid)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '0.25rem' }}>2. Weighted Ideal Points</strong>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
-                  Calculates the Positive Ideal Solution (A+) maximizing benefits while minimizing costs, and the Negative Ideal Solution (A-) minimizing benefits while maximizing costs.
-                </p>
-              </div>
-
-              <div style={{ padding: '0.85rem', background: 'var(--bg-card-solid)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '0.25rem' }}>3. Relative Closeness (Ci*)</strong>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
-                  Computes Euclidean distances (S+ and S-) and derives the closeness index: Ci* = S- / (S+ + S-). Strategies with Ci* closer to 1.0 rank highest.
-                </p>
-              </div>
-            </div>
-
-            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '0.5rem 0 0 0', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)' }}>
-              * The analytical ranking remains preserved for transparency while entrepreneurs maintain complete freedom to select their preferred operational roadmap.
-            </p>
-          </div>
-        )}
-      </div>
 
       {/* Trade-Off & Risk Advisory Modal */}
       <StrategyTradeoffModal
