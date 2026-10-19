@@ -125,15 +125,16 @@ def extract_business_info(user_text: str, specified_stage: str = "", specified_g
 
     # Business / Enterprise Name extraction
     name_patterns = [
-        r'(?:named|called|name is|named as|brand name is|brand is)\s+["\']?([A-Za-z0-9\s&\'\.\-]+?(?:Shop|Store|Mart|Bakery|Salon|Saloon|Garments|Enterprise|Enterprises|Creations|Foods|Boutique|Trading|Center|Centre)?)["\']?(?:\s+(?:in|at|with|for|,|\.|$))',
-        r'["\']([A-Za-z0-9\s&\'\.\-]{3,40}\b(?:Shop|Store|Mart|Bakery|Salon|Saloon|Garments|Enterprise|Enterprises|Creations|Foods|Boutique)?)["\']'
+        r'^(?:my\s+business\s+)?([A-Za-z0-9\s&\'\.\-]+?)\s+(?:is|will be|planned to be)\s+(?:a|an)\s+(?:new|existing)?\s*(?:bakery|salon|shop|grocery|garment|business|store|enterprise|boutique|mart)',
+        r'(?:named|called|name is|named as|brand name is|brand is)\s+["\']?([A-Za-z0-9\s&\'\.\-]+?(?:Shop|Store|Mart|Bakery|Salon|Saloon|Garments|Enterprise|Enterprises|Creations|Foods|Boutique|Trading|Center|Centre|House)?)["\']?(?:\s+(?:in|at|with|for|,|\.|$))',
+        r'["\']([A-Za-z0-9\s&\'\.\-]{3,40}\b(?:Shop|Store|Mart|Bakery|Salon|Saloon|Garments|Enterprise|Enterprises|Creations|Foods|Boutique|House)?)["\']'
     ]
     extracted_biz_name = None
     for pattern in name_patterns:
         m = re.search(pattern, text, re.IGNORECASE)
         if m:
             candidate = m.group(1).strip()
-            if 3 <= len(candidate) <= 50 and candidate.lower() not in ["a new", "an existing", "the business"]:
+            if 3 <= len(candidate) <= 50 and candidate.lower() not in ["a new", "an existing", "the business", "this business", "our business"]:
                 extracted_biz_name = candidate
                 break
 
@@ -284,26 +285,56 @@ def extract_business_info(user_text: str, specified_stage: str = "", specified_g
                 }
                 break
 
-    staff_match = re.search(r'(\d+)\s*(?:staff|employees|workers|veda karayo)', lower_text)
-    if staff_match:
-        try:
-            sval = int(staff_match.group(1))
-            extracted_fields["available_staff_count"] = {
-                "value": sval, "status": "extracted", "requirement_state": extracted_fields["available_staff_count"]["requirement_state"], "confidence": 0.90, "label": "Available Staff Count", "type": "number", "note": f"Extracted staff count: {sval}"
-            }
-            extracted_fields["required_staff_count"] = {
-                "value": sval, "status": "extracted", "requirement_state": extracted_fields["required_staff_count"]["requirement_state"], "confidence": 0.85, "label": "Required Staff Count", "type": "number", "note": f"Inferred required staff count: {sval}"
-            }
-        except ValueError:
-            pass
+    # Staff Count extraction (available & required)
+    zero_staff_match = re.search(
+        r'\b(?:no|zero|without|don\'?t have (?:any)?|not having (?:any)?)\s+(?:staff|employees|workers|assistants|team members|sewakayan)\b', lower_text
+    ) or re.search(r'\b(?:operate|operating|running|working)\s+(?:alone|solo|by myself)\b', lower_text)
+
+    req_match = re.search(
+        r'(?:needs?|require[sd]?|looking for|plan to hire|want to hire|looking to hire)\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:staff|employees|workers|assistants)', lower_text
+    )
+    req_val = None
+    if req_match:
+        raw_req = req_match.group(1).lower()
+        req_val = int(raw_req) if raw_req.isdigit() else WORD_TO_NUM.get(raw_req)
+
+    if zero_staff_match:
+        extracted_fields["available_staff_count"] = {
+            "value": 0, "status": "extracted", "requirement_state": extracted_fields["available_staff_count"]["requirement_state"], "confidence": 0.95, "label": "Available Staff Count", "type": "number", "note": "Detected zero staff / solo operator"
+        }
+        extracted_fields["required_staff_count"] = {
+            "value": req_val if req_val is not None else 1, "status": "extracted", "requirement_state": extracted_fields["required_staff_count"]["requirement_state"], "confidence": 0.90, "label": "Required Staff Count", "type": "number", "note": f"Required staff: {req_val if req_val is not None else 1}"
+        }
+    else:
+        staff_num_regex = r'(\d+|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty)'
+        staff_match = re.search(rf'{staff_num_regex}\s*(?:staff|employees|workers|assistants|crew|team members|sewakayan)', lower_text) or \
+                      re.search(rf'(?:have|employ|hire|with)\s*{staff_num_regex}\s*(?:staff|employees|workers)', lower_text) or \
+                      re.search(rf'(?:staff|employees|workers|team)\s*(?:is|count is|of|=|:|\s+)*\s*{staff_num_regex}', lower_text)
+        if staff_match:
+            try:
+                raw_s = staff_match.group(1).lower()
+                sval = int(raw_s) if raw_s.isdigit() else WORD_TO_NUM.get(raw_s)
+                if sval is not None and 0 <= sval <= 100:
+                    extracted_fields["available_staff_count"] = {
+                        "value": sval, "status": "extracted", "requirement_state": extracted_fields["available_staff_count"]["requirement_state"], "confidence": 0.92, "label": "Available Staff Count", "type": "number", "note": f"Extracted staff count: {sval}"
+                    }
+                    extracted_fields["required_staff_count"] = {
+                        "value": req_val if req_val is not None else sval, "status": "extracted", "requirement_state": extracted_fields["required_staff_count"]["requirement_state"], "confidence": 0.88, "label": "Required Staff Count", "type": "number", "note": f"Inferred required staff count: {req_val if req_val is not None else sval}"
+                    }
+            except ValueError:
+                pass
 
     # Competition Level
-    if any(w in lower_text for w in ["high competition", "many competitors", "lots of shops", "heavy competition", "godak kade"]):
-        extracted_fields["competition_level"] = {"value": "High", "status": "extracted", "requirement_state": extracted_fields["competition_level"]["requirement_state"], "confidence": 0.90, "label": "Competition Level", "type": "select", "note": "High competition detected"}
-    elif any(w in lower_text for w in ["moderate competition", "some competition", "medium competition", "samanya"]):
-        extracted_fields["competition_level"] = {"value": "Moderate", "status": "extracted", "requirement_state": extracted_fields["competition_level"]["requirement_state"], "confidence": 0.90, "label": "Competition Level", "type": "select", "note": "Moderate competition detected"}
-    elif any(w in lower_text for w in ["low competition", "no competition", "few shops", "little competition"]):
-        extracted_fields["competition_level"] = {"value": "Low", "status": "extracted", "requirement_state": extracted_fields["competition_level"]["requirement_state"], "confidence": 0.90, "label": "Competition Level", "type": "select", "note": "Low competition detected"}
+    if any(w in lower_text for w in [
+        "high competition", "strong competition", "intense competition", "heavy competition",
+        "fierce competition", "many competitors", "lots of shops", "saturated", "godak kade",
+        "established chains", "four established", "established bakery chains", "supermarkets within"
+    ]):
+        extracted_fields["competition_level"] = {"value": "High", "status": "extracted", "requirement_state": extracted_fields["competition_level"]["requirement_state"], "confidence": 0.92, "label": "Market Competition Level", "type": "select", "note": "High competition detected"}
+    elif any(w in lower_text for w in ["moderate competition", "some competition", "some competitors", "medium competition", "normal competition", "samanya", "fair competition"]):
+        extracted_fields["competition_level"] = {"value": "Moderate", "status": "extracted", "requirement_state": extracted_fields["competition_level"]["requirement_state"], "confidence": 0.90, "label": "Market Competition Level", "type": "select", "note": "Moderate competition detected"}
+    elif any(w in lower_text for w in ["low competition", "no competition", "no competitors", "few shops", "little competition", "minimal competition", "no other", "unique in the area"]):
+        extracted_fields["competition_level"] = {"value": "Low", "status": "extracted", "requirement_state": extracted_fields["competition_level"]["requirement_state"], "confidence": 0.90, "label": "Market Competition Level", "type": "select", "note": "Low competition detected"}
 
     # Summary Stats
     extracted_count = sum(1 for f in extracted_fields.values() if f["status"] == "extracted")

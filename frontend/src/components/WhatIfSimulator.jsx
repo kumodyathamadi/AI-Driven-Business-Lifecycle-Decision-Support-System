@@ -173,6 +173,26 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
     setErrorMsg(null);
   };
 
+  const handleApplyScenarioToSliders = (sim) => {
+    const mods = sim.modifications || {};
+    if (mods.available_capital_lkr !== undefined) {
+      setCustomCapital(parseFloat(mods.available_capital_lkr));
+    }
+    if (mods.monthly_budget_lkr !== undefined) {
+      setCustomBudget(parseFloat(mods.monthly_budget_lkr));
+    }
+    if (mods.expected_customers_per_day !== undefined) {
+      setCustomCustomers(parseInt(mods.expected_customers_per_day, 10));
+    }
+    if (mods.expected_price_lkr !== undefined) {
+      setCustomPrice(parseFloat(mods.expected_price_lkr));
+    }
+    const target = document.querySelector('.glass-card');
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   const scenarioFeasibility = activeCustomResult?.feasibility_analysis || null;
   const scenarioLabel = scenarioFeasibility?.predicted_label || baselineLabel;
   const scenarioScore = scenarioFeasibility 
@@ -668,46 +688,137 @@ export default function WhatIfSimulator({ scenarioData: propScenario, currentInp
         )}
       </div>
 
-      {/* Pre-calculated Research Scenarios */}
+      {/* Alternative Business Scenarios */}
       {what_if_simulations.length > 0 && (
         <div>
-          <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>
-            Pre-Evaluated Stress-Test Scenarios
-          </h4>
+          <div style={{ marginBottom: '1rem' }}>
+            <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Sparkles size={18} style={{ color: '#38bdf8' }} />
+              <span>Alternative Business Scenarios</span>
+            </h4>
+            <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: '0.25rem 0 0 0' }}>
+              See how common adjustments (like adding capital, taking a loan, or attracting more customers) would improve your business feasibility.
+            </p>
+          </div>
+
           <div className="grid-2" style={{ gap: '1rem' }}>
-            {what_if_simulations.map((sim, idx) => (
-              <div key={idx} className="glass-card" style={{ padding: '1rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.825rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-                  <span style={{ color: 'var(--text-primary)' }}>{sim.title}</span>
-                  <span style={{ 
-                    padding: '0.2rem 0.5rem', 
-                    borderRadius: '4px', 
-                    fontSize: '0.725rem', 
-                    fontFamily: 'monospace',
-                    background: sim.feasibility_probability_delta >= 0 ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                    color: sim.feasibility_probability_delta >= 0 ? '#4ade80' : '#fca5a5'
-                  }}>
-                    Delta: {(sim.feasibility_probability_delta * 100).toFixed(1)}%
-                  </span>
+            {what_if_simulations.map((sim, idx) => {
+              const deltas = sim.probability_deltas || {};
+              const dInfeas = Math.round((deltas.Infeasible || 0) * 1000) / 10;
+              const dFeas = Math.round((deltas.Feasible || 0) * 1000) / 10;
+              const riskDrop = Math.abs(dInfeas);
+              const isUpgraded = (baselineLabel === 'Infeasible' && sim.new_prediction !== 'Infeasible') ||
+                                 (baselineLabel === 'Conditionally Feasible' && sim.new_prediction === 'Feasible');
+
+              // Friendly explanation fallback if impact_summary contains raw statistical text
+              let friendlyText = sim.impact_summary;
+              if (!friendlyText || friendlyText.includes('Class probability shifts')) {
+                if (sim.title?.includes('Capital')) {
+                  friendlyText = `Adding 50% more capital extends your cash runway and buffers early operating expenses, reducing failure risk by ${riskDrop.toFixed(1)}%.`;
+                } else if (sim.title?.includes('Loan')) {
+                  friendlyText = `Securing an SME working loan provides immediate liquidity to purchase stock and manage daily cash flow, lowering risk by ${riskDrop.toFixed(1)}%.`;
+                } else if (sim.title?.includes('Footfall') || sim.title?.includes('Customer')) {
+                  friendlyText = `Attracting 30% more daily customers boosts daily sales revenue, trimming failure risk by ${riskDrop.toFixed(1)}%.`;
+                } else if (sim.title?.includes('Operating Cost') || sim.title?.includes('Budget')) {
+                  friendlyText = `Trimming monthly expenses by 20% lowers your daily break-even requirements, cutting risk by ${riskDrop.toFixed(1)}%.`;
+                } else if (dInfeas <= -1.0) {
+                  friendlyText = `This scenario reduces failure risk by ${riskDrop.toFixed(1)}% and improves overall business viability.`;
+                } else {
+                  friendlyText = `This adjustment helps stabilize operations, but additional capital or customer demand is recommended.`;
+                }
+              }
+
+              // Determine badge text and color based on real impact
+              let badgeText = 'Minimal Shift';
+              let badgeBg = 'rgba(100, 116, 139, 0.15)';
+              let badgeColor = '#94a3b8';
+              let badgeBorder = 'rgba(100, 116, 139, 0.3)';
+
+              if (dInfeas <= -1.0) {
+                badgeText = `-${riskDrop.toFixed(1)}% Failure Risk`;
+                badgeBg = 'rgba(34, 197, 94, 0.15)';
+                badgeColor = '#4ade80';
+                badgeBorder = 'rgba(34, 197, 94, 0.35)';
+              } else if (dFeas >= 1.0) {
+                badgeText = `+${dFeas.toFixed(1)}% Feasible`;
+                badgeBg = 'rgba(56, 189, 248, 0.15)';
+                badgeColor = '#38bdf8';
+                badgeBorder = 'rgba(56, 189, 248, 0.35)';
+              } else if (sim.viability_delta > 0.005) {
+                badgeText = `+${(sim.viability_delta * 100).toFixed(1)}% Viability`;
+                badgeBg = 'rgba(34, 197, 94, 0.15)';
+                badgeColor = '#4ade80';
+                badgeBorder = 'rgba(34, 197, 94, 0.35)';
+              }
+
+              return (
+                <div key={idx} className="glass-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '0.85rem' }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.65rem' }}>
+                      <span style={{ color: 'var(--text-primary)', fontSize: '0.92rem', fontWeight: 700, lineHeight: 1.3 }}>
+                        {sim.title}
+                      </span>
+                      <span style={{ 
+                        padding: '0.22rem 0.55rem', 
+                        borderRadius: '6px', 
+                        fontSize: '0.72rem', 
+                        fontWeight: 700,
+                        whiteSpace: 'nowrap',
+                        background: badgeBg,
+                        color: badgeColor,
+                        border: `1px solid ${badgeBorder}`
+                      }}>
+                        {badgeText}
+                      </span>
+                    </div>
+
+                    <p style={{ fontSize: '0.82rem', color: '#cbd5e1', lineHeight: 1.55, margin: 0 }}>
+                      {friendlyText}
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.75rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem' }}>
+                      <span style={{ color: '#94a3b8' }}>Expected Verdict:</span>
+                      <span style={{ 
+                        fontWeight: 700,
+                        fontSize: '0.75rem',
+                        padding: '0.2rem 0.6rem',
+                        borderRadius: '12px',
+                        background: sim.new_prediction === 'Feasible' ? 'rgba(34, 197, 94, 0.15)' : sim.new_prediction === 'Conditionally Feasible' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                        color: sim.new_prediction === 'Feasible' ? '#4ade80' : sim.new_prediction === 'Conditionally Feasible' ? '#fbbf24' : '#f87171',
+                        border: `1px solid ${sim.new_prediction === 'Feasible' ? 'rgba(34, 197, 94, 0.3)' : sim.new_prediction === 'Conditionally Feasible' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+                      }}>
+                        {isUpgraded ? `▲ Upgraded to ${sim.new_prediction}` : sim.new_prediction}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleApplyScenarioToSliders(sim)}
+                      className="btn btn-secondary"
+                      style={{ fontSize: '0.72rem', padding: '0.25rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                      title="Test this scenario in the interactive sliders above"
+                    >
+                      <Sliders size={12} />
+                      <span>Test in Simulator</span>
+                    </button>
+                  </div>
                 </div>
-                <p style={{ fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '0.5rem' }}>{sim.impact_summary}</p>
-                <div style={{ fontSize: '0.75rem', color: '#94a3b8', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)' }}>
-                  Predicted: <strong style={{ color: '#60a5fa' }}>{sim.new_prediction}</strong>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* Counterfactual Boundary Guidance */}
+      {/* Target Recommendation to Achieve Full Feasibility */}
       {counterfactual_boundary && counterfactual_boundary.recommendation && (
-        <div className="glass-card" style={{ border: '1px solid rgba(99, 102, 241, 0.4)', background: 'rgba(49, 46, 129, 0.25)' }}>
-          <h4 style={{ fontSize: '0.8rem', fontWeight: 700, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            <ShieldAlert size={18} />
-            Counterfactual Minimum Viability Boundary
+        <div className="glass-card" style={{ border: '1px solid rgba(99, 102, 241, 0.4)', background: 'rgba(49, 46, 129, 0.25)', padding: '1.25rem' }}>
+          <h4 style={{ fontSize: '0.82rem', fontWeight: 700, color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <Sparkles size={16} style={{ color: '#818cf8' }} />
+            Target Recommendation to Achieve Full Feasibility
           </h4>
-          <p style={{ fontSize: '0.825rem', color: '#e2e8f0', lineHeight: '1.6' }}>
+          <p style={{ fontSize: '0.84rem', color: '#e2e8f0', lineHeight: '1.6', margin: 0 }}>
             {counterfactual_boundary.recommendation}
           </p>
         </div>

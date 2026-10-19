@@ -986,6 +986,14 @@ export default function AiIntakeAssistant({
                 {/* Captured Fields List */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, overflowY: 'auto' }}>
                   
+                  {/* Business Name */}
+                  <div className={`live-fact-item ${prefilledFormData?.business_name ? 'extracted' : 'missing'}`}>
+                    <span className="live-fact-label">Business Name</span>
+                    <span className="live-fact-value">
+                      {prefilledFormData?.business_name || 'Not specified'}
+                    </span>
+                  </div>
+
                   {/* Category */}
                   <div className={`live-fact-item ${prefilledFormData?.business_category ? 'extracted' : 'missing'}`}>
                     <span className="live-fact-label">Category</span>
@@ -1045,10 +1053,12 @@ export default function AiIntakeAssistant({
                   </div>
 
                   {/* Staff Count */}
-                  <div className={`live-fact-item ${prefilledFormData?.available_staff_count ? 'extracted' : 'missing'}`}>
+                  <div className={`live-fact-item ${prefilledFormData?.available_staff_count !== '' && prefilledFormData?.available_staff_count !== null && prefilledFormData?.available_staff_count !== undefined ? 'extracted' : 'missing'}`}>
                     <span className="live-fact-label">Staff Count</span>
                     <span className="live-fact-value">
-                      {prefilledFormData?.available_staff_count ? `${prefilledFormData.available_staff_count} members` : 'Not specified'}
+                      {prefilledFormData?.available_staff_count !== '' && prefilledFormData?.available_staff_count !== null && prefilledFormData?.available_staff_count !== undefined
+                        ? (Number(prefilledFormData.available_staff_count) === 0 ? '0 (No staff / Solo)' : `${prefilledFormData.available_staff_count} members`)
+                        : 'Not specified'}
                     </span>
                   </div>
 

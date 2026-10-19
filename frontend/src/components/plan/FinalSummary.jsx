@@ -105,10 +105,6 @@ export default function FinalSummary({ profile, finalSummary: propSummary }) {
           <strong className="pillar-label amber">Main Constraint:</strong>
           <span className="pillar-text">{summary.main_operational_constraint}</span>
         </div>
-        <div className="bp-footer-pillar">
-          <strong className="pillar-label blue">Scenario Insight:</strong>
-          <span className="pillar-text">{summary.key_scenario_insight}</span>
-        </div>
       </div>
     </section>
   );
