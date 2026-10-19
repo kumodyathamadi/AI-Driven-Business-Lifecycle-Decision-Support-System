@@ -84,11 +84,11 @@ export default function PlanHeader({
             {planTypeTitle}
           </div>
 
-          <p className="bp-hero-subtitle">
-            {isAdopted 
-              ? `Personalized strategic roadmap tailored specifically to your chosen operational strategy: ${activeStrategy}. Resource setup, marketing targets, and financial runway reflect this execution path.`
-              : `Comprehensive AI-generated business plan synthesized from your operational inputs, machine learning feasibility drivers, and multi-criteria TOPSIS strategic evaluations.`}
-          </p>
+          {isAdopted && (
+            <p className="bp-hero-subtitle">
+              Personalized strategic roadmap tailored specifically to your chosen operational strategy: {activeStrategy}. Resource setup, marketing targets, and financial runway reflect this execution path.
+            </p>
+          )}
 
           <div className="bp-hero-meta-strip">
             <div className="bp-hero-meta-item">

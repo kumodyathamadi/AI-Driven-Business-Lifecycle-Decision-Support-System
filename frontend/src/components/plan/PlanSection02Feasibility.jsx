@@ -49,6 +49,26 @@ export default function PlanSection02Feasibility({
     constraints: (explainability.negative_drivers || []).slice(0, 3).map(d => `Constraint in ${d.feature}: ${d.feature_value || 'Requires attention'}`)
   };
 
+  const getFeasibilitySummary = () => {
+    const raw = sec02.feasibility_interpretation;
+    const isLegacyAcademic = !raw || 
+      raw.includes('The feasibility model developed in this study') || 
+      raw.includes('Predicted Class Probability:') ||
+      raw.includes('multi-dimensional baseline patterns');
+
+    if (!isLegacyAcademic && raw.trim().length > 0) {
+      return raw;
+    }
+
+    if (predLabel === 'Feasible') {
+      return "This business plan is considered Feasible because the venture demonstrates strong foundational readiness across capital, market demand, and operational setup. With sufficient initial capital to cover early operations without debt pressure, healthy local customer demand, and an operational team and equipment setup ready to support steady daily customer flow, the business is well-positioned for sustainable launch and steady cash flow.";
+    } else if (predLabel === 'Conditionally Feasible') {
+      return "This business plan is considered Conditionally Feasible: while the core business concept shows solid commercial promise, sustainable profitability will require disciplined management of monthly operating expenses, active customer retention, and maintaining a strict cash buffer during the initial launch phase.";
+    } else {
+      return "This business plan is considered Infeasible under its current assumptions due to significant working capital constraints, high monthly overhead relative to customer footfall, or operational resource gaps. Restructuring initial capital and operating costs is recommended before launching.";
+    }
+  };
+
   return (
     <PlanSection
       id="section-02"
@@ -72,10 +92,6 @@ export default function PlanSection02Feasibility({
                 Confidence: <strong className="bp-meta-strong">{assessment.confidence_percentage}</strong>
               </span>
             </div>
-          </div>
-
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)', fontStyle: 'italic', maxWidth: '340px', textAlign: 'right' }}>
-            Empirical baseline trained on 1,500+ verified Sri Lankan SME enterprise profiles.
           </div>
         </div>
 
@@ -124,7 +140,7 @@ export default function PlanSection02Feasibility({
 
         {/* 2.2 Feasibility Interpretation Narrative */}
         <div className="bp-interpretation-box">
-          {sec02.feasibility_interpretation || `The proposed business is assessed as '${predLabel}' under the evaluated financial, market, operational, and resource conditions.`}
+          {getFeasibilitySummary()}
         </div>
       </div>
 
@@ -146,18 +162,18 @@ export default function PlanSection02Feasibility({
             emptyMessage="No positive enablers captured"
           />
 
-          {/* Operational Risk Hurdles to Mitigate (-) in red */}
+          {/* Important Things to Consider */}
           <FactorList
-            title="Operational Risk Hurdles to Mitigate (-)"
+            title="Important Things to Consider"
             type="negative"
             items={shapData.negative_hurdles || []}
-            emptyMessage="No operational hurdles captured"
+            emptyMessage="No critical factors identified"
           />
         </div>
       </div>
 
-      {/* 2.4 Evidence-Based Key Insights (Key Strengths & Core Operational Constraints) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.75rem' }}>
+      {/* 2.4 Evidence-Based Key Insights (Key Strengths) */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
         <div className="bp-insights-box positive">
           <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#059669', fontWeight: 700, marginBottom: '0.35rem' }}>
             Key Strengths Identified
@@ -165,17 +181,6 @@ export default function PlanSection02Feasibility({
           <ul className="bp-insights-list" role="list">
             {(insights.strengths || []).map((s, idx) => (
               <li key={idx} role="listitem">{s}</li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="bp-insights-box negative">
-          <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#d97706', fontWeight: 700, marginBottom: '0.35rem' }}>
-            Core Operational Constraints
-          </div>
-          <ul className="bp-insights-list" role="list">
-            {(insights.constraints || []).map((c, idx) => (
-              <li key={idx} role="listitem">{c}</li>
             ))}
           </ul>
         </div>

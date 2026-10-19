@@ -1,5 +1,5 @@
 import React from 'react';
-import { Award, Check, Sparkles } from 'lucide-react';
+import { Award, Check, Sparkles, HelpCircle } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 
 export default function RankingTable({
@@ -23,7 +23,7 @@ export default function RankingTable({
             <tr>
               <th scope="col" style={{ width: '60px' }}>Rank</th>
               <th scope="col">Strategy Name</th>
-              <th scope="col">Focus Area</th>
+              <th scope="col">Primary Business Focus</th>
               <th scope="col" style={{ textAlign: 'right' }}>Target Capital</th>
               <th scope="col" style={{ textAlign: 'right' }}>TOPSIS Score</th>
               <th scope="col" style={{ textAlign: 'center', width: '120px' }}>Status</th>
@@ -58,8 +58,16 @@ export default function RankingTable({
                     )}
                   </td>
                   <td className="bp-topsis-focus">
-                    <span className="bp-focus-tag">
-                      {strat.strategic_focus || strat.focus_area || 'Operational Growth'}
+                    <span 
+                      className="bp-focus-tag" 
+                      style={{ 
+                        display: 'inline-block', 
+                        lineHeight: 1.35, 
+                        whiteSpace: 'normal',
+                        maxWidth: '240px'
+                      }}
+                    >
+                      {strat.strategic_focus || strat.focus_area || 'Core Operations & Growth'}
                     </span>
                   </td>
                   <td className="bp-topsis-capital" style={{ textAlign: 'right' }}>
@@ -98,8 +106,31 @@ export default function RankingTable({
         </table>
       </div>
 
-      <div className="bp-table-helper-note">
-        <strong>TOPSIS Score:</strong> Technique for Order of Preference by Similarity to Ideal Solution. Evaluates each strategy on a 0 to 1 closeness index across 5 research-weighted criteria.
+      <div 
+        className="bp-table-helper-note" 
+        style={{ 
+          marginTop: '0.9rem', 
+          padding: '0.85rem 1rem', 
+          background: 'rgba(2, 132, 199, 0.05)', 
+          border: '1px solid rgba(2, 132, 199, 0.18)', 
+          borderRadius: '8px' 
+        }}
+      >
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '0.4rem', 
+          fontSize: '0.86rem', 
+          fontWeight: 700, 
+          color: '#0284c7', 
+          marginBottom: '0.35rem' 
+        }}>
+          <HelpCircle size={15} />
+          <span>What is TOPSIS?</span>
+        </div>
+        <p style={{ margin: 0, fontSize: '0.8rem', lineHeight: 1.5, color: 'var(--text-secondary, #475569)' }}>
+          <strong>TOPSIS</strong> is a smart decision-making method used to fairly evaluate and rank strategies by comparing them to an ideal benchmark. It analyzes key business factors—such as required startup capital, customer demand, and ease of execution—to identify the strategy that gives you the best chance of success. A higher score (closer to <strong>1.0</strong>) represents a stronger, more well-rounded strategy for your business.
+        </p>
       </div>
     </div>
   );

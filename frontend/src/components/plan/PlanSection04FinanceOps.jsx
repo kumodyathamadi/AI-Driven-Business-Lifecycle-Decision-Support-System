@@ -265,11 +265,8 @@ export default function PlanSection04FinanceOps({
               <AlertCircle size={16} style={{ color: '#d97706' }} />
             )}
           </div>
-          <div className="bp-ops-tile-desc">
-            {ops.staffing.capacity_status}. {ops.staffing.recommended_approach}
-          </div>
-          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted, #64748b)', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem' }}>
-            Gap: <strong style={{ color: isStaffBalanced ? '#059669' : '#dc2626' }}>{ops.staffing.staffing_gap} personnel needed</strong>
+          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted, #64748b)', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem', marginTop: 'auto' }}>
+            Status: <strong style={{ color: isStaffBalanced ? '#059669' : '#dc2626' }}>{isStaffBalanced ? 'Staffing balanced' : `${ops.staffing.staffing_gap} personnel needed`}</strong>
           </div>
         </div>
 
@@ -283,11 +280,8 @@ export default function PlanSection04FinanceOps({
             <span>Score: {ops.equipment.available_equipment_score}</span>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)' }}>Target: {ops.equipment.required_equipment_score}</span>
           </div>
-          <div className="bp-ops-tile-desc">
-            {ops.equipment.readiness_status}. {ops.equipment.recommended_approach}
-          </div>
-          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted, #64748b)', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem' }}>
-            Focus: <strong className="bp-meta-strong">Prioritize essential commercial fixtures</strong>
+          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted, #64748b)', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem', marginTop: 'auto' }}>
+            Status: <strong className="bp-meta-strong">{ops.equipment.readiness_status || 'Equipment meets operating baseline'}</strong>
           </div>
         </div>
 
@@ -300,11 +294,8 @@ export default function PlanSection04FinanceOps({
           <div className="bp-ops-tile-val" style={{ color: '#059669' }}>
             Availability: {ops.suppliers.supplier_availability_score}
           </div>
-          <div className="bp-ops-tile-desc">
-            Regional Hub: {ops.suppliers.network_region}. {ops.suppliers.sourcing_approach}
-          </div>
-          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted, #64748b)', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem' }}>
-            Strategy: <strong className="bp-meta-strong">Dual-supplier contracts to avert bottlenecks</strong>
+          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted, #64748b)', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem', marginTop: 'auto' }}>
+            Hub: <strong className="bp-meta-strong">{ops.suppliers.network_region || 'Regional supplier ecosystem'}</strong>
           </div>
         </div>
       </div>

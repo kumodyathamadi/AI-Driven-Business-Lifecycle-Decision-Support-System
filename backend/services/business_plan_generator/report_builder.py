@@ -1285,7 +1285,7 @@ class BusinessPlanReportBuilder:
                 "phase_3": action_roadmap.get("phase_3", [])
             },
             "assumptions_and_considerations": [
-                "The feasibility model developed in this study was trained and evaluated using the dataset used for this research.",
+                "Feasibility assessments are based on multi-dimensional analysis of capital, market, and operational indicators.",
                 "Financial projections assume operating days and steady unit pricing based on provided business inputs.",
                 "Simplified budget coverage represents a capital-to-budget ratio and does not constitute a guaranteed survival period.",
                 "The entrepreneur should perform on-the-ground market and supplier validation before committing heavy capital investments."

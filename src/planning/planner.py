@@ -301,6 +301,26 @@ class PersonalizedPlanGenerator:
         # ---------------------------------------------------------------------
         # 5. SECTION 02 — AI FEASIBILITY & KEY INSIGHTS
         # ---------------------------------------------------------------------
+        if prediction == "Feasible":
+            feasibility_interpretation = (
+                "This business plan is considered Feasible because the venture demonstrates strong foundational readiness across capital, "
+                "market demand, and operational setup. With sufficient initial capital to cover early operations without debt pressure, "
+                "healthy local customer demand, and an operational team and equipment setup ready to support steady daily customer flow, "
+                "the business is well-positioned for sustainable launch and steady cash flow."
+            )
+        elif prediction == "Conditionally Feasible":
+            feasibility_interpretation = (
+                "This business plan is considered Conditionally Feasible: while the core business concept shows solid commercial promise, "
+                "sustainable profitability will require disciplined management of monthly operating expenses, active customer retention, "
+                "and maintaining a strict cash buffer during the initial launch phase."
+            )
+        else:
+            feasibility_interpretation = (
+                "This business plan is considered Infeasible under its current assumptions due to significant working capital constraints, "
+                "high monthly overhead relative to customer footfall, or operational resource gaps. Restructuring initial capital "
+                "and operating costs is recommended before launching."
+            )
+
         section_02 = {
             "section_number": "02",
             "section_title": "02 — AI Feasibility & Key Insights",
@@ -313,13 +333,7 @@ class PersonalizedPlanGenerator:
                 "confidence_percentage": f"{(confidence_score * 100):.1f}%",
                 "probabilities": probs
             },
-            "feasibility_interpretation": (
-                f"The proposed business is assessed as '{prediction}' (Predicted Class Probability: {confidence_score:.1%}). "
-                f"Class Probabilities: Feasible ({probs['Feasible']:.1%}), Conditionally Feasible ({probs['Conditionally Feasible']:.1%}), "
-                f"Infeasible ({probs['Infeasible']:.1%}). "
-                f"The feasibility model developed in this study was trained and evaluated using the dataset used for this research. "
-                f"This decision-support outcome reflects multi-dimensional baseline patterns across capital, market, and operational indicators."
-            ),
+            "feasibility_interpretation": feasibility_interpretation,
             "shap_explainability": {
                 "methodology_note": "SHAP (SHapley Additive exPlanations) attributes how each business parameter contributed to the model prediction relative to the model baseline without asserting causal proof.",
                 "positive_enablers": structured_positive,
@@ -338,7 +352,7 @@ class PersonalizedPlanGenerator:
             {"criterion": "Financial Viability", "weight": 0.25, "description": "Assessment of cash flow adequacy, capital runway, and budgetary resilience."},
             {"criterion": "Implementation Feasibility", "weight": 0.20, "description": "Ease of operational execution given entrepreneur experience and staffing."},
             {"criterion": "Market Demand Alignment", "weight": 0.25, "description": "Alignment with local consumer demand score and footfall potential."},
-            {"criterion": "Operational Risk", "weight": 0.15, "description": "Exposure to fixed-cost burn, supply dependencies, and resource hurdles."},
+            {"criterion": "Operational Stability", "weight": 0.15, "description": "Sustainability of operational workflows, supplier consistency, and core resource capacity."},
             {"criterion": "Resource Efficiency", "weight": 0.15, "description": "Ratio of revenue output to invested equipment and human capital."}
         ]
 
@@ -348,7 +362,7 @@ class PersonalizedPlanGenerator:
             "available_strategic_alternatives": ranked_strategies,
             "topsis_evaluation": {
                 "criteria_weights": topsis_criteria_weights,
-                "methodology_description": "Vector-normalized TOPSIS (Technique for Order of Preference by Similarity to Ideal Solution) ranking across 5 validated research criteria."
+                "methodology_description": "Vector-normalized TOPSIS ranking across balanced business performance criteria."
             },
             "strategy_ranking": [
                 {

@@ -3,11 +3,10 @@ import {
   ShieldCheck, 
   DollarSign, 
   Clock, 
-  Users, 
-  Target 
+  Users 
 } from 'lucide-react';
 import KpiTile from './KpiTile';
-import { formatCurrency, formatCustomersPerDay, formatConfidence } from '../../utils/formatters';
+import { formatCurrency, formatConfidence } from '../../utils/formatters';
 
 export default function PlanSnapshot({ profile, financialPlan = {}, marketingPlan = {} }) {
   const businessInput = profile?.business_input || {};
@@ -19,16 +18,6 @@ export default function PlanSnapshot({ profile, financialPlan = {}, marketingPla
   const targetCapital = financialPlan.available_capital_lkr ?? businessInput.available_capital_lkr ?? 0;
   const monthlyBudget = financialPlan.monthly_operating_budget_lkr ?? businessInput.monthly_budget_lkr ?? 0;
   const capitalRunway = financialPlan.capital_runway_months ?? 0;
-  
-  const targetCustomers = marketingPlan.target_daily_customers ?? businessInput.expected_customers_per_day ?? 0;
-  
-  // Clean demand score string or number
-  let demandVal = marketingPlan.demand_score;
-  if (!demandVal && businessInput.customer_demand_score !== undefined) {
-    demandVal = `${businessInput.customer_demand_score}/100`;
-  } else if (typeof demandVal === 'string' && demandVal.includes(':')) {
-    demandVal = demandVal.split(':').pop().trim();
-  }
 
   const availStaff = businessInput.available_staff_count ?? 1;
   const reqStaff = businessInput.required_staff_count ?? availStaff;
@@ -69,15 +58,6 @@ export default function PlanSnapshot({ profile, financialPlan = {}, marketingPla
         helper="Operating cash buffer"
         icon={Clock}
         variant="amber"
-      />
-
-      {/* 5. Customer Demand & Target Daily */}
-      <KpiTile
-        label="Target Daily Demand"
-        value={formatCustomersPerDay(targetCustomers)}
-        helper={`Demand Index: ${demandVal || 'Normal'}`}
-        icon={Target}
-        variant="purple"
       />
 
       {/* 6. Staffing Capacity */}

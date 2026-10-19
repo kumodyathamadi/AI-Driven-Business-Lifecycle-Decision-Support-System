@@ -39,14 +39,6 @@ export default function PlanSection03Recommendations({
 
   const isUserAdopted = hitl.is_user_selected;
 
-  const criteriaWeights = [
-    { criterion: 'Financial Viability', weight: '0.25 (25%)', description: 'Working capital adequacy, capital runway, and cash burn resilience.' },
-    { criterion: 'Implementation Feasibility', weight: '0.20 (20%)', description: 'Execution simplicity relative to team size and operational readiness.' },
-    { criterion: 'Market Demand Alignment', weight: '0.25 (25%)', description: 'Attunement with local customer demand score and target footfall.' },
-    { criterion: 'Operational Risk (Cost)', weight: '0.15 (15%)', description: 'Cost criterion: exposure to fixed burn and supply vulnerabilities.' },
-    { criterion: 'Resource Efficiency', weight: '0.15 (15%)', description: 'Revenue generation efficiency per unit of equipment and staff.' }
-  ];
-
   return (
     <PlanSection
       id="section-03"
@@ -88,11 +80,11 @@ export default function PlanSection03Recommendations({
         </div>
       </div>
 
-      {/* 3.3 TOPSIS Strategy Ranking Table with Highlighted Top Row */}
+      {/* 3.2 TOPSIS Strategy Ranking Table with Highlighted Top Row */}
       <div className="bp-narrative-card">
         <div style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#0284c7', fontWeight: 700, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <Award size={15} />
-          <span>3.3 TOPSIS Multi-Criteria Decision Evaluation & Strategy Ranking</span>
+          <span>3.2 TOPSIS Strategy Evaluation & Ranking</span>
         </div>
 
         <RankingTable
@@ -100,26 +92,6 @@ export default function PlanSection03Recommendations({
           selectedStrategyId={hitl.selected_strategy_id}
           selectedStrategyName={hitl.selected_strategy_name}
         />
-      </div>
-
-      {/* 3.2 Research Evaluation Criteria & Weights Cards */}
-      <div className="bp-criteria-container">
-        <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--text-muted, #64748b)', fontWeight: 700, marginBottom: '0.5rem' }}>
-          3.2 Research Evaluation Criteria & Vector Normalization Weights
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.65rem' }}>
-          {criteriaWeights.map((cw, idx) => (
-            <div key={idx} className="bp-criteria-card">
-              <div className="bp-criteria-card-head">
-                <span>{cw.criterion}</span>
-                <span style={{ color: '#0284c7', fontWeight: 700 }}>{cw.weight}</span>
-              </div>
-              <div className="bp-criteria-card-desc">
-                {cw.description}
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
     </PlanSection>
   );
