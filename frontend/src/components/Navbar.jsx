@@ -7,10 +7,52 @@ import { User, Sun, Moon, ChevronDown, Check, Shield } from 'lucide-react';
 
 export default function Navbar({ currentProfile }) {
   const [apiStatus, setApiStatus] = useState({ online: false, loading: true });
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode, toggleTheme, setDarkMode, setLightMode } = useTheme();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef(null);
   const userName = 'SME Decision Maker';
+
+  const handleSetLight = (e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    try {
+      document.documentElement.setAttribute('data-theme', 'light');
+      document.body.setAttribute('data-theme', 'light');
+      document.documentElement.style.colorScheme = 'light';
+      document.documentElement.classList.remove('theme-dark', 'dark');
+      document.documentElement.classList.add('theme-light', 'light');
+      document.body.classList.remove('theme-dark', 'dark');
+      document.body.classList.add('theme-light', 'light');
+      localStorage.setItem('sme360_theme', 'light');
+    } catch (err) {}
+    if (typeof setLightMode === 'function') setLightMode();
+    else if (typeof toggleTheme === 'function' && isDarkMode) toggleTheme();
+  };
+
+  const handleSetDark = (e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    try {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.body.setAttribute('data-theme', 'dark');
+      document.documentElement.style.colorScheme = 'dark';
+      document.documentElement.classList.remove('theme-light', 'light');
+      document.documentElement.classList.add('theme-dark', 'dark');
+      document.body.classList.remove('theme-light', 'light');
+      document.body.classList.add('theme-dark', 'dark');
+      localStorage.setItem('sme360_theme', 'dark');
+    } catch (err) {}
+    if (typeof setDarkMode === 'function') setDarkMode();
+    else if (typeof toggleTheme === 'function' && !isDarkMode) toggleTheme();
+  };
+
+  const handleToggle = (e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const current = document.documentElement.getAttribute('data-theme') || (isDarkMode ? 'dark' : 'light');
+    if (current === 'dark') {
+      handleSetLight(e);
+    } else {
+      handleSetDark(e);
+    }
+  };
 
   useEffect(() => {
     async function verifyHealth() {
@@ -90,53 +132,112 @@ export default function Navbar({ currentProfile }) {
           </div>
         )}
 
-        {/* Pill-shaped Dark/Light Theme Toggle */}
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className="theme-toggle-pill"
-          title={`Switch to ${isDarkMode ? 'Light' : 'Dark'} mode`}
-          aria-label="Toggle theme mode"
+        {/* Segmented Dark/Light Theme Switcher */}
+        <div
+          className="theme-switcher-group"
+          role="radiogroup"
+          aria-label="Theme mode selector"
+          onClick={handleToggle}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '0.35rem',
-            background: isDarkMode ? 'rgba(15, 23, 42, 0.85)' : '#ffffff',
-            border: isDarkMode ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid #cbd5e1',
+            background: isDarkMode ? 'rgba(15, 23, 42, 0.9)' : '#f1f5f9',
+            border: isDarkMode ? '1px solid rgba(59, 130, 246, 0.35)' : '1px solid #cbd5e1',
             borderRadius: '24px',
-            padding: '0.28rem 0.55rem',
+            padding: '2px',
             cursor: 'pointer',
-            boxShadow: isDarkMode ? '0 2px 8px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
+            boxShadow: isDarkMode
+              ? '0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(0, 0, 0, 0.3)'
+              : '0 2px 8px rgba(0, 0, 0, 0.06), inset 0 1px 2px rgba(0, 0, 0, 0.04)',
             transition: 'all 0.2s ease',
           }}
         >
-          <Sun size={13} style={{ color: isDarkMode ? '#64748b' : '#f59e0b', transition: 'color 0.2s' }} />
-          <div
+          {/* Explicit Light Mode Trigger */}
+          <button
+            type="button"
+            onClick={handleSetLight}
+            title="Switch to Light mode"
+            aria-label="Light mode"
+            aria-checked={!isDarkMode}
+            role="radio"
             style={{
-              width: '26px',
-              height: '14px',
-              borderRadius: '10px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '4px 6px',
+              borderRadius: '20px',
+              border: 'none',
+              cursor: 'pointer',
+              background: !isDarkMode ? '#ffffff' : 'transparent',
+              color: !isDarkMode ? '#d97706' : '#64748b',
+              boxShadow: !isDarkMode ? '0 1px 4px rgba(0, 0, 0, 0.12)' : 'none',
+              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          >
+            <Sun size={14} style={{ color: !isDarkMode ? '#f59e0b' : '#64748b', transition: 'color 0.2s' }} />
+          </button>
+
+          {/* Interactive Switch Pill */}
+          <button
+            type="button"
+            onClick={handleToggle}
+            className="theme-toggle-pill"
+            title={isDarkMode ? 'Currently Dark. Click to switch to Light mode' : 'Currently Light. Click to switch to Dark mode'}
+            aria-label="Toggle theme mode"
+            style={{
+              width: '32px',
+              height: '18px',
+              borderRadius: '12px',
               background: isDarkMode ? '#1e293b' : '#3b82f6',
+              border: isDarkMode ? '1px solid rgba(59, 130, 246, 0.5)' : '1px solid #2563eb',
               position: 'relative',
-              transition: 'background 0.2s',
+              cursor: 'pointer',
+              padding: 0,
+              margin: '0 2px',
+              boxShadow: isDarkMode ? 'inset 0 1px 3px rgba(0, 0, 0, 0.5)' : 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
+              transition: 'all 0.25s ease',
             }}
           >
             <div
               style={{
-                width: '10px',
-                height: '10px',
+                width: '12px',
+                height: '12px',
                 borderRadius: '50%',
                 background: '#ffffff',
                 position: 'absolute',
                 top: '2px',
-                left: isDarkMode ? '14px' : '2px',
-                transition: 'left 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.4)',
+                left: isDarkMode ? '16px' : '2px',
+                transition: 'left 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+                boxShadow: '0 1px 4px rgba(0, 0, 0, 0.35)',
               }}
             />
-          </div>
-          <Moon size={13} style={{ color: isDarkMode ? '#38bdf8' : '#64748b', transition: 'color 0.2s' }} />
-        </button>
+          </button>
+
+          {/* Explicit Dark Mode Trigger */}
+          <button
+            type="button"
+            onClick={handleSetDark}
+            title="Switch to Dark mode"
+            aria-label="Dark mode"
+            aria-checked={isDarkMode}
+            role="radio"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '4px 6px',
+              borderRadius: '20px',
+              border: 'none',
+              cursor: 'pointer',
+              background: isDarkMode ? '#1e293b' : 'transparent',
+              color: isDarkMode ? '#38bdf8' : '#94a3b8',
+              boxShadow: isDarkMode ? '0 1px 4px rgba(0, 0, 0, 0.3)' : 'none',
+              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          >
+            <Moon size={14} style={{ color: isDarkMode ? '#38bdf8' : '#94a3b8', transition: 'color 0.2s' }} />
+          </button>
+        </div>
 
         {/* User Profile Dropdown */}
         <div ref={profileMenuRef} style={{ position: 'relative' }}>

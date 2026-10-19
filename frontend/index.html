@@ -13,6 +13,25 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap"
     rel="stylesheet">
+  <script>
+    (function() {
+      try {
+        var savedTheme = localStorage.getItem('sme360_theme');
+        var theme = savedTheme === 'light' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.style.colorScheme = theme;
+        if (theme === 'dark') {
+          document.documentElement.classList.add('theme-dark', 'dark');
+          document.documentElement.classList.remove('theme-light', 'light');
+        } else {
+          document.documentElement.classList.add('theme-light', 'light');
+          document.documentElement.classList.remove('theme-dark', 'dark');
+        }
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
 </head>
 
 <body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-blue-500 selection:text-white">
