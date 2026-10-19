@@ -655,8 +655,35 @@ def extract_business_profile_from_text(
     profile["decision_system_reference"] = decision_ref
 
     # 12. Component 2 Operational Compliance Conditions
-    profile["legal_form"] = "sole_proprietorship"
-    profile["ownership"] = "sole_proprietorship"
+    # Smart legal form detection from PDF text (not hardcoded)
+    detected_legal_form = "sole_proprietorship"  # sensible fallback
+    _lf_text = full_text.lower()
+
+    # Pattern 1: Explicit label extraction (e.g. "Legal Form: Partnership")
+    _lf_match = re.search(
+        r"(?:legal\s+form|ownership\s+structure|business\s+structure|entity\s+type|registration\s+type)"
+        r"\s*[:\-]\s*([^\n\r,\.\|]{3,60})",
+        full_text,
+        re.IGNORECASE,
+    )
+    if _lf_match:
+        _lf_raw = _lf_match.group(1).strip().lower()
+        if any(k in _lf_raw for k in ["private limited", "pvt ltd", "pvt. ltd", "(pvt)", "company", "incorporated", "inc."]):
+            detected_legal_form = "private_limited"
+        elif any(k in _lf_raw for k in ["partnership", "partners", "co-founder", "joint venture"]):
+            detected_legal_form = "partnership"
+        elif any(k in _lf_raw for k in ["sole", "proprietor", "individual", "single owner"]):
+            detected_legal_form = "sole_proprietorship"
+
+    # Pattern 2: Keyword scan across the full document
+    if detected_legal_form == "sole_proprietorship":
+        if any(k in _lf_text for k in ["private limited company", "(pvt) ltd", "pvt. ltd.", "private ltd", "registered as a company"]):
+            detected_legal_form = "private_limited"
+        elif any(k in _lf_text for k in ["partnership agreement", "business partners", "co-founders", "joint venture", "partnership firm"]):
+            detected_legal_form = "partnership"
+
+    profile["legal_form"] = detected_legal_form
+    profile["ownership"] = detected_legal_form
     
     # Food checks
     profile["handles_food"] = (business_type == "food")
