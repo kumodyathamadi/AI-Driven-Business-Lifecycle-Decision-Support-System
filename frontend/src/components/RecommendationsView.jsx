@@ -9,13 +9,16 @@ import {
   CheckCircle2, 
   ArrowRight, 
   FileText, 
-  Lightbulb, 
   Award, 
-  Info 
+  BookOpen, 
+  Eye
 } from 'lucide-react';
-import StrategyCard from './StrategyCard';
+import SegmentedControl from './strategy/SegmentedControl';
+import StrategyList from './strategy/StrategyList';
+import StrategyDetail from './strategy/StrategyDetail';
+import CompareTable from './strategy/CompareTable';
+import CriteriaCard from './strategy/CriteriaCard';
 import StrategyTradeoffModal from './strategy/StrategyTradeoffModal';
-import { EmptyState } from './common/EmptyState';
 import { adoptStrategy } from '../services/api';
 import { useToast } from './common/Toast';
 
@@ -27,6 +30,13 @@ export default function RecommendationsView({ profile: propProfile }) {
 
   const profile = propProfile || ctx?.profile;
 
+  // View state: 'explore' (master-detail) vs 'compare' (side-by-side table)
+  const [viewMode, setViewMode] = useState('explore');
+
+  // Academic methodology collapsed state
+  const [showMethodology, setShowMethodology] = useState(false);
+
+  // Adoption modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [targetStrategy, setTargetStrategy] = useState(null);
   const [isAdopting, setIsAdopting] = useState(false);
@@ -47,14 +57,16 @@ export default function RecommendationsView({ profile: propProfile }) {
   const activeStrategy = strategies.find(s => s.strategy_id === activeStrategyId) || strategies[0];
   const isCustomAdopted = Boolean(stratRecs.selected_strategy_id && stratRecs.selected_strategy_id !== topsisRanking.top_recommended_id);
 
+  // Selected strategy for the Explore view
+  const [selectedStrategyId, setSelectedStrategyId] = useState(() => {
+    return activeStrategyId || strategies[0]?.strategy_id || null;
+  });
+
+  const selectedIndex = strategies.findIndex(s => (s.strategy_id || '') === selectedStrategyId);
+  const currentStrategy = selectedIndex >= 0 ? strategies[selectedIndex] : strategies[0];
+
   const businessName = profile?.business_name || profile?.business_input?.business_name || ctx?.businessName;
   const district = profile?.business_input?.district || 'Colombo';
-
-  // TOPSIS Score: display the active strategy's own score when custom-adopted, or AI #1 score
-  const rawScore = isCustomAdopted
-    ? (activeStrategy?.topsis_score ?? topsisRanking.top_topsis_score ?? 0.70)
-    : (topsisRanking.top_topsis_score ?? activeStrategy?.topsis_score ?? 0.70);
-  const formattedScore = Math.round(rawScore <= 1 ? rawScore * 100 : rawScore);
 
   // Decision Criteria
   const evaluationCriteria = (topsisRanking.evaluation_criteria && topsisRanking.evaluation_criteria.length > 0)
@@ -108,47 +120,61 @@ export default function RecommendationsView({ profile: propProfile }) {
     navigate(`/businesses/${id}/scenarios?${query}`, { state: { prefillStrategy: strategy } });
   };
 
+  const handlePrevStrategy = () => {
+    if (selectedIndex > 0) {
+      setSelectedStrategyId(strategies[selectedIndex - 1]?.strategy_id);
+    }
+  };
+
+  const handleNextStrategy = () => {
+    if (selectedIndex < strategies.length - 1) {
+      setSelectedStrategyId(strategies[selectedIndex + 1]?.strategy_id);
+    }
+  };
+
+  const handleSelectFromCompare = (strategyId) => {
+    setSelectedStrategyId(strategyId);
+    setViewMode('explore');
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div className="strategies-redesign-container">
       
       {/* Page Header */}
-      <div>
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Sparkles size={22} style={{ color: '#c084fc' }} />
-          Strategic Recommendations & Evaluated Options {businessName ? `for ${businessName}` : ''}
-        </h3>
-        <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginTop: '0.25rem', lineHeight: 1.5 }}>
-          Contextual strategic directions evaluated via Multi-Criteria TOPSIS decision analysis to optimize feasibility, profitability, and operational scale.
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <Sparkles size={24} style={{ color: 'var(--accent-blue, #3b82f6)' }} />
+          <span>Strategic Recommendations & Evaluated Options {businessName ? `for ${businessName}` : ''}</span>
+        </h2>
+        <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
+          Compare evaluated business directions ranked by Multi-Criteria TOPSIS analysis to maximize profitability, manage cash runway, and reduce risk.
         </p>
       </div>
 
       {/* Just Adopted Success Notification Banner */}
       {justAdopted && (
-        <div 
-          style={{
-            background: 'linear-gradient(135deg, rgba(6, 78, 59, 0.6), rgba(15, 23, 42, 0.9))',
-            border: '1.5px solid rgba(16, 185, 129, 0.7)',
-            borderRadius: '12px',
-            padding: '1rem 1.25rem',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '1rem',
-            boxShadow: '0 4px 20px rgba(16, 185, 129, 0.25)',
-            animation: 'fadeIn 0.3s ease'
-          }}
-        >
+        <div style={{
+          background: 'rgba(16, 185, 129, 0.15)',
+          border: '1.5px solid #10b981',
+          borderRadius: '12px',
+          padding: '1rem 1.25rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          boxShadow: '0 2px 10px rgba(16, 185, 129, 0.15)'
+        }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#34d399' }}>
-              <CheckCircle2 size={20} />
+            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981' }}>
+              <CheckCircle2 size={22} />
             </div>
             <div>
-              <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              <div style={{ fontSize: '0.925rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                 Business Plan Successfully Regenerated!
               </div>
-              <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '0.15rem' }}>
-                The operational plan, financial runway, and 3-phase action roadmap are now calibrated specifically for <strong style={{ color: '#34d399' }}>{justAdopted}</strong>.
+              <div style={{ fontSize: '0.8rem', color: '#34d399', marginTop: '0.15rem' }}>
+                The operational plan, financial runway, and 3-phase action roadmap are now calibrated for <strong>{justAdopted}</strong>.
               </div>
             </div>
           </div>
@@ -156,17 +182,17 @@ export default function RecommendationsView({ profile: propProfile }) {
           <Link
             to={`/businesses/${id}/plan`}
             style={{
-              background: 'linear-gradient(135deg, #059669, #10b981)',
+              padding: '0.5rem 1rem',
+              background: '#059669',
               color: '#ffffff',
-              padding: '0.55rem 1.15rem',
-              borderRadius: '8px',
               fontSize: '0.8rem',
               fontWeight: 700,
+              borderRadius: '8px',
               textDecoration: 'none',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.45rem',
-              boxShadow: '0 2px 10px rgba(16, 185, 129, 0.4)'
+              gap: '0.4rem',
+              boxShadow: '0 2px 6px rgba(5, 150, 105, 0.3)'
             }}
           >
             <FileText size={15} />
@@ -176,179 +202,273 @@ export default function RecommendationsView({ profile: propProfile }) {
         </div>
       )}
 
-      {/* Active Strategic Pathway Banner */}
-      {activeStrategy && (
-        <div 
-          className="glass-card"
-          style={{
-            background: isCustomAdopted 
-              ? 'linear-gradient(135deg, rgba(6, 78, 59, 0.4), rgba(15, 23, 42, 0.85))'
-              : 'linear-gradient(135deg, rgba(30, 58, 138, 0.4), rgba(15, 23, 42, 0.85))',
-            border: isCustomAdopted 
-              ? '1px solid rgba(16, 185, 129, 0.5)' 
-              : '1px solid rgba(59, 130, 246, 0.5)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '1.25rem',
-            padding: '1.25rem 1.5rem'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      {/* 1. Slim Recommendation Banner */}
+      {aiTopStrategy && (
+        <div className="strategy-slim-banner">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
             <div style={{
-              width: '46px',
-              height: '46px',
-              borderRadius: '12px',
-              background: isCustomAdopted ? 'rgba(16, 185, 129, 0.2)' : 'rgba(59, 130, 246, 0.2)',
-              border: isCustomAdopted ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid rgba(59, 130, 246, 0.5)',
+              width: '42px',
+              height: '42px',
+              borderRadius: '10px',
+              background: 'rgba(59, 130, 246, 0.15)',
+              border: '1px solid rgba(59, 130, 246, 0.35)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: isCustomAdopted ? '#34d399' : '#60a5fa'
+              color: '#60a5fa',
+              flexShrink: 0
             }}>
-              {isCustomAdopted ? <CheckCircle2 size={24} /> : <Award size={24} />}
+              <Award size={22} />
             </div>
             <div>
-              <span style={{ 
-                fontSize: '0.72rem', 
-                color: isCustomAdopted ? '#6ee7b7' : '#93c5fd', 
-                textTransform: 'uppercase', 
-                letterSpacing: '0.6px', 
-                fontWeight: 700 
-              }}>
-                {isCustomAdopted ? 'Entrepreneur-Selected Active Strategy' : 'AI-Recommended Primary Strategy'}
-              </span>
-              <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0.15rem 0 0.15rem 0' }}>
-                {activeStrategy.strategy_name}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', color: '#60a5fa' }}>
+                  AI-Recommended Primary Strategy
+                </span>
+                <span style={{
+                  padding: '0.1rem 0.45rem',
+                  borderRadius: '4px',
+                  fontSize: '0.68rem',
+                  fontWeight: 700,
+                  background: 'rgba(59, 130, 246, 0.2)',
+                  color: '#93c5fd'
+                }}>
+                  #1 Ranked
+                </span>
+              </div>
+              <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0.15rem 0 0.15rem 0' }}>
+                {aiTopStrategy.strategy_name}
               </h4>
-              <span style={{ fontSize: '0.78rem', color: '#cbd5e1' }}>
-                Strategic Focus: <strong style={{ color: '#93c5fd' }}>{activeStrategy.strategic_focus}</strong>
-              </span>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>
+                Strategic Focus: <strong style={{ color: 'var(--text-primary)' }}>{aiTopStrategy.strategic_focus}</strong>
+              </p>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
             <div style={{ textAlign: 'right' }}>
-              <span style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Decision Score
-              </span>
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: isCustomAdopted ? '#34d399' : '#60a5fa', fontFamily: 'monospace' }}>
-                {formattedScore}/100
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Decision Score</span>
+              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#3b82f6', fontFamily: 'monospace', lineHeight: 1 }}>
+                {Math.round((aiTopStrategy.topsis_score <= 1 ? aiTopStrategy.topsis_score * 100 : aiTopStrategy.topsis_score) || 86)}/100
               </div>
             </div>
 
             <Link
               to={`/businesses/${id}/plan`}
               style={{
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                color: '#e2e8f0',
-                padding: '0.55rem 1.1rem',
-                borderRadius: '8px',
+                padding: '0.55rem 1rem',
                 fontSize: '0.8rem',
                 fontWeight: 600,
+                color: 'var(--text-primary)',
+                background: 'var(--bg-card-solid)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
                 textDecoration: 'none',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                transition: 'all 0.2s ease'
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
               }}
             >
-              <FileText size={15} />
-              <span>View Business Plan</span>
-              <ArrowRight size={14} />
+              <FileText size={14} style={{ color: 'var(--text-muted)' }} />
+              <span>View in Plan</span>
+              <ArrowRight size={13} />
             </Link>
           </div>
         </div>
       )}
 
-      {/* Section 1: Evaluated Strategic Options (Ranked Order) */}
-      <div id="recommendations" className="workspace-scroll-section" style={{ scrollMarginTop: '150px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <div>
-            <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, flexWrap: 'wrap' }}>
-              <Layers size={18} style={{ color: '#60a5fa' }} />
-              <span>Evaluated Strategic Pathways</span>
-              <span className="tab-pill-badge tab-pill-blue" style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem' }}>TOPSIS</span>
-            </h4>
-            <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '0.2rem 0 0 0' }}>
-              Review evaluated candidate pathways below. Click <strong>Adopt This Strategy</strong> to adapt your business plan, or <strong>Simulate in What-If</strong> to test parameters.
-            </p>
-          </div>
-        </div>
-
-        {strategies.length === 0 ? (
-          <EmptyState 
-            icon={Lightbulb}
-            title="No Specific Recommendations Available"
-            description="The AI recommendation engine did not find specific strategy candidates for this profile configuration."
-          />
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {strategies.map((strat, idx) => (
-              <StrategyCard 
-                key={strat.strategy_id || idx} 
-                strategy={strat} 
-                rank={strat.rank || idx + 1}
-                isActive={strat.strategy_id === activeStrategyId || strat.strategy_name === activeStrategy?.strategy_name}
-                isCustomAdopted={isCustomAdopted}
-                onAdopt={handleOpenAdopt}
-                onSimulate={handleSimulate}
-                isAdopting={isAdopting}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Section 2: Decision Matrix Evaluation Criteria & Weights */}
-      <div id="options" className="glass-card workspace-scroll-section" style={{ scrollMarginTop: '150px' }}>
-        <div style={{ marginBottom: '1rem' }}>
-          <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-            <BarChart2 size={18} style={{ color: '#c084fc' }} />
-            <span>Decision Matrix Evaluation Criteria & Model Weights</span>
+      {/* 2. View Switch: Explore One by One vs Compare All */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', paddingTop: '0.5rem' }}>
+        <div>
+          <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+            Evaluated Strategic Directions
           </h4>
-          <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: '0.2rem 0 0 0' }}>
-            The TOPSIS multi-criteria algorithm evaluates each operational pathway across these weighted objectives:
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0.15rem 0 0 0' }}>
+            Switch between in-depth exploration and side-by-side comparison.
           </p>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th>Criterion</th>
-                <th>Attribute Type</th>
-                <th>Assigned Weight</th>
-                <th>Evaluation Impact</th>
-              </tr>
-            </thead>
-            <tbody>
-              {evaluationCriteria.map((c, idx) => (
-                <tr key={idx}>
-                  <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{c.criterion}</td>
-                  <td>
-                    <span style={{ 
-                      padding: '0.2rem 0.6rem', 
-                      borderRadius: '4px', 
-                      fontSize: '0.725rem', 
-                      fontWeight: 700,
-                      background: c.type === 'Benefit' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                      color: c.type === 'Benefit' ? '#4ade80' : '#fca5a5'
-                    }}>
-                      {c.type}
-                    </span>
-                  </td>
-                  <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#60a5fa' }}>
-                    {(c.weight * 100).toFixed(0)}%
-                  </td>
-                  <td style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{c.description}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <SegmentedControl
+          value={viewMode}
+          onChange={setViewMode}
+          options={[
+            { id: 'explore', label: 'Explore one by one', icon: Eye },
+            { id: 'compare', label: 'Compare all', icon: Layers }
+          ]}
+        />
+      </div>
+
+      {/* 3. Explore View (Master-Detail) */}
+      {viewMode === 'explore' && (
+        <div id="recommendations" className="strategy-explore-grid">
+          {/* Left Master List */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 0.25rem' }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
+                Strategy Options ({strategies.length})
+              </span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                Ranked by score
+              </span>
+            </div>
+
+            <StrategyList
+              strategies={strategies}
+              selectedId={selectedStrategyId}
+              activeStrategyId={activeStrategyId}
+              onSelect={setSelectedStrategyId}
+            />
+          </div>
+
+          {/* Right Detail Panel */}
+          <div>
+            <StrategyDetail
+              strategy={currentStrategy}
+              strategies={strategies}
+              currentIndex={selectedIndex}
+              totalCount={strategies.length}
+              isActiveInPlan={currentStrategy?.strategy_id === activeStrategyId}
+              isTopRanked={selectedIndex === 0}
+              isAdopting={isAdopting}
+              onAdopt={handleOpenAdopt}
+              onSimulate={handleSimulate}
+              onPrev={handlePrevStrategy}
+              onNext={handleNextStrategy}
+            />
+          </div>
         </div>
+      )}
+
+      {/* 4. Compare View (Side-by-Side Table) */}
+      {viewMode === 'compare' && (
+        <div id="recommendations">
+          <CompareTable
+            strategies={strategies}
+            activeStrategyId={activeStrategyId}
+            isAdopting={isAdopting}
+            onSelectStrategy={handleSelectFromCompare}
+            onAdopt={handleOpenAdopt}
+            onSimulate={handleSimulate}
+          />
+        </div>
+      )}
+
+      {/* 5. Decision Matrix Criteria Cards */}
+      <div id="options" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-color)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div>
+            <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <BarChart2 size={18} style={{ color: 'var(--accent-blue, #3b82f6)' }} />
+              <span>Decision Matrix Evaluation Criteria & Weights</span>
+            </h4>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0.2rem 0 0 0' }}>
+              How the AI evaluates and ranks every strategic pathway for small businesses in Sri Lanka.
+            </p>
+          </div>
+
+          {/* Legend */}
+          <div style={{
+            padding: '0.35rem 0.75rem',
+            background: 'var(--bg-card-solid)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '8px',
+            fontSize: '0.75rem',
+            color: 'var(--text-secondary)',
+            fontWeight: 500
+          }}>
+            <strong style={{ color: 'var(--text-primary)' }}>Legend: </strong> Cost: lower is better. Benefit: higher is better.
+          </div>
+        </div>
+
+        {/* Criteria Cards Grid */}
+        <div className="strategy-criteria-grid">
+          {evaluationCriteria.map((criterion, idx) => (
+            <CriteriaCard key={idx} criterion={criterion} />
+          ))}
+        </div>
+      </div>
+
+      {/* 6. Collapsed Academic & Research Methodology Panel */}
+      <div style={{
+        background: 'var(--bg-card-solid)',
+        border: '1px solid var(--border-color)',
+        borderRadius: '12px',
+        overflow: 'hidden',
+        marginTop: '0.5rem'
+      }}>
+        <button
+          type="button"
+          onClick={() => setShowMethodology(!showMethodology)}
+          aria-expanded={showMethodology}
+          style={{
+            width: '100%',
+            padding: '1rem 1.25rem',
+            textAlign: 'left',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <BookOpen size={16} style={{ color: 'var(--text-muted)' }} />
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              Academic & Research Methodology: TOPSIS Multi-Criteria Decision Science
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            <span>{showMethodology ? 'Collapse details' : 'View methodology'}</span>
+            {showMethodology ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </div>
+        </button>
+
+        {showMethodology && (
+          <div style={{
+            padding: '1.25rem',
+            borderTop: '1px solid var(--border-color)',
+            background: 'var(--bg-dark, #090d16)',
+            fontSize: '0.825rem',
+            color: 'var(--text-secondary)',
+            lineHeight: 1.6,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.75rem'
+          }}>
+            <p style={{ margin: 0 }}>
+              The <strong>TOPSIS</strong> (Technique for Order of Preference by Similarity to Ideal Solution) algorithm is a multi-criteria decision analysis method originally developed by Hwang and Yoon (1981). In SME360 AI, it calculates an objective ranking index based on the geometric distance of each strategy to an ideal best benchmark and an ideal worst benchmark.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem', paddingTop: '0.5rem' }}>
+              <div style={{ padding: '0.85rem', background: 'var(--bg-card-solid)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '0.25rem' }}>1. Vector Normalization</strong>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
+                  Normalizes disparate units (LKR capital, monthly rupees, customer volume, risk points) onto a standardized dimensionless scale between 0.0 and 1.0.
+                </p>
+              </div>
+
+              <div style={{ padding: '0.85rem', background: 'var(--bg-card-solid)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '0.25rem' }}>2. Weighted Ideal Points</strong>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
+                  Calculates the Positive Ideal Solution (A+) maximizing benefits while minimizing costs, and the Negative Ideal Solution (A-) minimizing benefits while maximizing costs.
+                </p>
+              </div>
+
+              <div style={{ padding: '0.85rem', background: 'var(--bg-card-solid)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '0.25rem' }}>3. Relative Closeness (Ci*)</strong>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
+                  Computes Euclidean distances (S+ and S-) and derives the closeness index: Ci* = S- / (S+ + S-). Strategies with Ci* closer to 1.0 rank highest.
+                </p>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '0.5rem 0 0 0', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)' }}>
+              * The analytical ranking remains preserved for transparency while entrepreneurs maintain complete freedom to select their preferred operational roadmap.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Trade-Off & Risk Advisory Modal */}

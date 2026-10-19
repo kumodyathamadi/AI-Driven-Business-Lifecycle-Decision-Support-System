@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Modern Dark Vanilla CSS Design System for SME Decision Support System */
 
 :root {
@@ -6713,3 +6717,344 @@ body[data-theme="dark"] {
   background: transparent !important;
   color: #ffffff !important;
 }
+
+/* ==========================================================================
+   STRATEGIES PAGE REDESIGN - ACCESSIBLE UX (LIGHT & DARK THEMES)
+   ========================================================================== */
+
+.strategies-redesign-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 1152px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.strategies-redesign-container h2,
+.strategies-redesign-container h3,
+.strategies-redesign-container h4 {
+  color: var(--text-primary, #ffffff);
+}
+
+.strategies-redesign-container p,
+.strategies-redesign-container span {
+  color: var(--text-secondary, #cbd5e1);
+}
+
+/* Slim Recommendation Banner */
+.strategy-slim-banner {
+  background: var(--bg-card-solid, #1e293b);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  border-radius: 14px;
+  padding: 1.15rem 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+[data-theme="light"] .strategy-slim-banner {
+  background: #ffffff;
+  border-color: #e2e8f0;
+}
+
+[data-theme="dark"] .strategy-slim-banner,
+.theme-dark .strategy-slim-banner,
+.dark .strategy-slim-banner {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Segmented Control Switcher */
+.strategy-segmented-switcher {
+  display: inline-flex;
+  padding: 4px;
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  border-radius: 12px;
+  gap: 4px;
+}
+
+[data-theme="light"] .strategy-segmented-switcher {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+[data-theme="dark"] .strategy-segmented-switcher,
+.theme-dark .strategy-segmented-switcher,
+.dark .strategy-segmented-switcher {
+  background: #0f172a;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.strategy-segmented-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1rem;
+  border-radius: 9px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  background: transparent;
+  color: var(--text-muted, #94a3b8);
+}
+
+.strategy-segmented-btn.active {
+  background: var(--bg-card-solid, #1e293b);
+  color: var(--text-primary, #ffffff);
+  border-color: var(--border-color, rgba(255, 255, 255, 0.12));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="light"] .strategy-segmented-btn.active {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: #cbd5e1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .strategy-segmented-btn.active,
+.theme-dark .strategy-segmented-btn.active,
+.dark .strategy-segmented-btn.active {
+  background: #1e293b;
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+/* Explore Master-Detail Grid */
+.strategy-explore-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .strategy-explore-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Master List */
+.strategy-master-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .strategy-master-list {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+  }
+}
+
+.strategy-master-item {
+  width: 100%;
+  text-align: left;
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  background: var(--bg-card-solid, #1e293b);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+[data-theme="light"] .strategy-master-item {
+  background: #ffffff;
+  border-color: #e2e8f0;
+}
+
+[data-theme="dark"] .strategy-master-item,
+.theme-dark .strategy-master-item,
+.dark .strategy-master-item {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.strategy-master-item:hover {
+  border-color: #3b82f6;
+}
+
+[data-theme="light"] .strategy-master-item.selected {
+  background: #eff6ff;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb;
+}
+
+[data-theme="dark"] .strategy-master-item.selected,
+.theme-dark .strategy-master-item.selected,
+.dark .strategy-master-item.selected {
+  background: rgba(37, 99, 235, 0.22);
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 1px #60a5fa;
+}
+
+@media (max-width: 900px) {
+  .strategy-master-item {
+    min-width: 260px;
+    flex-shrink: 0;
+  }
+}
+
+/* Detail Panel */
+.strategy-detail-panel {
+  background: var(--bg-card-solid, #1e293b);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  border-radius: 16px;
+  padding: 1.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+[data-theme="light"] .strategy-detail-panel {
+  background: #ffffff;
+  border-color: #e2e8f0;
+}
+
+[data-theme="dark"] .strategy-detail-panel,
+.theme-dark .strategy-detail-panel,
+.dark .strategy-detail-panel {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Comparative Metric Tiles */
+.strategy-metric-tiles-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .strategy-metric-tiles-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.strategy-metric-tile {
+  background: rgba(148, 163, 184, 0.06);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  border-radius: 12px;
+  padding: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.85rem;
+}
+
+[data-theme="light"] .strategy-metric-tile {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+[data-theme="dark"] .strategy-metric-tile,
+.theme-dark .strategy-metric-tile,
+.dark .strategy-metric-tile {
+  background: rgba(15, 23, 42, 0.65);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Compare View Table */
+.strategy-compare-card {
+  background: var(--bg-card-solid, #1e293b);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+[data-theme="light"] .strategy-compare-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+}
+
+[data-theme="dark"] .strategy-compare-card,
+.theme-dark .strategy-compare-card,
+.dark .strategy-compare-card {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.strategy-compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+.strategy-compare-table th,
+.strategy-compare-table td {
+  padding: 1rem 1.15rem;
+  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+}
+
+.strategy-compare-table thead tr {
+  background: rgba(148, 163, 184, 0.08);
+}
+
+[data-theme="light"] .strategy-compare-table thead tr {
+  background: #f8fafc;
+}
+
+[data-theme="dark"] .strategy-compare-table thead tr,
+.theme-dark .strategy-compare-table thead tr,
+.dark .strategy-compare-table thead tr {
+  background: #0f172a;
+}
+
+[data-theme="light"] .strategy-compare-table .best-cell {
+  background: #ecfdf5 !important;
+  color: #065f46 !important;
+}
+
+[data-theme="dark"] .strategy-compare-table .best-cell,
+.theme-dark .strategy-compare-table .best-cell,
+.dark .strategy-compare-table .best-cell {
+  background: rgba(16, 185, 129, 0.18) !important;
+  color: #34d399 !important;
+}
+
+/* Criteria Cards Grid */
+.strategy-criteria-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.strategy-criteria-card {
+  background: var(--bg-card-solid, #1e293b);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  border-radius: 12px;
+  padding: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.85rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .strategy-criteria-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+}
+
+[data-theme="dark"] .strategy-criteria-card,
+.theme-dark .strategy-criteria-card,
+.dark .strategy-criteria-card {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
