@@ -18,6 +18,7 @@ import CriteriaCard from './strategy/CriteriaCard';
 import StrategyTradeoffModal from './strategy/StrategyTradeoffModal';
 import { adoptStrategy } from '../services/api';
 import { useToast } from './common/Toast';
+import { getFriendlyStrategyName } from '../utils/strategyHelper';
 
 export default function RecommendationsView({ profile: propProfile }) {
   const ctx = useOutletContext();
@@ -88,8 +89,9 @@ export default function RecommendationsView({ profile: propProfile }) {
       } else if (ctx?.reloadRecord) {
         ctx.reloadRecord();
       }
-      setJustAdopted(targetStrategy.strategy_name);
-      const msg = `Adopted "${targetStrategy.strategy_name}". Business Plan & Action Roadmap updated!`;
+      const friendlyName = getFriendlyStrategyName(targetStrategy.strategy_name, targetStrategy.strategy_id);
+      setJustAdopted(friendlyName);
+      const msg = `Adopted "${friendlyName}". Business Plan & Action Roadmap updated!`;
       if (toast?.success) toast.success(msg);
       else if (toast?.showToast) toast.showToast(msg, 'success');
       setModalOpen(false);
@@ -231,7 +233,7 @@ export default function RecommendationsView({ profile: propProfile }) {
                 </span>
               </div>
               <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0.15rem 0 0.15rem 0' }}>
-                {aiTopStrategy.strategy_name}
+                {getFriendlyStrategyName(aiTopStrategy.strategy_name, aiTopStrategy.strategy_id)}
               </h4>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>
                 Strategic Focus: <strong style={{ color: 'var(--text-primary)' }}>{aiTopStrategy.strategic_focus}</strong>

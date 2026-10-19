@@ -12,6 +12,7 @@ import {
   Clock 
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
+import { getFriendlyStrategyName } from '../../utils/strategyHelper';
 
 export default function StrategyTradeoffModal({
   isOpen,
@@ -128,7 +129,7 @@ export default function StrategyTradeoffModal({
               <span>Human-in-the-Loop Decision Override</span>
             </div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', lineHeight: 1.3 }}>
-              Adopt Strategy: {targetStrategy.strategy_name}
+              Adopt Strategy: {getFriendlyStrategyName(targetStrategy.strategy_name, targetStrategy.strategy_id)}
             </h3>
             <p style={{ fontSize: '0.825rem', color: '#94a3b8', marginTop: '0.2rem' }}>
               Updating primary strategic roadmap for <strong style={{ color: '#e2e8f0' }}>{businessName || 'your business'}</strong>.
@@ -150,7 +151,7 @@ export default function StrategyTradeoffModal({
           <div style={{ paddingRight: '0.75rem', borderRight: '1px solid rgba(255, 255, 255, 0.08)' }}>
             <span style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>AI Baseline (#1)</span>
             <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#93c5fd', marginTop: '0.2rem' }}>
-              {aiTopStrategy?.strategy_name || 'Low-Cost, Low-Risk Start'}
+              {getFriendlyStrategyName(aiTopStrategy?.strategy_name, aiTopStrategy?.strategy_id) || 'Low-Cost Essential Start'}
             </div>
             <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginTop: '0.4rem' }}>
               Capital: <strong>LKR {Number(aiTopStrategy?.estimated_capital_required_lkr || 0).toLocaleString()}</strong>
@@ -163,7 +164,7 @@ export default function StrategyTradeoffModal({
           <div>
             <span style={{ fontSize: '0.72rem', color: '#34d399', textTransform: 'uppercase', fontWeight: 700 }}>Your Selected Strategy</span>
             <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff', marginTop: '0.2rem' }}>
-              {targetStrategy.strategy_name}
+              {getFriendlyStrategyName(targetStrategy.strategy_name, targetStrategy.strategy_id)}
             </div>
             <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginTop: '0.4rem' }}>
               Capital: <strong style={{ color: '#34d399' }}>LKR {Number(targetStrategy.estimated_capital_required_lkr || 0).toLocaleString()}</strong>
@@ -210,7 +211,7 @@ export default function StrategyTradeoffModal({
           {/* HITL Flow Transparency Notice */}
           <div style={{ background: 'rgba(15, 23, 42, 0.65)', border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: '8px', padding: '0.75rem 1rem', fontSize: '0.75rem', color: '#94a3b8', lineHeight: 1.5 }}>
             <span style={{ color: '#60a5fa', fontWeight: 700 }}>Human-in-the-Loop Operational Adaptation: </span>
-            Confirming this will regenerate your 5-section Business Plan, calibrate your financial runway (LKR {Number(targetStrategy.estimated_capital_required_lkr || 0).toLocaleString()}), and tailor your Phase 1–3 milestones specifically around <strong>{targetStrategy.strategy_name}</strong>. The objective TOPSIS ranking leaderboard remains intact for analytical reference.
+            Confirming this will regenerate your 5-section Business Plan, calibrate your financial runway (LKR {Number(targetStrategy.estimated_capital_required_lkr || 0).toLocaleString()}), and tailor your Phase 1–3 milestones specifically around <strong>{getFriendlyStrategyName(targetStrategy.strategy_name, targetStrategy.strategy_id)}</strong>. The objective TOPSIS ranking leaderboard remains intact for analytical reference.
           </div>
         </div>
 

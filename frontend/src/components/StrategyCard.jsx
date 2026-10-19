@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckCircle2, Sliders, ArrowRight, Sparkles, Check } from 'lucide-react';
+import { getFriendlyStrategyName, getHowStrategyWasDeveloped } from '../utils/strategyHelper';
 
 export default function StrategyCard({ 
   strategy, 
@@ -58,7 +59,7 @@ export default function StrategyCard({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-                {strategy.strategy_name}
+                {getFriendlyStrategyName(strategy.strategy_name, strategy.strategy_id)}
               </h4>
               {isActive && (
                 <span style={{ 
@@ -100,9 +101,24 @@ export default function StrategyCard({
         </div>
       </div>
 
-      <p style={{ fontSize: '0.825rem', color: '#cbd5e1', lineHeight: '1.6', marginBottom: '1rem' }}>
+      <p style={{ fontSize: '0.825rem', color: '#cbd5e1', lineHeight: '1.6', marginBottom: '0.75rem' }}>
         {strategy.operational_approach}
       </p>
+
+      {/* How This Strategy Was Generated */}
+      <div style={{
+        background: 'rgba(59, 130, 246, 0.08)',
+        border: '1px solid rgba(59, 130, 246, 0.2)',
+        borderRadius: '8px',
+        padding: '0.6rem 0.85rem',
+        marginBottom: '1rem',
+        fontSize: '0.78rem',
+        color: 'var(--text-secondary)',
+        lineHeight: 1.5
+      }}>
+        <strong style={{ color: '#60a5fa' }}>How This Strategy Was Generated: </strong>
+        {getHowStrategyWasDeveloped(strategy)}
+      </div>
 
       {/* Sizing & Impact Metrics */}
       <div style={{ 

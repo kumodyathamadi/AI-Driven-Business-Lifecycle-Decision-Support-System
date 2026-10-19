@@ -95,14 +95,18 @@ class SMEStrategyGenerator:
             # =====================================================================
             # EXISTING BUSINESS GROWTH STRATEGIES
             # =====================================================================
-            # Strategy A: Phased Modular Expansion (Capital-Guarded)
+            # Strategy A: Step-by-Step Low-Risk Expansion
             strategies.append({
                 "strategy_id": "STRAT_01",
-                "strategy_name": f"Phased Modular Expansion ({display_name})",
+                "strategy_name": "Step-by-Step Low-Risk Expansion",
                 "strategic_focus": "Capital Protection & Phased Scale",
                 "operational_approach": (
                     f"Execute a staged expansion for {display_name}, validating initial branch or service capacity "
                     f"with controlled layout to mitigate exposure around {top_hurdle} before committing further capital."
+                ),
+                "how_generated": (
+                    f"Developed as a staged rollout using 60% of submitted capital (LKR {s1_capital:,.0f}) and 75% budget "
+                    f"to test branch demand in {district} before committing further expansion funding."
                 ),
                 "estimated_capital_required_lkr": s1_capital,
                 "estimated_monthly_budget_lkr": s1_budget,
@@ -119,14 +123,18 @@ class SMEStrategyGenerator:
                 "criteria_rationale": "Staged rollout preserves parent enterprise cash flow while proving expansion demand."
             })
 
-            # Strategy B: Capacity & Scale Expansion
+            # Strategy B: Full-Scale Capacity Growth
             strategies.append({
                 "strategy_id": "STRAT_02",
-                "strategy_name": f"Capacity & Scale Expansion ({display_name})",
+                "strategy_name": "Full-Scale Capacity Growth",
                 "strategic_focus": "High Volume & Capacity Scaling",
                 "operational_approach": (
                     f"Rapidly expand customer-serving capacity, equipment throughput, and team size for {display_name} "
                     f"to capture unmet market demand across {district}."
+                ),
+                "how_generated": (
+                    f"Developed to aggressively capture local market share across {district} by scaling equipment "
+                    f"and team size to serve 130% daily customer capacity with 110% capital allocation (LKR {s2_capital:,.0f})."
                 ),
                 "estimated_capital_required_lkr": s2_capital,
                 "estimated_monthly_budget_lkr": s2_budget,
@@ -143,14 +151,18 @@ class SMEStrategyGenerator:
                 "criteria_rationale": "Aggressive capacity scale maximizes market capture; requires structured operational oversight."
             })
 
-            # Strategy C: Omnichannel Delivery & Digital Expansion
+            # Strategy C: Online & Home Delivery Expansion
             strategies.append({
                 "strategy_id": "STRAT_03",
-                "strategy_name": f"Omnichannel Delivery & Digital Expansion ({display_name})",
+                "strategy_name": "Online & Home Delivery Expansion",
                 "strategic_focus": "Multi-Channel Orders & Shared Hub Efficiency",
                 "operational_approach": (
                     f"Leverage {display_name}'s existing commercial infrastructure and supplier network through "
                     f"digital ordering, delivery dispatch, and multi-channel fulfillment without proportional fixed rent increases."
+                ),
+                "how_generated": (
+                    f"Developed to grow revenue without paying for new rental space by fulfilling delivery and "
+                    f"phone/online orders directly from your existing store hub."
                 ),
                 "estimated_capital_required_lkr": s3_capital,
                 "estimated_monthly_budget_lkr": s3_budget,
@@ -167,14 +179,18 @@ class SMEStrategyGenerator:
                 "criteria_rationale": "Shared facilities and digital fulfillment enhance margin without heavy duplicate overhead."
             })
 
-            # Strategy D: Product / Service-Line Extension
+            # Strategy D: New High-Margin Product Lines
             strategies.append({
                 "strategy_id": "STRAT_04",
-                "strategy_name": f"Product / Service-Line Extension ({display_name})",
+                "strategy_name": "New High-Margin Product Lines",
                 "strategic_focus": "Higher Margins via New Offerings",
                 "operational_approach": (
                     f"Introduce complementary, high-margin product offerings or specialized service packages within "
                     f"{display_name}'s current operations to drive higher spend per visit and cross-selling."
+                ),
+                "how_generated": (
+                    f"Developed to increase average customer spending per visit by introducing high-margin complementary "
+                    f"items into your current shop layout."
                 ),
                 "estimated_capital_required_lkr": s4_capital,
                 "estimated_monthly_budget_lkr": s4_budget,
@@ -195,14 +211,18 @@ class SMEStrategyGenerator:
             # =====================================================================
             # NEW STARTUP LAUNCH STRATEGIES (Business-Friendly Practical Titles)
             # =====================================================================
-            # Strategy 1: Lean Bootstrapped Start
+            # Strategy 1: Low-Cost Essential Start
             strategies.append({
                 "strategy_id": "STRAT_01",
-                "strategy_name": f"Lean Bootstrapped Start ({display_name})",
+                "strategy_name": "Low-Cost Essential Start",
                 "strategic_focus": "Capital Protection & Essential Setup",
                 "operational_approach": (
                     f"Start with essential equipment and minimal initial inventory for {display_name}. Focus on lean operations "
                     f"to keep overhead low and manage constraints around {top_hurdle}."
+                ),
+                "how_generated": (
+                    f"Developed to protect cash reserves and minimize startup debt by calculating a lean 60% capital allocation "
+                    f"(LKR {s1_capital:,.0f}) and 75% budget, protecting your runway against early hurdles around {top_hurdle}."
                 ),
                 "estimated_capital_required_lkr": s1_capital,
                 "estimated_monthly_budget_lkr": s1_budget,
@@ -219,14 +239,18 @@ class SMEStrategyGenerator:
                 "criteria_rationale": "Minimal initial investment and low fixed costs safeguard cash reserves during early operations."
             })
 
-            # Strategy 2: Customer Acquisition & Local Promotion
+            # Strategy 2: Active Marketing & Opening Promotion
             strategies.append({
                 "strategy_id": "STRAT_02",
-                "strategy_name": f"Customer Acquisition & Local Promotion ({display_name})",
+                "strategy_name": "Active Marketing & Opening Promotion",
                 "strategic_focus": "Rapid Customer Reach & Opening Discounts",
                 "operational_approach": (
                     f"Invest in active local flyers, introductory discounts, and neighborhood visibility for {display_name} to stand out against {competition} "
                     f"competition and attract high daily customer footfall."
+                ),
+                "how_generated": (
+                    f"Developed to overcome {competition} competition by dedicating 110% capital (LKR {s2_capital:,.0f}) "
+                    f"into opening promotional flyers and introductory discounts to drive 130% daily customer volume."
                 ),
                 "estimated_capital_required_lkr": s2_capital,
                 "estimated_monthly_budget_lkr": s2_budget,
@@ -243,14 +267,18 @@ class SMEStrategyGenerator:
                 "criteria_rationale": "Strong opening promotion accelerates daily sales volume, though marketing costs require careful monitoring."
             })
 
-            # Strategy 3: Storefront + Home Delivery Model
+            # Strategy 3: Physical Shop + Local Home Delivery
             strategies.append({
                 "strategy_id": "STRAT_03",
-                "strategy_name": "Storefront + Home Delivery Model",
+                "strategy_name": "Physical Shop + Local Home Delivery",
                 "strategic_focus": "In-Store Sales with Phone & WhatsApp Orders",
                 "operational_approach": (
                     f"Combine your physical shop in {district} with convenient phone and messaging delivery for nearby households, "
                     f"expanding customer reach without opening a second location."
+                ),
+                "how_generated": (
+                    f"Developed by combining physical walk-in sales in {district} with direct phone/messaging home delivery, "
+                    f"expanding sales reach by 10% without paying for a costly second location."
                 ),
                 "estimated_capital_required_lkr": s3_capital,
                 "estimated_monthly_budget_lkr": s3_budget,
@@ -275,6 +303,10 @@ class SMEStrategyGenerator:
                 "operational_approach": (
                     f"Offer curated, superior-quality products and attentive personal customer service to achieve higher profit margins per sale "
                     f"rather than relying purely on mass foot traffic."
+                ),
+                "how_generated": (
+                    f"Developed to avoid dangerous price wars with established competitors by targeting higher profit "
+                    f"margins per customer visit through curated, premium quality products."
                 ),
                 "estimated_capital_required_lkr": s4_capital,
                 "estimated_monthly_budget_lkr": s4_budget,

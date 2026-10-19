@@ -1,6 +1,7 @@
 import React from 'react';
 import { Check, Sparkles, Sliders, Eye } from 'lucide-react';
 import { formatCurrency, formatCustomersPerDay } from '../../utils/formatters';
+import { getFriendlyStrategyName } from '../../utils/strategyHelper';
 
 export default function CompareTable({
   strategies = [],
@@ -106,7 +107,7 @@ export default function CompareTable({
                         #{rank}
                       </span>
                       <span style={{ fontSize: '0.925rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                        {strat.strategy_name}
+                        {getFriendlyStrategyName(strat.strategy_name, strat.strategy_id)}
                       </span>
                     </div>
 

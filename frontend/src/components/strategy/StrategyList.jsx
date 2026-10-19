@@ -1,5 +1,6 @@
 import React from 'react';
 import { Check } from 'lucide-react';
+import { getFriendlyStrategyName } from '../../utils/strategyHelper';
 
 /**
  * StrategyList - Master list selector component
@@ -63,7 +64,7 @@ export default function StrategyList({
                   color: 'var(--text-primary)',
                   lineHeight: 1.2
                 }}>
-                  {strat.strategy_name}
+                  {getFriendlyStrategyName(strat.strategy_name, strat.strategy_id)}
                 </span>
               </div>
               <span style={{

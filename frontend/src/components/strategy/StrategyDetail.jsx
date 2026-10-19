@@ -9,10 +9,12 @@ import {
   Award,
   DollarSign,
   Users,
-  Calendar
+  Calendar,
+  Lightbulb
 } from 'lucide-react';
 import MetricTile from './MetricTile';
 import { formatCurrency, formatCustomersPerDay } from '../../utils/formatters';
+import { getFriendlyStrategyName, getHowStrategyWasDeveloped } from '../../utils/strategyHelper';
 
 export default function StrategyDetail({
   strategy,
@@ -104,7 +106,7 @@ export default function StrategyDetail({
           </div>
 
           <h3 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0.35rem 0 0.25rem 0', lineHeight: 1.25 }}>
-            {strategy.strategy_name}
+            {getFriendlyStrategyName(strategy.strategy_name, strategy.strategy_id)}
           </h3>
           <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#3b82f6', margin: 0 }}>
             Strategic Focus: <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{strategy.strategic_focus}</span>
@@ -146,6 +148,40 @@ export default function StrategyDetail({
         <p style={{ fontSize: '0.925rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
           {strategy.operational_approach}
         </p>
+      </div>
+
+      {/* How This Strategy Was Generated Callout */}
+      <div style={{
+        background: 'rgba(59, 130, 246, 0.08)',
+        border: '1px solid rgba(59, 130, 246, 0.25)',
+        borderRadius: '12px',
+        padding: '0.9rem 1.1rem',
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '0.75rem'
+      }}>
+        <div style={{
+          width: '32px',
+          height: '32px',
+          borderRadius: '8px',
+          background: 'rgba(59, 130, 246, 0.18)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#60a5fa',
+          flexShrink: 0,
+          marginTop: '2px'
+        }}>
+          <Lightbulb size={18} />
+        </div>
+        <div>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: '#60a5fa' }}>
+            How This Strategy Was Developed
+          </span>
+          <p style={{ fontSize: '0.885rem', color: 'var(--text-secondary)', lineHeight: 1.55, margin: '0.25rem 0 0 0' }}>
+            {getHowStrategyWasDeveloped(strategy)}
+          </p>
+        </div>
       </div>
 
       {/* Expected Impact Callout */}

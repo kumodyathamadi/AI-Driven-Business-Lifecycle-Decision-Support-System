@@ -10,6 +10,7 @@ import {
 import PlanSection from './PlanSection';
 import RankingTable from './RankingTable';
 import { formatCurrency } from '../../utils/formatters';
+import { getFriendlyStrategyName } from '../../utils/strategyHelper';
 
 export default function PlanSection03Recommendations({ 
   profile, 
@@ -70,7 +71,7 @@ export default function PlanSection03Recommendations({
               {isUserAdopted ? 'Entrepreneur Selected Operational Strategy' : 'AI Top-Ranked Strategy Recommendation'}
             </div>
             <div className="bp-strategy-selected-title" style={{ fontSize: '1.05rem', fontWeight: 800 }}>
-              {hitl.selected_strategy_name}
+              {getFriendlyStrategyName(hitl.selected_strategy_name, hitl.selected_strategy_id)}
             </div>
           </div>
         </div>

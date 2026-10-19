@@ -1,6 +1,7 @@
 import React from 'react';
 import { Award, Check, Sparkles, HelpCircle } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
+import { getFriendlyStrategyName } from '../../utils/strategyHelper';
 
 export default function RankingTable({
   ranking = [],
@@ -52,7 +53,7 @@ export default function RankingTable({
                     </div>
                   </th>
                   <td className="bp-topsis-strat-name">
-                    <div className="bp-strat-name-text">{strat.strategy_name}</div>
+                    <div className="bp-strat-name-text">{getFriendlyStrategyName(strat.strategy_name, strat.strategy_id)}</div>
                     {strat.description && (
                       <div className="bp-strat-subdesc">{strat.description}</div>
                     )}
