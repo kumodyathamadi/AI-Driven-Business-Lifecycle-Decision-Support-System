@@ -7,10 +7,16 @@ import {
   Info, 
   BarChart3 
 } from 'lucide-react';
+import PlanSection from './PlanSection';
+import FactorList from './FactorList';
 import { FeasibilityBadge } from '../common/Badge';
 import { formatConfidence } from '../../utils/formatters';
 
-export default function PlanSection02Feasibility({ profile }) {
+export default function PlanSection02Feasibility({ 
+  profile, 
+  isOpen = false, 
+  onToggle 
+}) {
   const feasibility = profile?.feasibility_analysis || {};
   const explainability = profile?.explainability || {};
   const personalizedPlan = profile?.personalized_business_plan || {};
@@ -44,44 +50,38 @@ export default function PlanSection02Feasibility({ profile }) {
   };
 
   return (
-    <div className="bp-section" id="section-02">
-      {/* Section Header */}
-      <div className="bp-section-header">
-        <span className="bp-section-num">02</span>
-        <div className="bp-section-heading-text">
-          <h2 className="bp-section-title">
-            <ShieldCheck size={18} style={{ color: '#38bdf8' }} />
-            AI Feasibility Assessment & Key Insights
-          </h2>
-          <div className="bp-section-subtitle">
-            Trained Random Forest multi-class classification, model probabilities, and SHAP explainable feature attribution
-          </div>
-        </div>
-      </div>
-
+    <PlanSection
+      id="section-02"
+      number="02"
+      title="AI Feasibility Assessment & Key Insights"
+      icon={ShieldCheck}
+      description="Trained Random Forest multi-class classification, model probabilities, and SHAP explainable feature attribution"
+      isOpen={isOpen}
+      onToggle={onToggle}
+    >
       {/* 2.1 Feasibility Assessment Card & Probability Distribution */}
       <div className="bp-narrative-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
           <div>
-            <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#64748b', fontWeight: 700 }}>
+            <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--text-muted, #64748b)', fontWeight: 700 }}>
               Random Forest Feasibility Prediction
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
               <FeasibilityBadge label={predLabel} size="large" />
-              <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)' }}>
                 Confidence: <strong className="bp-meta-strong">{assessment.confidence_percentage}</strong>
               </span>
             </div>
           </div>
 
-          <div style={{ fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic', maxWidth: '340px', textAlign: 'right' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)', fontStyle: 'italic', maxWidth: '340px', textAlign: 'right' }}>
             Empirical baseline trained on 1,500+ verified Sri Lankan SME enterprise profiles.
           </div>
         </div>
 
         {/* Multi-Class Probability Bars */}
         <div style={{ marginBottom: '1.15rem' }}>
-          <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#64748b', fontWeight: 700, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--text-muted, #64748b)', fontWeight: 700, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <BarChart3 size={13} style={{ color: '#0284c7' }} />
             <span>Multi-Class Prediction Probability Distribution</span>
           </div>
@@ -122,79 +122,49 @@ export default function PlanSection02Feasibility({ profile }) {
           </div>
         </div>
 
-        {/* 2.2 Feasibility Interpretation */}
+        {/* 2.2 Feasibility Interpretation Narrative */}
         <div className="bp-interpretation-box">
           {sec02.feasibility_interpretation || `The proposed business is assessed as '${predLabel}' under the evaluated financial, market, operational, and resource conditions.`}
         </div>
       </div>
 
-      {/* 2.3 SHAP Feature Attribution Cards */}
-      <div>
-        <div style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#64748b', fontWeight: 700, marginBottom: '0.25rem' }}>
+      {/* 2.3 SHAP Feature Attribution Cards (Positive Enablers & Negative Hurdles) */}
+      <div style={{ marginBottom: '1.25rem' }}>
+        <div style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--text-muted, #64748b)', fontWeight: 700, marginBottom: '0.25rem' }}>
           2.3 Why Did the AI Give This Result? (SHAP Feature Attribution)
         </div>
-        <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.75rem' }}>
+        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted, #64748b)', marginBottom: '0.75rem' }}>
           * SHAP identifies empirical factors that contributed to the model prediction (non-causal attribution).
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '0.85rem' }}>
-          
-          {/* Positive Supporting Enablers */}
-          <div className="bp-shap-container positive">
-            <div className="bp-shap-header positive">
-              <TrendingUp size={15} />
-              <span>Positive Supporting Enablers (+)</span>
-            </div>
+          {/* Positive Supporting Enablers (+) in green */}
+          <FactorList
+            title="Positive Supporting Enablers (+)"
+            type="positive"
+            items={shapData.positive_enablers || []}
+            emptyMessage="No positive enablers captured"
+          />
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              {(shapData.positive_enablers || []).map((item, idx) => (
-                <div key={idx} className="bp-shap-item positive">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', fontWeight: 700 }}>
-                    <span className="bp-shap-name">{item.feature}</span>
-                    <span className="bp-shap-badge positive">{item.feature_value ? `Value: ${item.feature_value}` : ''}</span>
-                  </div>
-                  <div className="bp-shap-desc">
-                    {item.business_interpretation || 'Contributed positive support to the feasibility prediction.'}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Negative Operational Hurdles */}
-          <div className="bp-shap-container negative">
-            <div className="bp-shap-header negative">
-              <AlertTriangle size={15} />
-              <span>Operational Risk Hurdles to Mitigate (-)</span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              {(shapData.negative_hurdles || []).map((item, idx) => (
-                <div key={idx} className="bp-shap-item negative">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', fontWeight: 700 }}>
-                    <span className="bp-shap-name">{item.feature}</span>
-                    <span className="bp-shap-badge negative">{item.feature_value ? `Value: ${item.feature_value}` : ''}</span>
-                  </div>
-                  <div className="bp-shap-desc">
-                    {item.business_interpretation || 'Contributed downward pressure, identifying an operational hurdle.'}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
+          {/* Operational Risk Hurdles to Mitigate (-) in red */}
+          <FactorList
+            title="Operational Risk Hurdles to Mitigate (-)"
+            type="negative"
+            items={shapData.negative_hurdles || []}
+            emptyMessage="No operational hurdles captured"
+          />
         </div>
       </div>
 
-      {/* 2.4 Evidence-Based Key Insights */}
+      {/* 2.4 Evidence-Based Key Insights (Key Strengths & Core Operational Constraints) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.75rem' }}>
         <div className="bp-insights-box positive">
           <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#059669', fontWeight: 700, marginBottom: '0.35rem' }}>
             Key Strengths Identified
           </div>
-          <ul className="bp-insights-list">
+          <ul className="bp-insights-list" role="list">
             {(insights.strengths || []).map((s, idx) => (
-              <li key={idx}>{s}</li>
+              <li key={idx} role="listitem">{s}</li>
             ))}
           </ul>
         </div>
@@ -203,14 +173,13 @@ export default function PlanSection02Feasibility({ profile }) {
           <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#d97706', fontWeight: 700, marginBottom: '0.35rem' }}>
             Core Operational Constraints
           </div>
-          <ul className="bp-insights-list">
+          <ul className="bp-insights-list" role="list">
             {(insights.constraints || []).map((c, idx) => (
-              <li key={idx}>{c}</li>
+              <li key={idx} role="listitem">{c}</li>
             ))}
           </ul>
         </div>
       </div>
-
-    </div>
+    </PlanSection>
   );
 }

@@ -3,10 +3,10 @@ import {
   ShieldCheck, 
   DollarSign, 
   Clock, 
-  TrendingUp, 
   Users, 
   Target 
 } from 'lucide-react';
+import KpiTile from './KpiTile';
 import { formatCurrency, formatCustomersPerDay, formatConfidence } from '../../utils/formatters';
 
 export default function PlanSnapshot({ profile, financialPlan = {}, marketingPlan = {} }) {
@@ -34,92 +34,60 @@ export default function PlanSnapshot({ profile, financialPlan = {}, marketingPla
   const reqStaff = businessInput.required_staff_count ?? availStaff;
 
   return (
-    <div className="bp-snapshot-bar">
-      
+    <div className="bp-snapshot-bar" role="region" aria-label="Key Plan Figures">
       {/* 1. Overall Feasibility */}
-      <div className="bp-snapshot-tile">
-        <div className="bp-snapshot-tile-header">
-          <span className="bp-snapshot-label">Feasibility</span>
-          <ShieldCheck size={16} className="bp-snapshot-icon icon-blue" />
-        </div>
-        <div className="bp-snapshot-value val-blue">
-          {feasibilityLabel}
-        </div>
-        <div className="bp-snapshot-sub">
-          Confidence: <strong className="bp-snapshot-highlight">{formatConfidence(confidenceScore)}</strong>
-        </div>
-      </div>
+      <KpiTile
+        label="Feasibility"
+        value={feasibilityLabel}
+        helper={`Confidence: ${formatConfidence(confidenceScore)}`}
+        icon={ShieldCheck}
+        variant="blue"
+      />
 
       {/* 2. Target Capital Required */}
-      <div className="bp-snapshot-tile">
-        <div className="bp-snapshot-tile-header">
-          <span className="bp-snapshot-label">Target Capital</span>
-          <DollarSign size={16} className="bp-snapshot-icon icon-emerald" />
-        </div>
-        <div className="bp-snapshot-value val-emerald">
-          {formatCurrency(targetCapital)}
-        </div>
-        <div className="bp-snapshot-sub">
-          Initial funding baseline
-        </div>
-      </div>
+      <KpiTile
+        label="Target Capital"
+        value={formatCurrency(targetCapital)}
+        helper="Initial funding baseline"
+        icon={DollarSign}
+        variant="emerald"
+      />
 
       {/* 3. Monthly Operating Budget */}
-      <div className="bp-snapshot-tile">
-        <div className="bp-snapshot-tile-header">
-          <span className="bp-snapshot-label">Monthly Budget</span>
-          <DollarSign size={16} className="bp-snapshot-icon icon-indigo" />
-        </div>
-        <div className="bp-snapshot-value val-indigo">
-          {formatCurrency(monthlyBudget)}
-        </div>
-        <div className="bp-snapshot-sub">
-          Monthly operational burn
-        </div>
-      </div>
+      <KpiTile
+        label="Monthly Budget"
+        value={formatCurrency(monthlyBudget)}
+        helper="Monthly operational burn"
+        icon={DollarSign}
+        variant="indigo"
+      />
 
       {/* 4. Capital Runway */}
-      <div className="bp-snapshot-tile">
-        <div className="bp-snapshot-tile-header">
-          <span className="bp-snapshot-label">Capital Runway</span>
-          <Clock size={16} className="bp-snapshot-icon icon-amber" />
-        </div>
-        <div className="bp-snapshot-value val-amber">
-          {capitalRunway} <span className="bp-snapshot-unit">Months</span>
-        </div>
-        <div className="bp-snapshot-sub">
-          Operational buffer
-        </div>
-      </div>
+      <KpiTile
+        label="Capital Runway"
+        value={<span>{capitalRunway} <span className="bp-snapshot-unit">Months</span></span>}
+        helper="Operating cash buffer"
+        icon={Clock}
+        variant="amber"
+      />
 
       {/* 5. Customer Demand & Target Daily */}
-      <div className="bp-snapshot-tile">
-        <div className="bp-snapshot-tile-header">
-          <span className="bp-snapshot-label">Target Daily Demand</span>
-          <Target size={16} className="bp-snapshot-icon icon-purple" />
-        </div>
-        <div className="bp-snapshot-value val-purple">
-          {formatCustomersPerDay(targetCustomers)}
-        </div>
-        <div className="bp-snapshot-sub">
-          Demand Index: <strong className="bp-snapshot-highlight">{demandVal || 'Normal'}</strong>
-        </div>
-      </div>
+      <KpiTile
+        label="Target Daily Demand"
+        value={formatCustomersPerDay(targetCustomers)}
+        helper={`Demand Index: ${demandVal || 'Normal'}`}
+        icon={Target}
+        variant="purple"
+      />
 
       {/* 6. Staffing Capacity */}
-      <div className="bp-snapshot-tile">
-        <div className="bp-snapshot-tile-header">
-          <span className="bp-snapshot-label">Staff Capacity</span>
-          <Users size={16} className="bp-snapshot-icon icon-teal" />
-        </div>
-        <div className="bp-snapshot-value val-teal">
-          {availStaff} / {reqStaff} <span className="bp-snapshot-unit">Staff</span>
-        </div>
-        <div className="bp-snapshot-sub">
-          {availStaff >= reqStaff ? 'Balanced staffing' : 'Additional staff needed'}
-        </div>
-      </div>
-
+      <KpiTile
+        label="Staff Capacity"
+        value={<span>{availStaff} / {reqStaff} <span className="bp-snapshot-unit">Staff</span></span>}
+        helper={availStaff >= reqStaff ? 'Balanced staffing allocation' : 'Additional hiring required'}
+        icon={Users}
+        variant="teal"
+      />
     </div>
   );
 }

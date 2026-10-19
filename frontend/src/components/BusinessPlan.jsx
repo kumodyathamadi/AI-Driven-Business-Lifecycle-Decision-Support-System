@@ -4,14 +4,16 @@ import { downloadBusinessPlanPdf, downloadBusinessPlanDocx } from '../services/a
 import { useToast } from './common/Toast';
 
 import './plan/business_plan.css';
-import PlanHeader from './plan/PlanHeader';
+import PlanCover from './plan/PlanCover';
 import PlanSnapshot from './plan/PlanSnapshot';
+import PlanContents from './plan/PlanContents';
 import PlanSection01Overview from './plan/PlanSection01Overview';
 import PlanSection02Feasibility from './plan/PlanSection02Feasibility';
 import PlanSection03Recommendations from './plan/PlanSection03Recommendations';
 import PlanSection04FinanceOps from './plan/PlanSection04FinanceOps';
 import PlanSection05ScenariosRoadmap from './plan/PlanSection05ScenariosRoadmap';
 import PlanHighlightsSidebar from './plan/PlanHighlightsSidebar';
+import FinalSummary from './plan/FinalSummary';
 
 export default function BusinessPlan({ profile: propProfile }) {
   const ctx = useOutletContext();
@@ -21,6 +23,38 @@ export default function BusinessPlan({ profile: propProfile }) {
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadingDocx, setDownloadingDocx] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Section open/closed state: Open only the first section by default
+  const [openSections, setOpenSections] = useState({
+    1: true,
+    2: false,
+    3: false,
+    4: false,
+    5: false,
+  });
+
+  const toggleSection = (sectionNum) => {
+    setOpenSections(prev => ({
+      ...prev,
+      [sectionNum]: !prev[sectionNum]
+    }));
+  };
+
+  const jumpToSection = (sectionNum, sectionId) => {
+    // Expand the target section
+    setOpenSections(prev => ({
+      ...prev,
+      [sectionNum]: true
+    }));
+
+    // Smooth scroll to the target section
+    setTimeout(() => {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 60);
+  };
 
   if (!profile) return null;
 
@@ -82,8 +116,8 @@ export default function BusinessPlan({ profile: propProfile }) {
   return (
     <div className="bp-container">
       
-      {/* 1. Header / Hero: Document Title, Metadata & Actions */}
-      <PlanHeader
+      {/* 1. Cover Card: Title, Badges, Meta Line & 4 Actions (Download PDF primary, Word, Share, Print) */}
+      <PlanCover
         profile={profile}
         executiveOverview={executive_overview}
         downloadingPdf={downloadingPdf}
@@ -95,60 +129,84 @@ export default function BusinessPlan({ profile: propProfile }) {
         onPrint={handlePrint}
       />
 
-      {/* 2. Executive Summary — "Business Plan at a Glance" */}
+      {/* 2. Key Figures Row (Six Tiles) */}
       <PlanSnapshot
         profile={profile}
         financialPlan={financial_plan}
         marketingPlan={marketing_plan}
       />
 
-      {/* 3. Two-Column Layout: Main Continuous Document + Sticky Highlights Sidebar */}
+      {/* 3. Two-Column Body on Desktop */}
       <div className="bp-layout">
         
-        {/* Main Continuous Research & Decision Document */}
-        <main className="bp-document">
+        {/* Left (Sticky): Plan Contents List with Anchor Links + Key Plan Highlights */}
+        <aside className="bp-left-column">
+          <PlanContents
+            openSections={openSections}
+            onSelectSection={jumpToSection}
+          />
+
+          <div className="bp-sidebar-highlights-wrapper">
+            <PlanHighlightsSidebar
+              profile={profile}
+              executiveOverview={executive_overview}
+              financialPlan={financial_plan}
+              marketingPlan={marketing_plan}
+              downloadingPdf={downloadingPdf}
+              downloadingDocx={downloadingDocx}
+              copiedLink={copiedLink}
+              onDownloadPdf={handleDownloadPdf}
+              onDownloadDocx={handleDownloadDocx}
+              onShareLink={handleShareLink}
+              onPrint={handlePrint}
+            />
+          </div>
+        </aside>
+
+        {/* Right: The Plan Sections as Collapsible Panels */}
+        <main className="bp-document" id="plan-main-content">
           
           {/* SECTION 01 — Business & Market Overview */}
           <PlanSection01Overview
             profile={profile}
+            isOpen={openSections[1]}
+            onToggle={() => toggleSection(1)}
           />
 
           {/* SECTION 02 — AI Feasibility & Key Insights */}
           <PlanSection02Feasibility
             profile={profile}
+            isOpen={openSections[2]}
+            onToggle={() => toggleSection(2)}
           />
 
           {/* SECTION 03 — Strategic Recommendations & TOPSIS Ranking */}
           <PlanSection03Recommendations
             profile={profile}
+            isOpen={openSections[3]}
+            onToggle={() => toggleSection(3)}
           />
 
           {/* SECTION 04 — Financial & Operational Plan (Strategy-Aligned) */}
           <PlanSection04FinanceOps
             profile={profile}
+            isOpen={openSections[4]}
+            onToggle={() => toggleSection(4)}
           />
 
           {/* SECTION 05 — Scenario Analysis & Action Roadmap */}
           <PlanSection05ScenariosRoadmap
             profile={profile}
+            isOpen={openSections[5]}
+            onToggle={() => toggleSection(5)}
+          />
+
+          {/* 5. Final AI Recommendation & Operational Summary block at the end */}
+          <FinalSummary
+            profile={profile}
           />
 
         </main>
-
-        {/* Desktop Sticky Highlights Sidebar */}
-        <PlanHighlightsSidebar
-          profile={profile}
-          executiveOverview={executive_overview}
-          financialPlan={financial_plan}
-          marketingPlan={marketing_plan}
-          downloadingPdf={downloadingPdf}
-          downloadingDocx={downloadingDocx}
-          copiedLink={copiedLink}
-          onDownloadPdf={handleDownloadPdf}
-          onDownloadDocx={handleDownloadDocx}
-          onShareLink={handleShareLink}
-          onPrint={handlePrint}
-        />
 
       </div>
 

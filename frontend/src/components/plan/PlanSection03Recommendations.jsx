@@ -7,9 +7,15 @@ import {
   Award, 
   HelpCircle 
 } from 'lucide-react';
+import PlanSection from './PlanSection';
+import RankingTable from './RankingTable';
 import { formatCurrency } from '../../utils/formatters';
 
-export default function PlanSection03Recommendations({ profile }) {
+export default function PlanSection03Recommendations({ 
+  profile, 
+  isOpen = false, 
+  onToggle 
+}) {
   const strategicRecs = profile?.strategic_recommendations || {};
   const topsis = strategicRecs.topsis_ranking || {};
   const personalizedPlan = profile?.personalized_business_plan || {};
@@ -42,33 +48,28 @@ export default function PlanSection03Recommendations({ profile }) {
   ];
 
   return (
-    <div className="bp-section" id="section-03">
-      {/* Section Header */}
-      <div className="bp-section-header">
-        <span className="bp-section-num">03</span>
-        <div className="bp-section-heading-text">
-          <h2 className="bp-section-title">
-            <Compass size={18} style={{ color: '#38bdf8' }} />
-            Strategic Recommendations & TOPSIS Ranking
-          </h2>
-          <div className="bp-section-subtitle">
-            Multi-objective strategy generation, mathematical TOPSIS closeness ranking, and human-in-the-loop operational selection
-          </div>
-        </div>
-      </div>
-
-      {/* 3.5 Human-in-the-Loop Strategy Status Card */}
+    <PlanSection
+      id="section-03"
+      number="03"
+      title="Strategic Recommendations & TOPSIS Ranking"
+      icon={Compass}
+      description="Multi-objective strategy generation, mathematical TOPSIS closeness ranking, and human-in-the-loop operational selection"
+      isOpen={isOpen}
+      onToggle={onToggle}
+    >
+      {/* 3.1 Strategy Callout (AI Top / Entrepreneur Adopted) */}
       <div className={`bp-strategy-callout ${isUserAdopted ? 'adopted' : ''}`}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{ 
             width: '38px', 
             height: '38px', 
             borderRadius: '50%', 
-            background: isUserAdopted ? 'rgba(16, 185, 129, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+            background: isUserAdopted ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.15)',
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center',
-            color: isUserAdopted ? '#059669' : '#2563eb'
+            color: isUserAdopted ? '#059669' : '#2563eb',
+            flexShrink: 0
           }}>
             {isUserAdopted ? <Check size={20} /> : <Award size={20} />}
           </div>
@@ -87,80 +88,23 @@ export default function PlanSection03Recommendations({ profile }) {
         </div>
       </div>
 
-      {/* 3.3 TOPSIS Strategy Ranking Table */}
+      {/* 3.3 TOPSIS Strategy Ranking Table with Highlighted Top Row */}
       <div className="bp-narrative-card">
         <div style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#0284c7', fontWeight: 700, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <Award size={15} />
           <span>3.3 TOPSIS Multi-Criteria Decision Evaluation & Strategy Ranking</span>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table className="bp-topsis-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: '#64748b' }}>
-                <th style={{ padding: '0.5rem', width: '50px' }}>Rank</th>
-                <th style={{ padding: '0.5rem' }}>Strategy Name</th>
-                <th style={{ padding: '0.5rem' }}>Focus Area</th>
-                <th style={{ padding: '0.5rem', textAlign: 'right' }}>Target Capital</th>
-                <th style={{ padding: '0.5rem', textAlign: 'right' }}>TOPSIS Score</th>
-                <th style={{ padding: '0.5rem', textAlign: 'center' }}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ranking.map((strat, idx) => {
-                const isThisActive = strat.strategy_id === hitl.selected_strategy_id || strat.strategy_name === hitl.selected_strategy_name;
-                const isAiTop = idx === 0;
-
-                return (
-                  <tr 
-                    key={idx}
-                    className={`bp-topsis-row ${isThisActive ? 'active-strat' : ''}`}
-                    style={{ 
-                      borderBottom: '1px solid var(--border-color)',
-                      transition: 'background 0.2s ease'
-                    }}
-                  >
-                    <td style={{ padding: '0.65rem 0.5rem', fontWeight: 700, color: isAiTop ? 'var(--accent-blue, #38bdf8)' : 'var(--text-muted, #94a3b8)' }}>
-                      #{strat.rank || idx + 1}
-                    </td>
-                    <td className="bp-topsis-strat-name" style={{ padding: '0.65rem 0.5rem', fontWeight: 700 }}>
-                      {strat.strategy_name}
-                    </td>
-                    <td className="bp-topsis-focus" style={{ padding: '0.65rem 0.5rem' }}>
-                      {strat.strategic_focus || 'Operational Growth'}
-                    </td>
-                    <td style={{ padding: '0.65rem 0.5rem', textAlign: 'right', color: 'var(--text-primary)', fontWeight: 600 }}>
-                      {formatCurrency(strat.estimated_capital_required_lkr)}
-                    </td>
-                    <td style={{ padding: '0.65rem 0.5rem', textAlign: 'right', fontWeight: 700, color: 'var(--accent-blue, #818cf8)', fontFamily: 'monospace' }}>
-                      {strat.topsis_score || 'N/A'}
-                    </td>
-                    <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>
-                      {isThisActive ? (
-                        <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.55rem', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', fontWeight: 700, border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-                          Active Plan
-                        </span>
-                      ) : isAiTop ? (
-                        <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.55rem', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', fontWeight: 700, border: '1px solid rgba(59, 130, 246, 0.3)' }}>
-                          AI #1
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #94a3b8)' }}>
-                          Alternative
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <RankingTable
+          ranking={ranking}
+          selectedStrategyId={hitl.selected_strategy_id}
+          selectedStrategyName={hitl.selected_strategy_name}
+        />
       </div>
 
-      {/* 3.2 TOPSIS Criteria & Weights Table */}
+      {/* 3.2 Research Evaluation Criteria & Weights Cards */}
       <div className="bp-criteria-container">
-        <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#64748b', fontWeight: 700, marginBottom: '0.5rem' }}>
+        <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--text-muted, #64748b)', fontWeight: 700, marginBottom: '0.5rem' }}>
           3.2 Research Evaluation Criteria & Vector Normalization Weights
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.65rem' }}>
@@ -168,7 +112,7 @@ export default function PlanSection03Recommendations({ profile }) {
             <div key={idx} className="bp-criteria-card">
               <div className="bp-criteria-card-head">
                 <span>{cw.criterion}</span>
-                <span style={{ color: '#0284c7' }}>{cw.weight}</span>
+                <span style={{ color: '#0284c7', fontWeight: 700 }}>{cw.weight}</span>
               </div>
               <div className="bp-criteria-card-desc">
                 {cw.description}
@@ -177,7 +121,6 @@ export default function PlanSection03Recommendations({ profile }) {
           ))}
         </div>
       </div>
-
-    </div>
+    </PlanSection>
   );
 }

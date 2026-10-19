@@ -14,9 +14,14 @@ import {
   Layers, 
   Calculator 
 } from 'lucide-react';
+import PlanSection from './PlanSection';
 import { formatCurrency, formatCustomersPerDay } from '../../utils/formatters';
 
-export default function PlanSection04FinanceOps({ profile }) {
+export default function PlanSection04FinanceOps({ 
+  profile, 
+  isOpen = false, 
+  onToggle 
+}) {
   const businessInput = profile?.business_input || {};
   const personalizedPlan = profile?.personalized_business_plan || {};
   const sec04 = personalizedPlan.section_04_financial_operational_plan || {};
@@ -100,21 +105,15 @@ export default function PlanSection04FinanceOps({ profile }) {
   const hasFundingGap = startupInv.funding_gap_lkr > 0;
 
   return (
-    <div className="bp-section" id="section-04">
-      {/* Section Header */}
-      <div className="bp-section-header">
-        <span className="bp-section-num">04</span>
-        <div className="bp-section-heading-text">
-          <h2 className="bp-section-title">
-            <DollarSign size={18} style={{ color: '#38bdf8' }} />
-            Financial & Operational Plan
-          </h2>
-          <div className="bp-section-subtitle">
-            Dynamic capital allocation, revenue model, funding structure, operational staffing, and marketing execution tailored to selected strategy
-          </div>
-        </div>
-      </div>
-
+    <PlanSection
+      id="section-04"
+      number="04"
+      title="Financial & Operational Plan"
+      icon={DollarSign}
+      description="Dynamic capital allocation, revenue model, funding structure, operational staffing, and marketing execution tailored to selected strategy"
+      isOpen={isOpen}
+      onToggle={onToggle}
+    >
       {/* Strategy Re-Alignment Notification Callout */}
       <div className={`bp-strat-alignment-callout ${stratAlignment.is_user_selected ? 'selected' : 'ai'}`}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
@@ -133,7 +132,7 @@ export default function PlanSection04FinanceOps({ profile }) {
         </span>
       </div>
 
-      {/* 4.1 & 4.2 Financial Overview Metrics */}
+      {/* 4.1 & 4.2 Key Money Metrics Grid */}
       <div className="bp-fin-grid">
         <div className="bp-fin-card primary">
           <div className="bp-fin-card-label">Target Required Capital</div>
@@ -250,7 +249,7 @@ export default function PlanSection04FinanceOps({ profile }) {
         </div>
       </div>
 
-      {/* 4.4 Operational Resource Setup */}
+      {/* 4.4 Operational Resource Setup (Staffing, Equipment, Suppliers) */}
       <div className="bp-ops-grid">
         {/* Tile 1: Staffing Capacity */}
         <div className="bp-ops-tile">
@@ -269,7 +268,7 @@ export default function PlanSection04FinanceOps({ profile }) {
           <div className="bp-ops-tile-desc">
             {ops.staffing.capacity_status}. {ops.staffing.recommended_approach}
           </div>
-          <div style={{ fontSize: '0.74rem', color: '#64748b', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem' }}>
+          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted, #64748b)', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem' }}>
             Gap: <strong style={{ color: isStaffBalanced ? '#059669' : '#dc2626' }}>{ops.staffing.staffing_gap} personnel needed</strong>
           </div>
         </div>
@@ -282,12 +281,12 @@ export default function PlanSection04FinanceOps({ profile }) {
           </div>
           <div className="bp-ops-tile-val" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>Score: {ops.equipment.available_equipment_score}</span>
-            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Target: {ops.equipment.required_equipment_score}</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)' }}>Target: {ops.equipment.required_equipment_score}</span>
           </div>
           <div className="bp-ops-tile-desc">
             {ops.equipment.readiness_status}. {ops.equipment.recommended_approach}
           </div>
-          <div style={{ fontSize: '0.74rem', color: '#64748b', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem' }}>
+          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted, #64748b)', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem' }}>
             Focus: <strong className="bp-meta-strong">Prioritize essential commercial fixtures</strong>
           </div>
         </div>
@@ -304,7 +303,7 @@ export default function PlanSection04FinanceOps({ profile }) {
           <div className="bp-ops-tile-desc">
             Regional Hub: {ops.suppliers.network_region}. {ops.suppliers.sourcing_approach}
           </div>
-          <div style={{ fontSize: '0.74rem', color: '#64748b', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem' }}>
+          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted, #64748b)', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem' }}>
             Strategy: <strong className="bp-meta-strong">Dual-supplier contracts to avert bottlenecks</strong>
           </div>
         </div>
@@ -325,14 +324,14 @@ export default function PlanSection04FinanceOps({ profile }) {
           {marketing.customer_acquisition} {marketing.retention_and_positioning ? `Competitive positioning is anchored upon ${marketing.retention_and_positioning}` : ''}
         </p>
 
-        <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#64748b', fontWeight: 700, marginBottom: '0.5rem' }}>
+        <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted, #64748b)', fontWeight: 700, marginBottom: '0.5rem' }}>
           Actionable Promotional Tactics:
         </div>
 
-        <ul className="bp-marketing-tactics">
+        <ul className="bp-marketing-tactics" role="list">
           {(marketing.promotional_tactics || []).map((tactic, idx) => (
-            <li key={idx} className="bp-marketing-tactic-item">
-              <span className="bp-marketing-tactic-num">
+            <li key={idx} className="bp-marketing-tactic-item" role="listitem">
+              <span className="bp-marketing-tactic-num" aria-hidden="true">
                 {idx + 1}
               </span>
               <span className="bp-marketing-tactic-text">{tactic}</span>
@@ -340,7 +339,6 @@ export default function PlanSection04FinanceOps({ profile }) {
           ))}
         </ul>
       </div>
-
-    </div>
+    </PlanSection>
   );
 }

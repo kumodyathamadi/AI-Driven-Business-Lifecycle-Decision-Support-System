@@ -10,9 +10,14 @@ import {
   Tag, 
   AlertCircle 
 } from 'lucide-react';
+import PlanSection from './PlanSection';
 import { formatCurrency, formatCustomersPerDay } from '../../utils/formatters';
 
-export default function PlanSection01Overview({ profile }) {
+export default function PlanSection01Overview({ 
+  profile, 
+  isOpen = false, 
+  onToggle 
+}) {
   const businessInput = profile?.business_input || {};
   const personalizedPlan = profile?.personalized_business_plan || {};
   const sec01 = personalizedPlan.section_01_business_market_overview || {};
@@ -61,24 +66,18 @@ export default function PlanSection01Overview({ profile }) {
   };
 
   return (
-    <div className="bp-section" id="section-01">
-      {/* Section Header */}
-      <div className="bp-section-header">
-        <span className="bp-section-num">01</span>
-        <div className="bp-section-heading-text">
-          <h2 className="bp-section-title">
-            <Building2 size={18} style={{ color: '#38bdf8' }} />
-            Business & Market Overview
-          </h2>
-          <div className="bp-section-subtitle">
-            Enterprise profile, concept definition, market catchment, competitive positioning, and location dynamics
-          </div>
-        </div>
-      </div>
-
-      {/* 1.1 Business Identity & Summary Grid */}
+    <PlanSection
+      id="section-01"
+      number="01"
+      title="Business & Market Overview"
+      icon={Building2}
+      description="Enterprise profile, concept definition, market catchment, competitive positioning, and location dynamics"
+      isOpen={isOpen}
+      onToggle={onToggle}
+    >
+      {/* 1.1 Business Identity & Profile Summary */}
       <div className="bp-narrative-card">
-        <div style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#38bdf8', fontWeight: 700, marginBottom: '0.65rem' }}>
+        <div style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#0284c7', fontWeight: 700, marginBottom: '0.65rem' }}>
           1.1 Business Identity & Profile Summary
         </div>
         
@@ -124,27 +123,27 @@ export default function PlanSection01Overview({ profile }) {
         )}
       </div>
 
-      {/* 1.2 Market Overview, Competition & Location Grid */}
+      {/* 1.2 Market Overview, Competition & Location Grid (3 Cards) */}
       <div className="bp-ops-grid">
         
-        {/* Tile 1: Market & Demand */}
+        {/* Card 1: Target Market Catchment */}
         <div className="bp-ops-tile">
           <div className="bp-ops-tile-title">
-            <Target size={14} style={{ color: '#c084fc' }} />
+            <Target size={14} style={{ color: '#9333ea' }} />
             <span>Target Market Catchment</span>
           </div>
-          <div className="bp-ops-tile-val" style={{ color: '#e879f9' }}>
+          <div className="bp-ops-tile-val" style={{ color: '#9333ea' }}>
             {market.customer_demand_score}
           </div>
           <div className="bp-ops-tile-desc">
             Catchment: {market.target_market}. Target customer profile: {market.customer_profile}.
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#64748b', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem' }}>
             Target: <strong className="bp-meta-strong">{formatCustomersPerDay(market.expected_customers_per_day)}</strong> @ <strong style={{ color: '#059669' }}>{formatCurrency(market.expected_selling_price_lkr)}</strong>
           </div>
         </div>
 
-        {/* Tile 2: Competitive Positioning */}
+        {/* Card 2: Competitive Landscape */}
         <div className="bp-ops-tile">
           <div className="bp-ops-tile-title">
             <Users size={14} style={{ color: '#d97706' }} />
@@ -158,12 +157,12 @@ export default function PlanSection01Overview({ profile }) {
               ? `${competition.competitor_count_nearby} direct competitors mapped in local radius.`
               : 'Direct competitor count not specifically recorded.'}
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#64748b', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem' }}>
             Positioning: <strong className="bp-meta-strong">{competition.competitive_positioning}</strong>
           </div>
         </div>
 
-        {/* Tile 3: Location Dynamics */}
+        {/* Card 3: Location Dynamics */}
         <div className="bp-ops-tile">
           <div className="bp-ops-tile-title">
             <MapPin size={14} style={{ color: '#059669' }} />
@@ -175,12 +174,12 @@ export default function PlanSection01Overview({ profile }) {
           <div className="bp-ops-tile-desc">
             Type: {location.location_type}. Situated in {location.district}, {location.province} Province.
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#64748b', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)', borderTop: '1px solid var(--border-color)', paddingTop: '0.35rem' }}>
             Factors: <strong className="bp-meta-strong">{location.location_considerations}</strong>
           </div>
         </div>
 
       </div>
-    </div>
+    </PlanSection>
   );
 }
