@@ -112,6 +112,8 @@ const SAMPLE_PRESETS: Record<string, BrFormData> = {
     residence_address: 'No. 5, Temple Road, Yakkala',
     commencement_date: '2026-11-10',
   },
+};
+
 export interface RoadmapStep {
   step: number;
   title: string;
