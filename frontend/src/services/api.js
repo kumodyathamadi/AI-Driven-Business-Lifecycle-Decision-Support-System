@@ -276,4 +276,12 @@ export const getComponent4Businesses = async (limit = 50) => {
   return response.data;
 };
 
+/**
+ * Retrieves GNN model status, inductive evaluation metrics, and disclosures
+ */
+export const getComponent4ModelStatus = async () => {
+  const response = await apiClient.get('/component4/model-status');
+  return response.data;
+};
+
 

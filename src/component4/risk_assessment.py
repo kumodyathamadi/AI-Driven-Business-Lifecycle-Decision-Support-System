@@ -255,7 +255,7 @@ class RiskAssessmentEngine:
         debt_burden = self._safe_float(data.get("debt_service_burden_ratio"), default=0.0)
         net_cash_flow = self._safe_float(data.get("post_action_net_cash_flow_lkr"), default=0.0)
 
-        has_critical_flag = bool(
+        has_critical_flag = (
             post_runway < cfg.runway_critical_months
             or (inv_to_cash > cfg.investment_to_cash_critical and debt_burden > cfg.debt_burden_warning)
             or (net_cash_flow < -100000.0 and post_runway < cfg.runway_warning_months)

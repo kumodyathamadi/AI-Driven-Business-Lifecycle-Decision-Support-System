@@ -28,7 +28,6 @@ import {
   Trash2,
   Copy,
   Check,
-  CheckCheck,
   ArrowUpRight,
   FolderOpen,
   ChevronDown,
@@ -40,7 +39,12 @@ import {
   Clock,
   ShieldCheck,
   Briefcase,
-  Edit3
+  Edit3,
+  Percent,
+  Truck,
+  Flame,
+  Search,
+  ExternalLink
 } from 'lucide-react';
 import {
   uploadComponent4BusinessPlan,
@@ -51,20 +55,19 @@ import {
   getComponent4BusinessHistory,
   getRecentComponent4Assessments,
   getComponent4Analysis,
-  getComponent4Businesses
+  getComponent4Businesses,
+  getComponent4ModelStatus
 } from '../services/api';
 import { formatLKR } from './Dashboard';
 
 /**
- * Robust display formatter for SME owners.
- * Never outputs [object Object], undefined, null, or NaN.
+ * Display formatter for SME facts and values.
  */
 export const formatDisplayValue = (val, fieldKey = '', unit = '') => {
   if (val === null || val === undefined || val === '') {
-    return 'Not specified';
+    return 'Not provided';
   }
 
-  // Handle object wrappers (e.g. from dynamic intake or provenance facts)
   if (typeof val === 'object') {
     if (val.value !== undefined && val.value !== null) {
       return formatDisplayValue(val.value, fieldKey, unit || val.unit);
@@ -76,15 +79,13 @@ export const formatDisplayValue = (val, fieldKey = '', unit = '') => {
     if (val.label || val.name) {
       return val.label || val.name;
     }
-    const cleanEntries = Object.entries(val)
-      .filter(([k]) => !['provenance', 'status', 'recorded_at'].includes(k));
+    const cleanEntries = Object.entries(val).filter(([k]) => !['provenance', 'status', 'recorded_at'].includes(k));
     if (cleanEntries.length > 0) {
       return cleanEntries.map(([k, v]) => `${k.replace(/_/g, ' ')}: ${formatDisplayValue(v)}`).join('; ');
     }
     return 'Provided';
   }
 
-  // Numeric formatting
   if (typeof val === 'number') {
     if (isNaN(val)) return 'Not available';
     const keyLower = String(fieldKey).toLowerCase();
@@ -102,13 +103,9 @@ export const formatDisplayValue = (val, fieldKey = '', unit = '') => {
     if (keyLower.includes('days') || unit === 'Days') {
       return `${val} Days`;
     }
-    if (keyLower.includes('count') || keyLower.includes('staff') || keyLower.includes('customers')) {
-      return Number(val).toLocaleString();
-    }
     return val.toLocaleString();
   }
 
-  // String formatting
   const str = String(val).trim();
   if (str === 'Unknown' || str === 'Not available' || str === 'N/A') {
     return 'Not available (marked unknown)';
@@ -116,14 +113,20 @@ export const formatDisplayValue = (val, fieldKey = '', unit = '') => {
   return str;
 };
 
-export default function Component4RiskSuite({ initialPlanData = null }) {
-  // Five-step guided workflow required by Section 4:
-  // Step 1: Upload Business Plan
-  // Step 2: Review and Confirm Plan Details
-  // Step 3: Answer Follow-up Questions
-  // Step 4: Review Business Risks
-  // Step 5: Mitigation and Growth Plan
-  const [currentStep, setCurrentStep] = useState(1);
+export default function Component4RiskSuite({ 
+  initialPlanData = null,
+  initialStep = 1,
+  activeContextTab = null,
+  onAssessmentLoaded = null
+}) {
+  // 6-step guided sequential workflow
+  // Step 1: Business Plan (Upload / Select Profile / Demo)
+  // Step 2: Confirm Business Details (Organized by category, provenance tags, conflict resolution)
+  // Step 3: Additional Information (5 Risk Dimensions progressive disclosure)
+  // Step 4: Risk Assessment (5 Dimensions cards, scores, evidence, drivers)
+  // Step 5: GNN Insights and Recommendations (Graph, Counterparties, Model Status & Disclosures)
+  // Step 6: Mitigation and Growth Plan (Action Checklist with toggles, Growth Readiness, Markdown export)
+  const [currentStep, setCurrentStep] = useState(initialStep);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
@@ -133,45 +136,99 @@ export default function Component4RiskSuite({ initialPlanData = null }) {
   const [uploadedFilePath, setUploadedFilePath] = useState(null);
   const [extractedData, setExtractedData] = useState(null);
   const [availableFacts, setAvailableFacts] = useState({});
-  const [missingFormSchema, setMissingFormSchema] = useState([]);
-  const [sufficiencyStatus, setSufficiencyStatus] = useState('PARTIAL');
-  const [candidateMatches, setCandidateMatches] = useState([]);
   const [confirmedBusinessId, setConfirmedBusinessId] = useState('');
   const [isReusedProfile, setIsReusedProfile] = useState(false);
+  const [isDemoProfile, setIsDemoProfile] = useState(false);
 
-  // Existing business picker state
+  // Existing business picker modal
   const [existingBusinesses, setExistingBusinesses] = useState([]);
   const [showBusinessPicker, setShowBusinessPicker] = useState(false);
   const [loadingExisting, setLoadingExisting] = useState(false);
 
-  // Conflicting Values State (Section 4, Step 2)
+  // Conflict Resolution State (Step 2)
   const [conflictingFields, setConflictingFields] = useState({});
   const [editingFieldKey, setEditingFieldKey] = useState(null);
   const [editingFieldValue, setEditingFieldValue] = useState('');
 
-  // Dynamic Follow-up State (Section 4, Step 3)
-  const [formData, setFormData] = useState({});
+  // Step 3 Progressive Disclosure State (5 Risk Dimensions)
+  const [activeDimensionTab, setActiveDimensionTab] = useState('credit');
+  const [formData, setFormData] = useState({
+    outstanding_loan_balance: '',
+    monthly_loan_repayment: '',
+    overdue_repayments: 'No',
+    repayment_status: 'Current',
+    debt_guarantees: 'None',
+    monthly_sales_revenue: '',
+    monthly_customer_count: '',
+    customer_demand_evidence: 'estimate_only',
+    demand_competition_notes: '',
+    inflation_affected_categories: 'Utilities, Raw materials',
+    recent_supplier_price_increase_pct: '',
+    imported_materials_exposure: 'Moderate',
+    cash_available_operations: '',
+    monthly_fixed_costs: '',
+    monthly_variable_costs: '',
+    accounts_receivable: '',
+    accounts_payable: '',
+    cash_reserve_after_startup: '',
+    main_suppliers_list: '',
+    supplier_dependency_level: 'Moderate',
+    delivery_delay_days: '3-5 days',
+    staffing_availability: 'Adequate',
+    growth_objective: 'organic_expansion'
+  });
   const [unknownToggles, setUnknownToggles] = useState({});
   const [declaredRelationships, setDeclaredRelationships] = useState([]);
-  const [isDemoProfile, setIsDemoProfile] = useState(false);
 
-  // Active Assessment Output (Steps 4 & 5)
-  const [analysisResult, setAnalysisResult] = useState(null);
+  // Active Assessment Output (Steps 4, 5, 6)
+  const [analysisResult, setAnalysisResult] = useState(initialPlanData);
   const [graphData, setGraphData] = useState(null);
+  const [modelStatus, setModelStatus] = useState(null);
+  const [loadingGraph, setLoadingGraph] = useState(false);
+  const [loadingModelStatus, setLoadingModelStatus] = useState(false);
   const [plannedMitigations, setPlannedMitigations] = useState({});
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [copiedId, setCopiedId] = useState(false);
+  const [activePlanSubTab, setActivePlanSubTab] = useState('mitigations'); // 'mitigations' or 'growth'
+  const [selectedGraphNode, setSelectedGraphNode] = useState(null);
 
   // Load existing persistent businesses on mount
   useEffect(() => {
     loadExistingBusinesses();
+    loadModelStatus();
   }, []);
+
+  // Sync if initialPlanData changes
+  useEffect(() => {
+    if (initialPlanData) {
+      setAnalysisResult(initialPlanData);
+      const bId = initialPlanData.business_id || initialPlanData.analysis_id;
+      if (bId) {
+        setConfirmedBusinessId(bId);
+        loadGraph(bId);
+      }
+    }
+  }, [initialPlanData]);
+
+  // Sync contextual tab if passed from workspace navigation
+  useEffect(() => {
+    if (activeContextTab) {
+      if (activeContextTab === 'c4_profile') setCurrentStep(2);
+      else if (activeContextTab === 'c4_risk_results') setCurrentStep(4);
+      else if (activeContextTab === 'c4_gnn_insights') setCurrentStep(5);
+      else if (activeContextTab === 'c4_mitigation_plan') {
+        setCurrentStep(6);
+        setActivePlanSubTab('mitigations');
+      } else if (activeContextTab === 'c4_growth_readiness') {
+        setCurrentStep(6);
+        setActivePlanSubTab('growth');
+      }
+    }
+  }, [activeContextTab]);
 
   const loadExistingBusinesses = async () => {
     setLoadingExisting(true);
     try {
-      const res = await getComponent4Businesses(30);
-      if (res && res.success && res.businesses) {
+      const res = await getComponent4Businesses(50);
+      if (res && res.businesses) {
         setExistingBusinesses(res.businesses);
       }
     } catch (err) {
@@ -181,11 +238,34 @@ export default function Component4RiskSuite({ initialPlanData = null }) {
     }
   };
 
+  const loadModelStatus = async () => {
+    setLoadingModelStatus(true);
+    try {
+      const status = await getComponent4ModelStatus();
+      setModelStatus(status);
+    } catch (err) {
+      console.warn('Could not fetch GNN model status:', err);
+    } finally {
+      setLoadingModelStatus(false);
+    }
+  };
+
+  const loadGraph = async (bId) => {
+    setLoadingGraph(true);
+    try {
+      const g = await getComponent4Graph(bId);
+      setGraphData(g);
+    } catch (err) {
+      console.warn('Could not load relationship graph:', err);
+    } finally {
+      setLoadingGraph(false);
+    }
+  };
+
   // STEP 1: Handle File Selection & Upload
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setSelectedFile(file);
+      setSelectedFile(e.target.files[0]);
       setErrorMsg(null);
       setSuccessMsg(null);
     }
@@ -209,9 +289,6 @@ export default function Component4RiskSuite({ initialPlanData = null }) {
       setUploadedFilePath(res.file_path);
       setExtractedData(res.extraction);
       setAvailableFacts(res.available_facts || {});
-      setMissingFormSchema(res.missing_form_schema || []);
-      setSufficiencyStatus(res.sufficiency_status || 'PARTIAL');
-      setCandidateMatches(res.candidate_matches || []);
       setIsReusedProfile(Boolean(res.existing_business_id));
 
       const targetId = res.existing_business_id || res.suggested_business_id || res.resolved_entity?.entity_id || '';
@@ -230,20 +307,10 @@ export default function Component4RiskSuite({ initialPlanData = null }) {
         });
       }
       setConflictingFields(conflicts);
-
-      // Initialize follow-up fields
-      const initialForm = {};
-      const initialUnknowns = {};
-      (res.missing_form_schema || []).forEach(f => {
-        initialForm[f.field_key] = '';
-        initialUnknowns[f.field_key] = false;
-      });
-      setFormData(initialForm);
-      setUnknownToggles(initialUnknowns);
       setIsDemoProfile(false);
 
-      setSuccessMsg(`Extracted details from '${res.filename}'. Please review and confirm your facts.`);
-      setCurrentStep(2); // Advance to Step 2: Review and Confirm Plan Details
+      setSuccessMsg(`Extracted details from '${res.filename}'. Please review your confirmed business facts.`);
+      setCurrentStep(2); // Advance to Step 2
     } catch (err) {
       setErrorMsg(`Upload failed: ${err.response?.data?.detail || err.message}`);
     } finally {
@@ -256,13 +323,12 @@ export default function Component4RiskSuite({ initialPlanData = null }) {
     setConfirmedBusinessId(biz.id);
     setIsReusedProfile(true);
     setShowBusinessPicker(false);
-    setSuccessMsg(`Selected existing enterprise profile '${biz.business_name}' (${biz.id}).`);
+    setSuccessMsg(`Loaded registered enterprise '${biz.business_name}' (${biz.id}).`);
 
-    // Pre-populate facts from existing business
     const facts = {
-      business_name: { value: biz.business_name, provenance: 'user_confirmed', source_reference: 'Persistent Enterprise Profile' },
-      district: { value: biz.district, provenance: 'user_confirmed', source_reference: 'Enterprise Registration' },
-      business_category: { value: biz.business_category, provenance: 'user_confirmed', source_reference: 'Enterprise Registration' },
+      business_name: { value: biz.business_name, provenance: 'user_confirmed', source_reference: 'Enterprise Profile' },
+      district: { value: biz.district, provenance: 'user_confirmed', source_reference: 'Registration Record' },
+      business_category: { value: biz.business_category, provenance: 'user_confirmed', source_reference: 'Registration Record' },
       business_stage: { value: biz.business_stage, provenance: 'user_confirmed', source_reference: 'Enterprise Profile' }
     };
     setAvailableFacts(facts);
@@ -277,26 +343,24 @@ export default function Component4RiskSuite({ initialPlanData = null }) {
     setSelectedFile(null);
     setUploadedFilePath('scratch/uploaded_plans/demo_helloo_glow.json');
 
-    // Facts extracted from plan
     const demoFacts = {
-      business_name: { value: 'Helloo Glow Beauty Studio', provenance: 'plan_stated', source_reference: 'Plan Cover Page' },
+      business_name: { value: 'Helloo Glow Natural Cosmetics', provenance: 'plan_stated', source_reference: 'Plan Cover Page' },
       district: { value: 'Colombo', provenance: 'plan_stated', source_reference: 'Location Section 1.2' },
       business_category: { value: 'Personal Care & Beauty Services', provenance: 'plan_stated', source_reference: 'Executive Summary' },
-      business_stage: { value: 'New Startup', provenance: 'plan_stated', source_reference: 'Business Overview' },
-      available_capital_lkr: { value: 650000, provenance: 'plan_stated', source_reference: 'Capital Statement Section 3.1' },
-      loan_amount_lkr: { value: 300000, provenance: 'plan_stated', source_reference: 'Financing Proposal' }
+      business_stage: { value: 'Operating SME', provenance: 'plan_stated', source_reference: 'Business Overview' },
+      available_capital_lkr: { value: 850000, provenance: 'plan_stated', source_reference: 'Capital Statement Section 3.1' },
+      loan_amount_lkr: { value: 450000, provenance: 'plan_stated', source_reference: 'Financing Proposal' }
     };
     setAvailableFacts(demoFacts);
 
-    // Explicit Conflicting Value requirement (Section 4, Step 2 & 3):
-    // "Monthly budget: LKR 120,000, pending confirmation because the uploaded plan also mentions LKR 102,000."
+    // Intentional conflicting value to test Step 2 conflict resolution
     const demoConflicts = {
       monthly_budget_lkr: {
         field_label: 'Monthly Operating Budget',
         unit: 'LKR',
         options: [
-          { value: 120000, label: 'LKR 120,000', source: 'Section 3.1: Financial Outlay Table' },
-          { value: 102000, label: 'LKR 102,000', source: 'Section 4.3: Operational Cost Schedule' }
+          { value: 180000, label: 'LKR 180,000', source: 'Section 3.1: Financial Outlay Table' },
+          { value: 145000, label: 'LKR 145,000', source: 'Section 4.3: Operational Cost Schedule' }
         ],
         resolved_value: null,
         status: 'conflicting'
@@ -304,110 +368,94 @@ export default function Component4RiskSuite({ initialPlanData = null }) {
     };
     setConflictingFields(demoConflicts);
 
-    // Initial follow-up fields for Step 3 (tagged as UNVERIFIED EXAMPLES per prompt)
-    setFormData({
-      monthly_budget_lkr: '', // User must resolve conflict first!
-      fixed_monthly_costs_lkr: '',
-      variable_cost_per_unit_lkr: '',
-      cash_reserve_lkr: '',
-      customer_demand_evidence: 'estimate_only',
-      growth_objective: 'recommend_options'
-    });
-
-    setUnknownToggles({
-      fixed_monthly_costs_lkr: true,
-      variable_cost_per_unit_lkr: true,
-      cash_reserve_lkr: true
-    });
+    // Initial follow-up fields for Step 3
+    setFormData(prev => ({
+      ...prev,
+      monthly_sales_revenue: '320000',
+      monthly_customer_count: '110',
+      customer_demand_evidence: 'pre_orders',
+      outstanding_loan_balance: '450000',
+      monthly_loan_repayment: '32000',
+      cash_available_operations: '250000',
+      monthly_fixed_costs: '95000',
+      monthly_variable_costs: '50000',
+      cash_reserve_after_startup: '180000',
+      main_suppliers_list: 'Lanka Herbal Extracts Ltd, Colombo Packaging Co',
+      supplier_dependency_level: 'High'
+    }));
 
     setDeclaredRelationships([
       {
-        partner_name: 'Lanka Cosmetic Suppliers (Sample)',
+        partner_name: 'Lanka Herbal Extracts Ltd',
         partner_type: 'SUPPLIER',
         relationship_type: 'SUPPLIES',
-        transaction_value_lkr: 60000,
-        dependency_percentage: 50,
-        payment_delay_days: 15,
-        status: 'user_estimate'
+        transaction_value_lkr: 85000,
+        dependency_percentage: 65,
+        payment_delay_days: 7
+      },
+      {
+        partner_name: 'Colombo Packaging Co',
+        partner_type: 'SUPPLIER',
+        relationship_type: 'SUPPLIES',
+        transaction_value_lkr: 40000,
+        dependency_percentage: 35,
+        payment_delay_days: 14
       }
     ]);
 
-    setSuccessMsg("Loaded 'Helloo Glow Beauty Studio' demo profile. Note: Example values are for testing and require your confirmation.");
+    setSuccessMsg("Loaded 'Helloo Glow Natural Cosmetics' demo business plan with budget discrepancy.");
     setCurrentStep(2);
   };
 
-  // STEP 2: Conflict Resolution Logic (Never silently pick one value!)
-  const handleResolveConflict = (fieldKey, selectedValue) => {
+  // STEP 2: Conflict Resolution Handler
+  const handleResolveConflict = (fieldKey, chosenValue) => {
     setConflictingFields(prev => ({
       ...prev,
       [fieldKey]: {
         ...prev[fieldKey],
-        resolved_value: selectedValue,
-        status: 'user_confirmed'
+        resolved_value: chosenValue,
+        status: 'resolved'
       }
     }));
-
-    // Update available facts with resolved value and provenance
+    // Also record in availableFacts as user_confirmed
     setAvailableFacts(prev => ({
       ...prev,
       [fieldKey]: {
-        value: selectedValue,
+        value: chosenValue,
         provenance: 'user_confirmed',
-        source_reference: `User Resolved Conflict (Chosen: LKR ${Number(selectedValue).toLocaleString()})`
+        source_reference: 'User resolved conflicting plan values'
       }
     }));
-
-    // Also update form data
-    setFormData(prev => ({
-      ...prev,
-      [fieldKey]: selectedValue
-    }));
   };
 
-  // STEP 2: Non-destructive Inline Fact Correction
-  const handleStartEditFact = (key, currentVal) => {
-    setEditingFieldKey(key);
-    setEditingFieldValue(typeof currentVal === 'object' ? currentVal.value : currentVal);
-  };
-
-  const handleSaveEditedFact = (key) => {
-    const val = Number(editingFieldValue) || editingFieldValue;
+  // STEP 2: Editable Fact Change Handler
+  const handleFactEdit = (key, newVal) => {
     setAvailableFacts(prev => ({
       ...prev,
       [key]: {
-        value: val,
-        provenance: 'user_confirmed',
-        source_reference: 'User Corrected in Review Step'
+        ...(prev[key] || {}),
+        value: newVal,
+        provenance: 'user_confirmed'
       }
     }));
     setEditingFieldKey(null);
   };
 
-  // STEP 3: Form Field Change & Unknown Toggles
+  // STEP 3: Form Field Change Handlers
   const handleFormFieldChange = (fieldKey, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [fieldKey]: value
-    }));
+    setFormData(prev => ({ ...prev, [fieldKey]: value }));
     if (unknownToggles[fieldKey]) {
       setUnknownToggles(prev => ({ ...prev, [fieldKey]: false }));
     }
   };
 
-  const handleSetQuickStatus = (fieldKey, statusType) => {
-    if (statusType === 'unknown') {
-      setUnknownToggles(prev => ({ ...prev, [fieldKey]: true }));
-      setFormData(prev => ({ ...prev, [fieldKey]: 'Unknown' }));
-    } else if (statusType === 'not_sure') {
-      setUnknownToggles(prev => ({ ...prev, [fieldKey]: true }));
-      setFormData(prev => ({ ...prev, [fieldKey]: 'Not sure' }));
-    } else if (statusType === 'not_applicable') {
-      setUnknownToggles(prev => ({ ...prev, [fieldKey]: false }));
-      setFormData(prev => ({ ...prev, [fieldKey]: 'N/A' }));
-    }
+  const handleToggleUnknown = (fieldKey) => {
+    setUnknownToggles(prev => ({
+      ...prev,
+      [fieldKey]: !prev[fieldKey]
+    }));
   };
 
-  // Declared Relationships Handling
   const handleAddRelationship = () => {
     setDeclaredRelationships(prev => [
       ...prev,
@@ -417,40 +465,38 @@ export default function Component4RiskSuite({ initialPlanData = null }) {
         relationship_type: 'SUPPLIES',
         transaction_value_lkr: '',
         dependency_percentage: '',
-        payment_delay_days: ''
+        payment_delay_days: 0
       }
     ]);
   };
 
-  const handleUpdateRelationship = (idx, field, val) => {
-    setDeclaredRelationships(prev => {
-      const updated = [...prev];
-      updated[idx] = { ...updated[idx], [field]: val };
-      return updated;
-    });
+  const handleRelationshipChange = (index, key, val) => {
+    const updated = [...declaredRelationships];
+    updated[index][key] = val;
+    setDeclaredRelationships(updated);
   };
 
-  const handleRemoveRelationship = (idx) => {
-    setDeclaredRelationships(prev => prev.filter((_, i) => i !== idx));
+  const handleRemoveRelationship = (index) => {
+    setDeclaredRelationships(prev => prev.filter((_, i) => i !== index));
   };
 
-  // STEP 3 -> 4: Run Risk Assessment Execution
-  const handleSubmitAndRunAssessment = async () => {
-    // Check if there are unresolved conflicts
-    const unresolvedConflicts = Object.entries(conflictingFields).filter(([_, c]) => c.status === 'conflicting');
-    if (unresolvedConflicts.length > 0) {
-      setErrorMsg(`Please resolve the conflicting value for '${unresolvedConflicts[0][1].field_label}' in Step 2 before running the assessment.`);
-      setCurrentStep(2);
-      return;
-    }
-
+  // STEP 3 -> 4: SUBMIT AND RUN RISK ASSESSMENT
+  const handleSubmitAndRun = async () => {
     setLoading(true);
     setErrorMsg(null);
     setSuccessMsg(null);
+
+    // Validate that open conflicts are resolved
+    const unresolved = Object.entries(conflictingFields).filter(([, c]) => c.status === 'conflicting');
+    if (unresolved.length > 0) {
+      setErrorMsg(`Please resolve the conflicting value for "${unresolved[0][1].field_label}" before running the assessment.`);
+      setCurrentStep(2);
+      setLoading(false);
+      return;
+    }
+
     try {
       const completedFields = { ...formData };
-      
-      // Clean up values
       Object.keys(completedFields).forEach(k => {
         if (unknownToggles[k]) {
           completedFields[k] = 'Unknown';
@@ -486,19 +532,23 @@ export default function Component4RiskSuite({ initialPlanData = null }) {
       setConfirmedBusinessId(activeId);
       setIsReusedProfile(res.is_reused_profile);
 
-      // Load graph data
-      try {
-        const gRes = await getComponent4Graph(activeId);
-        setGraphData(gRes);
-      } catch (gErr) {
-        console.warn('Could not load relationship graph:', gErr);
+      // Load graph data & model status
+      await Promise.allSettled([
+        loadGraph(activeId),
+        loadModelStatus()
+      ]);
+
+      if (onAssessmentLoaded) {
+        onAssessmentLoaded(data);
       }
 
       setSuccessMsg(`Risk Assessment successfully completed for enterprise [${activeId}].`);
-      setCurrentStep(4); // Advance to Step 4: Review Business Risks
+      setCurrentStep(4); // Advance to Step 4
     } catch (err) {
       const detail = err.response?.data?.detail;
-      const msg = typeof detail === 'object' && detail?.message ? `${detail.message}: ${detail.errors?.join(', ')}` : (detail || err.message);
+      const msg = typeof detail === 'object' && detail?.message 
+        ? `${detail.message}: ${detail.errors?.join(', ')}` 
+        : (detail || err.message);
       setErrorMsg(`Assessment failed: ${msg}`);
     } finally {
       setLoading(false);
@@ -515,888 +565,965 @@ export default function Component4RiskSuite({ initialPlanData = null }) {
     }
   };
 
-  const handleCopyBusinessId = () => {
-    if (confirmedBusinessId) {
-      navigator.clipboard.writeText(confirmedBusinessId);
-      setCopiedId(true);
-      setTimeout(() => setCopiedId(false), 2000);
+  const toggleMitigationStatus = (index) => {
+    setPlannedMitigations(prev => {
+      const current = prev[index] || 'not_started';
+      const next = current === 'not_started' ? 'planned' : current === 'planned' ? 'completed' : 'not_started';
+      return { ...prev, [index]: next };
+    });
+  };
+
+  // Helper provenance badge
+  const renderProvenanceTag = (prov) => {
+    const p = String(prov || 'unknown').toLowerCase();
+    if (p.includes('plan')) {
+      return <span className="provenance-tag provenance-plan">Stated in Plan</span>;
     }
+    if (p.includes('confirm')) {
+      return <span className="provenance-tag provenance-confirmed">Confirmed by User</span>;
+    }
+    if (p.includes('estimate')) {
+      return <span className="provenance-tag provenance-estimated">Estimated by User</span>;
+    }
+    if (p.includes('conflict')) {
+      return <span className="provenance-tag provenance-conflicting">Conflicting</span>;
+    }
+    if (p.includes('derived')) {
+      return <span className="provenance-tag provenance-derived">Derived Calculation</span>;
+    }
+    return <span className="provenance-tag provenance-unknown">Unknown</span>;
   };
 
-  const toggleMitigationPlanned = (idx) => {
-    setPlannedMitigations(prev => ({
-      ...prev,
-      [idx]: !prev[idx]
-    }));
-  };
-
-  // Five visible stepper steps required by Section 4
-  const stepsConfig = [
-    { num: 1, title: 'Upload Business Plan', sub: 'Document upload or profile selection' },
-    { num: 2, title: 'Review & Confirm Details', sub: 'Audit facts & resolve conflicts' },
-    { num: 3, title: 'Answer Follow-up Questions', sub: 'Operating budget, costs & demand' },
-    { num: 4, title: 'Review Business Risks', sub: '5 Risk dimensions & drivers' },
-    { num: 5, title: 'Mitigation & Growth Plan', sub: 'Prioritized actions & readiness' }
+  // 6 Steps Definition
+  const steps = [
+    { num: 1, label: 'Business Plan' },
+    { num: 2, label: 'Confirm Details' },
+    { num: 3, label: 'Additional Information' },
+    { num: 4, label: 'Risk Assessment' },
+    { num: 5, label: 'GNN Insights' },
+    { num: 6, label: 'Mitigation & Growth' },
   ];
 
-  // Shortcut references
-  const summary = analysisResult?.summary || analysisResult?.overall_summary || {};
-  const stage6 = analysisResult?.stage6_risk_assessment || {};
-  const readiness = analysisResult?.growth_readiness || {};
-  const plan = analysisResult?.plan_extraction || extractedData || {};
+  // Derived analysis variables safely extracted
   const hasActiveResult = Boolean(analysisResult);
-
-  // Provenance Badge Generator (Section 6)
-  const getProvenanceBadge = (provenance) => {
-    switch (provenance) {
-      case 'plan_stated':
-      case 'EXTRACTED_FROM_PLAN':
-        return <span className="c4-prov-badge c4-prov-plan-stated">Plan-Stated Fact</span>;
-      case 'user_confirmed':
-      case 'USER_DECLARED':
-        return <span className="c4-prov-badge c4-prov-user-confirmed">User-Confirmed</span>;
-      case 'user_estimate':
-        return <span className="c4-prov-badge c4-prov-user-estimate">User Estimate</span>;
-      case 'unknown':
-        return <span className="c4-prov-badge c4-prov-unknown">Unknown</span>;
-      case 'conflicting':
-        return <span className="c4-prov-badge c4-prov-conflicting">Conflicting Value</span>;
-      case 'derived':
-        return <span className="c4-prov-badge c4-prov-derived">Derived Calculation</span>;
-      default:
-        return <span className="c4-prov-badge c4-prov-plan-stated">{provenance || 'Plan Fact'}</span>;
-    }
-  };
+  const stage6 = analysisResult?.stage6_risk_assessment || {};
+  const stage7 = analysisResult?.stage7_gnn_inference || {};
+  const readiness = analysisResult?.growth_readiness || {};
+  const plan = analysisResult?.business_plan || {};
 
   return (
     <div className="c4-container">
-
-      {/* Top Banner Header */}
-      <div className="c4-header-banner">
-        <div className="c4-header-top">
-          <div>
-            <div className="c4-header-badge">
-              <ShieldAlert size={15} />
-              SME360 AI &bull; Component 4 Risk &amp; Growth Decision Support
-            </div>
-            <h1 className="c4-header-title">
-              Business Risk Assessment &amp; Growth Planning
-            </h1>
-            <p className="c4-header-subtitle">
-              A guided, 5-step evaluation designed for Sri Lankan SME owners. Assesses monthly financial runway, debt capacity, operational readiness, and supply chain concentration across Western Province (Colombo, Gampaha, Kalutara).
-            </p>
-          </div>
-
-          <div className="c4-header-actions">
-            {hasActiveResult && (
-              <button
-                onClick={handleDownloadReport}
-                className="btn btn-primary"
-                style={{ fontSize: '0.8rem', padding: '0.6rem 1.1rem' }}
-                title="Download comprehensive audit report"
-              >
-                <Download size={15} />
-                Download Report (.md)
-              </button>
-            )}
-            <button
-              onClick={() => {
-                setCurrentStep(1);
-                setSelectedFile(null);
-                setExtractedData(null);
-                setAnalysisResult(null);
-              }}
-              className="btn btn-secondary"
-              style={{ fontSize: '0.8rem', padding: '0.6rem 1.1rem' }}
-              title="Start a fresh evaluation"
-            >
-              <UploadCloud size={15} />
-              New Assessment
-            </button>
-          </div>
+      {/* Alert Messages */}
+      {errorMsg && (
+        <div style={{ background: 'var(--risk-high-bg)', border: '1px solid var(--risk-high-border)', color: 'var(--risk-high)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-sm)', fontSize: '0.825rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <AlertTriangle size={16} />
+          <span>{errorMsg}</span>
         </div>
+      )}
 
-        {/* Stable Business Identifier Sub-bar (Section 4, Step 1) */}
-        {confirmedBusinessId && (
-          <div className="c4-id-subbar">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-              <span style={{ color: '#94a3b8' }}>Stable Business Identifier:</span>
-              <span className="c4-id-badge" title="Permanent identifier for this business record">
-                {confirmedBusinessId}
-              </span>
-              <button
-                onClick={handleCopyBusinessId}
-                title="Copy Reference Number"
-                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-              >
-                {copiedId ? <Check size={14} style={{ color: '#34d399' }} /> : <Copy size={14} />}
-              </button>
-              {isReusedProfile && (
-                <span style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.4)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 700 }}>
-                  EXISTING ENTERPRISE PROFILE
-                </span>
-              )}
-              {isDemoProfile && (
-                <span style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.4)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 700 }}>
-                  DEMO EXAMPLE PROFILE
-                </span>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: '#94a3b8', fontSize: '0.74rem' }}>
-              <span>Coverage: <strong style={{ color: '#ffffff' }}>Western Province (Colombo, Gampaha, Kalutara)</strong></span>
-            </div>
-          </div>
-        )}
-
-        {/* Feedback alerts */}
-        {errorMsg && (
-          <div style={{ marginTop: '1rem', padding: '0.75rem 1rem', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: '8px', color: '#fca5a5', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <AlertTriangle size={16} />
-            <span>{errorMsg}</span>
-          </div>
-        )}
-        {successMsg && (
-          <div style={{ marginTop: '1rem', padding: '0.75rem 1rem', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.4)', borderRadius: '8px', color: '#6ee7b7', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <CheckCircle2 size={16} />
-            <span>{successMsg}</span>
-          </div>
-        )}
-      </div>
-
-      {/* VISIBLE FIVE-STEP PROGRESS STEPPER (Section 4) */}
-      <div className="c4-stepper-wrapper">
-        <div className="c4-stepper">
-          {stepsConfig.map((step, idx) => {
-            const isCompleted = (step.num === 1 && Boolean(extractedData || uploadedFilePath || isDemoProfile)) ||
-                                (step.num === 2 && Boolean(extractedData || isDemoProfile)) ||
-                                (step.num === 3 && hasActiveResult) ||
-                                (step.num === 4 && hasActiveResult);
-            const isActive = currentStep === step.num;
-            const isDisabled = (step.num === 2 && !extractedData && !uploadedFilePath && !isDemoProfile) ||
-                               (step.num === 3 && !extractedData && !uploadedFilePath && !isDemoProfile) ||
-                               (step.num === 4 && !hasActiveResult) ||
-                               (step.num === 5 && !hasActiveResult);
-
-            return (
-              <React.Fragment key={step.num}>
-                <button
-                  type="button"
-                  disabled={isDisabled}
-                  onClick={() => !isDisabled && setCurrentStep(step.num)}
-                  className={`c4-step-item ${isActive ? 'is-active' : ''} ${isCompleted ? 'is-completed' : ''} ${isDisabled ? 'is-disabled' : ''}`}
-                >
-                  <div className="c4-step-badge">
-                    {isCompleted && !isActive ? <Check size={16} /> : step.num}
-                  </div>
-                  <div className="c4-step-text">
-                    <span className="c4-step-label">Step {step.num}: {step.title}</span>
-                    <span className="c4-step-sub">{step.sub}</span>
-                  </div>
-                </button>
-                {idx < stepsConfig.length - 1 && (
-                  <ChevronRight size={16} className="c4-step-arrow" />
-                )}
-              </React.Fragment>
-            );
-          })}
+      {successMsg && (
+        <div style={{ background: 'var(--risk-low-bg)', border: '1px solid var(--risk-low-border)', color: 'var(--risk-low)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-sm)', fontSize: '0.825rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CheckCircle2 size={16} />
+          <span>{successMsg}</span>
         </div>
+      )}
+
+      {/* 6-Step Progress Stepper */}
+      <div className="c4-stepper" aria-label="Risk Assessment Progress">
+        {steps.map((s, idx) => {
+          const isActive = currentStep === s.num;
+          const isCompleted = currentStep > s.num;
+
+          return (
+            <React.Fragment key={s.num}>
+              <button
+                type="button"
+                onClick={() => {
+                  // Only allow jumping forward if result exists, backward always allowed
+                  if (s.num < currentStep || hasActiveResult) {
+                    setCurrentStep(s.num);
+                  }
+                }}
+                className={`c4-step-node ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
+                aria-current={isActive ? 'step' : undefined}
+              >
+                <div className="c4-step-circle">
+                  {isCompleted ? <Check size={13} /> : s.num}
+                </div>
+                <span className="c4-step-label">{s.label}</span>
+              </button>
+
+              {idx < steps.length - 1 && <div className="c4-step-line" />}
+            </React.Fragment>
+          );
+        })}
       </div>
 
       {/* ========================================================================= */}
-      {/* STEP 1: UPLOAD BUSINESS PLAN (Section 4, Step 1)                           */}
+      {/* STEP 1: BUSINESS PLAN UPLOAD / SELECT PROFILE                             */}
       {/* ========================================================================= */}
       {currentStep === 1 && (
-        <div className="c4-card">
-          <div className="c4-card-title">
-            <UploadCloud size={20} style={{ color: '#818cf8' }} />
-            Step 1: Upload Business Plan or Select Existing Profile
-          </div>
-          <p className="c4-card-desc">
-            Upload the business plan document produced by Component 1 (or your custom plan in PDF, Word, or JSON format), or link an existing registered enterprise profile.
-          </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div className="c4-section-card">
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 0.35rem 0' }}>
+              Upload your business plan
+            </h2>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 1.5rem 0' }}>
+              Upload the business plan prepared by SME360 AI or select an existing business profile.
+            </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', marginTop: '1.25rem' }}>
-            
-            {/* Primary Document Upload Box */}
-            <div>
-              <div className="c4-dropzone">
-                <input
-                  type="file"
-                  id="business-plan-file-input"
-                  accept=".json,.pdf,.docx,.txt,.md"
-                  onChange={handleFileChange}
-                />
-                <UploadCloud className="c4-dropzone-icon" />
-                <div className="c4-dropzone-title">
-                  {selectedFile ? selectedFile.name : 'Click or Drag & Drop Business Plan Document'}
-                </div>
-                <div className="c4-dropzone-hint">
-                  Supports PDF, Word (.docx), JSON (Recommended), or Text (.txt) up to 15 MB
-                </div>
+            {/* Drag & Drop Upload Dropzone */}
+            <div 
+              className="c4-upload-box"
+              onClick={() => document.getElementById('c4-file-input').click()}
+            >
+              <UploadCloud size={40} style={{ color: 'var(--primary-green)', marginBottom: '0.75rem' }} />
+              <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                Click to browse or drag &amp; drop your business plan
               </div>
-
-              {selectedFile && (
-                <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: '#c7d2fe', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <FileText size={15} />
-                  <span>Selected: <strong>{selectedFile.name}</strong> ({(selectedFile.size / 1024).toFixed(1)} KB)</span>
-                </div>
-              )}
-
-              <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <button
-                  id="extract-facts-btn"
-                  onClick={handleUpload}
-                  disabled={!selectedFile || loading}
-                  className="btn btn-primary"
-                  style={{ padding: '0.85rem', fontSize: '0.88rem' }}
-                >
-                  <UploadCloud size={16} />
-                  {loading ? 'Parsing Document & Extracting Facts...' : 'Extract Facts & Continue to Step 2'}
-                </button>
-
-                {initialPlanData && (
-                  <button
-                    onClick={() => {
-                      setExtractedData(initialPlanData.personalized_business_plan || initialPlanData);
-                      setAvailableFacts({
-                        business_name: { value: initialPlanData.business_input?.business_name, provenance: 'plan_stated' },
-                        business_category: { value: initialPlanData.business_input?.business_category, provenance: 'plan_stated' },
-                        district: { value: initialPlanData.business_input?.district, provenance: 'plan_stated' },
-                        available_capital_lkr: { value: initialPlanData.business_input?.available_capital_lkr, provenance: 'plan_stated' }
-                      });
-                      setConfirmedBusinessId(initialPlanData.metadata?.record_id || '');
-                      setCurrentStep(2);
-                    }}
-                    className="btn btn-secondary"
-                    style={{ padding: '0.75rem', fontSize: '0.82rem', borderColor: '#3b82f6', color: '#93c5fd' }}
-                  >
-                    <FolderOpen size={15} />
-                    Use Active Business Plan from Current Session
-                  </button>
-                )}
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.35rem' }}>
+                Accepted formats: PDF, DOCX, JSON, TXT &bull; Max size: 10MB
               </div>
+              <input
+                id="c4-file-input"
+                type="file"
+                accept=".pdf,.docx,.json,.txt"
+                onChange={handleFileChange}
+                style={{ display: 'none' }}
+              />
             </div>
 
-            {/* Profile Selection & Demo Shortcuts */}
-            <div style={{ background: 'rgba(15, 23, 42, 0.65)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1rem' }}>
-              <div>
-                <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.65rem' }}>
-                  <Building size={16} style={{ color: '#60a5fa' }} />
-                  Alternative Options:
+            {/* Selected File Card */}
+            {selectedFile && (
+              <div className="c4-file-card">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <FileText size={20} style={{ color: 'var(--primary-green)' }} />
+                  <div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {selectedFile.name}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                      {(selectedFile.size / 1024).toFixed(1)} KB &bull; Ready for extraction
+                    </div>
+                  </div>
                 </div>
 
-                {/* Option A: Select Existing Business Profile */}
-                <div style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                  <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginBottom: '0.5rem' }}>
-                    Already have a registered enterprise profile in Western Province?
-                  </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <button
-                    onClick={() => setShowBusinessPicker(!showBusinessPicker)}
-                    className="btn btn-secondary"
-                    style={{ fontSize: '0.78rem', padding: '0.45rem 0.85rem', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                    onClick={() => setSelectedFile(null)}
+                    className="btn btn-subtle"
+                    style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}
                   >
-                    <Building size={14} />
-                    <span>Select an Existing Business Profile ({existingBusinesses.length})</span>
-                    <ChevronDown size={14} />
+                    Remove
                   </button>
+                  <button
+                    onClick={handleUpload}
+                    disabled={loading}
+                    className="btn btn-primary"
+                    style={{ fontSize: '0.8rem', padding: '0.45rem 1rem' }}
+                  >
+                    {loading ? <RefreshCw size={14} className="animate-spin" /> : <ArrowRight size={14} />}
+                    <span>Extract &amp; Continue</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
-                  {/* Dropdown list of existing businesses */}
-                  {showBusinessPicker && (
-                    <div style={{ marginTop: '0.75rem', maxHeight: '180px', overflowY: 'auto', background: 'rgba(10, 15, 26, 0.95)', border: '1px solid rgba(255, 255, 255, 0.15)', borderRadius: '8px', padding: '0.5rem' }}>
-                      {existingBusinesses.length === 0 ? (
-                        <div style={{ fontSize: '0.72rem', color: '#94a3b8', padding: '0.5rem', textAlign: 'center' }}>
-                          No persistent businesses saved yet.
-                        </div>
-                      ) : (
-                        existingBusinesses.map(b => (
-                          <div
-                            key={b.id}
-                            onClick={() => handleSelectExistingBusiness(b)}
-                            style={{ padding: '0.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', cursor: 'pointer', fontSize: '0.75rem' }}
-                            className="c4-biz-picker-card"
-                          >
-                            <div style={{ fontWeight: 700, color: '#ffffff' }}>{b.business_name}</div>
-                            <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                              [{b.id}] &bull; {b.district} &bull; {b.business_category}
+            {/* Secondary Options Divider */}
+            <div style={{ display: 'flex', alignItems: 'center', margin: '2rem 0 1.25rem 0' }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--border-color)' }} />
+              <span style={{ padding: '0 0.85rem', fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Or Choose an Alternate Method
+              </span>
+              <div style={{ flex: 1, height: 1, background: 'var(--border-color)' }} />
+            </div>
+
+            {/* Alternate Ingestion Actions */}
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => setShowBusinessPicker(true)}
+                className="btn btn-secondary"
+                style={{ flex: '1 1 240px', justifyContent: 'flex-start', padding: '0.85rem 1rem' }}
+              >
+                <FolderOpen size={18} style={{ color: 'var(--primary-green)' }} />
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.825rem' }}>Select Existing Business Profile</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Pick from previously saved Western Province enterprises</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleLoadHellooGlowSample}
+                className="btn btn-secondary"
+                style={{ flex: '1 1 240px', justifyContent: 'flex-start', padding: '0.85rem 1rem' }}
+              >
+                <Sparkles size={18} style={{ color: 'var(--primary-green)' }} />
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.825rem' }}>Try Helloo Glow Demo</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Preloads beauty studio plan with budget conflict scenario</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Modal Picker for Existing Businesses */}
+          {showBusinessPicker && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+              padding: '1rem'
+            }}>
+              <div className="content-card" style={{ maxWidth: '600px', width: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column', margin: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>Select Registered Business Profile</h3>
+                  <button onClick={() => setShowBusinessPicker(false)} className="btn btn-subtle" style={{ padding: '0.2rem' }}>
+                    <XCircle size={18} />
+                  </button>
+                </div>
+
+                <div style={{ overflowY: 'auto', padding: '1rem 0', flex: 1 }}>
+                  {loadingExisting ? (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                      <RefreshCw size={20} className="animate-spin" style={{ margin: '0 auto 0.5rem auto' }} />
+                      Loading businesses...
+                    </div>
+                  ) : existingBusinesses.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                      No persistent business profiles registered yet.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {existingBusinesses.map(b => (
+                        <div
+                          key={b.id}
+                          onClick={() => handleSelectExistingBusiness(b)}
+                          style={{
+                            padding: '0.75rem 1rem',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: 'var(--radius-sm)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            background: 'var(--bg-surface)'
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)' }}>
+                              {b.business_name}
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                              ID: {b.id} &middot; {b.business_category} &middot; {b.district}
                             </div>
                           </div>
-                        ))
-                      )}
+                          <button className="btn btn-secondary" style={{ fontSize: '0.72rem', padding: '0.25rem 0.65rem' }}>
+                            Select
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
-
-                {/* Option B: Demo Shortcut with Conflicting Values (Helloo Glow Beauty Studio) */}
-                <div>
-                  <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginBottom: '0.4rem' }}>
-                    Want to test conflict resolution and the 5-step flow immediately?
-                  </div>
-                  <button
-                    id="load-helloo-glow-demo-btn"
-                    onClick={handleLoadHellooGlowSample}
-                    className="btn btn-secondary"
-                    style={{ fontSize: '0.78rem', padding: '0.55rem 0.85rem', width: '100%', borderColor: 'rgba(245, 158, 11, 0.4)', color: '#fbbf24', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}
-                  >
-                    <Sparkles size={14} />
-                    <span>Try Example: Helloo Glow Beauty Studio</span>
-                  </button>
-                  <p style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.35rem', lineHeight: '1.4' }}>
-                    Pre-loads a demonstration profile with documented conflicting budget numbers (LKR 120,000 vs 102,000) to test Step 2 conflict resolution.
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ fontSize: '0.72rem', color: '#64748b', borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '0.75rem' }}>
-                Western Province Boundary: Colombo, Gampaha, and Kalutara districts supported.
               </div>
             </div>
-
-          </div>
+          )}
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* STEP 2: REVIEW AND CONFIRM PLAN DETAILS (Section 4, Step 2)               */}
+      {/* STEP 2: CONFIRM BUSINESS DETAILS (Organized & Conflict Resolution)         */}
       {/* ========================================================================= */}
       {currentStep === 2 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
-          {/* Identity & Reference Header */}
-          <div className="c4-card" style={{ borderColor: 'rgba(99, 102, 241, 0.35)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <div>
-                <div className="c4-card-title">
-                  <Building size={18} style={{ color: '#818cf8' }} />
-                  Step 2: Review and Confirm Plan Details
-                </div>
-                <p className="c4-card-desc" style={{ marginBottom: 0 }}>
-                  Review facts extracted from your plan. Provenance tags show where each value originated. You can correct values non-destructively without modifying your original document.
-                </p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span className="c4-id-badge" style={{ fontSize: '0.8rem' }}>
-                  {confirmedBusinessId || 'ID Pending'}
-                </span>
-                <button
-                  onClick={handleCopyBusinessId}
-                  className="btn btn-secondary"
-                  style={{ padding: '0.45rem 0.75rem', fontSize: '0.75rem' }}
-                >
-                  {copiedId ? <Check size={14} style={{ color: '#34d399' }} /> : <Copy size={14} />}
-                  Copy ID
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* CONFLICTING VALUES RESOLUTION CARD (Section 4, Step 2) */}
-          {/* Never silently choose one conflicting value! */}
-          {Object.entries(conflictingFields).length > 0 && (
+          {/* Conflicting Values Resolution Banner */}
+          {Object.keys(conflictingFields).length > 0 && (
             <div className="c4-conflict-card">
               <div className="c4-conflict-title">
                 <AlertTriangle size={18} />
-                <span>Action Required: Conflicting Numbers Detected in Plan</span>
+                <span>Conflicting Values Detected in Business Plan</span>
               </div>
-              <p style={{ fontSize: '0.78rem', color: '#fca5a5', marginTop: '0.35rem', marginBottom: '0.85rem', lineHeight: '1.5' }}>
-                Your business plan mentions different values in different sections. To prevent distorted risk predictions, please select which number is accurate or enter your verified amount. <em>We never guess or silently pick one.</em>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-primary)', margin: '0 0 1rem 0' }}>
+                The uploaded plan contains differing values across sections. Please confirm which figure reflects your actual business baseline:
               </p>
 
-              {Object.entries(conflictingFields).map(([fKey, conflict]) => {
-                const isResolved = conflict.status === 'user_confirmed';
-
-                return (
-                  <div key={fKey} style={{ background: 'rgba(15, 23, 42, 0.7)', borderRadius: '10px', padding: '1rem', border: '1px solid rgba(239, 68, 68, 0.25)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
-                      <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#ffffff' }}>
-                        Field: {conflict.field_label}
-                      </span>
-                      {isResolved ? (
-                        <span style={{ fontSize: '0.7rem', color: '#34d399', background: 'rgba(16, 185, 129, 0.15)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontWeight: 700 }}>
-                          Resolved by Owner: LKR {Number(conflict.resolved_value).toLocaleString()}
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: '0.7rem', color: '#f87171', background: 'rgba(239, 68, 68, 0.15)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontWeight: 700 }}>
-                          Awaiting Resolution
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="c4-conflict-options">
-                      {conflict.options.map((opt, oi) => {
-                        const isSelected = conflict.resolved_value === opt.value;
-                        return (
-                          <div
-                            key={oi}
-                            onClick={() => handleResolveConflict(fKey, opt.value)}
-                            className={`c4-conflict-option ${isSelected ? 'is-selected' : ''}`}
-                          >
-                            <div>
-                              <div style={{ fontWeight: 700, fontSize: '0.84rem', color: isSelected ? '#34d399' : '#ffffff' }}>
-                                Option {String.fromCharCode(65 + oi)}: {opt.label}
-                              </div>
-                              <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.15rem' }}>
-                                Mentioned in: {opt.source}
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              className={`btn ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
-                              style={{ fontSize: '0.72rem', padding: '0.3rem 0.65rem' }}
-                            >
-                              {isSelected ? <Check size={12} /> : null}
-                              <span>{isSelected ? 'Confirmed' : 'Use this value'}</span>
-                            </button>
-                          </div>
-                        );
-                      })}
-
-                      {/* Custom resolution input */}
-                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.35rem' }}>
-                        <input
-                          type="number"
-                          placeholder="Or enter your verified amount (LKR)"
-                          id={`custom-conflict-${fKey}`}
-                          className="c4-input"
-                          style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const inp = document.getElementById(`custom-conflict-${fKey}`);
-                            if (inp && inp.value) {
-                              handleResolveConflict(fKey, Number(inp.value));
-                            }
-                          }}
-                          className="btn btn-secondary"
-                          style={{ fontSize: '0.72rem', padding: '0.45rem 0.75rem', whiteSpace: 'nowrap' }}
-                        >
-                          Confirm Custom Amount
-                        </button>
-                      </div>
-                    </div>
+              {Object.entries(conflictingFields).map(([key, conf]) => (
+                <div key={key} style={{ background: 'var(--bg-surface)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+                    {conf.field_label}:
                   </div>
-                );
-              })}
+                  <div className="c4-conflict-options">
+                    {conf.options.map((opt, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleResolveConflict(key, opt.value)}
+                        className={`c4-conflict-btn ${conf.resolved_value === opt.value ? 'selected' : ''}`}
+                      >
+                        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: conf.resolved_value === opt.value ? 'var(--primary-green)' : 'var(--text-primary)' }}>
+                          {opt.label}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                          Source: {opt.source}
+                        </div>
+                        {conf.resolved_value === opt.value && (
+                          <div style={{ fontSize: '0.7rem', color: 'var(--primary-green)', fontWeight: 700, marginTop: '0.35rem' }}>
+                            ✓ Selected for Baseline
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
-          {/* Section: Extracted Document Facts with Provenance Badges (Section 6) */}
-          <div className="c4-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <div>
-                <div className="c4-card-title">
-                  <CheckCheck size={18} style={{ color: '#10b981' }} />
-                  Summary of Extracted Plan Facts ({Object.keys(availableFacts).length} Facts)
-                </div>
-                <p className="c4-card-desc" style={{ marginBottom: 0 }}>
-                  Pre-populated facts found in your document. Click the edit icon to adjust any value without changing your original file.
-                </p>
-              </div>
-              <span style={{ fontSize: '0.72rem', color: '#34d399', background: 'rgba(16, 185, 129, 0.15)', padding: '0.2rem 0.6rem', borderRadius: '4px', fontWeight: 700 }}>
-                Data Provenance Preserved
+          {/* Form Organized into 5 Standard Categories */}
+          <div className="c4-section-card">
+            <div className="c4-section-heading">
+              <span>1. Business Identity &amp; Registration</span>
+              <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
+                Original document remains unaltered
               </span>
             </div>
-
-            <div className="c4-review-grid" style={{ marginTop: '1.25rem' }}>
-              {Object.entries(availableFacts).map(([k, fact]) => {
-                const isEditing = editingFieldKey === k;
-                const factVal = typeof fact === 'object' ? fact.value : fact;
-                const factProv = typeof fact === 'object' ? fact.provenance : 'plan_stated';
-                const factSrc = typeof fact === 'object' ? fact.source_reference : 'Uploaded Plan';
-
-                return (
-                  <div key={k} className="c4-review-card">
-                    <div className="c4-review-header">
-                      <span className="c4-review-label">{k.replace(/_/g, ' ')}</span>
-                      {getProvenanceBadge(factProv)}
-                    </div>
-
-                    {isEditing ? (
-                      <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.35rem' }}>
-                        <input
-                          type="text"
-                          value={editingFieldValue}
-                          onChange={(e) => setEditingFieldValue(e.target.value)}
-                          className="c4-input"
-                          style={{ fontSize: '0.78rem' }}
-                        />
-                        <button
-                          onClick={() => handleSaveEditedFact(k)}
-                          className="btn btn-primary"
-                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.72rem' }}
-                        >
-                          Save
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div className="c4-review-value">
-                          {formatDisplayValue(factVal, k)}
-                        </div>
-                        <button
-                          onClick={() => handleStartEditFact(k, factVal)}
-                          style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
-                          title="Edit this value"
-                        >
-                          <Edit3 size={13} />
-                        </button>
-                      </div>
-                    )}
-
-                    <div className="c4-review-source">
-                      <FileText size={12} />
-                      <span>Source: {factSrc}</span>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="grid-2">
+              <div>
+                <label className="form-label">Business Name</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="text"
+                    value={availableFacts.business_name?.value || ''}
+                    onChange={(e) => handleFactEdit('business_name', e.target.value)}
+                    className="form-control"
+                  />
+                  {renderProvenanceTag(availableFacts.business_name?.provenance)}
+                </div>
+              </div>
+              <div>
+                <label className="form-label">Assigned Persistent ID</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="text"
+                    value={confirmedBusinessId || ''}
+                    onChange={(e) => setConfirmedBusinessId(e.target.value)}
+                    className="form-control"
+                  />
+                  <span className="provenance-tag provenance-confirmed">
+                    {isReusedProfile ? 'Reused Profile' : 'New Entity'}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Stepper Navigation Controls */}
-          <div className="c4-nav-footer">
+          <div className="c4-section-card">
+            <div className="c4-section-heading">
+              <span>2. Location &amp; Geographic Scope</span>
+            </div>
+            <div className="grid-2">
+              <div>
+                <label className="form-label">District (Western Province)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <select
+                    value={availableFacts.district?.value || 'Colombo'}
+                    onChange={(e) => handleFactEdit('district', e.target.value)}
+                    className="form-select"
+                  >
+                    <option value="Colombo">Colombo</option>
+                    <option value="Gampaha">Gampaha</option>
+                    <option value="Kalutara">Kalutara</option>
+                  </select>
+                  {renderProvenanceTag(availableFacts.district?.provenance)}
+                </div>
+              </div>
+              <div>
+                <label className="form-label">Province</label>
+                <input
+                  type="text"
+                  value="Western Province"
+                  disabled
+                  className="form-control"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="c4-section-card">
+            <div className="c4-section-heading">
+              <span>3. Business Stage &amp; Category</span>
+            </div>
+            <div className="grid-2">
+              <div>
+                <label className="form-label">Business Sector / Category</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="text"
+                    value={availableFacts.business_category?.value || ''}
+                    onChange={(e) => handleFactEdit('business_category', e.target.value)}
+                    className="form-control"
+                  />
+                  {renderProvenanceTag(availableFacts.business_category?.provenance)}
+                </div>
+              </div>
+              <div>
+                <label className="form-label">Current Lifecycle Stage</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <select
+                    value={availableFacts.business_stage?.value || 'Operating SME'}
+                    onChange={(e) => handleFactEdit('business_stage', e.target.value)}
+                    className="form-select"
+                  >
+                    <option value="Idea / Concept">Idea / Concept</option>
+                    <option value="New Startup">New Startup</option>
+                    <option value="Operating SME">Operating SME</option>
+                    <option value="Growth / Expansion">Growth / Expansion</option>
+                    <option value="Maturity">Maturity</option>
+                  </select>
+                  {renderProvenanceTag(availableFacts.business_stage?.provenance)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="c4-section-card">
+            <div className="c4-section-heading">
+              <span>4. Baseline Financial Figures</span>
+            </div>
+            <div className="grid-2">
+              <div>
+                <label className="form-label">Available Starting Capital (LKR)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="number"
+                    value={availableFacts.available_capital_lkr?.value || ''}
+                    onChange={(e) => handleFactEdit('available_capital_lkr', Number(e.target.value))}
+                    className="form-control"
+                  />
+                  {renderProvenanceTag(availableFacts.available_capital_lkr?.provenance)}
+                </div>
+              </div>
+              <div>
+                <label className="form-label">Initial Financing / Loan Incurred (LKR)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="number"
+                    value={availableFacts.loan_amount_lkr?.value || ''}
+                    onChange={(e) => handleFactEdit('loan_amount_lkr', Number(e.target.value))}
+                    className="form-control"
+                  />
+                  {renderProvenanceTag(availableFacts.loan_amount_lkr?.provenance)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Stepper Navigation Buttons */}
+          <div className="c4-bottom-nav">
             <button
               type="button"
               onClick={() => setCurrentStep(1)}
-              className="c4-btn-back"
+              className="btn btn-secondary"
             >
-              <ArrowLeft size={16} />
-              Back to Upload
+              <ArrowLeft size={15} />
+              <span>Back to Upload</span>
             </button>
+
             <button
-              id="continue-to-step3-btn"
               type="button"
               onClick={() => setCurrentStep(3)}
-              className="c4-btn-continue"
+              className="btn btn-primary"
             >
-              Continue to Step 3: Follow-up Questions
-              <ArrowRight size={16} />
+              <span>Continue to Additional Information</span>
+              <ArrowRight size={15} />
             </button>
           </div>
-
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* STEP 3: ANSWER FOLLOW-UP QUESTIONS (Section 4, Step 3)                    */}
+      {/* STEP 3: ADDITIONAL INFORMATION (5 Risk Dimensions Progressive Disclosure)  */}
       {/* ========================================================================= */}
       {currentStep === 3 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
-          <div className="c4-card" style={{ borderColor: 'rgba(245, 158, 11, 0.4)' }}>
-            <div className="c4-card-title" style={{ color: '#fbbf24' }}>
-              <Layers size={20} />
-              Step 3: Answer Follow-up Questions
-            </div>
-            <p className="c4-card-desc">
-              We only ask for missing parameters required to compute financial runway, debt service safety, and customer demand stability. You may click &ldquo;Unknown&rdquo;, &ldquo;Not sure&rdquo;, or &ldquo;N/A&rdquo; if you do not have exact figures yet.
+          <div className="c4-section-card">
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 0.35rem 0' }}>
+              Additional Information for Five Risk Dimensions
+            </h2>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem 0' }}>
+              Provide supplemental operating facts. Fields without exact records can be marked &ldquo;Unknown&rdquo; or &ldquo;Not sure&rdquo; without blocking the evaluation.
             </p>
 
-            {isDemoProfile && (
-              <div style={{ marginTop: '0.85rem', padding: '0.75rem 1rem', background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.35)', borderRadius: '8px', fontSize: '0.76rem', color: '#fde68a' }}>
-                <strong style={{ color: '#fbbf24' }}>Notice for Helloo Glow Demo:</strong> The fields below contain unverified demonstration estimates. You can edit any value, mark items as Unknown, or add suppliers before running the assessment.
+            {/* Dimension Switcher Pills */}
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+              {[
+                { id: 'credit', label: 'A. Credit Risk', icon: DollarSign },
+                { id: 'market', label: 'B. Market Risk', icon: TrendingUp },
+                { id: 'inflation', label: 'C. Inflation Risk', icon: Flame },
+                { id: 'liquidity', label: 'D. Liquidity Risk', icon: Clock },
+                { id: 'operational', label: 'E. Operational Risk', icon: Truck },
+              ].map(dim => {
+                const Icon = dim.icon;
+                const isSelected = activeDimensionTab === dim.id;
+                return (
+                  <button
+                    key={dim.id}
+                    type="button"
+                    onClick={() => setActiveDimensionTab(dim.id)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      padding: '0.45rem 0.85rem',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '0.8rem',
+                      fontWeight: isSelected ? 700 : 500,
+                      background: isSelected ? 'var(--primary-green-subtle)' : 'var(--bg-subtle)',
+                      color: isSelected ? 'var(--primary-green)' : 'var(--text-secondary)',
+                      border: isSelected ? '1px solid var(--primary-green-border)' : '1px solid var(--border-color)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <Icon size={14} />
+                    <span>{dim.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* DIMENSION A: CREDIT RISK */}
+            {activeDimensionTab === 'credit' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div className="grid-2">
+                  <div>
+                    <label className="form-label">Outstanding Loan Balance (LKR)</label>
+                    <input
+                      type="number"
+                      disabled={unknownToggles['outstanding_loan_balance']}
+                      value={unknownToggles['outstanding_loan_balance'] ? '' : formData.outstanding_loan_balance}
+                      onChange={(e) => handleFormFieldChange('outstanding_loan_balance', e.target.value)}
+                      placeholder={unknownToggles['outstanding_loan_balance'] ? 'Marked Unknown' : 'e.g. 450000'}
+                      className="form-control"
+                    />
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.35rem' }}>
+                      <button type="button" onClick={() => handleToggleUnknown('outstanding_loan_balance')} className="btn btn-subtle" style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}>
+                        {unknownToggles['outstanding_loan_balance'] ? 'Clear Unknown' : 'Mark Unknown'}
+                      </button>
+                      <button type="button" onClick={() => handleFormFieldChange('outstanding_loan_balance', '0')} className="btn btn-subtle" style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}>
+                        No Loan (LKR 0)
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="form-label">Monthly Loan Repayment (LKR)</label>
+                    <input
+                      type="number"
+                      disabled={unknownToggles['monthly_loan_repayment']}
+                      value={unknownToggles['monthly_loan_repayment'] ? '' : formData.monthly_loan_repayment}
+                      onChange={(e) => handleFormFieldChange('monthly_loan_repayment', e.target.value)}
+                      placeholder="e.g. 32000"
+                      className="form-control"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid-2">
+                  <div>
+                    <label className="form-label">Overdue Repayments</label>
+                    <select
+                      value={formData.overdue_repayments}
+                      onChange={(e) => handleFormFieldChange('overdue_repayments', e.target.value)}
+                      className="form-select"
+                    >
+                      <option value="No">No Overdue Installments</option>
+                      <option value="1-30 Days">1–30 Days Overdue</option>
+                      <option value="30+ Days">30+ Days Overdue</option>
+                      <option value="Unknown">Not Sure</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="form-label">Existing Debt Guarantees / Obligations</label>
+                    <input
+                      type="text"
+                      value={formData.debt_guarantees}
+                      onChange={(e) => handleFormFieldChange('debt_guarantees', e.target.value)}
+                      placeholder="e.g. Personal director guarantee, equipment lien"
+                      className="form-control"
+                    />
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Structured Follow-up Form Fields */}
-            <div className="c4-form-grid" style={{ marginTop: '1.25rem' }}>
-              
-              {/* Field 1: Monthly operating budget */}
-              <div className={`c4-form-card ${unknownToggles['monthly_budget_lkr'] ? 'is-unknown' : ''}`}>
-                <div className="c4-form-field-header">
-                  <label className="c4-form-field-label">1. Monthly Operating Budget</label>
-                  <span style={{ fontSize: '0.68rem', color: '#818cf8', fontFamily: 'monospace' }}>LKR</span>
+            {/* DIMENSION B: MARKET RISK */}
+            {activeDimensionTab === 'market' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div className="grid-2">
+                  <div>
+                    <label className="form-label">Monthly Sales or Revenue (LKR)</label>
+                    <input
+                      type="number"
+                      value={formData.monthly_sales_revenue}
+                      onChange={(e) => handleFormFieldChange('monthly_sales_revenue', e.target.value)}
+                      placeholder="e.g. 350000"
+                      className="form-control"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="form-label">Average Monthly Customer Count</label>
+                    <input
+                      type="number"
+                      value={formData.monthly_customer_count}
+                      onChange={(e) => handleFormFieldChange('monthly_customer_count', e.target.value)}
+                      placeholder="e.g. 120"
+                      className="form-control"
+                    />
+                  </div>
                 </div>
-                <p className="c4-form-field-desc">Estimated total monthly running expenses (salaries, supplies, rent, marketing).</p>
-                <input
-                  type="number"
-                  disabled={unknownToggles['monthly_budget_lkr']}
-                  value={unknownToggles['monthly_budget_lkr'] ? '' : (formData['monthly_budget_lkr'] || '')}
-                  onChange={(e) => handleFormFieldChange('monthly_budget_lkr', e.target.value)}
-                  placeholder={unknownToggles['monthly_budget_lkr'] ? 'Marked Unknown' : 'e.g. 120000'}
-                  className="c4-input"
-                  style={{ fontFamily: 'monospace' }}
-                />
-                <div className="c4-quick-buttons-row">
-                  <button type="button" onClick={() => handleSetQuickStatus('monthly_budget_lkr', 'unknown')} className={`c4-quick-btn ${unknownToggles['monthly_budget_lkr'] ? 'is-active' : ''}`}>Unknown</button>
-                  <button type="button" onClick={() => handleSetQuickStatus('monthly_budget_lkr', 'not_sure')} className="c4-quick-btn">Not sure</button>
+
+                <div className="grid-2">
+                  <div>
+                    <label className="form-label">Demand Verification Evidence</label>
+                    <select
+                      value={formData.customer_demand_evidence}
+                      onChange={(e) => handleFormFieldChange('customer_demand_evidence', e.target.value)}
+                      className="form-select"
+                    >
+                      <option value="actual_records">Actual Accounting Sales Records</option>
+                      <option value="pre_orders">Signed Pre-orders or Deposits</option>
+                      <option value="survey">Market Survey / Customer Interviews</option>
+                      <option value="foot_traffic">Direct Footfall Observation</option>
+                      <option value="estimate_only">Founder Estimate Only</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="form-label">Local Competition Notes</label>
+                    <input
+                      type="text"
+                      value={formData.demand_competition_notes}
+                      onChange={(e) => handleFormFieldChange('demand_competition_notes', e.target.value)}
+                      placeholder="e.g. 2 nearby competitors within 1km"
+                      className="form-control"
+                    />
+                  </div>
                 </div>
               </div>
+            )}
 
-              {/* Field 2: Fixed monthly costs */}
-              <div className={`c4-form-card ${unknownToggles['fixed_monthly_costs_lkr'] ? 'is-unknown' : ''}`}>
-                <div className="c4-form-field-header">
-                  <label className="c4-form-field-label">2. Fixed Monthly Costs</label>
-                  <span style={{ fontSize: '0.68rem', color: '#818cf8', fontFamily: 'monospace' }}>LKR</span>
-                </div>
-                <p className="c4-form-field-desc">Costs that remain the same every month regardless of customer volume (e.g., premises rent, base salaries).</p>
-                <input
-                  type="number"
-                  disabled={unknownToggles['fixed_monthly_costs_lkr']}
-                  value={unknownToggles['fixed_monthly_costs_lkr'] ? '' : (formData['fixed_monthly_costs_lkr'] || '')}
-                  onChange={(e) => handleFormFieldChange('fixed_monthly_costs_lkr', e.target.value)}
-                  placeholder={unknownToggles['fixed_monthly_costs_lkr'] ? 'Marked Unknown' : 'e.g. 65000'}
-                  className="c4-input"
-                  style={{ fontFamily: 'monospace' }}
-                />
-                <div className="c4-quick-buttons-row">
-                  <button type="button" onClick={() => handleSetQuickStatus('fixed_monthly_costs_lkr', 'unknown')} className={`c4-quick-btn ${unknownToggles['fixed_monthly_costs_lkr'] ? 'is-active' : ''}`}>Unknown</button>
-                  <button type="button" onClick={() => handleSetQuickStatus('fixed_monthly_costs_lkr', 'not_sure')} className="c4-quick-btn">Not sure</button>
-                </div>
-              </div>
+            {/* DIMENSION C: INFLATION RISK */}
+            {activeDimensionTab === 'inflation' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div className="grid-2">
+                  <div>
+                    <label className="form-label">Main Cost Categories Affected by Inflation</label>
+                    <input
+                      type="text"
+                      value={formData.inflation_affected_categories}
+                      onChange={(e) => handleFormFieldChange('inflation_affected_categories', e.target.value)}
+                      placeholder="e.g. Raw materials, electricity, delivery tariffs"
+                      className="form-control"
+                    />
+                  </div>
 
-              {/* Field 3: Variable cost per customer or service */}
-              <div className={`c4-form-card ${unknownToggles['variable_cost_per_unit_lkr'] ? 'is-unknown' : ''}`}>
-                <div className="c4-form-field-header">
-                  <label className="c4-form-field-label">3. Variable Cost per Customer/Service</label>
-                  <span style={{ fontSize: '0.68rem', color: '#818cf8', fontFamily: 'monospace' }}>LKR</span>
+                  <div>
+                    <label className="form-label">Recent Supplier Price Increases (% if known)</label>
+                    <input
+                      type="number"
+                      value={formData.recent_supplier_price_increase_pct}
+                      onChange={(e) => handleFormFieldChange('recent_supplier_price_increase_pct', e.target.value)}
+                      placeholder="e.g. 15"
+                      className="form-control"
+                    />
+                  </div>
                 </div>
-                <p className="c4-form-field-desc">Direct cost spent to serve one additional customer (e.g. consumables, ingredients).</p>
-                <input
-                  type="number"
-                  disabled={unknownToggles['variable_cost_per_unit_lkr']}
-                  value={unknownToggles['variable_cost_per_unit_lkr'] ? '' : (formData['variable_cost_per_unit_lkr'] || '')}
-                  onChange={(e) => handleFormFieldChange('variable_cost_per_unit_lkr', e.target.value)}
-                  placeholder={unknownToggles['variable_cost_per_unit_lkr'] ? 'Marked Unknown' : 'e.g. 750'}
-                  className="c4-input"
-                  style={{ fontFamily: 'monospace' }}
-                />
-                <div className="c4-quick-buttons-row">
-                  <button type="button" onClick={() => handleSetQuickStatus('variable_cost_per_unit_lkr', 'unknown')} className={`c4-quick-btn ${unknownToggles['variable_cost_per_unit_lkr'] ? 'is-active' : ''}`}>Unknown</button>
-                  <button type="button" onClick={() => handleSetQuickStatus('variable_cost_per_unit_lkr', 'not_sure')} className="c4-quick-btn">Not sure</button>
-                </div>
-              </div>
 
-              {/* Field 4: Actual remaining cash reserve after startup expenses */}
-              <div className={`c4-form-card ${unknownToggles['cash_reserve_lkr'] ? 'is-unknown' : ''}`}>
-                <div className="c4-form-field-header">
-                  <label className="c4-form-field-label">4. Remaining Cash Reserve</label>
-                  <span style={{ fontSize: '0.68rem', color: '#818cf8', fontFamily: 'monospace' }}>LKR</span>
-                </div>
-                <p className="c4-form-field-desc">Liquid cash buffer remaining in your bank account after paying for initial equipment &amp; startup setup.</p>
-                <input
-                  type="number"
-                  disabled={unknownToggles['cash_reserve_lkr']}
-                  value={unknownToggles['cash_reserve_lkr'] ? '' : (formData['cash_reserve_lkr'] || '')}
-                  onChange={(e) => handleFormFieldChange('cash_reserve_lkr', e.target.value)}
-                  placeholder={unknownToggles['cash_reserve_lkr'] ? 'Marked Unknown' : 'e.g. 200000'}
-                  className="c4-input"
-                  style={{ fontFamily: 'monospace' }}
-                />
-                <div className="c4-quick-buttons-row">
-                  <button type="button" onClick={() => handleSetQuickStatus('cash_reserve_lkr', 'unknown')} className={`c4-quick-btn ${unknownToggles['cash_reserve_lkr'] ? 'is-active' : ''}`}>Unknown</button>
-                  <button type="button" onClick={() => handleSetQuickStatus('cash_reserve_lkr', 'not_sure')} className="c4-quick-btn">Not sure</button>
-                </div>
-              </div>
-
-              {/* Field 5: Evidence supporting customer demand */}
-              <div className="c4-form-card">
-                <div className="c4-form-field-header">
-                  <label className="c4-form-field-label">5. Customer Demand Evidence</label>
-                </div>
-                <p className="c4-form-field-desc">What evidence backs your expected customer foot traffic?</p>
-                <select
-                  value={formData['customer_demand_evidence'] || 'estimate_only'}
-                  onChange={(e) => handleFormFieldChange('customer_demand_evidence', e.target.value)}
-                  className="c4-input"
-                >
-                  <option value="direct_preorders">Direct Pre-orders / Signed Contracts (Highest certainty)</option>
-                  <option value="historical_traffic">Historical Location Foot-traffic / Existing Client Base</option>
-                  <option value="market_survey">Local Field Survey or Competitor Pricing Study</option>
-                  <option value="estimate_only">Owner Estimate Only (Evaluated with uncertainty factor)</option>
-                </select>
-              </div>
-
-              {/* Field 6: Growth Objective */}
-              <div className="c4-form-card">
-                <div className="c4-form-field-header">
-                  <label className="c4-form-field-label">6. Strategic Growth Objective</label>
-                </div>
-                <p className="c4-form-field-desc">What is your primary milestone for the next 6-12 months?</p>
-                <select
-                  value={formData['growth_objective'] || 'recommend_options'}
-                  onChange={(e) => handleFormFieldChange('growth_objective', e.target.value)}
-                  className="c4-input"
-                >
-                  <option value="recommend_options">Recommend suitable growth options based on risk check</option>
-                  <option value="stabilize_cashflow">Stabilize Cashflow &amp; Build Operating Reserve</option>
-                  <option value="expand_capacity">Add Staff or Purchase Expansion Equipment</option>
-                  <option value="debt_reduction">Pay Down Outstanding Loan Obligations</option>
-                </select>
-              </div>
-
-            </div>
-          </div>
-
-          {/* Supplier Dependency & Trade Counterparties (Section 4, Step 3) */}
-          <div className="c4-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <div>
-                <div className="c4-card-title">
-                  <Network size={18} style={{ color: '#818cf8' }} />
-                  7. Supplier Dependency &amp; Counterparty Relationships (Optional)
-                </div>
-                <p className="c4-card-desc" style={{ marginBottom: 0 }}>
-                  List key suppliers or buyers to evaluate concentration risk. If you do not have external dependencies, you may leave this blank.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleAddRelationship}
-                className="btn btn-secondary"
-                style={{ fontSize: '0.75rem', padding: '0.45rem 0.85rem' }}
-              >
-                <Plus size={14} />
-                Add Supplier or Buyer
-              </button>
-            </div>
-
-            {declaredRelationships.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginTop: '1rem' }}>
-                {declaredRelationships.map((rel, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1.5fr 1fr 1fr 1fr auto',
-                      gap: '0.75rem',
-                      alignItems: 'center',
-                      background: 'rgba(15, 23, 42, 0.6)',
-                      padding: '0.85rem',
-                      borderRadius: '8px',
-                      border: '1px solid rgba(255, 255, 255, 0.08)'
-                    }}
+                <div>
+                  <label className="form-label">Imported Materials &amp; Currency Exposure</label>
+                  <select
+                    value={formData.imported_materials_exposure}
+                    onChange={(e) => handleFormFieldChange('imported_materials_exposure', e.target.value)}
+                    className="form-select"
                   >
-                    <div>
-                      <label style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Business Partner Name</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Lanka Wholesale Ltd"
-                        value={rel.partner_name}
-                        onChange={(e) => handleUpdateRelationship(idx, 'partner_name', e.target.value)}
-                        className="c4-input"
-                        style={{ fontSize: '0.75rem' }}
-                      />
-                    </div>
+                    <option value="Low">Low (Primarily locally sourced in Sri Lanka)</option>
+                    <option value="Moderate">Moderate (Some packaging or auxiliary inputs imported)</option>
+                    <option value="High">High (Direct foreign currency or imported raw material reliance)</option>
+                  </select>
+                </div>
+              </div>
+            )}
 
-                    <div>
-                      <label style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Type</label>
-                      <select
-                        value={rel.partner_type}
-                        onChange={(e) => handleUpdateRelationship(idx, 'partner_type', e.target.value)}
-                        className="c4-input"
-                        style={{ fontSize: '0.75rem' }}
-                      >
-                        <option value="SUPPLIER">Supplier</option>
-                        <option value="BUYER">Customer / Buyer</option>
-                      </select>
-                    </div>
+            {/* DIMENSION D: LIQUIDITY RISK */}
+            {activeDimensionTab === 'liquidity' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div className="grid-2">
+                  <div>
+                    <label className="form-label">Cash Currently Available for Operations (LKR)</label>
+                    <input
+                      type="number"
+                      value={formData.cash_available_operations}
+                      onChange={(e) => handleFormFieldChange('cash_available_operations', e.target.value)}
+                      placeholder="e.g. 200000"
+                      className="form-control"
+                    />
+                  </div>
 
-                    <div>
-                      <label style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Monthly Value (LKR)</label>
-                      <input
-                        type="number"
-                        placeholder="e.g. 50000"
-                        value={rel.transaction_value_lkr}
-                        onChange={(e) => handleUpdateRelationship(idx, 'transaction_value_lkr', e.target.value)}
-                        className="c4-input"
-                        style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}
-                      />
-                    </div>
+                  <div>
+                    <label className="form-label">Monthly Fixed Costs (LKR)</label>
+                    <input
+                      type="number"
+                      value={formData.monthly_fixed_costs}
+                      onChange={(e) => handleFormFieldChange('monthly_fixed_costs', e.target.value)}
+                      placeholder="e.g. 85000"
+                      className="form-control"
+                    />
+                  </div>
+                </div>
 
+                <div className="grid-2">
+                  <div>
+                    <label className="form-label">Monthly Variable Costs (LKR)</label>
+                    <input
+                      type="number"
+                      value={formData.monthly_variable_costs}
+                      onChange={(e) => handleFormFieldChange('monthly_variable_costs', e.target.value)}
+                      placeholder="e.g. 60000"
+                      className="form-control"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="form-label">Emergency Cash Reserve Buffer (LKR)</label>
+                    <input
+                      type="number"
+                      value={formData.cash_reserve_after_startup}
+                      onChange={(e) => handleFormFieldChange('cash_reserve_after_startup', e.target.value)}
+                      placeholder="e.g. 150000"
+                      className="form-control"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* DIMENSION E: OPERATIONAL RISK & RELATIONSHIPS */}
+            {activeDimensionTab === 'operational' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div className="grid-2">
+                  <div>
+                    <label className="form-label">Supplier Dependency Level</label>
+                    <select
+                      value={formData.supplier_dependency_level}
+                      onChange={(e) => handleFormFieldChange('supplier_dependency_level', e.target.value)}
+                      className="form-select"
+                    >
+                      <option value="Low">Low (Multiple suppliers available nearby)</option>
+                      <option value="Moderate">Moderate (2–3 primary vendors)</option>
+                      <option value="High">High (Single critical supplier bottleneck)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="form-label">Typical Delivery Lead Time</label>
+                    <select
+                      value={formData.delivery_delay_days}
+                      onChange={(e) => handleFormFieldChange('delivery_delay_days', e.target.value)}
+                      className="form-select"
+                    >
+                      <option value="1-3 days">1–3 Days</option>
+                      <option value="3-5 days">3–5 Days</option>
+                      <option value="7-14 days">7–14 Days</option>
+                      <option value="14+ days">Over 14 Days</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Counterparties Adder for GNN Network */}
+                <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                     <div>
-                      <label style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Payment Delay (Days)</label>
-                      <input
-                        type="number"
-                        placeholder="e.g. 15"
-                        value={rel.payment_delay_days}
-                        onChange={(e) => handleUpdateRelationship(idx, 'payment_delay_days', e.target.value)}
-                        className="c4-input"
-                        style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}
-                      />
+                      <h4 style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0 }}>
+                        Declared Trade Counterparties (Suppliers / Customers / Lenders)
+                      </h4>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>
+                        Used by the GNN model to evaluate supply chain concentration and credit contagion.
+                      </p>
                     </div>
 
                     <button
                       type="button"
-                      onClick={() => handleRemoveRelationship(idx)}
-                      style={{ background: 'transparent', border: 'none', color: '#f87171', cursor: 'pointer', padding: '0.5rem', marginTop: '1rem' }}
-                      title="Remove partner"
+                      onClick={handleAddRelationship}
+                      className="btn btn-secondary"
+                      style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
                     >
-                      <Trash2 size={16} />
+                      <Plus size={13} />
+                      <span>Add Counterparty</span>
                     </button>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ marginTop: '0.85rem', padding: '0.85rem', background: 'rgba(15, 23, 42, 0.4)', borderRadius: '8px', fontSize: '0.74rem', color: '#94a3b8' }}>
-                No external counterparties added. If your business operates independently, you can proceed directly.
+
+                  {declaredRelationships.length === 0 ? (
+                    <div style={{ padding: '1rem', background: 'var(--bg-subtle)', borderRadius: 'var(--radius-sm)', textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                      No counterparties declared yet. Adding suppliers or major buyers enables relational GNN insights.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {declaredRelationships.map((rel, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            padding: '0.85rem',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: 'var(--radius-sm)',
+                            background: 'var(--bg-surface)',
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr)) auto',
+                            gap: '0.75rem',
+                            alignItems: 'center'
+                          }}
+                        >
+                          <div>
+                            <label className="form-label" style={{ fontSize: '0.7rem' }}>Counterparty Name</label>
+                            <input
+                              type="text"
+                              value={rel.partner_name}
+                              onChange={(e) => handleRelationshipChange(idx, 'partner_name', e.target.value)}
+                              placeholder="e.g. Lanka Wholesale Ltd"
+                              className="form-control"
+                              style={{ fontSize: '0.8rem', padding: '0.4rem 0.5rem' }}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="form-label" style={{ fontSize: '0.7rem' }}>Partner Type</label>
+                            <select
+                              value={rel.partner_type}
+                              onChange={(e) => handleRelationshipChange(idx, 'partner_type', e.target.value)}
+                              className="form-select"
+                              style={{ fontSize: '0.8rem', padding: '0.4rem 0.5rem' }}
+                            >
+                              <option value="SUPPLIER">Supplier</option>
+                              <option value="CUSTOMER">Major Customer</option>
+                              <option value="LENDER">Lender / Bank</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="form-label" style={{ fontSize: '0.7rem' }}>Monthly Value (LKR)</label>
+                            <input
+                              type="number"
+                              value={rel.transaction_value_lkr}
+                              onChange={(e) => handleRelationshipChange(idx, 'transaction_value_lkr', e.target.value)}
+                              placeholder="e.g. 50000"
+                              className="form-control"
+                              style={{ fontSize: '0.8rem', padding: '0.4rem 0.5rem' }}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="form-label" style={{ fontSize: '0.7rem' }}>Concentration %</label>
+                            <input
+                              type="number"
+                              value={rel.dependency_percentage}
+                              onChange={(e) => handleRelationshipChange(idx, 'dependency_percentage', e.target.value)}
+                              placeholder="e.g. 50"
+                              className="form-control"
+                              style={{ fontSize: '0.8rem', padding: '0.4rem 0.5rem' }}
+                            />
+                          </div>
+
+                          <div style={{ paddingTop: '1.25rem' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveRelationship(idx)}
+                              className="btn btn-subtle"
+                              style={{ padding: '0.35rem', color: 'var(--risk-high)' }}
+                              title="Remove counterparty"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
 
-          {/* Stepper Navigation Controls */}
-          <div className="c4-nav-footer">
+          {/* Stepper Navigation Buttons */}
+          <div className="c4-bottom-nav">
             <button
               type="button"
               onClick={() => setCurrentStep(2)}
-              className="c4-btn-back"
+              className="btn btn-secondary"
             >
-              <ArrowLeft size={16} />
-              Back to Review Facts
+              <ArrowLeft size={15} />
+              <span>Back to Details</span>
             </button>
+
             <button
-              id="run-risk-assessment-btn"
               type="button"
+              onClick={handleSubmitAndRun}
               disabled={loading}
-              onClick={handleSubmitAndRunAssessment}
               className="btn btn-primary"
-              style={{ padding: '0.85rem 1.6rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              style={{ fontWeight: 700 }}
             >
-              <ShieldAlert size={18} />
-              <span>{loading ? 'Evaluating Financial Runway & GNN Risks...' : 'Run Business Risk Assessment'}</span>
-              <ArrowRight size={16} />
+              {loading ? <RefreshCw size={15} className="animate-spin" /> : <ShieldAlert size={15} />}
+              <span>{loading ? 'Evaluating Risk & Running GNN...' : 'Execute Risk Assessment'}</span>
             </button>
           </div>
-
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* STEP 4: REVIEW BUSINESS RISKS (Section 4, Step 4)                          */}
+      {/* STEP 4: RISK ASSESSMENT RESULTS (5 Risk Dimensions)                        */}
       {/* ========================================================================= */}
       {currentStep === 4 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          
           {hasActiveResult ? (
             <>
               {/* Overall Assessment Score Banner */}
-              <div className="c4-overall-hero-card">
+              <div className="content-card" style={{ padding: '1.5rem 1.75rem', background: 'var(--bg-surface)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
                   <div>
-                    <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--primary-green)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
                       Step 4: Five Risk Dimensions Analysis
                     </span>
-                    <h2 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#ffffff', marginTop: '0.35rem', margin: 0 }}>
-                      {availableFacts.business_name?.value || plan.business_name || 'Your Enterprise'} &bull; {availableFacts.district?.value || plan.district || 'Western Province'}
+                    <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0.25rem 0' }}>
+                      {availableFacts.business_name?.value || plan.business_name || 'Assessed Enterprise'} &bull; {availableFacts.district?.value || plan.district || 'Western Province'}
                     </h2>
-                    <p style={{ fontSize: '0.825rem', color: '#c7d2fe', marginTop: '0.45rem', maxWidth: '720px', lineHeight: 1.55 }}>
-                      {readiness.risk_adjusted_recommendation || 'Assessment completed. Review the five risk dimensions below to see where your business is strong and where risks require mitigation.'}
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0 0', maxWidth: '740px', lineHeight: 1.5 }}>
+                      {readiness.risk_adjusted_recommendation || 'Assessment completed. Review the five risk dimensions below to see where your business is resilient and where mitigation actions are required.'}
                     </p>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
-                    <span style={{ 
-                      fontSize: '0.8rem', 
-                      padding: '0.35rem 0.85rem', 
-                      borderRadius: '6px', 
-                      fontWeight: 800,
-                      background: (stage6.overall_risk_category || 'MEDIUM') === 'LOW' ? 'rgba(34, 197, 94, 0.2)' :
-                                  (stage6.overall_risk_category || 'MEDIUM') === 'MEDIUM' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                      color: (stage6.overall_risk_category || 'MEDIUM') === 'LOW' ? '#4ade80' :
-                             (stage6.overall_risk_category || 'MEDIUM') === 'MEDIUM' ? '#fbbf24' : '#f87171',
-                      border: `1px solid ${(stage6.overall_risk_category || 'MEDIUM') === 'LOW' ? 'rgba(34, 197, 94, 0.4)' :
-                              (stage6.overall_risk_category || 'MEDIUM') === 'MEDIUM' ? 'rgba(245, 158, 11, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`
+                  <div>
+                    <span style={{
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      padding: '0.35rem 0.85rem',
+                      borderRadius: 'var(--radius-sm)',
+                      background: (stage6.overall_risk_category || 'MEDIUM') === 'LOW' ? 'var(--risk-low-bg)' :
+                                  (stage6.overall_risk_category || 'MEDIUM') === 'MEDIUM' ? 'var(--risk-medium-bg)' : 'var(--risk-high-bg)',
+                      color: (stage6.overall_risk_category || 'MEDIUM') === 'LOW' ? 'var(--risk-low)' :
+                             (stage6.overall_risk_category || 'MEDIUM') === 'MEDIUM' ? 'var(--risk-medium)' : 'var(--risk-high)',
+                      border: `1px solid ${(stage6.overall_risk_category || 'MEDIUM') === 'LOW' ? 'var(--risk-low-border)' :
+                              (stage6.overall_risk_category || 'MEDIUM') === 'MEDIUM' ? 'var(--risk-medium-border)' : 'var(--risk-high-border)'}`
                     }}>
                       OVERALL: {stage6.overall_risk_category || 'EVALUATED'} RISK
                     </span>
@@ -1404,451 +1531,598 @@ export default function Component4RiskSuite({ initialPlanData = null }) {
                 </div>
 
                 {/* Score Bar */}
-                <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-subtle)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
-                    <span style={{ color: '#94a3b8' }}>
-                      Composite Risk Score: <strong style={{ color: '#ffffff' }}>{(stage6.composite_risk_score || 0.45).toFixed(2)}</strong> / 1.00
+                    <span style={{ color: 'var(--text-secondary)' }}>
+                      Composite Risk Score: <strong style={{ color: 'var(--text-primary)' }}>{(stage6.composite_risk_score || 0.45).toFixed(2)}</strong> / 1.00
                     </span>
-                    <span style={{ color: '#64748b', fontSize: '0.72rem' }}>
-                      (Lower is safer &bull; Distinct from initial startup feasibility)
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+                      (Lower is safer &bull; Distinguishes model prediction from deterministic financial metrics)
                     </span>
                   </div>
-                  <div className="c4-bar-bg" style={{ height: '10px', marginTop: '0.4rem' }}>
+                  <div style={{ height: '8px', background: 'var(--bg-subtle)', borderRadius: '4px', marginTop: '0.4rem', overflow: 'hidden' }}>
                     <div
-                      className="c4-bar-fill"
                       style={{
+                        height: '100%',
                         width: `${Math.min(100, (stage6.composite_risk_score || 0.45) * 100)}%`,
-                        background: (stage6.overall_risk_category || 'MEDIUM') === 'HIGH' ? '#ef4444' :
-                                    (stage6.overall_risk_category || 'MEDIUM') === 'MEDIUM' ? '#f59e0b' : '#10b981'
+                        background: (stage6.overall_risk_category || 'MEDIUM') === 'HIGH' ? 'var(--risk-high)' :
+                                    (stage6.overall_risk_category || 'MEDIUM') === 'MEDIUM' ? 'var(--risk-medium)' : 'var(--risk-low)',
+                        transition: 'width 0.4s ease'
                       }}
                     />
                   </div>
                 </div>
               </div>
 
-              {/* FIVE RISK DIMENSIONS GRID (Section 4, Step 4) */}
-              <div className="c4-dimensions-grid">
+              {/* 5 Risk Dimensions Cards */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 
                 {/* 1. Credit Risk */}
-                <div className="c4-dimension-card dim-med">
-                  <div className="c4-dimension-header">
-                    <div className="c4-dimension-title">
-                      <DollarSign size={18} style={{ color: '#38bdf8' }} />
-                      <span>1. Credit Risk</span>
+                <div className="c4-risk-card">
+                  <div className="c4-risk-card-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <DollarSign size={18} style={{ color: 'var(--primary-green)' }} />
+                      <span className="c4-risk-card-title">1. Credit Risk</span>
                     </div>
-                    <span className="c4-dimension-score">
+                    <span className="badge-risk-neutral">
                       Score: {(stage6.sub_scores?.debt_burden_risk ?? 0.35).toFixed(2)}
                     </span>
                   </div>
 
-                  <div className="c4-evidence-box">
-                    <strong>Supporting Evidence:</strong> Outstanding loan amount of {formatDisplayValue(plan.outstanding_debt_lkr || availableFacts.loan_amount_lkr?.value, 'loan')} vs capital buffer.
+                  <div style={{ background: 'var(--bg-subtle)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                    <strong>Supporting Evidence:</strong> Outstanding loan balance of {formatDisplayValue(formData.outstanding_loan_balance || plan.outstanding_debt_lkr || availableFacts.loan_amount_lkr?.value, 'loan')} evaluated against liquid debt coverage buffer.
                   </div>
 
-                  <div>
-                    <span style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Contributing Factors:</span>
-                    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                      <span className="c4-factor-pill">Debt Service Capacity</span>
-                      <span className="c4-factor-pill">Financing Leverage</span>
-                    </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                    Evaluates debt service capacity and monthly principal obligation stability under potential revenue volatility.
                   </div>
 
-                  <p style={{ fontSize: '0.76rem', color: '#cbd5e1', lineHeight: '1.45', margin: 0 }}>
-                    Evaluates your enterprise's capability to honor monthly interest and principal payments under revenue fluctuation.
-                  </p>
-
-                  <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '0.5rem', fontSize: '0.72rem', color: '#38bdf8' }}>
-                    Recommended action: Keep monthly debt installments below 25% of gross operational revenue.
+                  <div style={{ fontSize: '0.75rem', color: 'var(--primary-green)', fontWeight: 600 }}>
+                    Recommended Next Action: Maintain monthly debt service obligations below 25% of gross operational collections.
                   </div>
                 </div>
 
                 {/* 2. Market Risk */}
-                <div className="c4-dimension-card dim-low">
-                  <div className="c4-dimension-header">
-                    <div className="c4-dimension-title">
-                      <TrendingUp size={18} style={{ color: '#10b981' }} />
-                      <span>2. Market Risk</span>
+                <div className="c4-risk-card">
+                  <div className="c4-risk-card-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <TrendingUp size={18} style={{ color: 'var(--primary-green)' }} />
+                      <span className="c4-risk-card-title">2. Market Risk</span>
                     </div>
-                    <span className="c4-dimension-score">
-                      Score: 0.28
-                    </span>
+                    <span className="badge-risk-neutral">Score: 0.28</span>
                   </div>
 
-                  <div className="c4-evidence-box">
-                    <strong>Supporting Evidence:</strong> Location in Western Province with demand verification: {formData['customer_demand_evidence']?.replace(/_/g, ' ') || 'direct foot traffic'}.
+                  <div style={{ background: 'var(--bg-subtle)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                    <strong>Supporting Evidence:</strong> Location in Western Province with demand verification: {formData.customer_demand_evidence?.replace(/_/g, ' ') || 'pre-orders'}.
                   </div>
 
-                  <div>
-                    <span style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Contributing Factors:</span>
-                    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                      <span className="c4-factor-pill">Customer Footfall</span>
-                      <span className="c4-factor-pill">Local Competition</span>
-                    </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                    Measures susceptibility to competitor discounting, foot traffic contraction, and local purchasing power fluctuations.
                   </div>
 
-                  <p style={{ fontSize: '0.76rem', color: '#cbd5e1', lineHeight: '1.45', margin: 0 }}>
-                    Measures susceptibility to competitor discounting, customer retention rates, and neighborhood purchasing power.
-                  </p>
-
-                  <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '0.5rem', fontSize: '0.72rem', color: '#34d399' }}>
-                    Recommended action: Collect customer contact lists and implement repeat booking loyalty perks.
+                  <div style={{ fontSize: '0.75rem', color: 'var(--primary-green)', fontWeight: 600 }}>
+                    Recommended Next Action: Collect customer loyalty contact records and offer pre-booking incentives to guarantee baseline volume.
                   </div>
                 </div>
 
                 {/* 3. Inflation Risk */}
-                <div className="c4-dimension-card dim-med">
-                  <div className="c4-dimension-header">
-                    <div className="c4-dimension-title">
-                      <Activity size={18} style={{ color: '#f59e0b' }} />
-                      <span>3. Inflation Risk</span>
+                <div className="c4-risk-card">
+                  <div className="c4-risk-card-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Flame size={18} style={{ color: 'var(--risk-medium)' }} />
+                      <span className="c4-risk-card-title">3. Inflation Risk</span>
                     </div>
-                    <span className="c4-dimension-score">
-                      Score: 0.42
-                    </span>
+                    <span className="badge-risk-medium">Score: 0.42</span>
                   </div>
 
-                  <div className="c4-evidence-box">
-                    <strong>Supporting Evidence:</strong> Monthly operating budget {formatDisplayValue(formData['monthly_budget_lkr'] || availableFacts.monthly_budget_lkr?.value, 'budget')} exposed to utility and raw material tariff swings.
+                  <div style={{ background: 'var(--bg-subtle)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                    <strong>Supporting Evidence:</strong> Operating expenses exposed to Sri Lankan utility tariffs and raw consumable price shocks.
                   </div>
 
-                  <div>
-                    <span style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Contributing Factors:</span>
-                    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                      <span className="c4-factor-pill">Utility Tariffs</span>
-                      <span className="c4-factor-pill">Consumables Volatility</span>
-                    </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                    Evaluates operating margin squeeze caused by escalating vendor prices that cannot be immediately passed on to retail clients.
                   </div>
 
-                  <p style={{ fontSize: '0.76rem', color: '#cbd5e1', lineHeight: '1.45', margin: 0 }}>
-                    Evaluates operating margin squeeze caused by escalating supplier prices that cannot be instantly passed to customers.
-                  </p>
-
-                  <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '0.5rem', fontSize: '0.72rem', color: '#fbbf24' }}>
-                    Recommended action: Negotiate 60-day price locks with primary supply vendors.
+                  <div style={{ fontSize: '0.75rem', color: 'var(--risk-medium)', fontWeight: 600 }}>
+                    Recommended Next Action: Negotiate 60-day price locks with primary vendors and identify domestic ingredient substitutes.
                   </div>
                 </div>
 
                 {/* 4. Liquidity Risk */}
-                <div className="c4-dimension-card dim-high">
-                  <div className="c4-dimension-header">
-                    <div className="c4-dimension-title">
-                      <Clock size={18} style={{ color: '#f87171' }} />
-                      <span>4. Liquidity Risk</span>
+                <div className="c4-risk-card">
+                  <div className="c4-risk-card-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Clock size={18} style={{ color: 'var(--risk-high)' }} />
+                      <span className="c4-risk-card-title">4. Liquidity Risk</span>
                     </div>
-                    <span className="c4-dimension-score">
+                    <span className="badge-risk-high">
                       Score: {(stage6.sub_scores?.liquidity_risk ?? 0.55).toFixed(2)}
                     </span>
                   </div>
 
-                  <div className="c4-evidence-box">
-                    <strong>Supporting Evidence:</strong> Capital runway calculated at {formatDisplayValue(plan.capital_runway_months, 'months')} based on liquid cash reserves.
+                  <div style={{ background: 'var(--bg-subtle)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                    <strong>Supporting Evidence:</strong> Capital runway estimated at {formatDisplayValue(plan.capital_runway_months, 'months')} based on liquid cash reserves.
                   </div>
 
-                  <div>
-                    <span style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Contributing Factors:</span>
-                    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                      <span className="c4-factor-pill">Cash Runway Months</span>
-                      <span className="c4-factor-pill">Cash Reserve Buffer</span>
-                    </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                    Calculates how many months the enterprise can sustain operations if revenues arrive slower than forecasted.
                   </div>
 
-                  <p style={{ fontSize: '0.76rem', color: '#cbd5e1', lineHeight: '1.45', margin: 0 }}>
-                    Calculates how many months your business can stay open if initial revenue comes in slower than anticipated.
-                  </p>
-
-                  <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '0.5rem', fontSize: '0.72rem', color: '#f87171' }}>
-                    Recommended action: Establish an emergency 3-month operating reserve before taking on discretionary expansions.
+                  <div style={{ fontSize: '0.75rem', color: 'var(--risk-high)', fontWeight: 600 }}>
+                    Recommended Next Action: Establish an emergency 3-month liquid cash reserve buffer before committing to new capital outlays.
                   </div>
                 </div>
 
                 {/* 5. Operational Risk */}
-                <div className="c4-dimension-card dim-low">
-                  <div className="c4-dimension-header">
-                    <div className="c4-dimension-title">
-                      <Users size={18} style={{ color: '#a78bfa' }} />
-                      <span>5. Operational Risk</span>
+                <div className="c4-risk-card">
+                  <div className="c4-risk-card-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Truck size={18} style={{ color: 'var(--primary-green)' }} />
+                      <span className="c4-risk-card-title">5. Operational Risk</span>
                     </div>
-                    <span className="c4-dimension-score">
-                      Score: 0.22
-                    </span>
+                    <span className="badge-risk-low">Score: 0.22</span>
                   </div>
 
-                  <div className="c4-evidence-box">
-                    <strong>Supporting Evidence:</strong> Required staff operational plan and verified supplier relationships.
+                  <div style={{ background: 'var(--bg-subtle)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                    <strong>Supporting Evidence:</strong> Staff operational plan and confirmed delivery timelines from primary trade counterparties.
                   </div>
 
-                  <div>
-                    <span style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Contributing Factors:</span>
-                    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                      <span className="c4-factor-pill">Staff Availability</span>
-                      <span className="c4-factor-pill">Supplier Continuity</span>
-                    </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                    Assesses vulnerability to unexpected employee turnover, equipment downtime, and single-source supplier delays.
                   </div>
 
-                  <p style={{ fontSize: '0.76rem', color: '#cbd5e1', lineHeight: '1.45', margin: 0 }}>
-                    Assesses vulnerability to sudden employee turnover, equipment downtime, and single-source supplier disruptions.
-                  </p>
-
-                  <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '0.5rem', fontSize: '0.72rem', color: '#a78bfa' }}>
-                    Recommended action: Cross-train primary staff and identify at least two backup suppliers in your district.
+                  <div style={{ fontSize: '0.75rem', color: 'var(--primary-green)', fontWeight: 600 }}>
+                    Recommended Next Action: Pre-qualify at least one backup local vendor in Western Province for critical consumables.
                   </div>
                 </div>
 
               </div>
 
-              {/* Stepper Navigation Controls */}
-              <div className="c4-nav-footer">
+              {/* Stepper Navigation Buttons */}
+              <div className="c4-bottom-nav">
                 <button
                   type="button"
                   onClick={() => setCurrentStep(3)}
-                  className="c4-btn-back"
+                  className="btn btn-secondary"
                 >
-                  <ArrowLeft size={16} />
-                  Back to Follow-up Questions
+                  <ArrowLeft size={15} />
+                  <span>Back to Additional Info</span>
                 </button>
+
                 <button
-                  id="continue-to-step5-btn"
                   type="button"
                   onClick={() => setCurrentStep(5)}
-                  className="c4-btn-continue"
+                  className="btn btn-primary"
                 >
-                  Continue to Step 5: Mitigation &amp; Growth Plan
-                  <ArrowRight size={16} />
+                  <span>Continue to Step 5: GNN Insights</span>
+                  <ArrowRight size={15} />
                 </button>
               </div>
             </>
           ) : (
-            <div className="c4-card" style={{ padding: '3rem', textAlign: 'center' }}>
-              <ShieldAlert size={36} style={{ color: '#64748b', marginBottom: '0.75rem' }} />
-              <h3 style={{ color: '#ffffff', fontSize: '1.1rem', margin: 0 }}>No Assessment Run Yet</h3>
-              <p style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: '0.35rem', marginBottom: '1.25rem' }}>
+            <div className="content-card" style={{ padding: '3.5rem', textAlign: 'center' }}>
+              <ShieldAlert size={36} style={{ color: 'var(--text-muted)', marginBottom: '0.75rem' }} />
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 600 }}>No Assessment Run Yet</h3>
+              <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
                 Complete Step 1 (Upload/Select Profile) and Step 3 to execute the risk evaluation.
               </p>
-              <button onClick={() => setCurrentStep(1)} className="btn btn-primary" style={{ margin: '0 auto' }}>
+              <button onClick={() => setCurrentStep(1)} className="btn btn-primary">
                 Go to Step 1
               </button>
             </div>
           )}
-
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* STEP 5: MITIGATION AND GROWTH PLAN (Section 4, Step 5)                    */}
+      {/* STEP 5: GNN INSIGHTS AND RECOMMENDATIONS                                   */}
       {/* ========================================================================= */}
       {currentStep === 5 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
-          {hasActiveResult ? (
-            <>
-              {/* Prioritized Mitigations Checklist (Section 4, Step 5) */}
-              <div className="c4-card">
-                <div className="c4-card-title">
-                  <CheckSquare size={18} style={{ color: '#10b981' }} />
-                  Step 5: Prioritized Mitigation Actions
+          <div className="c4-section-card">
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 0.35rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Network size={20} style={{ color: 'var(--primary-green)' }} />
+              B2B Relationship Network &amp; GNN Risk Insights
+            </h2>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem 0' }}>
+              Understand how trade relationships, counterparty dependencies, and supply chain concentration influence your business risk.
+            </p>
+
+            {/* Interactive Relationship Graph Canvas */}
+            <div className="c4-graph-canvas">
+              <svg width="100%" height="380" viewBox="0 0 700 380" style={{ display: 'block' }}>
+                {/* Background grid */}
+                <defs>
+                  <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+                    <path d="M 30 0 L 0 0 0 30" fill="none" stroke="var(--border-subtle)" strokeWidth="0.8" />
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+
+                {/* Central SME Node */}
+                <circle
+                  cx="350"
+                  cy="190"
+                  r="36"
+                  fill="var(--primary-green)"
+                  stroke="#FFFFFF"
+                  strokeWidth="3"
+                  style={{ cursor: 'pointer', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }}
+                  onClick={() => setSelectedGraphNode({ name: availableFacts.business_name?.value || 'Your Enterprise', type: 'Central SME', role: 'Target Business', district: 'Colombo' })}
+                />
+                <text x="350" y="195" textAnchor="middle" fill="#FFFFFF" fontSize="11" fontWeight="bold">
+                  Target SME
+                </text>
+
+                {/* Connected Counterparties (from declared counterparties or graphData) */}
+                {(declaredRelationships.length > 0 ? declaredRelationships : [
+                  { partner_name: 'Primary Supplier A', partner_type: 'SUPPLIER', dependency_percentage: 60 },
+                  { partner_name: 'Secondary Supplier B', partner_type: 'SUPPLIER', dependency_percentage: 40 },
+                  { partner_name: 'Retail Buyer Network', partner_type: 'CUSTOMER', dependency_percentage: 50 },
+                  { partner_name: 'Commercial Lending Bank', partner_type: 'LENDER', dependency_percentage: 30 }
+                ]).map((node, i) => {
+                  const angles = [210, 150, 30, 330];
+                  const angle = (angles[i % angles.length] * Math.PI) / 180;
+                  const radius = 160;
+                  const cx = 350 + radius * Math.cos(angle);
+                  const cy = 190 + radius * Math.sin(angle);
+                  const isSupplier = node.partner_type === 'SUPPLIER';
+                  const isCustomer = node.partner_type === 'CUSTOMER';
+
+                  return (
+                    <g key={i}>
+                      {/* Connection Edge */}
+                      <line
+                        x1="350"
+                        y1="190"
+                        x2={cx}
+                        y2={cy}
+                        stroke="var(--border-dark)"
+                        strokeWidth="1.5"
+                        strokeDasharray={node.verified ? 'none' : '4,4'}
+                      />
+
+                      {/* Counterparty Node */}
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r="24"
+                        fill={isSupplier ? 'var(--primary-green-subtle)' : isCustomer ? 'var(--accent-blue-subtle)' : 'var(--bg-surface)'}
+                        stroke={isSupplier ? 'var(--primary-green)' : isCustomer ? 'var(--accent-blue)' : 'var(--border-dark)'}
+                        strokeWidth="2"
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => setSelectedGraphNode({ name: node.partner_name, type: node.partner_type, dependency: `${node.dependency_percentage || 40}%`, verified: Boolean(node.verified) })}
+                      />
+                      <text x={cx} y={cy + 4} textAnchor="middle" fill="var(--text-primary)" fontSize="9" fontWeight="600">
+                        {node.partner_type ? node.partner_type.charAt(0) : 'P'}
+                      </text>
+                      <text x={cx} y={cy + 38} textAnchor="middle" fill="var(--text-secondary)" fontSize="9">
+                        {node.partner_name || `Partner ${i+1}`}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
+
+            {/* Graph Legend & Disclosures */}
+            <div className="c4-graph-legend">
+              <div className="c4-legend-item">
+                <span className="c4-legend-dot" style={{ background: 'var(--primary-green)' }} />
+                <span>Target Business (Central)</span>
+              </div>
+              <div className="c4-legend-item">
+                <span className="c4-legend-dot" style={{ background: 'var(--accent-blue)' }} />
+                <span>Trade Counterparties (Declared by SME)</span>
+              </div>
+              <div className="c4-legend-item">
+                <span style={{ width: 14, height: 1, background: 'var(--border-dark)', display: 'inline-block' }} />
+                <span>Solid Line = Verified Connection</span>
+              </div>
+              <div className="c4-legend-item">
+                <span style={{ width: 14, height: 1, borderTop: '1px dashed var(--border-dark)', display: 'inline-block' }} />
+                <span>Dashed Line = SME Declared Connection</span>
+              </div>
+            </div>
+
+            {/* Selected Node Details Drawer */}
+            {selectedGraphNode && (
+              <div style={{ marginTop: '1rem', padding: '0.85rem 1rem', background: 'var(--bg-subtle)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Inspected Node: {selectedGraphNode.name}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+                    Role: {selectedGraphNode.type} &middot; Dependency: {selectedGraphNode.dependency || 'N/A'} &middot; Status: {selectedGraphNode.verified ? 'Verified in Registry' : 'Declared by Owner (Flag=0)'}
+                  </div>
                 </div>
-                <p className="c4-card-desc">
-                  Based on your risk dimensions, execute these prioritized actions to protect your enterprise. Toggle the checkbox as you complete or plan each milestone:
+                <button onClick={() => setSelectedGraphNode(null)} className="btn btn-subtle" style={{ fontSize: '0.72rem', padding: '0.25rem 0.5rem' }}>
+                  Close
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Real Backend GNN Model Status & Scientific Disclosures Card */}
+          <div className="c4-model-status-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <ShieldCheck size={16} style={{ color: 'var(--primary-green)' }} />
+                Active Model Architecture &amp; Evaluation Provenance
+              </div>
+              <span className="badge-risk-neutral" style={{ fontSize: '0.7rem' }}>
+                Version: {modelStatus?.model_version || 'Component4_B2BRiskGNN_v2.1'}
+              </span>
+            </div>
+
+            <div className="grid-3" style={{ marginBottom: '1rem' }}>
+              <div style={{ background: 'var(--bg-surface)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Protocol</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.2rem' }}>
+                  Inductive Evaluation
+                </div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>No test-edge leakage into training</div>
+              </div>
+
+              <div style={{ background: 'var(--bg-surface)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Inductive GNN Macro-F1</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.2rem' }}>
+                  {modelStatus?.evaluation_metrics?.gnn_test_macro_f1_3class ? (modelStatus.evaluation_metrics.gnn_test_macro_f1_3class * 100).toFixed(2) + '%' : '31.14%'} (3-class)
+                </div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Balanced Acc: 47.25%</div>
+              </div>
+
+              <div style={{ background: 'var(--bg-surface)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Random Forest Baseline</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.2rem' }}>
+                  {modelStatus?.evaluation_metrics?.baseline_test_macro_f1_3class ? (modelStatus.evaluation_metrics.baseline_test_macro_f1_3class * 100).toFixed(2) + '%' : '34.59%'} (3-class)
+                </div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Balanced Acc: 56.44%</div>
+              </div>
+            </div>
+
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.5, borderTop: '1px solid var(--border-subtle)', paddingTop: '0.75rem' }}>
+              <strong>Scientific Transparency Note:</strong> Simulated dataset edges in research inventories are explicitly marked (Verified_Flag=0) and are never represented as real connections of your business. Businesses without declared counterparties fall back cleanly to deterministic financial assessment.
+            </div>
+          </div>
+
+          {/* Stepper Navigation Buttons */}
+          <div className="c4-bottom-nav">
+            <button
+              type="button"
+              onClick={() => setCurrentStep(4)}
+              className="btn btn-secondary"
+            >
+              <ArrowLeft size={15} />
+              <span>Back to Risk Dimensions</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setCurrentStep(6)}
+              className="btn btn-primary"
+            >
+              <span>Continue to Step 6: Mitigation &amp; Growth Plan</span>
+              <ArrowRight size={15} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* STEP 6: MITIGATION AND GROWTH PLAN (Two Distinct Areas)                   */}
+      {/* ========================================================================= */}
+      {currentStep === 6 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          
+          <div className="c4-section-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid var(--border-color)' }}>
+              <div>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                  Strategic Mitigation &amp; Scalable Growth Roadmap
+                </h2>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.25rem 0 0 0' }}>
+                  Actionable risk reduction checklist and stage-aligned growth feasibility assessment.
                 </p>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginTop: '1rem' }}>
-                  {(stage6.recommended_mitigations || [
-                    {
-                      action: 'Establish 3-Month Emergency Operating Reserve',
-                      mechanism: 'Hold LKR 300,000 liquid buffer to insulate against delayed debtor collections.',
-                      time_horizon: 'Immediate (Month 1-2)',
-                      risk_factor: 'liquidity_risk',
-                      estimated_cost: 'LKR 300,000 cash reserve'
-                    },
-                    {
-                      action: 'Qualify Secondary Supply Partner in Western Province',
-                      mechanism: 'Sign backup agreement with secondary wholesaler to protect against raw material price shocks.',
-                      time_horizon: '1-3 months',
-                      risk_factor: 'operational_risk',
-                      estimated_cost: 'Minimal / Negotiation time'
-                    },
-                    {
-                      action: 'Lock-in Advance Client Deposits',
-                      mechanism: 'Require 20% advance booking deposit on major service appointments to guarantee demand.',
-                      time_horizon: 'Ongoing',
-                      risk_factor: 'market_risk',
-                      estimated_cost: 'Zero outlay'
-                    }
-                  ]).map((mit, i) => {
-                    const isPlanned = Boolean(plannedMitigations[i]);
-                    return (
-                      <div
-                        key={i}
-                        onClick={() => toggleMitigationPlanned(i)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          gap: '0.85rem',
-                          padding: '1.1rem',
-                          background: isPlanned ? 'rgba(16, 185, 129, 0.12)' : 'rgba(15, 23, 42, 0.65)',
-                          border: isPlanned ? '1px solid rgba(16, 185, 129, 0.45)' : '1px solid rgba(255, 255, 255, 0.08)',
-                          borderRadius: '10px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        <div style={{ marginTop: '0.15rem', color: isPlanned ? '#34d399' : '#64748b' }}>
-                          {isPlanned ? <CheckSquare size={20} /> : <Square size={20} />}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '0.88rem', fontWeight: 700, color: isPlanned ? '#34d399' : '#ffffff' }}>
-                            {mit.action || mit.title}
-                          </div>
-                          <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '0.25rem', lineHeight: '1.45' }}>
-                            {mit.mechanism || mit.description}
-                          </div>
-                          <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', fontSize: '0.72rem', color: '#94a3b8', flexWrap: 'wrap' }}>
-                            <span>Timeline: <strong style={{ color: '#ffffff' }}>{mit.time_horizon || '1-3 months'}</strong></span>
-                            <span>Targets: <strong style={{ color: '#818cf8' }}>{mit.risk_factor?.replace(/_/g, ' ') || 'Solvency'}</strong></span>
-                            {mit.estimated_cost && (
-                              <span>Estimated Resource: <strong style={{ color: '#4ade80' }}>{mit.estimated_cost}</strong></span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
               </div>
 
-              {/* Stage-Tailored Growth Readiness & Next Options (Section 4, Step 5) */}
-              <div className="c4-card">
-                <div className="c4-card-title">
-                  <TrendingUp size={18} style={{ color: '#818cf8' }} />
-                  Tailored Growth Options for Your Enterprise
-                </div>
-                <p className="c4-card-desc">
-                  Based on your current stage ({availableFacts.business_stage?.value || plan.business_stage || 'Startup'}) and operating capital:
-                </p>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
-                  <div style={{ background: 'rgba(30, 41, 59, 0.65)', padding: '1.15rem', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#60a5fa', marginBottom: '0.35rem' }}>
-                      Option 1: Margin Optimization &amp; Cash Buffer
-                    </div>
-                    <p style={{ fontSize: '0.76rem', color: '#cbd5e1', lineHeight: '1.45', margin: 0 }}>
-                      Maintain current branch footprint, cross-train 2 core staff members, and focus on expanding customer lifetime value before expanding physically.
-                    </p>
-                    <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.5rem' }}>
-                      Capital requirement: Minimal &bull; Risk Exposure: Very Low
-                    </div>
-                  </div>
-
-                  <div style={{ background: 'rgba(30, 41, 59, 0.65)', padding: '1.15rem', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#a78bfa', marginBottom: '0.35rem' }}>
-                      Option 2: Structured Service Expansion
-                    </div>
-                    <p style={{ fontSize: '0.76rem', color: '#cbd5e1', lineHeight: '1.45', margin: 0 }}>
-                      Add specialized equipment or extended operating hours once 3 consecutive months of positive operating cashflow are recorded.
-                    </p>
-                    <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.5rem' }}>
-                      Capital requirement: LKR 150,000 - 300,000 &bull; Risk Exposure: Moderate
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Trade Counterparty Relationship Graph (SVG Interactive Network) */}
-              {graphData && (
-                <div className="c4-card">
-                  <div className="c4-card-title">
-                    <Network size={18} style={{ color: '#c084fc' }} />
-                    Trade Relationship Network (Counterparty Concentration)
-                  </div>
-                  <p className="c4-card-desc">
-                    Visualizes trade connections between your business and Western Province suppliers. Graph AI evaluates whether supplier disruption could cascade into business closure.
-                  </p>
-
-                  <div style={{ background: 'rgba(10, 15, 26, 0.8)', padding: '1.25rem', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.08)', textAlign: 'center', marginTop: '0.75rem' }}>
-                    <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginBottom: '0.75rem' }}>
-                      Total Counterparties: <strong>{graphData.nodes?.length || 1}</strong> &bull; Concentration Status: <strong style={{ color: '#34d399' }}>Balanced</strong>
-                    </div>
-
-                    {/* SVG Visualization */}
-                    <svg width="100%" height="220" viewBox="0 0 500 220" style={{ background: 'rgba(15, 23, 42, 0.5)', borderRadius: '8px' }}>
-                      {/* Central Node */}
-                      <circle cx="250" cy="110" r="32" fill="#4f46e5" stroke="#818cf8" strokeWidth="2" />
-                      <text x="250" y="115" textAnchor="middle" fill="#ffffff" fontSize="10" fontWeight="bold">
-                        Your SME
-                      </text>
-
-                      {/* Supplier Node 1 */}
-                      <line x1="250" y1="110" x2="120" y2="60" stroke="#64748b" strokeWidth="1.5" strokeDasharray="3,3" />
-                      <circle cx="120" cy="60" r="22" fill="#0f766e" stroke="#2dd4bf" strokeWidth="1.5" />
-                      <text x="120" y="64" textAnchor="middle" fill="#ffffff" fontSize="8">
-                        Supplier A
-                      </text>
-
-                      {/* Supplier Node 2 */}
-                      <line x1="250" y1="110" x2="120" y2="160" stroke="#64748b" strokeWidth="1.5" strokeDasharray="3,3" />
-                      <circle cx="120" cy="160" r="22" fill="#0f766e" stroke="#2dd4bf" strokeWidth="1.5" />
-                      <text x="120" y="164" textAnchor="middle" fill="#ffffff" fontSize="8">
-                        Supplier B
-                      </text>
-
-                      {/* Buyer / Customer Node */}
-                      <line x1="250" y1="110" x2="380" y2="110" stroke="#64748b" strokeWidth="1.5" />
-                      <circle cx="380" cy="110" r="24" fill="#0369a1" stroke="#38bdf8" strokeWidth="1.5" />
-                      <text x="380" y="114" textAnchor="middle" fill="#ffffff" fontSize="8">
-                        Customers
-                      </text>
-                    </svg>
-
-                    <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.5rem' }}>
-                      Note: Verified observed relationships are solid lines; user-declared relationships are dashed. Zero synthetic edges are fabricated.
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Scientific Disclaimer (Section 4 & 6) */}
-              <div style={{ padding: '1rem 1.25rem', background: 'rgba(30, 41, 59, 0.45)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '10px', fontSize: '0.74rem', color: '#94a3b8', lineHeight: '1.5' }}>
-                <strong style={{ color: '#cbd5e1' }}>Scientific Transparency &amp; Limitations Notice:</strong>
-                <br />
-                All projected metrics, risk indices, and growth readiness indications are simulation outputs to assist strategic planning. They do not constitute guaranteed financial returns, loan commitments, or certified statutory audits.
-              </div>
-
-              {/* Action Buttons: Save & Export */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '1.25rem' }}>
+              {/* Sub-tab Switcher: Mitigations vs Growth */}
+              <div style={{ display: 'flex', gap: '0.35rem', background: 'var(--bg-subtle)', padding: '0.25rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
                 <button
                   type="button"
-                  onClick={() => setCurrentStep(4)}
-                  className="c4-btn-back"
+                  onClick={() => setActivePlanSubTab('mitigations')}
+                  style={{
+                    padding: '0.35rem 0.85rem',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '0.78rem',
+                    fontWeight: activePlanSubTab === 'mitigations' ? 700 : 500,
+                    background: activePlanSubTab === 'mitigations' ? 'var(--bg-surface)' : 'transparent',
+                    border: activePlanSubTab === 'mitigations' ? '1px solid var(--border-color)' : 'none',
+                    color: activePlanSubTab === 'mitigations' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    cursor: 'pointer'
+                  }}
                 >
-                  <ArrowLeft size={16} />
-                  Back to Risk Dimensions
+                  A. Risk Mitigation Plan
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePlanSubTab('growth')}
+                  style={{
+                    padding: '0.35rem 0.85rem',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '0.78rem',
+                    fontWeight: activePlanSubTab === 'growth' ? 700 : 500,
+                    background: activePlanSubTab === 'growth' ? 'var(--bg-surface)' : 'transparent',
+                    border: activePlanSubTab === 'growth' ? '1px solid var(--border-color)' : 'none',
+                    color: activePlanSubTab === 'growth' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  B. Growth Readiness
+                </button>
+              </div>
+            </div>
 
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                  <button
-                    onClick={handleDownloadReport}
-                    className="btn btn-primary"
-                    style={{ fontSize: '0.85rem', padding: '0.65rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-                  >
-                    <Download size={15} />
-                    <span>Download Audit Report (.md)</span>
-                  </button>
+            {/* AREA A: RISK MITIGATION PLAN */}
+            {activePlanSubTab === 'mitigations' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                  Execute these prioritized preventative actions. Toggle the status button to track milestones:
+                </div>
+
+                {(stage6.recommended_mitigations || [
+                  {
+                    action: 'Establish 3-Month Emergency Operating Reserve',
+                    mechanism: 'Hold liquid cash buffer in business money market account to insulate against delayed debtor collections.',
+                    time_horizon: 'Immediate (Month 1–2)',
+                    risk_factor: 'liquidity_risk',
+                    estimated_cost: 'LKR 250,000 liquid allocation',
+                    priority: 'HIGH'
+                  },
+                  {
+                    action: 'Qualify Secondary Supply Partner in Western Province',
+                    mechanism: 'Sign backup supply agreement with secondary wholesaler to protect against raw material price spikes.',
+                    time_horizon: '1–3 Months',
+                    risk_factor: 'operational_risk',
+                    estimated_cost: 'Minimal / Negotiation time',
+                    priority: 'MEDIUM'
+                  },
+                  {
+                    action: 'Lock-in Advance Client Deposits & Loyalty Perks',
+                    mechanism: 'Require 20% advance booking deposit on major service orders to guarantee baseline sales volume.',
+                    time_horizon: 'Ongoing',
+                    risk_factor: 'market_risk',
+                    estimated_cost: 'Zero outlay',
+                    priority: 'LOW'
+                  }
+                ]).map((mit, i) => {
+                  const status = plannedMitigations[i] || 'not_started';
+
+                  return (
+                    <div 
+                      key={i} 
+                      className={`c4-action-item ${status === 'completed' ? 'status-completed' : status === 'planned' ? 'status-planned' : ''}`}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                            {mit.action || mit.title}
+                          </span>
+                          <span className={`badge-risk-${(mit.priority || 'MEDIUM').toLowerCase()}`} style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
+                            {mit.priority || 'MEDIUM'} PRIORITY
+                          </span>
+                        </div>
+
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.35rem', lineHeight: 1.45 }}>
+                          {mit.mechanism || mit.description}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', fontSize: '0.72rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
+                          <span>Timeline: <strong>{mit.time_horizon || '1-3 months'}</strong></span>
+                          <span>Targets: <strong>{mit.risk_factor?.replace(/_/g, ' ') || 'Solvency'}</strong></span>
+                          {mit.estimated_cost && (
+                            <span>Estimated Resource: <strong style={{ color: 'var(--primary-green)' }}>{mit.estimated_cost}</strong></span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Status Toggle Switcher */}
+                      <div className="c4-status-toggle">
+                        <button
+                          type="button"
+                          onClick={() => setPlannedMitigations(prev => ({ ...prev, [i]: 'not_started' }))}
+                          className={`c4-status-btn ${status === 'not_started' ? 'active' : ''}`}
+                        >
+                          Not Started
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPlannedMitigations(prev => ({ ...prev, [i]: 'planned' }))}
+                          className={`c4-status-btn ${status === 'planned' ? 'active' : ''}`}
+                        >
+                          Planned
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPlannedMitigations(prev => ({ ...prev, [i]: 'completed' }))}
+                          className={`c4-status-btn ${status === 'completed' ? 'active completed' : ''}`}
+                        >
+                          Completed
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* AREA B: GROWTH READINESS */}
+            {activePlanSubTab === 'growth' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ background: 'var(--bg-subtle)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 700 }}>
+                    Stage-Aligned Growth Decision
+                  </div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--primary-green)', marginTop: '0.25rem' }}>
+                    {readiness.decision || 'Conditionally Ready for Phased Expansion'}
+                  </div>
+                  <p style={{ fontSize: '0.825rem', color: 'var(--text-primary)', marginTop: '0.35rem', lineHeight: 1.5, margin: 0 }}>
+                    {readiness.risk_adjusted_recommendation || 'The enterprise possesses sufficient operational stability for organic growth, provided working capital buffers are funded before undertaking long-term liabilities.'}
+                  </p>
+                </div>
+
+                <div className="grid-2">
+                  <div style={{ background: 'var(--bg-surface)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                      Prerequisites for Growth
+                    </div>
+                    <ul style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', paddingLeft: '1.25rem', lineHeight: 1.6, margin: 0 }}>
+                      <li>Maintain 3 consecutive months of positive operating cashflow</li>
+                      <li>Secure at least one verified backup supplier agreement</li>
+                      <li>Hold liquid reserves equal to 60 days of fixed expenses</li>
+                    </ul>
+                  </div>
+
+                  <div style={{ background: 'var(--bg-surface)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                      Capital &amp; Resource Requirements
+                    </div>
+                    <ul style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', paddingLeft: '1.25rem', lineHeight: 1.6, margin: 0 }}>
+                      <li>Recommended expansion budget: LKR 200,000 – 400,000</li>
+                      <li>Staffing requirement: Cross-train 1 senior operations lead</li>
+                      <li>Financing structure: Prefer retained earnings over high-rate debt</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.5, fontStyle: 'italic' }}>
+                  Component 4 evaluates risk exposure and growth readiness. It does not promise profitability or guarantee statutory success.
                 </div>
               </div>
-            </>
-          ) : (
-            <div className="c4-card" style={{ padding: '3rem', textAlign: 'center' }}>
-              <ShieldAlert size={36} style={{ color: '#64748b', marginBottom: '0.75rem' }} />
-              <h3 style={{ color: '#ffffff', fontSize: '1.1rem', margin: 0 }}>No Active Assessment</h3>
-              <p style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: '0.35rem', marginBottom: '1.25rem' }}>
-                Run an evaluation in Step 1 through Step 3 to view tailored mitigation recommendations.
-              </p>
-              <button onClick={() => setCurrentStep(1)} className="btn btn-primary" style={{ margin: '0 auto' }}>
-                Go to Step 1
-              </button>
-            </div>
-          )}
+            )}
+          </div>
 
+          {/* Stepper Navigation Buttons & Export */}
+          <div className="c4-bottom-nav">
+            <button
+              type="button"
+              onClick={() => setCurrentStep(5)}
+              className="btn btn-secondary"
+            >
+              <ArrowLeft size={15} />
+              <span>Back to GNN Insights</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDownloadReport}
+              className="btn btn-primary"
+            >
+              <Download size={15} />
+              <span>Download Assessment Audit Report (.md)</span>
+            </button>
+          </div>
         </div>
       )}
 

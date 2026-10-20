@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { checkHealth } from '../services/api';
-import { Download } from 'lucide-react';
 import Logo from './Logo';
 
-export default function Navbar({ currentProfile, onExportJson }) {
+export default function Navbar() {
   const [apiStatus, setApiStatus] = useState({ online: false, loading: true });
 
   useEffect(() => {
@@ -23,14 +22,14 @@ export default function Navbar({ currentProfile, onExportJson }) {
   return (
     <header className="navbar">
       <div className="brand-section">
-        <Logo variant="header" height={42} />
+        <Logo variant="header" height={36} />
         <div className="brand-title-group">
           <h1>
             SME360 AI
-            <span className="tag-component">Feasibility & Growth Engine</span>
+            <span className="tag-component">Component 4 &middot; Risk &amp; Mitigation</span>
           </h1>
           <div className="brand-subtitle">
-            AI-Driven SME Business Lifecycle Decision Support System
+            GNN-Based Risk Prediction, Mitigation and Scalable Growth Recommendation
           </div>
         </div>
       </div>
@@ -38,17 +37,10 @@ export default function Navbar({ currentProfile, onExportJson }) {
       <div className="navbar-actions">
         <div className="status-indicator">
           <span className={`status-dot ${apiStatus.online ? 'online' : 'offline'}`}></span>
-          <span style={{ color: apiStatus.online ? '#4ade80' : '#fca5a5' }}>
-            {apiStatus.loading ? 'Checking API...' : apiStatus.online ? 'Backend Connected' : 'API Offline (Start Backend Server)'}
+          <span style={{ color: apiStatus.online ? 'var(--risk-low)' : 'var(--risk-high)', fontWeight: 600 }}>
+            {apiStatus.loading ? 'Checking Engine...' : apiStatus.online ? 'Risk Engine Active' : 'API Offline'}
           </span>
         </div>
-
-        {currentProfile && (
-          <button onClick={onExportJson} className="btn btn-primary">
-            <Download size={16} />
-            Export JSON Profile
-          </button>
-        )}
       </div>
     </header>
   );

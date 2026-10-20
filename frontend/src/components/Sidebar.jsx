@@ -1,78 +1,87 @@
 import React from 'react';
 import { 
   LayoutDashboard, 
+  PlusCircle,
   Building2, 
-  ShieldAlert, 
-  History,
-  Briefcase, 
-  ShieldCheck, 
-  Sparkles, 
-  Sliders, 
   FileText,
-  Clock,
-  Sparkle
+  Briefcase, 
+  ShieldAlert, 
+  Network, 
+  CheckSquare, 
+  ShieldCheck, 
+  Sliders,
+  X
 } from 'lucide-react';
 import Logo from './Logo';
 
-export default function Sidebar({ activeTab, setActiveTab, activeProfile }) {
-  const hasProfile = Boolean(activeProfile);
+export default function Sidebar({ 
+  activeTab, 
+  setActiveTab, 
+  activeAssessment,
+  onClearActiveAssessment 
+}) {
+  const hasActiveAssessment = Boolean(activeAssessment);
 
-  // Four Primary Destinations as required by Section 2:
-  // 1. Home
-  // 2. My Businesses
-  // 3. Risk Assessment
-  // 4. Reports & History
-  const mainNavItems = [
-    { id: 'dashboard', label: 'Home', icon: LayoutDashboard },
-    { id: 'my_businesses', label: 'My Businesses', icon: Building2 },
-    { id: 'component4_risk', label: 'Risk Assessment', icon: ShieldAlert },
-    { id: 'reports_history', label: 'Reports & History', icon: History },
+  // Four Primary Global Destinations
+  const primaryNavItems = [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'new_assessment', label: 'New Risk Assessment', icon: PlusCircle },
+    { id: 'my_assessments', label: 'My Assessments', icon: Building2 },
+    { id: 'reports', label: 'Reports', icon: FileText },
   ];
 
-  // Workspace items organized logically for active business
-  const workspaceNavItems = [
-    { id: 'overview', label: 'Business Overview', icon: Briefcase, enabled: hasProfile },
-    { id: 'workspace_risk', label: 'Risk Assessment', icon: ShieldAlert, enabled: hasProfile },
-    { id: 'mitigation_plan', label: 'Mitigation Plan', icon: Sparkles, enabled: hasProfile },
-    { id: 'growth_readiness', label: 'Growth Readiness', icon: ShieldCheck, enabled: hasProfile },
-    { id: 'scenarios', label: 'Scenarios', icon: Sliders, enabled: hasProfile },
-    { id: 'workspace_history', label: 'Assessment History', icon: Clock, enabled: hasProfile },
-    { id: 'plan', label: 'Business Plan', icon: FileText, enabled: hasProfile },
+  // Contextual Navigation for the Active Business Assessment
+  const contextualNavItems = [
+    { id: 'c4_profile', label: 'Business Profile', icon: Briefcase },
+    { id: 'c4_risk_results', label: 'Risk Assessment', icon: ShieldAlert },
+    { id: 'c4_gnn_insights', label: 'GNN Insights', icon: Network },
+    { id: 'c4_mitigation_plan', label: 'Mitigation Plan', icon: CheckSquare },
+    { id: 'c4_growth_readiness', label: 'Growth Readiness', icon: ShieldCheck },
+    { id: 'c4_scenarios', label: 'Scenario Analysis', icon: Sliders },
   ];
+
+  // Derive business display name
+  const businessName = activeAssessment?.business_name || 
+    activeAssessment?.business_profile?.business_name || 
+    activeAssessment?.business_input?.business_name || 
+    activeAssessment?.business_id || 
+    'Active Business';
 
   return (
-    <aside className="sidebar" aria-label="Main Navigation">
-      
+    <aside className="sidebar" aria-label="Component 4 Navigation">
       {/* Brand Header */}
       <div 
-        className="sidebar-brand-header" 
-        onClick={() => setActiveTab('dashboard')}
+        onClick={() => setActiveTab('overview')}
         role="button"
         tabIndex={0}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveTab('dashboard'); }}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveTab('overview'); }}
         style={{ 
           display: 'flex', 
           alignItems: 'center', 
           gap: '0.65rem', 
-          marginBottom: '1.25rem', 
+          marginBottom: '1.5rem', 
           paddingBottom: '0.85rem', 
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          borderBottom: '1px solid var(--border-color)',
           cursor: 'pointer'
         }}
       >
-        <Logo variant="compact" height={34} />
+        <Logo variant="compact" height={32} />
         <div>
-          <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#ffffff', letterSpacing: '-0.2px' }}>SME360 AI</div>
-          <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>Decision Support System</div>
+          <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)', letterSpacing: '-0.2px' }}>
+            SME360 AI
+          </div>
+          <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>
+            Component 4 &middot; Risk Engine
+          </div>
         </div>
       </div>
 
-      {/* Primary Navigation Destinations */}
-      <div className="sidebar-heading" style={{ color: '#64748b', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 700, marginBottom: '0.5rem' }}>
-        PRIMARY NAVIGATION
+      {/* Primary Navigation */}
+      <div className="sidebar-heading">
+        MAIN NAVIGATION
       </div>
-      <nav className="nav-list" style={{ marginBottom: '1.5rem' }} aria-label="Primary Navigation">
-        {mainNavItems.map((item) => {
+      <nav className="nav-list" style={{ marginBottom: '1.75rem' }} aria-label="Primary Navigation">
+        {primaryNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
 
@@ -83,56 +92,94 @@ export default function Sidebar({ activeTab, setActiveTab, activeProfile }) {
               className={`nav-item-btn ${isActive ? 'active' : ''}`}
               aria-current={isActive ? 'page' : undefined}
             >
-              <Icon size={18} style={{ color: isActive ? '#60a5fa' : '#94a3b8' }} />
-              <span style={{ fontWeight: isActive ? 700 : 500 }}>{item.label}</span>
+              <Icon size={17} style={{ color: isActive ? 'var(--primary-green)' : 'var(--text-secondary)' }} />
+              <span>{item.label}</span>
             </button>
           );
         })}
       </nav>
 
-      {/* Selected Business Workspace Section */}
-      <div className="sidebar-heading" style={{ color: '#64748b', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 700, marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span>BUSINESS WORKSPACE</span>
-        {hasProfile ? (
-          <span style={{ fontSize: '0.6rem', background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 700 }}>
-            Active
-          </span>
-        ) : (
-          <span style={{ fontSize: '0.6rem', color: '#64748b' }}>
-            None Selected
-          </span>
-        )}
-      </div>
+      {/* Contextual Navigation: Visible ONLY when an active assessment is selected */}
+      {hasActiveAssessment && (
+        <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            marginBottom: '0.5rem',
+            padding: '0 0.5rem'
+          }}>
+            <div className="sidebar-heading" style={{ margin: 0, padding: 0 }}>
+              ACTIVE ASSESSMENT
+            </div>
+            {onClearActiveAssessment && (
+              <button
+                onClick={onClearActiveAssessment}
+                title="Close active assessment"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '2px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: 'var(--text-secondary)'
+                }}
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
 
-      <nav className="nav-list" aria-label="Business Workspace Navigation">
-        {workspaceNavItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id || 
-            (item.id === 'growth_readiness' && (activeTab === 'feasibility' || activeTab === 'insights')) ||
-            (item.id === 'mitigation_plan' && (activeTab === 'recommendations' || activeTab === 'options')) ||
-            (item.id === 'scenarios' && activeTab === 'scenario');
-          const isDisabled = !item.enabled;
+          {/* Active Business Summary Pill */}
+          <div style={{
+            background: 'var(--bg-subtle)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-sm)',
+            padding: '0.45rem 0.65rem',
+            marginBottom: '0.75rem',
+            marginRight: '0.25rem',
+            marginLeft: '0.25rem'
+          }}>
+            <div style={{ 
+              fontSize: '0.8rem', 
+              fontWeight: 600, 
+              color: 'var(--text-primary)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}>
+              {businessName}
+            </div>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.15rem' }}>
+              <span style={{ 
+                width: 6, 
+                height: 6, 
+                borderRadius: '50%', 
+                background: 'var(--primary-green)' 
+              }}></span>
+              Loaded in Workspace
+            </div>
+          </div>
 
-          return (
-            <button
-              key={item.id}
-              disabled={isDisabled}
-              onClick={() => setActiveTab(item.id)}
-              className={`nav-item-btn ${isActive ? 'active' : ''}`}
-              aria-current={isActive ? 'page' : undefined}
-              style={{ opacity: isDisabled ? 0.35 : 1, cursor: isDisabled ? 'not-allowed' : 'pointer' }}
-              title={isDisabled ? 'Select or assess a business first to access this section' : item.label}
-            >
-              <Icon size={18} style={{ color: isActive ? '#60a5fa' : '#94a3b8' }} />
-              <span style={{ fontWeight: isActive ? 700 : 400 }}>{item.label}</span>
-            </button>
-          );
-        })}
-      </nav>
+          <nav className="nav-list" aria-label="Contextual Assessment Navigation">
+            {contextualNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
 
-      {!hasProfile && (
-        <div style={{ marginTop: '1.25rem', padding: '0.85rem', background: 'rgba(30, 58, 138, 0.2)', border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: '10px', fontSize: '0.725rem', color: '#93c5fd', lineHeight: '1.45' }}>
-          Assess a business in <strong>Risk Assessment</strong> or pick an enterprise from <strong>My Businesses</strong> to unlock workspace details.
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`nav-item-btn ${isActive ? 'active' : ''}`}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  <Icon size={17} style={{ color: isActive ? 'var(--primary-green)' : 'var(--text-secondary)' }} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
         </div>
       )}
     </aside>

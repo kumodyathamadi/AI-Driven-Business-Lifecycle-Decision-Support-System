@@ -75,7 +75,7 @@ EXCLUDED_COLUMNS: List[str] = [
 TARGET_COLUMN: str = "feasibility_label"
 
 
-def get_feature_definitions() -> Dict[str, List[str]]:
+def get_feature_definitions() -> Dict[str, Union[List[str], str]]:
     """Returns explicit feature schemas used by Component 4 feasibility module."""
     return {
         "numerical_features": list(NUMERICAL_FEATURES),
@@ -191,7 +191,10 @@ class FeasibilityPreprocessor:
     def transform(self, X: pd.DataFrame) -> np.ndarray:
         if not self.is_fitted or self.preprocessor is None:
             raise RuntimeError("Preprocessor has not been fitted. Call fit() first.")
-        return self.preprocessor.transform(X)
+        res = self.preprocessor.transform(X)
+        if hasattr(res, "toarray"):
+            return np.asarray(res.toarray())
+        return np.asarray(res)
 
     def fit_transform(self, X_train: pd.DataFrame) -> np.ndarray:
         return self.fit(X_train).transform(X_train)
@@ -414,8 +417,8 @@ class Component4RiskDataPipeline:
                     elif g_n == 1:
                         train_ids.append(g_bids[0])
                 else:
-                    g_tr = int(round(train_ratio * g_n))
-                    g_va = int(round(val_ratio * g_n))
+                    g_tr = round(train_ratio * g_n)
+                    g_va = round(val_ratio * g_n)
                     # Adjust to maintain total group size
                     g_te = g_n - g_tr - g_va
                     if g_te < 0:
@@ -552,11 +555,14 @@ class Component4RiskDataPipeline:
             self.stage_encoder = OneHotEncoder(handle_unknown="ignore", sparse_output=False).fit(train_stg)
             self.is_fitted = True
 
-        elif self.scaler is None:
+        elif self.scaler is None or self.sector_encoder is None or self.stage_encoder is None:
             self.scaler = StandardScaler().fit(node_df[num_cols])
             self.sector_encoder = OneHotEncoder(handle_unknown="ignore", sparse_output=False).fit(node_df[[sector_col]])
             self.stage_encoder = OneHotEncoder(handle_unknown="ignore", sparse_output=False).fit(node_df[[stage_col]])
             self.is_fitted = True
+
+        if self.scaler is None or self.sector_encoder is None or self.stage_encoder is None:
+            raise RuntimeError("Preprocessor transformers are not fitted.")
 
         scaled_num = self.scaler.transform(node_df[num_cols])
         encoded_sec = self.sector_encoder.transform(node_df[[sector_col]])
@@ -593,8 +599,8 @@ class Component4RiskDataPipeline:
 
         valid_mask = rel_df["Source_Business_ID"].isin(bid2idx) & rel_df["Target_Business_ID"].isin(bid2idx)
         valid_rels = rel_df[valid_mask]
-        src = valid_rels["Source_Business_ID"].map(bid2idx).values
-        tgt = valid_rels["Target_Business_ID"].map(bid2idx).values
+        src = np.asarray(valid_rels["Source_Business_ID"].map(bid2idx).to_numpy(), dtype=np.int64)
+        tgt = np.asarray(valid_rels["Target_Business_ID"].map(bid2idx).to_numpy(), dtype=np.int64)
         edge_index = torch.tensor(np.vstack([src, tgt]), dtype=torch.long)
 
         # Merge province and district for validation checks

@@ -23,7 +23,7 @@ import os
 import sys
 import json
 import re
-from typing import Dict, Any, List, Sequence, Tuple, Optional
+from typing import Dict, Any, List, Sequence, Tuple, Optional, Union
 import pandas as pd
 import numpy as np
 
@@ -238,8 +238,8 @@ def calculate_staffing_growth_ratio(
     Formula: max(0, required_staff_count) / max(current_employee_count, epsilon)
     Units: Dimensionless ratio in [0, inf)
     """
-    req = max(0, int(required_staff_count)) if pd.notnull(required_staff_count) else 0
-    curr = max(int(epsilon), int(current_employee_count)) if pd.notnull(current_employee_count) else int(epsilon)
+    req = max(0, required_staff_count) if pd.notnull(required_staff_count) else 0
+    curr = max(epsilon, current_employee_count) if pd.notnull(current_employee_count) else epsilon
     return round(float(req / curr), 4)
 
 
@@ -259,7 +259,7 @@ class RiskFeatureEngineer:
     def extract_relationship_features(
         self,
         rel_df: pd.DataFrame,
-        business_ids: Optional[Sequence[str]] = None
+        business_ids: Optional[Union[Sequence[str], pd.Series]] = None
     ) -> pd.DataFrame:
         """
         Aggregates relational edges from business_relationships.csv into
@@ -382,14 +382,14 @@ class RiskFeatureEngineer:
         )
 
         # Derived Ratios
-        rev_mean = merged["monthly_revenue_mean_lkr"].values
-        rev_std = merged["monthly_revenue_std_lkr"].fillna(0.0).values
-        exp_mean = merged["monthly_expenses_mean_lkr"].values
-        exp_std = merged["monthly_expenses_std_lkr"].fillna(0.0).values
-        cash_latest = merged["cash_reserves_latest_lkr"].values
-        cash_min = merged["cash_reserves_min_lkr"].values
-        repay = merged["monthly_debt_repayment_lkr"].values
-        working_cap = merged["working_capital_latest_lkr"].values
+        rev_mean = merged["monthly_revenue_mean_lkr"].to_numpy(dtype=float)
+        rev_std = merged["monthly_revenue_std_lkr"].fillna(0.0).to_numpy(dtype=float)
+        exp_mean = merged["monthly_expenses_mean_lkr"].to_numpy(dtype=float)
+        exp_std = merged["monthly_expenses_std_lkr"].fillna(0.0).to_numpy(dtype=float)
+        cash_latest = merged["cash_reserves_latest_lkr"].to_numpy(dtype=float)
+        cash_min = merged["cash_reserves_min_lkr"].to_numpy(dtype=float)
+        repay = merged["monthly_debt_repayment_lkr"].to_numpy(dtype=float)
+        working_cap = merged["working_capital_latest_lkr"].to_numpy(dtype=float)
 
         op_profit_mean = rev_mean - exp_mean
         op_margin = (rev_mean - exp_mean) / np.maximum(EPSILON, rev_mean)
@@ -414,7 +414,7 @@ class RiskFeatureEngineer:
         merged["min_cash_runway_months"] = np.round(cash_runway_min, 4)
         merged["working_capital_latest_lkr"] = np.round(working_cap, 2)
         merged["working_capital_to_revenue_ratio"] = np.round(working_cap_ratio, 4)
-        merged["outstanding_debt_latest_lkr"] = np.round(merged["outstanding_debt_latest_lkr"].values, 2)
+        merged["outstanding_debt_latest_lkr"] = np.round(merged["outstanding_debt_latest_lkr"].to_numpy(dtype=float), 2)
         merged["monthly_debt_repayment_lkr"] = np.round(repay, 2)
         merged["debt_service_burden_ratio"] = np.round(debt_burden, 4)
         merged["debt_service_coverage_ratio"] = np.round(dscr, 4)
@@ -444,7 +444,7 @@ class RiskFeatureEngineer:
         df_splits = pd.read_csv(splits_path)
 
         # 1. Aggregate Relational and Financial baseline
-        df_rel_feats = self.extract_relationship_features(df_rel, business_ids=df_prof["business_id"])
+        df_rel_feats = self.extract_relationship_features(df_rel, business_ids=df_prof["business_id"].tolist())
         df_fin_feats = self.extract_financial_snapshot_features(df_snaps)
 
         # 2. Merge Business-Level baseline features (500 rows)
@@ -467,17 +467,17 @@ class RiskFeatureEngineer:
         action_merged = df_act[act_cols].merge(base_df, on="business_id", how="left")
 
         # 4. Vectorized Growth Action Stress & Resilience Interactions
-        inv = action_merged["required_investment_lkr"].values
-        add_cost = action_merged["additional_monthly_cost_lkr"].values
-        rev_change = action_merged["expected_revenue_change_lkr"].values
-        req_staff = action_merged["required_staff_count"].values
-        cap_score = action_merged["available_capacity_score"].values
+        inv = action_merged["required_investment_lkr"].to_numpy(dtype=float)
+        add_cost = action_merged["additional_monthly_cost_lkr"].to_numpy(dtype=float)
+        rev_change = action_merged["expected_revenue_change_lkr"].to_numpy(dtype=float)
+        req_staff = action_merged["required_staff_count"].to_numpy(dtype=float)
+        cap_score = action_merged["available_capacity_score"].to_numpy(dtype=float)
 
-        cash_latest = action_merged["cash_reserves_latest_lkr"].values
-        rev_mean = action_merged["monthly_revenue_mean_lkr"].values
-        exp_mean = action_merged["monthly_expenses_mean_lkr"].values
-        debt_repay = action_merged["monthly_debt_repayment_lkr"].values
-        curr_staff = action_merged["employee_count"].values
+        cash_latest = action_merged["cash_reserves_latest_lkr"].to_numpy(dtype=float)
+        rev_mean = action_merged["monthly_revenue_mean_lkr"].to_numpy(dtype=float)
+        exp_mean = action_merged["monthly_expenses_mean_lkr"].to_numpy(dtype=float)
+        debt_repay = action_merged["monthly_debt_repayment_lkr"].to_numpy(dtype=float)
+        curr_staff = action_merged["employee_count"].to_numpy(dtype=float)
 
         inv_to_cash = np.maximum(0.0, inv) / np.maximum(EPSILON, cash_latest)
         add_cost_to_rev = np.maximum(0.0, add_cost) / np.maximum(EPSILON, rev_mean)
@@ -486,7 +486,7 @@ class RiskFeatureEngineer:
         post_runway = post_cash / post_exp
         post_net_flow = (rev_mean + rev_change) - (exp_mean + add_cost) - debt_repay
         cap_gap = np.maximum(0.0, np.minimum(1.0, 1.0 - cap_score))
-        staff_growth = np.maximum(0.0, req_staff.astype(float)) / np.maximum(1.0, curr_staff.astype(float))
+        staff_growth = np.maximum(0.0, req_staff) / np.maximum(1.0, curr_staff)
 
         action_merged["investment_to_cash_ratio"] = np.round(inv_to_cash, 4)
         action_merged["additional_cost_to_revenue_ratio"] = np.round(add_cost_to_rev, 4)
@@ -622,7 +622,7 @@ class RiskFeatureEngineer:
             feature_summary[col] = {
                 "metadata": meta,
                 "dtype": str(df[col].dtype),
-                "null_count": int(df[col].isnull().sum()),
+                "null_count": df[col].isnull().sum(),
                 "sample_values": df[col].dropna().head(3).tolist(),
             }
 

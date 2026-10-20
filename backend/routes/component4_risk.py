@@ -260,12 +260,21 @@ def submit_intake_and_run(
     """
     file_path = request.plan_file_path
 
-    # If direct JSON provided, save to temp file
-    if not file_path and request.plan_json:
-        temp_json_path = os.path.join(UPLOAD_TMP_DIR, f"plan_{os.urandom(4).hex()}.json")
-        with open(temp_json_path, "w", encoding="utf-8") as f:
-            json.dump(request.plan_json, f, indent=2)
-        file_path = temp_json_path
+    # If direct JSON provided, or if file_path does not exist, synthesize plan JSON from request
+    if (not file_path or not os.path.exists(file_path)):
+        if request.plan_json or request.completed_fields or request.business_name:
+            temp_json_path = os.path.join(UPLOAD_TMP_DIR, f"plan_{os.urandom(4).hex()}.json")
+            base_plan = request.plan_json or {
+                "business_name": request.business_name or "Registered SME",
+                "district": request.district or "Colombo",
+                "province": "Western",
+                "business_category": request.business_category or "Enterprise",
+                "business_stage": "Operating SME",
+                "financial_projections": request.completed_fields or {}
+            }
+            with open(temp_json_path, "w", encoding="utf-8") as f:
+                json.dump(base_plan, f, indent=2)
+            file_path = temp_json_path
 
     if not file_path or not os.path.exists(file_path):
         raise HTTPException(status_code=400, detail="Valid business plan file path or plan JSON is required.")
