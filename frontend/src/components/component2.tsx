@@ -831,8 +831,11 @@ export const RegistrationComplianceDashboard: React.FC = () => {
     setPdfError(null);
     try {
       const data = await uploadAndExtractPlanPDF(file);
+      const cleanProducts = (data.extracted_profile?.products_services || []).filter(
+        (p: string) => p && !/page break|filing date|\bdate\b|---|\d{4,}/i.test(p) && p.trim().length >= 3
+      );
       setPdfExtractResult(data);
-      setExtractedProfileEdit({ ...data.extracted_profile });
+      setExtractedProfileEdit({ ...data.extracted_profile, products_services: cleanProducts });
     } catch (err: any) {
       setPdfError(err.message || 'Failed to process business plan PDF');
     } finally {
@@ -845,8 +848,11 @@ export const RegistrationComplianceDashboard: React.FC = () => {
     setPdfError(null);
     try {
       const data = await extractSamplePlanAPI(sampleId);
+      const cleanProducts = (data.extracted_profile?.products_services || []).filter(
+        (p: string) => p && !/page break|filing date|\bdate\b|---|\d{4,}/i.test(p) && p.trim().length >= 3
+      );
       setPdfExtractResult(data);
-      setExtractedProfileEdit({ ...data.extracted_profile });
+      setExtractedProfileEdit({ ...data.extracted_profile, products_services: cleanProducts });
     } catch (err: any) {
       setPdfError(err.message || 'Failed to load sample business plan');
     } finally {

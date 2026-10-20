@@ -391,17 +391,45 @@ def _extract_proposed_activity(full_text: str, biz_name: str, category: str, dis
     return f"{biz_name} is a {category.lower()} enterprise operating in {district}, providing commercial retail and service operations to local customers."
 
 
+def _is_valid_product(item: str) -> bool:
+    if not item or len(item) < 3 or len(item) > 40:
+        return False
+    lower = item.lower().strip()
+    bad_tokens = [
+        "page break", "page ", "filing date", "date", "---", "sme360", "confidential",
+        "score", "topsis", "feasibility", "target customer", "risk", "financial",
+        "projection", "buffer", "roadmap", "phase", "lkr", "rs.", "table of", "contents",
+        "chapter", "section", "tel:", "phone", "email", "address", "registered",
+        "registration", "statute", "ordinance", "act no", "western province", "wider selection",
+        "high quality", "affordable", "district", "customers", "operation", "service in", "market"
+    ]
+    if any(b in lower for b in bad_tokens):
+        return False
+    letters = sum(1 for c in item if c.isalpha())
+    digits = sum(1 for c in item if c.isdigit())
+    if letters < 3 or digits >= letters:
+        return False
+    if re.search(r"\d+[-/\.]\d+", item):
+        return False
+    return True
+
+
 def _extract_products_services(
     full_text: str, biz_name: str, business_type: str, proposed_activity: str
 ) -> List[str]:
     """
     Extracts real domain products & services dynamically from the uploaded document text.
-    Never dumps hardcoded unrelated defaults.
+    Never dumps page breaks, filing dates, numbers, or document metadata.
     """
     products: List[str] = []
 
-    # Strategy A: Extract from explicit verbs: "provides X, Y, and Z", "will sell X, Y, Z", "products include X, Y"
-    action_text = f"{proposed_activity} {full_text[:4000]}"
+    # Clean document text to eliminate page breaks, headers and filing date footers
+    clean_text = re.sub(r"-{2,}\s*Page\s+Break\s*-{2,}\s*\d*", " ", full_text, flags=re.IGNORECASE)
+    clean_text = re.sub(r"Page\s+\d+\s*(?:of\s*\d+)?", " ", clean_text, flags=re.IGNORECASE)
+    clean_text = re.sub(r"(?:Filing\s+Date|Date|Registration\s+No|Reg\s+No)\s*:\s*[^\n\r]+", " ", clean_text, flags=re.IGNORECASE)
+
+    # Strategy A: Extract from explicit verbs
+    action_text = f"{proposed_activity} {clean_text[:4000]}"
     sell_match = re.search(
         r"(?:provides|providing|offers|offering|will\s+sell|selling|specializes\s+in|products\s+include|services\s+include|commercial\s+offerings\s+include)\s+([^\.\n\r]+)",
         action_text,
@@ -412,32 +440,22 @@ def _extract_products_services(
         items = re.split(r",|\band\b|;|&", raw_items)
         for item in items:
             clean_item = _clean_str(item)
-            if clean_item and 3 <= len(clean_item) <= 45:
-                # filter out filler words
-                if not any(stop in clean_item.lower() for stop in [
-                    "wider selection", "high quality", "affordable", "district",
-                    "customers", "operation", "service in", "market", "target"
-                ]):
-                    products.append(clean_item.title())
+            if _is_valid_product(clean_item):
+                products.append(clean_item.title())
 
-    # Strategy B: Extract bullet points under offerings / products
-    bullets = re.findall(r"[•\-\*]\s*([A-Za-z0-9][A-Za-z0-9\s,&'\(\)\-]{3,50})", full_text[:4000])
-    for b in bullets:
-        clean_b = _clean_str(b)
-        if clean_b and 3 <= len(clean_b) <= 45:
-            lower_b = clean_b.lower()
-            if not any(skip in lower_b for skip in [
-                "target customer", "financial", "feasibility", "score", "topsis",
-                "risk", "roadmap", "phase", "buffer", "projection", "lkr", "rs."
-            ]):
-                # If it mentions domain goods, add it
-                products.append(clean_b.title())
+    # Strategy B: Extract bullet points under offerings / products (strict line bullet match)
+    for line in clean_text[:4000].splitlines():
+        line = line.strip()
+        m_bullet = re.match(r"^[•\*\-]\s+([A-Za-z][A-Za-z0-9\s,&'\(\)\-]{2,40})$", line)
+        if m_bullet:
+            cand = _clean_str(m_bullet.group(1))
+            if _is_valid_product(cand):
+                products.append(cand.title())
 
     # Strategy C: Check which items from our domain catalog are ACTUALLY MENTIONED in the uploaded document
-    corpus_lower = full_text.lower()
+    corpus_lower = clean_text.lower()
     domain_catalog = DOMAIN_PRODUCTS_CATALOG.get(business_type, [])
     for item in domain_catalog:
-        # Check if key words of this product item exist in the document
         keywords = [w.lower() for w in re.findall(r"\w+", item) if len(w) > 3]
         if any(kw in corpus_lower for kw in keywords):
             if item not in products:
@@ -448,7 +466,7 @@ def _extract_products_services(
     cleaned_products = []
     for p in products:
         norm = p.lower()
-        if norm not in seen and len(norm) > 2:
+        if norm not in seen and _is_valid_product(p):
             seen.add(norm)
             cleaned_products.append(p)
 
