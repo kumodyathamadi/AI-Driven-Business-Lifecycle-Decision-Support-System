@@ -9,7 +9,7 @@
     "projected_nodes_count": 2,
     "projected_edges_count": 70,
     "unique_entity_dyads": 1,
-    "connected_components_hetero": 2,
+    "connected_components_hetero": 1,
     "temporal_coverage": {
       "earliest_date": "2022-05-01",
       "latest_date": "2026-08-02",

@@ -1,0 +1,2207 @@
+{
+  "gnn_metrics": {
+    "test_accuracy": 0.72,
+    "test_balanced_accuracy": 0.4725,
+    "test_macro_f1": 0.3114,
+    "test_macro_f1_3class": 0.3114,
+    "test_macro_f1_2class": 0.504,
+    "confusion_matrix": [
+      [
+        106,
+        12,
+        3
+      ],
+      [
+        25,
+        2,
+        2
+      ],
+      [
+        0,
+        0,
+        0
+      ]
+    ],
+    "classification_report": {
+      "Low": {
+        "precision": 0.8091603053435115,
+        "recall": 0.8760330578512396,
+        "f1-score": 0.8412698412698413,
+        "support": 121.0
+      },
+      "Medium": {
+        "precision": 0.14285714285714285,
+        "recall": 0.06896551724137931,
+        "f1-score": 0.09302325581395349,
+        "support": 29.0
+      },
+      "High": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 0.0
+      },
+      "accuracy": 0.72,
+      "macro avg": {
+        "precision": 0.31733914940021807,
+        "recall": 0.314999525030873,
+        "f1-score": 0.31143103236126496,
+        "support": 150.0
+      },
+      "weighted avg": {
+        "precision": 0.6803416939294802,
+        "recall": 0.72,
+        "f1-score": 0.6966088347483697,
+        "support": 150.0
+      }
+    },
+    "class_support": {
+      "Low": 121,
+      "Medium": 29,
+      "High": 0
+    },
+    "three_class_evaluation": {
+      "class_order": [
+        "Low",
+        "Medium",
+        "High"
+      ],
+      "labels": [
+        0,
+        1,
+        2
+      ],
+      "accuracy": 0.72,
+      "balanced_accuracy": 0.4725,
+      "macro_f1": 0.3114,
+      "confusion_matrix": [
+        [
+          106,
+          12,
+          3
+        ],
+        [
+          25,
+          2,
+          2
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "class_support": {
+        "Low": 121,
+        "Medium": 29,
+        "High": 0
+      },
+      "classification_report": {
+        "Low": {
+          "precision": 0.8091603053435115,
+          "recall": 0.8760330578512396,
+          "f1-score": 0.8412698412698413,
+          "support": 121.0
+        },
+        "Medium": {
+          "precision": 0.14285714285714285,
+          "recall": 0.06896551724137931,
+          "f1-score": 0.09302325581395349,
+          "support": 29.0
+        },
+        "High": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 0.0
+        },
+        "accuracy": 0.72,
+        "macro avg": {
+          "precision": 0.31733914940021807,
+          "recall": 0.314999525030873,
+          "f1-score": 0.31143103236126496,
+          "support": 150.0
+        },
+        "weighted avg": {
+          "precision": 0.6803416939294802,
+          "recall": 0.72,
+          "f1-score": 0.6966088347483697,
+          "support": 150.0
+        }
+      }
+    },
+    "binary_evaluation": {
+      "target_definition": "Low = Low (0), Medium or High = Higher Risk (1)",
+      "class_order": [
+        "Low",
+        "Higher Risk"
+      ],
+      "labels": [
+        0,
+        1
+      ],
+      "accuracy": 0.7333,
+      "balanced_accuracy": 0.507,
+      "macro_f1": 0.504,
+      "confusion_matrix": [
+        [
+          106,
+          15
+        ],
+        [
+          25,
+          4
+        ]
+      ],
+      "class_support": {
+        "Low": 121,
+        "Higher_Risk": 29
+      },
+      "classification_report": {
+        "Low": {
+          "precision": 0.8091603053435115,
+          "recall": 0.8760330578512396,
+          "f1-score": 0.8412698412698413,
+          "support": 121.0
+        },
+        "Higher Risk": {
+          "precision": 0.21052631578947367,
+          "recall": 0.13793103448275862,
+          "f1-score": 0.16666666666666666,
+          "support": 29.0
+        },
+        "accuracy": 0.7333333333333333,
+        "macro avg": {
+          "precision": 0.5098433105664926,
+          "recall": 0.5069820461669992,
+          "f1-score": 0.503968253968254,
+          "support": 150.0
+        },
+        "weighted avg": {
+          "precision": 0.6934244006963975,
+          "recall": 0.7333333333333333,
+          "f1-score": 0.7108465608465608,
+          "support": 150.0
+        }
+      }
+    }
+  },
+  "inductive_evaluation": {
+    "evaluation_protocol": "INDUCTIVE_NODE_CLASSIFICATION",
+    "protocol_description": "Trained strictly on G_train (700 businesses, 1,721 intra-train edges + self-loops). No validation or test nodes/edges were included in training convolutions or loss backpropagation.",
+    "isolated_subgraph_evaluation": {
+      "protocol_name": "STRICT_ISOLATED_SUBGRAPH_INDUCTIVE",
+      "description": "Evaluation on test cohort in complete isolation (150 nodes, 82 test-test edges + self-loops)",
+      "cross_split_relationships_used_at_inference": false,
+      "test_accuracy": 0.5533,
+      "test_balanced_accuracy": 0.4741,
+      "test_macro_f1": 0.3088,
+      "test_macro_f1_3class": 0.3088,
+      "test_macro_f1_2class": 0.4577,
+      "confusion_matrix": [
+        [
+          73,
+          44,
+          4
+        ],
+        [
+          19,
+          10,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "classification_report": {
+        "Low": {
+          "precision": 0.7934782608695652,
+          "recall": 0.6033057851239669,
+          "f1-score": 0.6854460093896714,
+          "support": 121.0
+        },
+        "Medium": {
+          "precision": 0.18518518518518517,
+          "recall": 0.3448275862068966,
+          "f1-score": 0.24096385542168675,
+          "support": 29.0
+        },
+        "High": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 0.0
+        },
+        "accuracy": 0.5533333333333333,
+        "macro avg": {
+          "precision": 0.32622114868491675,
+          "recall": 0.31604445711028784,
+          "f1-score": 0.3088032882704527,
+          "support": 150.0
+        },
+        "weighted avg": {
+          "precision": 0.6758749329039184,
+          "recall": 0.5533333333333333,
+          "f1-score": 0.599512792955861,
+          "support": 150.0
+        }
+      },
+      "class_support": {
+        "Low": 121,
+        "Medium": 29,
+        "High": 0
+      },
+      "three_class_evaluation": {
+        "class_order": [
+          "Low",
+          "Medium",
+          "High"
+        ],
+        "labels": [
+          0,
+          1,
+          2
+        ],
+        "accuracy": 0.5533,
+        "balanced_accuracy": 0.4741,
+        "macro_f1": 0.3088,
+        "confusion_matrix": [
+          [
+            73,
+            44,
+            4
+          ],
+          [
+            19,
+            10,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "class_support": {
+          "Low": 121,
+          "Medium": 29,
+          "High": 0
+        },
+        "classification_report": {
+          "Low": {
+            "precision": 0.7934782608695652,
+            "recall": 0.6033057851239669,
+            "f1-score": 0.6854460093896714,
+            "support": 121.0
+          },
+          "Medium": {
+            "precision": 0.18518518518518517,
+            "recall": 0.3448275862068966,
+            "f1-score": 0.24096385542168675,
+            "support": 29.0
+          },
+          "High": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 0.0
+          },
+          "accuracy": 0.5533333333333333,
+          "macro avg": {
+            "precision": 0.32622114868491675,
+            "recall": 0.31604445711028784,
+            "f1-score": 0.3088032882704527,
+            "support": 150.0
+          },
+          "weighted avg": {
+            "precision": 0.6758749329039184,
+            "recall": 0.5533333333333333,
+            "f1-score": 0.599512792955861,
+            "support": 150.0
+          }
+        }
+      },
+      "binary_evaluation": {
+        "target_definition": "Low = Low (0), Medium or High = Higher Risk (1)",
+        "class_order": [
+          "Low",
+          "Higher Risk"
+        ],
+        "labels": [
+          0,
+          1
+        ],
+        "accuracy": 0.5533,
+        "balanced_accuracy": 0.4741,
+        "macro_f1": 0.4577,
+        "confusion_matrix": [
+          [
+            73,
+            48
+          ],
+          [
+            19,
+            10
+          ]
+        ],
+        "class_support": {
+          "Low": 121,
+          "Higher_Risk": 29
+        },
+        "classification_report": {
+          "Low": {
+            "precision": 0.7934782608695652,
+            "recall": 0.6033057851239669,
+            "f1-score": 0.6854460093896714,
+            "support": 121.0
+          },
+          "Higher Risk": {
+            "precision": 0.1724137931034483,
+            "recall": 0.3448275862068966,
+            "f1-score": 0.22988505747126436,
+            "support": 29.0
+          },
+          "accuracy": 0.5533333333333333,
+          "macro avg": {
+            "precision": 0.48294602698650674,
+            "recall": 0.47406668566543175,
+            "f1-score": 0.4576655334304679,
+            "support": 150.0
+          },
+          "weighted avg": {
+            "precision": 0.6734057971014493,
+            "recall": 0.5533333333333333,
+            "f1-score": 0.5973708920187794,
+            "support": 150.0
+          }
+        }
+      }
+    },
+    "extended_network_evaluation": {
+      "protocol_name": "INDUCTIVE_GNN_WITH_EXPLICIT_TEST_RELATIONSHIPS",
+      "description": "Inference at test time on network with test nodes linked to counterparties",
+      "cross_split_relationships_used_at_inference": true,
+      "cross_split_notes": "Excluding held-out nodes from training does NOT mean the inference graph contains no cross-split relationships: at test time, an unseen SME is connected to its known trade partners (which may include training-cohort businesses).",
+      "test_accuracy": 0.72,
+      "test_balanced_accuracy": 0.4725,
+      "test_macro_f1": 0.3114,
+      "test_macro_f1_3class": 0.3114,
+      "test_macro_f1_2class": 0.504,
+      "confusion_matrix": [
+        [
+          106,
+          12,
+          3
+        ],
+        [
+          25,
+          2,
+          2
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "classification_report": {
+        "Low": {
+          "precision": 0.8091603053435115,
+          "recall": 0.8760330578512396,
+          "f1-score": 0.8412698412698413,
+          "support": 121.0
+        },
+        "Medium": {
+          "precision": 0.14285714285714285,
+          "recall": 0.06896551724137931,
+          "f1-score": 0.09302325581395349,
+          "support": 29.0
+        },
+        "High": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 0.0
+        },
+        "accuracy": 0.72,
+        "macro avg": {
+          "precision": 0.31733914940021807,
+          "recall": 0.314999525030873,
+          "f1-score": 0.31143103236126496,
+          "support": 150.0
+        },
+        "weighted avg": {
+          "precision": 0.6803416939294802,
+          "recall": 0.72,
+          "f1-score": 0.6966088347483697,
+          "support": 150.0
+        }
+      },
+      "class_support": {
+        "Low": 121,
+        "Medium": 29,
+        "High": 0
+      },
+      "three_class_evaluation": {
+        "class_order": [
+          "Low",
+          "Medium",
+          "High"
+        ],
+        "labels": [
+          0,
+          1,
+          2
+        ],
+        "accuracy": 0.72,
+        "balanced_accuracy": 0.4725,
+        "macro_f1": 0.3114,
+        "confusion_matrix": [
+          [
+            106,
+            12,
+            3
+          ],
+          [
+            25,
+            2,
+            2
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "class_support": {
+          "Low": 121,
+          "Medium": 29,
+          "High": 0
+        },
+        "classification_report": {
+          "Low": {
+            "precision": 0.8091603053435115,
+            "recall": 0.8760330578512396,
+            "f1-score": 0.8412698412698413,
+            "support": 121.0
+          },
+          "Medium": {
+            "precision": 0.14285714285714285,
+            "recall": 0.06896551724137931,
+            "f1-score": 0.09302325581395349,
+            "support": 29.0
+          },
+          "High": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 0.0
+          },
+          "accuracy": 0.72,
+          "macro avg": {
+            "precision": 0.31733914940021807,
+            "recall": 0.314999525030873,
+            "f1-score": 0.31143103236126496,
+            "support": 150.0
+          },
+          "weighted avg": {
+            "precision": 0.6803416939294802,
+            "recall": 0.72,
+            "f1-score": 0.6966088347483697,
+            "support": 150.0
+          }
+        }
+      },
+      "binary_evaluation": {
+        "target_definition": "Low = Low (0), Medium or High = Higher Risk (1)",
+        "class_order": [
+          "Low",
+          "Higher Risk"
+        ],
+        "labels": [
+          0,
+          1
+        ],
+        "accuracy": 0.7333,
+        "balanced_accuracy": 0.507,
+        "macro_f1": 0.504,
+        "confusion_matrix": [
+          [
+            106,
+            15
+          ],
+          [
+            25,
+            4
+          ]
+        ],
+        "class_support": {
+          "Low": 121,
+          "Higher_Risk": 29
+        },
+        "classification_report": {
+          "Low": {
+            "precision": 0.8091603053435115,
+            "recall": 0.8760330578512396,
+            "f1-score": 0.8412698412698413,
+            "support": 121.0
+          },
+          "Higher Risk": {
+            "precision": 0.21052631578947367,
+            "recall": 0.13793103448275862,
+            "f1-score": 0.16666666666666666,
+            "support": 29.0
+          },
+          "accuracy": 0.7333333333333333,
+          "macro avg": {
+            "precision": 0.5098433105664926,
+            "recall": 0.5069820461669992,
+            "f1-score": 0.503968253968254,
+            "support": 150.0
+          },
+          "weighted avg": {
+            "precision": 0.6934244006963975,
+            "recall": 0.7333333333333333,
+            "f1-score": 0.7108465608465608,
+            "support": 150.0
+          }
+        }
+      }
+    }
+  },
+  "transductive_evaluation": {
+    "evaluation_protocol": "TRANSDUCTIVE_NODE_CLASSIFICATION",
+    "protocol_name": "TRANSDUCTIVE_FULL_GRAPH_BENCHMARK",
+    "protocol_description": "Trained on complete graph with 3,487 simulated edges. Convolutions pass messages across 1,604 cross-split edges during training. Serves as an experimental relational benchmark, NOT an unseen-business inductive evaluation. Metrics from transductive evaluation must not be compared directly with inductive evaluation.",
+    "cross_split_relationships_used_at_inference": true,
+    "test_accuracy": 0.68,
+    "test_balanced_accuracy": 0.5788,
+    "test_macro_f1": 0.3743,
+    "test_macro_f1_3class": 0.3743,
+    "test_macro_f1_2class": 0.5614,
+    "confusion_matrix": [
+      [
+        90,
+        31,
+        0
+      ],
+      [
+        17,
+        12,
+        0
+      ],
+      [
+        0,
+        0,
+        0
+      ]
+    ],
+    "classification_report": {
+      "Low": {
+        "precision": 0.8411214953271028,
+        "recall": 0.743801652892562,
+        "f1-score": 0.7894736842105263,
+        "support": 121.0
+      },
+      "Medium": {
+        "precision": 0.27906976744186046,
+        "recall": 0.41379310344827586,
+        "f1-score": 0.3333333333333333,
+        "support": 29.0
+      },
+      "High": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 0.0
+      },
+      "accuracy": 0.68,
+      "macro avg": {
+        "precision": 0.3733970875896544,
+        "recall": 0.38586491878027923,
+        "f1-score": 0.3742690058479532,
+        "support": 150.0
+      },
+      "weighted avg": {
+        "precision": 0.7324581612692892,
+        "recall": 0.68,
+        "f1-score": 0.7012865497076024,
+        "support": 150.0
+      }
+    },
+    "class_support": {
+      "Low": 121,
+      "Medium": 29,
+      "High": 0
+    },
+    "three_class_evaluation": {
+      "class_order": [
+        "Low",
+        "Medium",
+        "High"
+      ],
+      "labels": [
+        0,
+        1,
+        2
+      ],
+      "accuracy": 0.68,
+      "balanced_accuracy": 0.5788,
+      "macro_f1": 0.3743,
+      "confusion_matrix": [
+        [
+          90,
+          31,
+          0
+        ],
+        [
+          17,
+          12,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "class_support": {
+        "Low": 121,
+        "Medium": 29,
+        "High": 0
+      },
+      "classification_report": {
+        "Low": {
+          "precision": 0.8411214953271028,
+          "recall": 0.743801652892562,
+          "f1-score": 0.7894736842105263,
+          "support": 121.0
+        },
+        "Medium": {
+          "precision": 0.27906976744186046,
+          "recall": 0.41379310344827586,
+          "f1-score": 0.3333333333333333,
+          "support": 29.0
+        },
+        "High": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 0.0
+        },
+        "accuracy": 0.68,
+        "macro avg": {
+          "precision": 0.3733970875896544,
+          "recall": 0.38586491878027923,
+          "f1-score": 0.3742690058479532,
+          "support": 150.0
+        },
+        "weighted avg": {
+          "precision": 0.7324581612692892,
+          "recall": 0.68,
+          "f1-score": 0.7012865497076024,
+          "support": 150.0
+        }
+      }
+    },
+    "binary_evaluation": {
+      "target_definition": "Low = Low (0), Medium or High = Higher Risk (1)",
+      "class_order": [
+        "Low",
+        "Higher Risk"
+      ],
+      "labels": [
+        0,
+        1
+      ],
+      "accuracy": 0.68,
+      "balanced_accuracy": 0.5788,
+      "macro_f1": 0.5614,
+      "confusion_matrix": [
+        [
+          90,
+          31
+        ],
+        [
+          17,
+          12
+        ]
+      ],
+      "class_support": {
+        "Low": 121,
+        "Higher_Risk": 29
+      },
+      "classification_report": {
+        "Low": {
+          "precision": 0.8411214953271028,
+          "recall": 0.743801652892562,
+          "f1-score": 0.7894736842105263,
+          "support": 121.0
+        },
+        "Higher Risk": {
+          "precision": 0.27906976744186046,
+          "recall": 0.41379310344827586,
+          "f1-score": 0.3333333333333333,
+          "support": 29.0
+        },
+        "accuracy": 0.68,
+        "macro avg": {
+          "precision": 0.5600956313844816,
+          "recall": 0.5787973781704189,
+          "f1-score": 0.5614035087719298,
+          "support": 150.0
+        },
+        "weighted avg": {
+          "precision": 0.7324581612692892,
+          "recall": 0.68,
+          "f1-score": 0.7012865497076024,
+          "support": 150.0
+        }
+      }
+    }
+  },
+  "baseline_metrics": {
+    "model_type": "RandomForestClassifier (Non-Graph Baseline)",
+    "protocol_name": "TABULAR_NON_GRAPH_BASELINE",
+    "protocol_description": "RandomForestClassifier trained and evaluated purely on tabular operational/financial features. Completely graph-agnostic; evaluates each business in isolation without any relational message passing.",
+    "cross_split_relationships_used_at_inference": false,
+    "val_accuracy": 0.6533,
+    "val_balanced_accuracy": 0.4512,
+    "val_macro_f1": 0.4024,
+    "test_accuracy": 0.5933,
+    "test_balanced_accuracy": 0.5644,
+    "test_macro_f1": 0.3459,
+    "test_macro_f1_3class": 0.3459,
+    "test_macro_f1_2class": 0.5189,
+    "confusion_matrix": [
+      [
+        74,
+        47,
+        0
+      ],
+      [
+        14,
+        15,
+        0
+      ],
+      [
+        0,
+        0,
+        0
+      ]
+    ],
+    "classification_report": {
+      "Low": {
+        "precision": 0.8409090909090909,
+        "recall": 0.6115702479338843,
+        "f1-score": 0.7081339712918661,
+        "support": 121.0
+      },
+      "Medium": {
+        "precision": 0.24193548387096775,
+        "recall": 0.5172413793103449,
+        "f1-score": 0.32967032967032966,
+        "support": 29.0
+      },
+      "High": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 0.0
+      },
+      "accuracy": 0.5933333333333334,
+      "macro avg": {
+        "precision": 0.36094819159335295,
+        "recall": 0.37627054241474306,
+        "f1-score": 0.3459347669873986,
+        "support": 150.0
+      },
+      "weighted avg": {
+        "precision": 0.7251075268817204,
+        "recall": 0.5933333333333334,
+        "f1-score": 0.6349643339117024,
+        "support": 150.0
+      }
+    },
+    "class_support": {
+      "Low": 121,
+      "Medium": 29,
+      "High": 0
+    },
+    "three_class_evaluation": {
+      "class_order": [
+        "Low",
+        "Medium",
+        "High"
+      ],
+      "labels": [
+        0,
+        1,
+        2
+      ],
+      "accuracy": 0.5933,
+      "balanced_accuracy": 0.5644,
+      "macro_f1": 0.3459,
+      "confusion_matrix": [
+        [
+          74,
+          47,
+          0
+        ],
+        [
+          14,
+          15,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "class_support": {
+        "Low": 121,
+        "Medium": 29,
+        "High": 0
+      },
+      "classification_report": {
+        "Low": {
+          "precision": 0.8409090909090909,
+          "recall": 0.6115702479338843,
+          "f1-score": 0.7081339712918661,
+          "support": 121.0
+        },
+        "Medium": {
+          "precision": 0.24193548387096775,
+          "recall": 0.5172413793103449,
+          "f1-score": 0.32967032967032966,
+          "support": 29.0
+        },
+        "High": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 0.0
+        },
+        "accuracy": 0.5933333333333334,
+        "macro avg": {
+          "precision": 0.36094819159335295,
+          "recall": 0.37627054241474306,
+          "f1-score": 0.3459347669873986,
+          "support": 150.0
+        },
+        "weighted avg": {
+          "precision": 0.7251075268817204,
+          "recall": 0.5933333333333334,
+          "f1-score": 0.6349643339117024,
+          "support": 150.0
+        }
+      }
+    },
+    "binary_evaluation": {
+      "target_definition": "Low = Low (0), Medium or High = Higher Risk (1)",
+      "class_order": [
+        "Low",
+        "Higher Risk"
+      ],
+      "labels": [
+        0,
+        1
+      ],
+      "accuracy": 0.5933,
+      "balanced_accuracy": 0.5644,
+      "macro_f1": 0.5189,
+      "confusion_matrix": [
+        [
+          74,
+          47
+        ],
+        [
+          14,
+          15
+        ]
+      ],
+      "class_support": {
+        "Low": 121,
+        "Higher_Risk": 29
+      },
+      "classification_report": {
+        "Low": {
+          "precision": 0.8409090909090909,
+          "recall": 0.6115702479338843,
+          "f1-score": 0.7081339712918661,
+          "support": 121.0
+        },
+        "Higher Risk": {
+          "precision": 0.24193548387096775,
+          "recall": 0.5172413793103449,
+          "f1-score": 0.32967032967032966,
+          "support": 29.0
+        },
+        "accuracy": 0.5933333333333334,
+        "macro avg": {
+          "precision": 0.5414222873900294,
+          "recall": 0.5644058136221146,
+          "f1-score": 0.5189021504810979,
+          "support": 150.0
+        },
+        "weighted avg": {
+          "precision": 0.7251075268817204,
+          "recall": 0.5933333333333334,
+          "f1-score": 0.6349643339117024,
+          "support": 150.0
+        }
+      }
+    }
+  },
+  "class_imbalance_disclosure": {
+    "total_records": 1000,
+    "dataset_class_distribution": {
+      "0": 758,
+      "1": 240,
+      "2": 2
+    },
+    "test_class_distribution": {
+      "0": 121,
+      "1": 29
+    },
+    "high_risk_cases_total": 2,
+    "high_risk_cases_test": 0,
+    "scientific_limitation_statement": "The dataset contains only 2 High-risk SMEs (0.2%), and 0 occur in the held-out test split. Consequently, empirical test evaluation measures binary Low vs Medium discrimination. Reliable three-class generalization to High-risk default cannot be claimed."
+  },
+  "performance_verdict": {
+    "finding": "Random Forest baseline achieves superior Balanced Accuracy (56.44%) and Binary Macro-F1 (51.89%) compared to Inductive GNN (47.25% / 50.40%). Under 3-class evaluation, Random Forest Macro-F1 (34.59%) also exceeds Inductive GNN (31.14%). The GNN's higher raw accuracy (72.00% vs 59.33%) is driven by majority-class bias toward Low risk, not superior relational discrimination.",
+    "balanced_accuracy": {
+      "RandomForest_Baseline": 0.5644,
+      "GNN_Inductive_Extended": 0.4725,
+      "GNN_Inductive_Subgraph": 0.4741,
+      "GNN_Transductive": 0.5788
+    },
+    "macro_f1_binary": {
+      "RandomForest_Baseline": 0.5189,
+      "GNN_Inductive_Extended": 0.504,
+      "GNN_Inductive_Subgraph": 0.4577,
+      "GNN_Transductive": 0.5614
+    },
+    "macro_f1_3class": {
+      "RandomForest_Baseline": 0.3459,
+      "GNN_Inductive_Extended": 0.3114,
+      "GNN_Inductive_Subgraph": 0.3088,
+      "GNN_Transductive": 0.3743
+    }
+  },
+  "metadata": {
+    "model_type": "B2BRiskGNN",
+    "model_architecture": "B2BRiskGNN (2-layer GCNConv + BatchNorm + Skip + MLP)",
+    "model_version": "Component4_B2BRiskGNN_v2.1",
+    "evaluation_protocol": "inductive",
+    "in_channels": 41,
+    "hidden_channels": 64,
+    "out_channels": 3,
+    "classes": [
+      "Low",
+      "Medium",
+      "High"
+    ],
+    "target_classes": [
+      "Low",
+      "Medium",
+      "High"
+    ],
+    "node_count": 1000,
+    "simulated_edge_count": 3487,
+    "split_strategy": "Business_ID Grouped (70% train, 15% validation, 15% test)",
+    "split_counts": {
+      "train": 700,
+      "validation": 150,
+      "test": 150
+    },
+    "subgraph_edge_counts": {
+      "train_intra_edges": 1721,
+      "validation_intra_edges": 80,
+      "test_intra_edges": 82,
+      "cross_split_edges": 1604
+    },
+    "inductive_metrics": {
+      "protocol_name": "INDUCTIVE_GNN_WITH_EXPLICIT_TEST_RELATIONSHIPS",
+      "description": "Inference at test time on network with test nodes linked to counterparties",
+      "cross_split_relationships_used_at_inference": true,
+      "cross_split_notes": "Excluding held-out nodes from training does NOT mean the inference graph contains no cross-split relationships: at test time, an unseen SME is connected to its known trade partners (which may include training-cohort businesses).",
+      "test_accuracy": 0.72,
+      "test_balanced_accuracy": 0.4725,
+      "test_macro_f1": 0.3114,
+      "test_macro_f1_3class": 0.3114,
+      "test_macro_f1_2class": 0.504,
+      "confusion_matrix": [
+        [
+          106,
+          12,
+          3
+        ],
+        [
+          25,
+          2,
+          2
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "classification_report": {
+        "Low": {
+          "precision": 0.8091603053435115,
+          "recall": 0.8760330578512396,
+          "f1-score": 0.8412698412698413,
+          "support": 121.0
+        },
+        "Medium": {
+          "precision": 0.14285714285714285,
+          "recall": 0.06896551724137931,
+          "f1-score": 0.09302325581395349,
+          "support": 29.0
+        },
+        "High": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 0.0
+        },
+        "accuracy": 0.72,
+        "macro avg": {
+          "precision": 0.31733914940021807,
+          "recall": 0.314999525030873,
+          "f1-score": 0.31143103236126496,
+          "support": 150.0
+        },
+        "weighted avg": {
+          "precision": 0.6803416939294802,
+          "recall": 0.72,
+          "f1-score": 0.6966088347483697,
+          "support": 150.0
+        }
+      },
+      "class_support": {
+        "Low": 121,
+        "Medium": 29,
+        "High": 0
+      },
+      "three_class_evaluation": {
+        "class_order": [
+          "Low",
+          "Medium",
+          "High"
+        ],
+        "labels": [
+          0,
+          1,
+          2
+        ],
+        "accuracy": 0.72,
+        "balanced_accuracy": 0.4725,
+        "macro_f1": 0.3114,
+        "confusion_matrix": [
+          [
+            106,
+            12,
+            3
+          ],
+          [
+            25,
+            2,
+            2
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "class_support": {
+          "Low": 121,
+          "Medium": 29,
+          "High": 0
+        },
+        "classification_report": {
+          "Low": {
+            "precision": 0.8091603053435115,
+            "recall": 0.8760330578512396,
+            "f1-score": 0.8412698412698413,
+            "support": 121.0
+          },
+          "Medium": {
+            "precision": 0.14285714285714285,
+            "recall": 0.06896551724137931,
+            "f1-score": 0.09302325581395349,
+            "support": 29.0
+          },
+          "High": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 0.0
+          },
+          "accuracy": 0.72,
+          "macro avg": {
+            "precision": 0.31733914940021807,
+            "recall": 0.314999525030873,
+            "f1-score": 0.31143103236126496,
+            "support": 150.0
+          },
+          "weighted avg": {
+            "precision": 0.6803416939294802,
+            "recall": 0.72,
+            "f1-score": 0.6966088347483697,
+            "support": 150.0
+          }
+        }
+      },
+      "binary_evaluation": {
+        "target_definition": "Low = Low (0), Medium or High = Higher Risk (1)",
+        "class_order": [
+          "Low",
+          "Higher Risk"
+        ],
+        "labels": [
+          0,
+          1
+        ],
+        "accuracy": 0.7333,
+        "balanced_accuracy": 0.507,
+        "macro_f1": 0.504,
+        "confusion_matrix": [
+          [
+            106,
+            15
+          ],
+          [
+            25,
+            4
+          ]
+        ],
+        "class_support": {
+          "Low": 121,
+          "Higher_Risk": 29
+        },
+        "classification_report": {
+          "Low": {
+            "precision": 0.8091603053435115,
+            "recall": 0.8760330578512396,
+            "f1-score": 0.8412698412698413,
+            "support": 121.0
+          },
+          "Higher Risk": {
+            "precision": 0.21052631578947367,
+            "recall": 0.13793103448275862,
+            "f1-score": 0.16666666666666666,
+            "support": 29.0
+          },
+          "accuracy": 0.7333333333333333,
+          "macro avg": {
+            "precision": 0.5098433105664926,
+            "recall": 0.5069820461669992,
+            "f1-score": 0.503968253968254,
+            "support": 150.0
+          },
+          "weighted avg": {
+            "precision": 0.6934244006963975,
+            "recall": 0.7333333333333333,
+            "f1-score": 0.7108465608465608,
+            "support": 150.0
+          }
+        }
+      }
+    },
+    "inductive_subgraph_metrics": {
+      "protocol_name": "STRICT_ISOLATED_SUBGRAPH_INDUCTIVE",
+      "description": "Evaluation on test cohort in complete isolation (150 nodes, 82 test-test edges + self-loops)",
+      "cross_split_relationships_used_at_inference": false,
+      "test_accuracy": 0.5533,
+      "test_balanced_accuracy": 0.4741,
+      "test_macro_f1": 0.3088,
+      "test_macro_f1_3class": 0.3088,
+      "test_macro_f1_2class": 0.4577,
+      "confusion_matrix": [
+        [
+          73,
+          44,
+          4
+        ],
+        [
+          19,
+          10,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "classification_report": {
+        "Low": {
+          "precision": 0.7934782608695652,
+          "recall": 0.6033057851239669,
+          "f1-score": 0.6854460093896714,
+          "support": 121.0
+        },
+        "Medium": {
+          "precision": 0.18518518518518517,
+          "recall": 0.3448275862068966,
+          "f1-score": 0.24096385542168675,
+          "support": 29.0
+        },
+        "High": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 0.0
+        },
+        "accuracy": 0.5533333333333333,
+        "macro avg": {
+          "precision": 0.32622114868491675,
+          "recall": 0.31604445711028784,
+          "f1-score": 0.3088032882704527,
+          "support": 150.0
+        },
+        "weighted avg": {
+          "precision": 0.6758749329039184,
+          "recall": 0.5533333333333333,
+          "f1-score": 0.599512792955861,
+          "support": 150.0
+        }
+      },
+      "class_support": {
+        "Low": 121,
+        "Medium": 29,
+        "High": 0
+      },
+      "three_class_evaluation": {
+        "class_order": [
+          "Low",
+          "Medium",
+          "High"
+        ],
+        "labels": [
+          0,
+          1,
+          2
+        ],
+        "accuracy": 0.5533,
+        "balanced_accuracy": 0.4741,
+        "macro_f1": 0.3088,
+        "confusion_matrix": [
+          [
+            73,
+            44,
+            4
+          ],
+          [
+            19,
+            10,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "class_support": {
+          "Low": 121,
+          "Medium": 29,
+          "High": 0
+        },
+        "classification_report": {
+          "Low": {
+            "precision": 0.7934782608695652,
+            "recall": 0.6033057851239669,
+            "f1-score": 0.6854460093896714,
+            "support": 121.0
+          },
+          "Medium": {
+            "precision": 0.18518518518518517,
+            "recall": 0.3448275862068966,
+            "f1-score": 0.24096385542168675,
+            "support": 29.0
+          },
+          "High": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 0.0
+          },
+          "accuracy": 0.5533333333333333,
+          "macro avg": {
+            "precision": 0.32622114868491675,
+            "recall": 0.31604445711028784,
+            "f1-score": 0.3088032882704527,
+            "support": 150.0
+          },
+          "weighted avg": {
+            "precision": 0.6758749329039184,
+            "recall": 0.5533333333333333,
+            "f1-score": 0.599512792955861,
+            "support": 150.0
+          }
+        }
+      },
+      "binary_evaluation": {
+        "target_definition": "Low = Low (0), Medium or High = Higher Risk (1)",
+        "class_order": [
+          "Low",
+          "Higher Risk"
+        ],
+        "labels": [
+          0,
+          1
+        ],
+        "accuracy": 0.5533,
+        "balanced_accuracy": 0.4741,
+        "macro_f1": 0.4577,
+        "confusion_matrix": [
+          [
+            73,
+            48
+          ],
+          [
+            19,
+            10
+          ]
+        ],
+        "class_support": {
+          "Low": 121,
+          "Higher_Risk": 29
+        },
+        "classification_report": {
+          "Low": {
+            "precision": 0.7934782608695652,
+            "recall": 0.6033057851239669,
+            "f1-score": 0.6854460093896714,
+            "support": 121.0
+          },
+          "Higher Risk": {
+            "precision": 0.1724137931034483,
+            "recall": 0.3448275862068966,
+            "f1-score": 0.22988505747126436,
+            "support": 29.0
+          },
+          "accuracy": 0.5533333333333333,
+          "macro avg": {
+            "precision": 0.48294602698650674,
+            "recall": 0.47406668566543175,
+            "f1-score": 0.4576655334304679,
+            "support": 150.0
+          },
+          "weighted avg": {
+            "precision": 0.6734057971014493,
+            "recall": 0.5533333333333333,
+            "f1-score": 0.5973708920187794,
+            "support": 150.0
+          }
+        }
+      }
+    },
+    "transductive_metrics": {
+      "evaluation_protocol": "TRANSDUCTIVE_NODE_CLASSIFICATION",
+      "protocol_name": "TRANSDUCTIVE_FULL_GRAPH_BENCHMARK",
+      "protocol_description": "Trained on complete graph with 3,487 simulated edges. Convolutions pass messages across 1,604 cross-split edges during training. Serves as an experimental relational benchmark, NOT an unseen-business inductive evaluation. Metrics from transductive evaluation must not be compared directly with inductive evaluation.",
+      "cross_split_relationships_used_at_inference": true,
+      "test_accuracy": 0.68,
+      "test_balanced_accuracy": 0.5788,
+      "test_macro_f1": 0.3743,
+      "test_macro_f1_3class": 0.3743,
+      "test_macro_f1_2class": 0.5614,
+      "confusion_matrix": [
+        [
+          90,
+          31,
+          0
+        ],
+        [
+          17,
+          12,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "classification_report": {
+        "Low": {
+          "precision": 0.8411214953271028,
+          "recall": 0.743801652892562,
+          "f1-score": 0.7894736842105263,
+          "support": 121.0
+        },
+        "Medium": {
+          "precision": 0.27906976744186046,
+          "recall": 0.41379310344827586,
+          "f1-score": 0.3333333333333333,
+          "support": 29.0
+        },
+        "High": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 0.0
+        },
+        "accuracy": 0.68,
+        "macro avg": {
+          "precision": 0.3733970875896544,
+          "recall": 0.38586491878027923,
+          "f1-score": 0.3742690058479532,
+          "support": 150.0
+        },
+        "weighted avg": {
+          "precision": 0.7324581612692892,
+          "recall": 0.68,
+          "f1-score": 0.7012865497076024,
+          "support": 150.0
+        }
+      },
+      "class_support": {
+        "Low": 121,
+        "Medium": 29,
+        "High": 0
+      },
+      "three_class_evaluation": {
+        "class_order": [
+          "Low",
+          "Medium",
+          "High"
+        ],
+        "labels": [
+          0,
+          1,
+          2
+        ],
+        "accuracy": 0.68,
+        "balanced_accuracy": 0.5788,
+        "macro_f1": 0.3743,
+        "confusion_matrix": [
+          [
+            90,
+            31,
+            0
+          ],
+          [
+            17,
+            12,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "class_support": {
+          "Low": 121,
+          "Medium": 29,
+          "High": 0
+        },
+        "classification_report": {
+          "Low": {
+            "precision": 0.8411214953271028,
+            "recall": 0.743801652892562,
+            "f1-score": 0.7894736842105263,
+            "support": 121.0
+          },
+          "Medium": {
+            "precision": 0.27906976744186046,
+            "recall": 0.41379310344827586,
+            "f1-score": 0.3333333333333333,
+            "support": 29.0
+          },
+          "High": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 0.0
+          },
+          "accuracy": 0.68,
+          "macro avg": {
+            "precision": 0.3733970875896544,
+            "recall": 0.38586491878027923,
+            "f1-score": 0.3742690058479532,
+            "support": 150.0
+          },
+          "weighted avg": {
+            "precision": 0.7324581612692892,
+            "recall": 0.68,
+            "f1-score": 0.7012865497076024,
+            "support": 150.0
+          }
+        }
+      },
+      "binary_evaluation": {
+        "target_definition": "Low = Low (0), Medium or High = Higher Risk (1)",
+        "class_order": [
+          "Low",
+          "Higher Risk"
+        ],
+        "labels": [
+          0,
+          1
+        ],
+        "accuracy": 0.68,
+        "balanced_accuracy": 0.5788,
+        "macro_f1": 0.5614,
+        "confusion_matrix": [
+          [
+            90,
+            31
+          ],
+          [
+            17,
+            12
+          ]
+        ],
+        "class_support": {
+          "Low": 121,
+          "Higher_Risk": 29
+        },
+        "classification_report": {
+          "Low": {
+            "precision": 0.8411214953271028,
+            "recall": 0.743801652892562,
+            "f1-score": 0.7894736842105263,
+            "support": 121.0
+          },
+          "Higher Risk": {
+            "precision": 0.27906976744186046,
+            "recall": 0.41379310344827586,
+            "f1-score": 0.3333333333333333,
+            "support": 29.0
+          },
+          "accuracy": 0.68,
+          "macro avg": {
+            "precision": 0.5600956313844816,
+            "recall": 0.5787973781704189,
+            "f1-score": 0.5614035087719298,
+            "support": 150.0
+          },
+          "weighted avg": {
+            "precision": 0.7324581612692892,
+            "recall": 0.68,
+            "f1-score": 0.7012865497076024,
+            "support": 150.0
+          }
+        }
+      }
+    },
+    "baseline_metrics": {
+      "model_type": "RandomForestClassifier (Non-Graph Baseline)",
+      "protocol_name": "TABULAR_NON_GRAPH_BASELINE",
+      "protocol_description": "RandomForestClassifier trained and evaluated purely on tabular operational/financial features. Completely graph-agnostic; evaluates each business in isolation without any relational message passing.",
+      "cross_split_relationships_used_at_inference": false,
+      "val_accuracy": 0.6533,
+      "val_balanced_accuracy": 0.4512,
+      "val_macro_f1": 0.4024,
+      "test_accuracy": 0.5933,
+      "test_balanced_accuracy": 0.5644,
+      "test_macro_f1": 0.3459,
+      "test_macro_f1_3class": 0.3459,
+      "test_macro_f1_2class": 0.5189,
+      "confusion_matrix": [
+        [
+          74,
+          47,
+          0
+        ],
+        [
+          14,
+          15,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "classification_report": {
+        "Low": {
+          "precision": 0.8409090909090909,
+          "recall": 0.6115702479338843,
+          "f1-score": 0.7081339712918661,
+          "support": 121.0
+        },
+        "Medium": {
+          "precision": 0.24193548387096775,
+          "recall": 0.5172413793103449,
+          "f1-score": 0.32967032967032966,
+          "support": 29.0
+        },
+        "High": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 0.0
+        },
+        "accuracy": 0.5933333333333334,
+        "macro avg": {
+          "precision": 0.36094819159335295,
+          "recall": 0.37627054241474306,
+          "f1-score": 0.3459347669873986,
+          "support": 150.0
+        },
+        "weighted avg": {
+          "precision": 0.7251075268817204,
+          "recall": 0.5933333333333334,
+          "f1-score": 0.6349643339117024,
+          "support": 150.0
+        }
+      },
+      "class_support": {
+        "Low": 121,
+        "Medium": 29,
+        "High": 0
+      },
+      "three_class_evaluation": {
+        "class_order": [
+          "Low",
+          "Medium",
+          "High"
+        ],
+        "labels": [
+          0,
+          1,
+          2
+        ],
+        "accuracy": 0.5933,
+        "balanced_accuracy": 0.5644,
+        "macro_f1": 0.3459,
+        "confusion_matrix": [
+          [
+            74,
+            47,
+            0
+          ],
+          [
+            14,
+            15,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "class_support": {
+          "Low": 121,
+          "Medium": 29,
+          "High": 0
+        },
+        "classification_report": {
+          "Low": {
+            "precision": 0.8409090909090909,
+            "recall": 0.6115702479338843,
+            "f1-score": 0.7081339712918661,
+            "support": 121.0
+          },
+          "Medium": {
+            "precision": 0.24193548387096775,
+            "recall": 0.5172413793103449,
+            "f1-score": 0.32967032967032966,
+            "support": 29.0
+          },
+          "High": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 0.0
+          },
+          "accuracy": 0.5933333333333334,
+          "macro avg": {
+            "precision": 0.36094819159335295,
+            "recall": 0.37627054241474306,
+            "f1-score": 0.3459347669873986,
+            "support": 150.0
+          },
+          "weighted avg": {
+            "precision": 0.7251075268817204,
+            "recall": 0.5933333333333334,
+            "f1-score": 0.6349643339117024,
+            "support": 150.0
+          }
+        }
+      },
+      "binary_evaluation": {
+        "target_definition": "Low = Low (0), Medium or High = Higher Risk (1)",
+        "class_order": [
+          "Low",
+          "Higher Risk"
+        ],
+        "labels": [
+          0,
+          1
+        ],
+        "accuracy": 0.5933,
+        "balanced_accuracy": 0.5644,
+        "macro_f1": 0.5189,
+        "confusion_matrix": [
+          [
+            74,
+            47
+          ],
+          [
+            14,
+            15
+          ]
+        ],
+        "class_support": {
+          "Low": 121,
+          "Higher_Risk": 29
+        },
+        "classification_report": {
+          "Low": {
+            "precision": 0.8409090909090909,
+            "recall": 0.6115702479338843,
+            "f1-score": 0.7081339712918661,
+            "support": 121.0
+          },
+          "Higher Risk": {
+            "precision": 0.24193548387096775,
+            "recall": 0.5172413793103449,
+            "f1-score": 0.32967032967032966,
+            "support": 29.0
+          },
+          "accuracy": 0.5933333333333334,
+          "macro avg": {
+            "precision": 0.5414222873900294,
+            "recall": 0.5644058136221146,
+            "f1-score": 0.5189021504810979,
+            "support": 150.0
+          },
+          "weighted avg": {
+            "precision": 0.7251075268817204,
+            "recall": 0.5933333333333334,
+            "f1-score": 0.6349643339117024,
+            "support": 150.0
+          }
+        }
+      }
+    },
+    "baseline_comparison": {
+      "model_type": "RandomForestClassifier (Non-Graph Baseline)",
+      "protocol_name": "TABULAR_NON_GRAPH_BASELINE",
+      "protocol_description": "RandomForestClassifier trained and evaluated purely on tabular operational/financial features. Completely graph-agnostic; evaluates each business in isolation without any relational message passing.",
+      "cross_split_relationships_used_at_inference": false,
+      "val_accuracy": 0.6533,
+      "val_balanced_accuracy": 0.4512,
+      "val_macro_f1": 0.4024,
+      "test_accuracy": 0.5933,
+      "test_balanced_accuracy": 0.5644,
+      "test_macro_f1": 0.3459,
+      "test_macro_f1_3class": 0.3459,
+      "test_macro_f1_2class": 0.5189,
+      "confusion_matrix": [
+        [
+          74,
+          47,
+          0
+        ],
+        [
+          14,
+          15,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "classification_report": {
+        "Low": {
+          "precision": 0.8409090909090909,
+          "recall": 0.6115702479338843,
+          "f1-score": 0.7081339712918661,
+          "support": 121.0
+        },
+        "Medium": {
+          "precision": 0.24193548387096775,
+          "recall": 0.5172413793103449,
+          "f1-score": 0.32967032967032966,
+          "support": 29.0
+        },
+        "High": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 0.0
+        },
+        "accuracy": 0.5933333333333334,
+        "macro avg": {
+          "precision": 0.36094819159335295,
+          "recall": 0.37627054241474306,
+          "f1-score": 0.3459347669873986,
+          "support": 150.0
+        },
+        "weighted avg": {
+          "precision": 0.7251075268817204,
+          "recall": 0.5933333333333334,
+          "f1-score": 0.6349643339117024,
+          "support": 150.0
+        }
+      },
+      "class_support": {
+        "Low": 121,
+        "Medium": 29,
+        "High": 0
+      },
+      "three_class_evaluation": {
+        "class_order": [
+          "Low",
+          "Medium",
+          "High"
+        ],
+        "labels": [
+          0,
+          1,
+          2
+        ],
+        "accuracy": 0.5933,
+        "balanced_accuracy": 0.5644,
+        "macro_f1": 0.3459,
+        "confusion_matrix": [
+          [
+            74,
+            47,
+            0
+          ],
+          [
+            14,
+            15,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        "class_support": {
+          "Low": 121,
+          "Medium": 29,
+          "High": 0
+        },
+        "classification_report": {
+          "Low": {
+            "precision": 0.8409090909090909,
+            "recall": 0.6115702479338843,
+            "f1-score": 0.7081339712918661,
+            "support": 121.0
+          },
+          "Medium": {
+            "precision": 0.24193548387096775,
+            "recall": 0.5172413793103449,
+            "f1-score": 0.32967032967032966,
+            "support": 29.0
+          },
+          "High": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 0.0
+          },
+          "accuracy": 0.5933333333333334,
+          "macro avg": {
+            "precision": 0.36094819159335295,
+            "recall": 0.37627054241474306,
+            "f1-score": 0.3459347669873986,
+            "support": 150.0
+          },
+          "weighted avg": {
+            "precision": 0.7251075268817204,
+            "recall": 0.5933333333333334,
+            "f1-score": 0.6349643339117024,
+            "support": 150.0
+          }
+        }
+      },
+      "binary_evaluation": {
+        "target_definition": "Low = Low (0), Medium or High = Higher Risk (1)",
+        "class_order": [
+          "Low",
+          "Higher Risk"
+        ],
+        "labels": [
+          0,
+          1
+        ],
+        "accuracy": 0.5933,
+        "balanced_accuracy": 0.5644,
+        "macro_f1": 0.5189,
+        "confusion_matrix": [
+          [
+            74,
+            47
+          ],
+          [
+            14,
+            15
+          ]
+        ],
+        "class_support": {
+          "Low": 121,
+          "Higher_Risk": 29
+        },
+        "classification_report": {
+          "Low": {
+            "precision": 0.8409090909090909,
+            "recall": 0.6115702479338843,
+            "f1-score": 0.7081339712918661,
+            "support": 121.0
+          },
+          "Higher Risk": {
+            "precision": 0.24193548387096775,
+            "recall": 0.5172413793103449,
+            "f1-score": 0.32967032967032966,
+            "support": 29.0
+          },
+          "accuracy": 0.5933333333333334,
+          "macro avg": {
+            "precision": 0.5414222873900294,
+            "recall": 0.5644058136221146,
+            "f1-score": 0.5189021504810979,
+            "support": 150.0
+          },
+          "weighted avg": {
+            "precision": 0.7251075268817204,
+            "recall": 0.5933333333333334,
+            "f1-score": 0.6349643339117024,
+            "support": 150.0
+          }
+        }
+      }
+    },
+    "test_accuracy": 0.72,
+    "test_balanced_accuracy": 0.4725,
+    "test_macro_f1": 0.3114,
+    "test_macro_f1_3class": 0.3114,
+    "test_macro_f1_2class": 0.504,
+    "test_confusion_matrix": [
+      [
+        106,
+        12,
+        3
+      ],
+      [
+        25,
+        2,
+        2
+      ],
+      [
+        0,
+        0,
+        0
+      ]
+    ],
+    "test_classification_report": {
+      "Low": {
+        "precision": 0.8091603053435115,
+        "recall": 0.8760330578512396,
+        "f1-score": 0.8412698412698413,
+        "support": 121.0
+      },
+      "Medium": {
+        "precision": 0.14285714285714285,
+        "recall": 0.06896551724137931,
+        "f1-score": 0.09302325581395349,
+        "support": 29.0
+      },
+      "High": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 0.0
+      },
+      "accuracy": 0.72,
+      "macro avg": {
+        "precision": 0.31733914940021807,
+        "recall": 0.314999525030873,
+        "f1-score": 0.31143103236126496,
+        "support": 150.0
+      },
+      "weighted avg": {
+        "precision": 0.6803416939294802,
+        "recall": 0.72,
+        "f1-score": 0.6966088347483697,
+        "support": 150.0
+      }
+    },
+    "three_class_evaluation": {
+      "class_order": [
+        "Low",
+        "Medium",
+        "High"
+      ],
+      "labels": [
+        0,
+        1,
+        2
+      ],
+      "accuracy": 0.72,
+      "balanced_accuracy": 0.4725,
+      "macro_f1": 0.3114,
+      "confusion_matrix": [
+        [
+          106,
+          12,
+          3
+        ],
+        [
+          25,
+          2,
+          2
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "class_support": {
+        "Low": 121,
+        "Medium": 29,
+        "High": 0
+      },
+      "classification_report": {
+        "Low": {
+          "precision": 0.8091603053435115,
+          "recall": 0.8760330578512396,
+          "f1-score": 0.8412698412698413,
+          "support": 121.0
+        },
+        "Medium": {
+          "precision": 0.14285714285714285,
+          "recall": 0.06896551724137931,
+          "f1-score": 0.09302325581395349,
+          "support": 29.0
+        },
+        "High": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 0.0
+        },
+        "accuracy": 0.72,
+        "macro avg": {
+          "precision": 0.31733914940021807,
+          "recall": 0.314999525030873,
+          "f1-score": 0.31143103236126496,
+          "support": 150.0
+        },
+        "weighted avg": {
+          "precision": 0.6803416939294802,
+          "recall": 0.72,
+          "f1-score": 0.6966088347483697,
+          "support": 150.0
+        }
+      }
+    },
+    "binary_evaluation": {
+      "target_definition": "Low = Low (0), Medium or High = Higher Risk (1)",
+      "class_order": [
+        "Low",
+        "Higher Risk"
+      ],
+      "labels": [
+        0,
+        1
+      ],
+      "accuracy": 0.7333,
+      "balanced_accuracy": 0.507,
+      "macro_f1": 0.504,
+      "confusion_matrix": [
+        [
+          106,
+          15
+        ],
+        [
+          25,
+          4
+        ]
+      ],
+      "class_support": {
+        "Low": 121,
+        "Higher_Risk": 29
+      },
+      "classification_report": {
+        "Low": {
+          "precision": 0.8091603053435115,
+          "recall": 0.8760330578512396,
+          "f1-score": 0.8412698412698413,
+          "support": 121.0
+        },
+        "Higher Risk": {
+          "precision": 0.21052631578947367,
+          "recall": 0.13793103448275862,
+          "f1-score": 0.16666666666666666,
+          "support": 29.0
+        },
+        "accuracy": 0.7333333333333333,
+        "macro avg": {
+          "precision": 0.5098433105664926,
+          "recall": 0.5069820461669992,
+          "f1-score": 0.503968253968254,
+          "support": 150.0
+        },
+        "weighted avg": {
+          "precision": 0.6934244006963975,
+          "recall": 0.7333333333333333,
+          "f1-score": 0.7108465608465608,
+          "support": 150.0
+        }
+      }
+    },
+    "class_imbalance_disclosure": {
+      "total_records": 1000,
+      "dataset_class_distribution": {
+        "0": 758,
+        "1": 240,
+        "2": 2
+      },
+      "test_class_distribution": {
+        "0": 121,
+        "1": 29
+      },
+      "high_risk_cases_total": 2,
+      "high_risk_cases_test": 0,
+      "scientific_limitation_statement": "The dataset contains only 2 High-risk SMEs (0.2%), and 0 occur in the held-out test split. Consequently, empirical test evaluation measures binary Low vs Medium discrimination. Reliable three-class generalization to High-risk default cannot be claimed."
+    },
+    "performance_verdict": {
+      "finding": "Random Forest baseline achieves superior Balanced Accuracy (56.44%) and Binary Macro-F1 (51.89%) compared to Inductive GNN (47.25% / 50.40%). Under 3-class evaluation, Random Forest Macro-F1 (34.59%) also exceeds Inductive GNN (31.14%). The GNN's higher raw accuracy (72.00% vs 59.33%) is driven by majority-class bias toward Low risk, not superior relational discrimination.",
+      "balanced_accuracy": {
+        "RandomForest_Baseline": 0.5644,
+        "GNN_Inductive_Extended": 0.4725,
+        "GNN_Inductive_Subgraph": 0.4741,
+        "GNN_Transductive": 0.5788
+      },
+      "macro_f1_binary": {
+        "RandomForest_Baseline": 0.5189,
+        "GNN_Inductive_Extended": 0.504,
+        "GNN_Inductive_Subgraph": 0.4577,
+        "GNN_Transductive": 0.5614
+      },
+      "macro_f1_3class": {
+        "RandomForest_Baseline": 0.3459,
+        "GNN_Inductive_Extended": 0.3114,
+        "GNN_Inductive_Subgraph": 0.3088,
+        "GNN_Transductive": 0.3743
+      }
+    },
+    "target_definition": "Overall_Risk_Label from Risk_Assessment.csv (SYNTHETIC_RULE_DERIVED)",
+    "dataset_version_hash": "a6c5ddbd11a2df05",
+    "provenance_disclosure": "Relationship edges are simulated (Verified_Flag=0). Target labels are synthetic rule-derived proxies. GNN embeddings serve as relational decision-support indicators, NOT real-world default probabilities."
+  }
+}

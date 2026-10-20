@@ -26,3 +26,7 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Scratch and Runtime Analysis Outputs
+scratch/
+reports/component4/analysis_runs/

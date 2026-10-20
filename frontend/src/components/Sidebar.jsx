@@ -10,7 +10,8 @@ import {
   Layers, 
   Sliders, 
   FileText, 
-  UserCheck 
+  UserCheck,
+  ShieldAlert
 } from 'lucide-react';
 import Logo from './Logo';
 
@@ -19,6 +20,7 @@ export default function Sidebar({ activeTab, setActiveTab, activeProfile }) {
 
   const mainNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'component4_risk', label: 'Business Risk Check', icon: ShieldAlert },
     { id: 'my_businesses', label: 'My Businesses', icon: Building2 },
     { id: 'new_analysis', label: 'New Analysis', icon: PlusCircle },
   ];

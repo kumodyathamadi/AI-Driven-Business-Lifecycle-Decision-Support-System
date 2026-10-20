@@ -1,0 +1,54 @@
+{
+  "engine_title": "Component 4 Explainable Risk Assessment & Mitigation Engine",
+  "geographic_scope": "Western Province, Sri Lanka (Colombo, Gampaha, Kalutara)",
+  "total_records_assessed": 2000,
+  "scoring_formula": "Composite = 0.30 * Liquidity + 0.20 * Debt + 0.25 * ActionStress + 0.15 * Supplier + 0.10 * Customer",
+  "risk_category_distribution": {
+    "HIGH": 986,
+    "MEDIUM": 659,
+    "LOW": 355
+  },
+  "growth_readiness_distribution": {
+    "DELAY": 1412,
+    "MODIFY": 532,
+    "PROCEED": 56
+  },
+  "readiness_by_variant": {
+    "DELAY": {
+      "BASELINE": 725,
+      "MITIGATED": 687
+    },
+    "MODIFY": {
+      "BASELINE": 249,
+      "MITIGATED": 283
+    },
+    "PROCEED": {
+      "BASELINE": 26,
+      "MITIGATED": 30
+    }
+  },
+  "critical_red_flags_count": 1412,
+  "can_proceed_immediately_count": 56,
+  "average_subscores": {
+    "liquidity_risk_mean": 0.7381,
+    "debt_burden_mean": 0.5937,
+    "action_stress_mean": 0.5241,
+    "supplier_concentration_mean": 0.3975,
+    "customer_concentration_mean": 0.4131,
+    "composite_score_mean": 0.5721
+  },
+  "top_primary_risk_drivers": {
+    "Severe cash depletion: post-action cash runway is 0.0 months (immediate exhaustion threshold: < 1.0m; cash reserves: 0 LKR).": 792,
+    "No major risk trigger detected": 56,
+    "Severe cash depletion: post-action cash runway is 0.0 months (immediate exhaustion threshold: < 1.0m; cash reserves: 202,835 LKR).": 4,
+    "High supplier dependency: supplier HHI is 0.76 with top supplier providing 86.9% of inputs across 5 total suppliers (benchmark: HHI < 0.30).": 4,
+    "Severe cash depletion: post-action cash runway is 0.0 months (immediate exhaustion threshold: < 1.0m; cash reserves: 22,040 LKR).": 4
+  },
+  "top_mitigation_actions": {
+    "Phase capital investment and retain at least 3 months of operational cash buffer": 1387,
+    "Qualify secondary local backup suppliers in Western Province and negotiate split-allocation terms": 220,
+    "Diversify commercial client acquisition and enforce milestone advance deposits": 177,
+    "Proceed with planned expansion under standard monitoring": 56,
+    "Adopt staged hiring tied to contract demand milestones and lease modular capacity": 51
+  }
+}

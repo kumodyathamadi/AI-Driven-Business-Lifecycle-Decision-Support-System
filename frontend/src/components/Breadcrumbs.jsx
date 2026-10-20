@@ -5,6 +5,7 @@ export default function Breadcrumbs({ activeTab, activeProfile, onNavigate }) {
   const getTabLabel = (tab) => {
     switch (tab) {
       case 'dashboard': return 'Dashboard';
+      case 'component4_risk': return 'Business Risk Check';
       case 'my_businesses': return 'My Businesses';
       case 'new_analysis': return 'New Analysis';
       case 'overview': return 'Business Overview';

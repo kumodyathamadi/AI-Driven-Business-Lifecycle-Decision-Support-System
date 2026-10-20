@@ -133,10 +133,9 @@ class AnonymizationManager:
         self._d07_registry = DATASET_07_ENTITY_REGISTRY
         self._d06_registry = DATASET_06_ENTITY_REGISTRY
 
-    def resolve_dataset07_party(self, raw_text: str, is_sender: bool = True) -> Dict[str, str]:
+    def resolve_dataset07_party(self, raw_text: str = "", is_sender: bool = True) -> Dict[str, str]:
         """Resolves party in Dataset 07 to anonymized entity descriptor."""
-        text_upper = raw_text.upper()
-        if "PTY LTD" in text_upper or "AUSTRALIA" in text_upper or (is_sender and "TYPEFI" in text_upper):
+        if is_sender:
             meta = self._d07_registry["TYPEFI_AU"]
             return {
                 "entity_id": meta["anonymized_id"],

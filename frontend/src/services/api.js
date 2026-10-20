@@ -160,3 +160,112 @@ export const downloadBusinessPlanDocx = async (profile) => {
     throw error;
   }
 };
+
+/* ==========================================================================
+   COMPONENT 4 — GNN RISK PREDICTION & GROWTH READINESS SERVICES
+   ========================================================================== */
+
+/**
+ * Uploads a business plan document (PDF, DOCX, TXT, JSON) to Component 4 backend
+ */
+export const uploadComponent4BusinessPlan = async (file, confirmedBusinessId = '') => {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (confirmedBusinessId) {
+    formData.append('confirmed_business_id', confirmedBusinessId);
+  }
+
+  const response = await apiClient.post('/component4/plan/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+/**
+ * Executes full Component 4 Risk, GNN Inference, and Growth Readiness Pipeline
+ */
+export const runComponent4Analysis = async ({ planFilePath = null, confirmedBusinessId = null, planJson = null }) => {
+  const response = await apiClient.post('/component4/analysis/run', {
+    plan_file_path: planFilePath,
+    confirmed_business_id: confirmedBusinessId,
+    plan_json: planJson,
+  });
+  return response.data;
+};
+
+/**
+ * Fetches analysis record by ID
+ */
+export const getComponent4Analysis = async (analysisId) => {
+  const response = await apiClient.get(`/component4/analysis/${analysisId}`);
+  return response.data;
+};
+
+/**
+ * Fetches relationship graph data for interactive visualization
+ */
+export const getComponent4Graph = async (businessId) => {
+  const response = await apiClient.get(`/component4/graph/${businessId}`);
+  return response.data;
+};
+
+/**
+ * Downloads generated Markdown report for Component 4 analysis
+ */
+export const downloadComponent4Report = async (analysisId) => {
+  try {
+    const response = await apiClient.get(`/component4/analysis/${analysisId}/report?download=true`, {
+      responseType: 'blob',
+    });
+    const blob = new Blob([response.data], { type: 'text/markdown' });
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(blob);
+    link.download = `Component4_Risk_Report_${analysisId}.md`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  } catch (error) {
+    console.error('Download Component 4 Report Error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetches candidate Western Province businesses for entity resolution confirmation
+ */
+export const getComponent4Candidates = async (district = '', category = '') => {
+  const params = {};
+  if (district) params.district = district;
+  if (category) params.category = category;
+  const response = await apiClient.get('/component4/candidates', { params });
+  return response.data;
+};
+
+/**
+ * Submits dynamic intake form with user-completed missing fields, confirms business identity,
+ * persists/reuses persistent business ID, and executes risk + GNN analysis.
+ */
+export const submitComponent4IntakeAndRun = async (payload) => {
+  const response = await apiClient.post('/component4/intake/submit-and-run', payload);
+  return response.data;
+};
+
+/**
+ * Retrieves chronological assessment runs history for a persistent business ID
+ */
+export const getComponent4BusinessHistory = async (businessId) => {
+  const response = await apiClient.get(`/component4/business/${businessId}/history`);
+  return response.data;
+};
+
+/**
+ * Retrieves recent assessment runs across persistent businesses for dashboard display
+ */
+export const getRecentComponent4Assessments = async (limit = 15) => {
+  const response = await apiClient.get(`/component4/assessments/recent?limit=${limit}`);
+  return response.data;
+};
+
+

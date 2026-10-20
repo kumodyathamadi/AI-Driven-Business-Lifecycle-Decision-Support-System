@@ -14,6 +14,7 @@ import StrategyCard from './components/StrategyCard';
 import WhatIfSimulator from './components/WhatIfSimulator';
 import BusinessPlan from './components/BusinessPlan';
 import ProfileViewer from './components/ProfileViewer';
+import Component4RiskSuite from './components/Component4RiskSuite';
 import { analyzeBusiness, fetchAnalysisRecordById } from './services/api';
 import { Lightbulb, Sparkles } from 'lucide-react';
 
@@ -100,6 +101,11 @@ export default function App() {
               onViewMyBusinesses={() => setActiveTab('my_businesses')}
               onSelectRecord={handleSelectRecordById}
             />
+          )}
+
+          {/* Component 4 Risk & GNN Suite View */}
+          {activeTab === 'component4_risk' && (
+            <Component4RiskSuite initialPlanData={structuredProfile} />
           )}
 
           {/* 2. My Businesses View */}

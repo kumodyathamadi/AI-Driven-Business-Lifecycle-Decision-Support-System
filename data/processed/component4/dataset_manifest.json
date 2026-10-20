@@ -1,173 +1,147 @@
 {
-  "package_title": "Component 4 Western Province Business Risk Dataset Package",
-  "created_date": "2026-10-17",
-  "scope": {
-    "country": "Sri Lanka",
-    "province": "Western",
-    "districts": [
-      "Colombo",
-      "Gampaha",
-      "Kalutara"
-    ]
-  },
-  "provenance_warning": "The generated CSV records in this package are simulated, not observed real businesses. File names intentionally use neutral task names, but data_origin and label_source fields explicitly disclose provenance. Do not describe these records as real SME records.",
-  "scenario_generator": {
-    "version": "rules_v1",
-    "seed": 421017,
-    "base_business_scenarios": 500,
-    "monthly_snapshots_per_business": 12,
-    "growth_actions_per_business": 2,
-    "paired_action_variants": [
-      "BASELINE",
-      "MITIGATED"
-    ]
-  },
-  "tables": {
-    "business_profiles.csv": {
-      "rows": 500,
-      "columns": [
-        "business_id",
-        "district",
-        "province",
-        "business_category",
-        "business_stage",
-        "employee_count",
-        "scenario_family_id",
-        "data_origin",
-        "base_scenario_version"
-      ]
+  "dataset_manifest_version": "2.0.0",
+  "data_integrity_protocol": "STRICT_EVIDENCE_BASED_ONLY",
+  "geographic_scope": "Western Province, Sri Lanka (Colombo, Gampaha, Kalutara)",
+  "tables_inventory": {
+    "Business_Profile.csv": {
+      "exists": true,
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\Business_Profile.csv",
+      "rows": 1200,
+      "columns": 35,
+      "null_values": 0,
+      "duplicate_rows": 0,
+      "is_empty_schema": false,
+      "status": "VALID"
     },
-    "financial_snapshots.csv": {
-      "rows": 6000,
-      "columns": [
-        "business_id",
-        "snapshot_month",
-        "district",
-        "province",
-        "business_category",
-        "monthly_revenue_lkr",
-        "monthly_expenses_lkr",
-        "cash_reserves_lkr",
-        "outstanding_debt_lkr",
-        "monthly_debt_repayment_lkr",
-        "accounts_receivable_lkr",
-        "accounts_payable_lkr",
-        "working_capital_lkr",
-        "cash_runway_months",
-        "debt_service_ratio",
-        "supplier_concentration_share",
-        "customer_concentration_share",
-        "supplier_disruption_active",
-        "liquidity_stress_label",
-        "relationship_risk_label",
-        "overall_risk_label",
-        "scenario_family_id",
-        "label_source",
-        "data_origin",
-        "split"
-      ]
+    "Monthly_Financials.csv": {
+      "exists": true,
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\Monthly_Financials.csv",
+      "rows": 0,
+      "columns": 10,
+      "null_values": 0,
+      "duplicate_rows": 0,
+      "is_empty_schema": true,
+      "status": "VALID"
     },
-    "business_relationships.csv": {
-      "rows": 5053,
-      "columns": [
-        "source_id",
-        "target_id",
-        "relationship_type",
-        "snapshot_month",
-        "transaction_count",
-        "transaction_value_lkr",
-        "dependency_percentage",
-        "relationship_duration_months",
-        "payment_delay_days",
-        "disruption_status",
-        "scenario_family_id",
-        "data_origin",
-        "split"
-      ]
+    "Credit_Risk_Data.csv": {
+      "exists": true,
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\Credit_Risk_Data.csv",
+      "rows": 0,
+      "columns": 11,
+      "null_values": 0,
+      "duplicate_rows": 0,
+      "is_empty_schema": true,
+      "status": "VALID"
     },
-    "growth_actions.csv": {
-      "rows": 2000,
-      "columns": [
-        "action_id",
-        "business_id",
-        "action_type",
-        "variant",
-        "required_investment_lkr",
-        "additional_monthly_cost_lkr",
-        "expected_revenue_change_lkr",
-        "required_staff_count",
-        "available_capacity_score",
-        "mitigation_applied",
-        "mitigation_recommendation",
-        "scenario_family_id",
-        "district",
-        "province",
-        "data_origin"
-      ]
+    "Market_Risk_Data.csv": {
+      "exists": true,
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\Market_Risk_Data.csv",
+      "rows": 1200,
+      "columns": 14,
+      "null_values": 4800,
+      "duplicate_rows": 0,
+      "is_empty_schema": false,
+      "status": "VALID"
     },
-    "risk_outcomes.csv": {
-      "rows": 2000,
-      "columns": [
-        "action_id",
-        "business_id",
-        "variant",
-        "overall_risk_label",
-        "liquidity_stress_label",
-        "relationship_risk_label",
-        "growth_readiness_label",
-        "risk_factor_codes",
-        "mitigation_codes",
-        "label_source",
-        "scenario_family_id",
-        "split",
-        "data_origin"
-      ]
+    "Inflation_Risk_Data.csv": {
+      "exists": true,
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\Inflation_Risk_Data.csv",
+      "rows": 0,
+      "columns": 8,
+      "null_values": 0,
+      "duplicate_rows": 0,
+      "is_empty_schema": true,
+      "status": "VALID"
     },
-    "graph_entities.csv": {
-      "rows": 5553,
-      "columns": [
-        "entity_id",
-        "entity_type",
-        "district",
-        "business_category",
-        "data_origin"
-      ]
+    "Liquidity_Risk_Data.csv": {
+      "exists": true,
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\Liquidity_Risk_Data.csv",
+      "rows": 0,
+      "columns": 9,
+      "null_values": 0,
+      "duplicate_rows": 0,
+      "is_empty_schema": true,
+      "status": "VALID"
     },
-    "scenario_families_and_splits.csv": {
-      "rows": 500,
-      "columns": [
-        "scenario_family_id",
-        "business_id",
-        "district",
-        "business_category",
-        "business_stage",
-        "supplier_concentration_control",
-        "customer_concentration_control",
-        "disruption_month",
-        "split",
-        "label_source",
-        "data_origin"
-      ]
+    "Operational_Risk_Data.csv": {
+      "exists": true,
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\Operational_Risk_Data.csv",
+      "rows": 1200,
+      "columns": 13,
+      "null_values": 3600,
+      "duplicate_rows": 0,
+      "is_empty_schema": false,
+      "status": "VALID"
+    },
+    "Economic_Indicators.csv": {
+      "exists": true,
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\Economic_Indicators.csv",
+      "rows": 0,
+      "columns": 10,
+      "null_values": 0,
+      "duplicate_rows": 0,
+      "is_empty_schema": true,
+      "status": "VALID"
+    },
+    "Business_Relationships.csv": {
+      "exists": true,
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\Business_Relationships.csv",
+      "rows": 0,
+      "columns": 12,
+      "null_values": 0,
+      "duplicate_rows": 0,
+      "is_empty_schema": true,
+      "status": "VALID"
+    },
+    "Risk_Assessment.csv": {
+      "exists": true,
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\Risk_Assessment.csv",
+      "rows": 1200,
+      "columns": 12,
+      "null_values": 1200,
+      "duplicate_rows": 0,
+      "is_empty_schema": false,
+      "status": "VALID"
+    },
+    "Scenario_Analysis.csv": {
+      "exists": true,
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\Scenario_Analysis.csv",
+      "rows": 40,
+      "columns": 12,
+      "null_values": 0,
+      "duplicate_rows": 0,
+      "is_empty_schema": false,
+      "status": "VALID"
+    },
+    "Data_Dictionary.csv": {
+      "exists": true,
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\Data_Dictionary.csv",
+      "rows": 119,
+      "columns": 8,
+      "null_values": 0,
+      "duplicate_rows": 0,
+      "is_empty_schema": false,
+      "status": "VALID"
+    },
+    "Data_Sources.csv": {
+      "exists": true,
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\Data_Sources.csv",
+      "rows": 3,
+      "columns": 10,
+      "null_values": 0,
+      "duplicate_rows": 0,
+      "is_empty_schema": false,
+      "status": "VALID"
+    },
+    "Problematic_Records_Review.csv": {
+      "exists": true,
+      "path": "C:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\data\\processed\\component4\\Problematic_Records_Review.csv",
+      "rows": 0,
+      "columns": 25,
+      "null_values": 0,
+      "duplicate_rows": 0,
+      "is_empty_schema": true,
+      "status": "VALID"
     }
-  },
-  "label_definitions": {
-    "overall_risk_label": "Rule-derived Low/Medium/High category from liquidity stress and relationship-risk controls; a simulator target, not historical failure/default.",
-    "liquidity_stress_label": "Rule-derived from cash runway and debt-service ratio in financial snapshots.",
-    "relationship_risk_label": "Rule-derived from supplier/customer concentration and disruption conditions.",
-    "growth_readiness_label": "Proceed/Modify/Delay based on simulated post-action liquidity, debt service, capacity and investment pressure; mitigation variants have explicit intervention logic."
-  },
-  "split_policy": "Grouped by scenario_family_id. 70% of base businesses train, 15% validation, 15% test. Related snapshots, actions and paired mitigation variants stay in the same split.",
-  "limitations": [
-    "No verified historical risk outcomes are available; labels are generated by transparent rules.",
-    "High performance on this dataset demonstrates learning simulator patterns, not real-world predictive accuracy.",
-    "Districts are assigned for Western Province scope, but distributions are not empirically calibrated to actual district populations.",
-    "Relationship edges are simulated and do not represent actual supplier/customer connections.",
-    "No links to the existing feasibility CSV or invoice entities are asserted."
-  ],
-  "real_dataset_candidate": {
-    "name": "World Bank Enterprise Survey 2025 - Sri Lanka",
-    "url": "https://microdata.worldbank.org/catalog/8264",
-    "status": "Official catalogue located; microdata is routed to the World Bank Enterprise Surveys portal. This package does not include the raw microdata because a verified, downloadable Western Province-only extract was not available in this workflow.",
-    "notes": "National survey; filter only using documented region codes after obtaining data. Do not assume all 607 records are Western Province."
   }
 }

@@ -10,8 +10,11 @@ from backend.database import engine, Base
 from backend.routes.analysis import router as analysis_router
 from backend.routes.intake import router as intake_router
 from backend.routes.business_plan import router as plan_router
+from backend.routes.component4_risk import router as component4_router
 from backend.schemas import HealthCheckResponse
 from src.prediction.predictor import DEFAULT_MODEL_DIR
+
+import backend.models  # Register all models including Component 4 tables
 
 # Create database tables if they do not exist
 Base.metadata.create_all(bind=engine)
@@ -35,6 +38,7 @@ app.add_middleware(
 app.include_router(analysis_router)
 app.include_router(intake_router)
 app.include_router(plan_router)
+app.include_router(component4_router)
 
 
 @app.get("/api/health", response_model=HealthCheckResponse, tags=["Health"])

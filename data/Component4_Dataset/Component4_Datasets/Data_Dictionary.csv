@@ -1,0 +1,120 @@
+Dataset,Variable_Name,Definition,Data_Type,Unit,Primary_Key_or_Grain,Default_Provenance
+Business_Profile,Business_ID,Business ID,object,See variable name / indicator-specific,Business_ID,SYNTHETIC
+Business_Profile,Country,Country,object,See variable name / indicator-specific,Business_ID,SYNTHETIC
+Business_Profile,Province,Province,object,See variable name / indicator-specific,Business_ID,SYNTHETIC
+Business_Profile,District,District,object,See variable name / indicator-specific,Business_ID,SYNTHETIC
+Business_Profile,Business_Sector,Business Sector,object,See variable name / indicator-specific,Business_ID,SYNTHETIC
+Business_Profile,Business_Stage,Business Stage,object,See variable name / indicator-specific,Business_ID,SYNTHETIC
+Business_Profile,Legal_Form,Legal Form,object,See variable name / indicator-specific,Business_ID,SYNTHETIC
+Business_Profile,Business_Age_Years,Business Age Years,int64,See variable name / indicator-specific,Business_ID,SYNTHETIC
+Business_Profile,Available_Capital_LKR,Available Capital LKR,float64,LKR,Business_ID,SYNTHETIC
+Business_Profile,Employee_Count,Employee Count,int64,See variable name / indicator-specific,Business_ID,SYNTHETIC
+Business_Profile,Monthly_Budget_LKR,Monthly Budget LKR,float64,LKR,Business_ID,SYNTHETIC
+Business_Profile,Initial_Investment_LKR,Initial Investment LKR,float64,LKR,Business_ID,SYNTHETIC
+Business_Profile,Loan_Required,Loan Required,int64,See variable name / indicator-specific,Business_ID,SYNTHETIC
+Business_Profile,Supplier_Count,Supplier Count,int64,See variable name / indicator-specific,Business_ID,SYNTHETIC
+Business_Profile,Customer_Concentration_Pct,Customer Concentration Pct,float64,See variable name / indicator-specific,Business_ID,SYNTHETIC
+Business_Profile,Imported_Input_Dependency_Pct,Imported Input Dependency Pct,float64,See variable name / indicator-specific,Business_ID,SYNTHETIC
+Business_Profile,Source_Type,Source Type,object,See variable name / indicator-specific,Business_ID,SYNTHETIC
+Business_Profile,Record_Notes,Record Notes,object,See variable name / indicator-specific,Business_ID,SYNTHETIC
+Monthly_Financials,Business_ID,Business ID,object,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Monthly_Financials,Month,Month,object,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Monthly_Financials,Revenue_LKR,Revenue LKR,float64,LKR,Business_ID + Month,SYNTHETIC
+Monthly_Financials,Operating_Expenses_LKR,Operating Expenses LKR,float64,LKR,Business_ID + Month,SYNTHETIC
+Monthly_Financials,Operating_Profit_LKR,Operating Profit LKR,float64,LKR,Business_ID + Month,SYNTHETIC
+Monthly_Financials,Cash_Flow_LKR,Cash Flow LKR,float64,LKR,Business_ID + Month,SYNTHETIC
+Monthly_Financials,Profit_Margin_Pct,Profit Margin Pct,float64,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Monthly_Financials,Loan_Balance_LKR,Loan Balance LKR,float64,LKR,Business_ID + Month,SYNTHETIC
+Monthly_Financials,Interest_Expense_LKR,Interest Expense LKR,float64,LKR,Business_ID + Month,SYNTHETIC
+Monthly_Financials,Source_Type,Source Type,object,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Credit_Risk_Data,Business_ID,Business ID,object,See variable name / indicator-specific,Business_ID + Month + Loan_ID,SYNTHETIC
+Credit_Risk_Data,Month,Month,object,See variable name / indicator-specific,Business_ID + Month + Loan_ID,SYNTHETIC
+Credit_Risk_Data,Loan_ID,Loan ID,object,See variable name / indicator-specific,Business_ID + Month + Loan_ID,SYNTHETIC
+Credit_Risk_Data,Loan_Balance_LKR,Loan Balance LKR,float64,LKR,Business_ID + Month + Loan_ID,SYNTHETIC
+Credit_Risk_Data,Annual_Interest_Rate_Pct,Annual Interest Rate Pct,float64,See variable name / indicator-specific,Business_ID + Month + Loan_ID,SYNTHETIC
+Credit_Risk_Data,Monthly_Installment_Due_LKR,Monthly Installment Due LKR,float64,LKR,Business_ID + Month + Loan_ID,SYNTHETIC
+Credit_Risk_Data,Monthly_Installment_Paid_LKR,Monthly Installment Paid LKR,float64,LKR,Business_ID + Month + Loan_ID,SYNTHETIC
+Credit_Risk_Data,Payment_Delay_Days,Payment Delay Days,int64,See variable name / indicator-specific,Business_ID + Month + Loan_ID,SYNTHETIC
+Credit_Risk_Data,Missed_Payment_Flag,Missed Payment Flag,int64,See variable name / indicator-specific,Business_ID + Month + Loan_ID,SYNTHETIC
+Credit_Risk_Data,Debt_to_Revenue_Ratio,Debt to Revenue Ratio,float64,See variable name / indicator-specific,Business_ID + Month + Loan_ID,SYNTHETIC
+Credit_Risk_Data,Source_Type,Source Type,object,See variable name / indicator-specific,Business_ID + Month + Loan_ID,SYNTHETIC
+Market_Risk_Data,Business_ID,Business ID,object,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Market_Risk_Data,Month,Month,object,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Market_Risk_Data,Estimated_Monthly_Demand_Index,Estimated Monthly Demand Index,float64,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Market_Risk_Data,Sales_Growth_Pct,Sales Growth Pct,float64,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Market_Risk_Data,Average_Selling_Price_Index,Average Selling Price Index,float64,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Market_Risk_Data,Competitor_Pressure_Score_1_5,Competitor Pressure Score 1 5,int64,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Market_Risk_Data,Customer_Concentration_Pct,Customer Concentration Pct,float64,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Market_Risk_Data,Lost_Sales_Estimate_LKR,Lost Sales Estimate LKR,float64,LKR,Business_ID + Month,SYNTHETIC
+Market_Risk_Data,Source_Type,Source Type,object,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Inflation_Risk_Data,Business_ID,Business ID,object,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Inflation_Risk_Data,Month,Month,object,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Inflation_Risk_Data,National_Inflation_Rate_Pct,National Inflation Rate Pct,float64,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Inflation_Risk_Data,Estimated_Input_Cost_Inflation_Pct,Estimated Input Cost Inflation Pct,float64,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Inflation_Risk_Data,Imported_Input_Dependency_Pct,Imported Input Dependency Pct,float64,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Inflation_Risk_Data,Estimated_Cost_Increase_LKR,Estimated Cost Increase LKR,float64,LKR,Business_ID + Month,SYNTHETIC
+Inflation_Risk_Data,Source_Type,Source Type,object,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Inflation_Risk_Data,Note,Note,object,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Liquidity_Risk_Data,Business_ID,Business ID,object,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Liquidity_Risk_Data,Month,Month,object,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Liquidity_Risk_Data,Cash_and_Cash_Equivalents_LKR,Cash and Cash Equivalents LKR,float64,LKR,Business_ID + Month,SYNTHETIC
+Liquidity_Risk_Data,Accounts_Receivable_LKR,Accounts Receivable LKR,float64,LKR,Business_ID + Month,SYNTHETIC
+Liquidity_Risk_Data,Accounts_Payable_LKR,Accounts Payable LKR,float64,LKR,Business_ID + Month,SYNTHETIC
+Liquidity_Risk_Data,Current_Liabilities_LKR,Current Liabilities LKR,float64,LKR,Business_ID + Month,SYNTHETIC
+Liquidity_Risk_Data,Quick_Ratio,Quick Ratio,float64,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Liquidity_Risk_Data,Cash_Runway_Months,Cash Runway Months,float64,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Liquidity_Risk_Data,Source_Type,Source Type,object,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Operational_Risk_Data,Business_ID,Business ID,object,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Operational_Risk_Data,Month,Month,object,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Operational_Risk_Data,Supplier_Delay_Days,Supplier Delay Days,int64,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Operational_Risk_Data,Inventory_Days,Inventory Days,float64,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Operational_Risk_Data,Stockout_Days,Stockout Days,int64,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Operational_Risk_Data,Operational_Disruption_Flag,Operational Disruption Flag,int64,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Operational_Risk_Data,Estimated_Disruption_Cost_LKR,Estimated Disruption Cost LKR,float64,LKR,Business_ID + Month,SYNTHETIC
+Operational_Risk_Data,Single_Supplier_Dependency_Pct,Single Supplier Dependency Pct,float64,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Operational_Risk_Data,Source_Type,Source Type,object,See variable name / indicator-specific,Business_ID + Month,SYNTHETIC
+Economic_Indicators,Indicator_ID,Indicator ID,object,See variable name / indicator-specific,Indicator_ID + Month,SYNTHETIC
+Economic_Indicators,Month,Month,object,See variable name / indicator-specific,Indicator_ID + Month,SYNTHETIC
+Economic_Indicators,Indicator_Name,Indicator Name,object,See variable name / indicator-specific,Indicator_ID + Month,SYNTHETIC
+Economic_Indicators,Value,Value,float64,See variable name / indicator-specific,Indicator_ID + Month,SYNTHETIC
+Economic_Indicators,Unit,Unit,object,See variable name / indicator-specific,Indicator_ID + Month,SYNTHETIC
+Economic_Indicators,Geography,Geography,object,See variable name / indicator-specific,Indicator_ID + Month,SYNTHETIC
+Economic_Indicators,Source_Type,Source Type,object,See variable name / indicator-specific,Indicator_ID + Month,SYNTHETIC
+Economic_Indicators,Official_Source_URL,Official Source URL,object,See variable name / indicator-specific,Indicator_ID + Month,SYNTHETIC
+Business_Relationships,Edge_ID,Edge ID,object,See variable name / indicator-specific,Edge_ID,SYNTHETIC
+Business_Relationships,Source_Business_ID,Source Business ID,object,See variable name / indicator-specific,Edge_ID,SYNTHETIC
+Business_Relationships,Target_Business_ID,Target Business ID,object,See variable name / indicator-specific,Edge_ID,SYNTHETIC
+Business_Relationships,Relationship_Type,Relationship Type,object,See variable name / indicator-specific,Edge_ID,SYNTHETIC
+Business_Relationships,Relationship_Start_Month,Relationship Start Month,object,See variable name / indicator-specific,Edge_ID,SYNTHETIC
+Business_Relationships,Relationship_Strength_1_5,Relationship Strength 1 5,int64,See variable name / indicator-specific,Edge_ID,SYNTHETIC
+Business_Relationships,Monthly_Transaction_Value_LKR,Monthly Transaction Value LKR,float64,LKR,Edge_ID,SYNTHETIC
+Business_Relationships,Verified_Flag,Verified Flag,int64,See variable name / indicator-specific,Edge_ID,SYNTHETIC
+Business_Relationships,Source_Type,Source Type,object,See variable name / indicator-specific,Edge_ID,SYNTHETIC
+Business_Relationships,Relationship_Notes,Relationship Notes,object,See variable name / indicator-specific,Edge_ID,SYNTHETIC
+Risk_Assessment,Business_ID,Business ID,object,See variable name / indicator-specific,Business_ID + Assessment_Month,SYNTHETIC
+Risk_Assessment,Assessment_Month,Assessment Month,object,See variable name / indicator-specific,Business_ID + Assessment_Month,SYNTHETIC
+Risk_Assessment,Overall_Risk_Score_0_100,Overall Risk Score 0 100,float64,See variable name / indicator-specific,Business_ID + Assessment_Month,SYNTHETIC
+Risk_Assessment,Overall_Risk_Label,Overall Risk Label,object,See variable name / indicator-specific,Business_ID + Assessment_Month,SYNTHETIC
+Risk_Assessment,Financial_Risk_Score_0_100,Financial Risk Score 0 100,float64,See variable name / indicator-specific,Business_ID + Assessment_Month,SYNTHETIC
+Risk_Assessment,Credit_Risk_Score_0_100,Credit Risk Score 0 100,float64,See variable name / indicator-specific,Business_ID + Assessment_Month,SYNTHETIC
+Risk_Assessment,Market_Risk_Score_0_100,Market Risk Score 0 100,float64,See variable name / indicator-specific,Business_ID + Assessment_Month,SYNTHETIC
+Risk_Assessment,Liquidity_Risk_Score_0_100,Liquidity Risk Score 0 100,float64,See variable name / indicator-specific,Business_ID + Assessment_Month,SYNTHETIC
+Risk_Assessment,Operational_Risk_Score_0_100,Operational Risk Score 0 100,float64,See variable name / indicator-specific,Business_ID + Assessment_Month,SYNTHETIC
+Risk_Assessment,Risk_Factors,Risk Factors,object,See variable name / indicator-specific,Business_ID + Assessment_Month,SYNTHETIC
+Risk_Assessment,Recommended_Mitigation,Recommended Mitigation,object,See variable name / indicator-specific,Business_ID + Assessment_Month,SYNTHETIC
+Risk_Assessment,Growth_Readiness_Score_0_100,Growth Readiness Score 0 100,float64,See variable name / indicator-specific,Business_ID + Assessment_Month,SYNTHETIC
+Risk_Assessment,Growth_Ready_Flag,Growth Ready Flag,int64,See variable name / indicator-specific,Business_ID + Assessment_Month,SYNTHETIC
+Risk_Assessment,Target_Label_Provenance,Target Label Provenance,object,See variable name / indicator-specific,Business_ID + Assessment_Month,SYNTHETIC
+Risk_Assessment,Source_Type,Source Type,object,See variable name / indicator-specific,Business_ID + Assessment_Month,SYNTHETIC
+Scenario_Analysis,Scenario_ID,Scenario ID,object,See variable name / indicator-specific,Scenario_ID + Business_ID,SYNTHETIC
+Scenario_Analysis,Business_ID,Business ID,object,See variable name / indicator-specific,Scenario_ID + Business_ID,SYNTHETIC
+Scenario_Analysis,Base_Month,Base Month,object,See variable name / indicator-specific,Scenario_ID + Business_ID,SYNTHETIC
+Scenario_Analysis,Scenario_Type,Scenario Type,object,See variable name / indicator-specific,Scenario_ID + Business_ID,SYNTHETIC
+Scenario_Analysis,Interest_Rate_Shock_Pct_Points,Interest Rate Shock Pct Points,float64,See variable name / indicator-specific,Scenario_ID + Business_ID,SYNTHETIC
+Scenario_Analysis,Inflation_Shock_Pct_Points,Inflation Shock Pct Points,float64,See variable name / indicator-specific,Scenario_ID + Business_ID,SYNTHETIC
+Scenario_Analysis,Demand_Change_Pct,Demand Change Pct,float64,See variable name / indicator-specific,Scenario_ID + Business_ID,SYNTHETIC
+Scenario_Analysis,Supplier_Delay_Shock_Days,Supplier Delay Shock Days,int64,See variable name / indicator-specific,Scenario_ID + Business_ID,SYNTHETIC
+Scenario_Analysis,Estimated_Profit_Impact_Pct,Estimated Profit Impact Pct,float64,See variable name / indicator-specific,Scenario_ID + Business_ID,SYNTHETIC
+Scenario_Analysis,Estimated_Risk_Score_Change,Estimated Risk Score Change,float64,See variable name / indicator-specific,Scenario_ID + Business_ID,SYNTHETIC
+Scenario_Analysis,Estimated_Growth_Readiness_Change,Estimated Growth Readiness Change,float64,See variable name / indicator-specific,Scenario_ID + Business_ID,SYNTHETIC
+Scenario_Analysis,Source_Type,Source Type,object,See variable name / indicator-specific,Scenario_ID + Business_ID,SYNTHETIC

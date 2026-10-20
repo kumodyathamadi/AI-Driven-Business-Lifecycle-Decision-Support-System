@@ -1,0 +1,11 @@
+{
+  "business_count": 1000,
+  "monthly_financial_rows": 24000,
+  "monthly_records_per_business_min": 24,
+  "relationship_edges": 3487,
+  "risk_assessment_rows": 24000,
+  "scenario_rows": 4000,
+  "all_relationships_verified": false,
+  "business_data_synthetic": true,
+  "economic_indicators_official_observations": false
+}
