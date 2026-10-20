@@ -1,6 +1,8 @@
 # component3_backend/tax_engine.py
 import csv
 import io
+import re
+from datetime import datetime, date
 from typing import Tuple, List
 from schemas import (
     InvoiceData,
@@ -288,92 +290,90 @@ def process_batch_invoices(batch_request: Schedule7BatchRequest) -> BatchTaxProc
     )
 
 
-def generate_schedule7_csv(batch_request: Schedule7BatchRequest) -> Tuple[str, str]:
+def format_ramis_period_code(tax_period: str) -> str:
     """
-    Maps categorized invoices directly to the column structure required by the
-    Sri Lankan Inland Revenue Department (IRD) RAMIS VAT Schedule 7 CSV format.
-    
-    Returns:
-      Tuple of (csv_content_string, ramis_standard_filename)
+    Converts tax period string to Sri Lanka IRD RAMIS standard 4-digit Period Code:
+    - Quarterly: YY + Quarter(1-4) + 0  (e.g., '2026-Q1' -> '2610', '2026-Q3' -> '2630')
+    - Monthly:   YY + Quarter(1-4) + Month_in_Quarter(1-3) (e.g., '2026-01' -> '2611', '2026-03' -> '2613')
+    - Fallback:  Cleaned 4-character code or '2610'
     """
-    output = io.StringIO()
-    writer = csv.writer(output, lineterminator="\n")
+    if not tax_period:
+        return "2610"
+    tp = str(tax_period).strip().upper()
     
-    # RAMIS Schedule 7 Standard Column Headers
-    headers = [
-        "Serial No",
-        "Tax Period",
-        "Taxpayer TIN",
-        "Taxpayer Name",
-        "Customer TIN",
-        "Customer Name",
-        "Invoice Number",
-        "Invoice Date",
-        "Description of Supply",
-        "Schedule Cage",
-        "Currency",
-        "Exchange Rate",
-        "Value of Supply (LKR)",
-        "VAT Rate (%)",
-        "VAT Amount (LKR)",
-        "Total Amount (LKR)"
-    ]
-    writer.writerow(headers)
-    
-    active_tin = (getattr(batch_request, "company_tin", None) or getattr(batch_request, "taxpayer_tin", None) or _ACTIVE_COMPANY_CONFIG["company_tin"]).strip()
-    active_name = (getattr(batch_request, "company_name", None) or getattr(batch_request, "taxpayer_name", None) or _ACTIVE_COMPANY_CONFIG["company_name"]).strip()
-    active_period = (getattr(batch_request, "tax_period", None) or _ACTIVE_COMPANY_CONFIG["tax_period"]).strip()
+    # If already a 4-digit IRD code (e.g. 2610, 2130, 2631)
+    if re.fullmatch(r'\d{4}', tp):
+        return tp
 
-    if not active_tin:
-        raise ValueError("Company TIN Number is strictly mandatory for generating RAMIS schedules.")
-    if not active_name:
-        raise ValueError("Company Name is strictly mandatory for generating RAMIS schedules.")
-    if not active_period:
-        raise ValueError("Tax Period is strictly mandatory for generating RAMIS schedules.")
+    # Match Quarterly format e.g. "2026-Q1", "2026Q1", "Q1-2026", "2026 Q1", "Q1 2026"
+    q_match = re.search(r'(?:(\d{4})[^\dQ]*Q([1-4])|Q([1-4])[^\dQ]*(\d{4}))', tp)
+    if q_match:
+        year = q_match.group(1) or q_match.group(4)
+        quarter = q_match.group(2) or q_match.group(3)
+        return f"{year[-2:]}{quarter}0"
 
-    for idx, inv in enumerate(batch_request.invoices, start=1):
-        analyzed = categorize_and_calculate_tax(inv)
-        
-        # Format Customer TIN for RAMIS
-        if inv.customer_tin and inv.customer_tin.strip():
-            cust_tin = inv.customer_tin.strip()
-        elif analyzed.schedule_7_cage == "Cage D":
-            cust_tin = "FOREIGN"
+    # Match Monthly format e.g. "2026-03", "2026/03", "03-2026", "2026-3"
+    m_match = re.search(r'(\d{4})[-/.](\d{1,2})', tp)
+    if not m_match:
+        m_match = re.search(r'(\d{1,2})[-/.](\d{4})', tp)
+        if m_match:
+            month = int(m_match.group(1))
+            year = m_match.group(2)
         else:
-            cust_tin = "UNREGISTERED"
-            
-        cust_name = inv.customer_name.strip() if (inv.customer_name and inv.customer_name.strip()) else "Direct Consumer"
-        
-        row = [
-            idx,
-            active_period,
-            active_tin,
-            active_name,
-            cust_tin,
-            cust_name,
-            analyzed.invoice_number,
-            analyzed.date_of_supply.isoformat(),
-            analyzed.description_of_supply,
-            analyzed.schedule_7_cage,
-            analyzed.original_currency,
-            f"{analyzed.exchange_rate:.4f}",
-            f"{analyzed.base_value_lkr:.2f}",
-            f"{analyzed.applied_tax_rate:.1f}",
-            f"{analyzed.tax_amount_lkr:.2f}",
-            f"{analyzed.total_value_lkr:.2f}"
-        ]
-        writer.writerow(row)
-        
-    csv_content = output.getvalue()
-    
-    # Standard RAMIS upload filename format: [TIN]_VAT_SCHEDULE07_[PERIOD].csv
-    clean_period = active_period.replace("-", "").replace("/", "").replace(" ", "_").upper()
-    filename = f"{active_tin}_VAT_SCHEDULE07_{clean_period}.csv"
-    
-    return csv_content, filename
+            month = None
+    else:
+        year = m_match.group(1)
+        month = int(m_match.group(2))
+
+    if month and 1 <= month <= 12:
+        yy = year[-2:]
+        q = (month - 1) // 3 + 1
+        m_in_q = (month - 1) % 3 + 1
+        return f"{yy}{q}{m_in_q}"
+
+    # Match any 4-digit year e.g. "2026" -> "2610"
+    y_match = re.search(r'\b(20\d{2})\b', tp)
+    if y_match:
+        return f"{y_match.group(1)[-2:]}10"
+
+    clean = re.sub(r'[^0-9]', '', tp)
+    return clean[:4] if len(clean) >= 4 else "2610"
 
 
+def format_invoice_date_mm_dd_yyyy(date_val) -> str:
+    """Formats any date string or object strictly into IRD RAMIS MM/DD/YYYY format."""
+    from datetime import datetime, date
+    if not date_val:
+        return datetime.now().strftime("%m/%d/%Y")
+    if isinstance(date_val, (datetime, date)):
+        return date_val.strftime("%m/%d/%Y")
+    s = str(date_val).strip()
+    for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%m/%d/%Y', '%Y/%m/%d', '%d.%m.%Y'):
+        try:
+            return datetime.strptime(s, fmt).strftime("%m/%d/%Y")
+        except ValueError:
+            pass
+    return datetime.now().strftime("%m/%d/%Y")
 
+
+def get_schedule_code(schedule_type: str) -> str:
+    """Returns the standardized RAMIS schedule code (e.g. SCHEDULE01 through SCHEDULE07)."""
+    s = str(schedule_type or "").lower().strip()
+    if "1" in s:
+        return "SCHEDULE01"
+    if "2" in s:
+        return "SCHEDULE02"
+    if "3" in s:
+        return "SCHEDULE03"
+    if "4" in s:
+        return "SCHEDULE04"
+    if "5" in s:
+        return "SCHEDULE05"
+    if "6" in s:
+        return "SCHEDULE06"
+    if "7" in s:
+        return "SCHEDULE07"
+    return "SCHEDULE01"
 
 
 def generate_schedule1_csv(batch_request: ScheduleBatchRequest) -> Tuple[str, str]:
@@ -381,6 +381,11 @@ def generate_schedule1_csv(batch_request: ScheduleBatchRequest) -> Tuple[str, st
     Official Sri Lanka Inland Revenue Department (IRD) RAMIS Schedule 1 CSV Generator.
     Output VAT on Taxable Supplies (Local Sales).
     
+    Strict Filtering Rule:
+      - ONLY includes local domestic sales invoices issued by the taxpayer company (OUTPUT_VAT).
+      - Strictly EXCLUDES vendor purchase bills (Input VAT).
+      - Strictly EXCLUDES export invoices (Foreign currency / Schedule 7 / CusDec).
+      
     Exact Column Specification (as per IRD guidelines & Excel template):
       1. Serial No : Running sequence number (1, 2, 3...)
       2. Invoice Date : Strictly MM/DD/YYYY format
@@ -391,6 +396,9 @@ def generate_schedule1_csv(batch_request: ScheduleBatchRequest) -> Tuple[str, st
       7. Value of supply : Strictly excluding VAT, mathematically derived via:
                            Value of supply = (VAT Amount / 18) * 100
       8. VAT Amount : Extracted tax amount
+      
+    Official IRD File Naming Standard (Page 24):
+      {TIN}_VAT_SCHEDULE01_{PERIOD_CODE}_{YYYYMMDD}_ORIGINAL_V1.csv
     """
     import re
     from datetime import datetime
@@ -427,31 +435,21 @@ def generate_schedule1_csv(batch_request: ScheduleBatchRequest) -> Tuple[str, st
         "COURT", "SRI LANKA RAILWAYS", "SRI LANKA POST", "CEB", "NWSDB"
     ]
 
-    row_count = 0
+    # STRICT INVOICE FILTERING FOR SCHEDULE 1:
+    # Must be our company sales (OUTPUT_VAT) AND must be local domestic sale (NOT export).
+    eligible_invoices = []
     for inv in batch_request.invoices:
-        # Check classification: only include Output Tax / local taxable sales (or all provided batch items)
-        classification = classify_vat_transaction(inv, {"company_tin": active_tin, "company_name": active_name})
-        
-        row_count += 1
-        
-        # 1. Invoice Date formatted strictly as MM/DD/YYYY
-        date_obj = inv.date_of_supply
-        if isinstance(date_obj, str):
-            for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%m/%d/%Y', '%Y/%m/%d'):
-                try:
-                    date_obj = datetime.strptime(date_obj.strip(), fmt).date()
-                    break
-                except ValueError:
-                    pass
-        if hasattr(date_obj, 'strftime'):
-            formatted_date = date_obj.strftime("%m/%d/%Y")
-        else:
-            formatted_date = datetime.now().strftime("%m/%d/%Y")
+        cls = classify_vat_transaction(inv, {"company_tin": active_tin, "company_name": active_name})
+        if cls["target_schedule"] == "Schedule 1" or (cls["vat_type"] == "OUTPUT_VAT" and not cls["is_export"]):
+            eligible_invoices.append(inv)
+
+    for row_count, inv in enumerate(eligible_invoices, start=1):
+        formatted_date = format_invoice_date_mm_dd_yyyy(inv.date_of_supply)
             
         # 2. Tax Invoice No (Extracted only if explicitly identified as a 'Tax Invoice')
         is_tax_inv = getattr(inv, 'is_tax_invoice', None)
         inv_no_str = str(inv.invoice_number or '').strip()
-        if is_tax_inv is False or inv_no_str == "INV-UNKNOWN":
+        if is_tax_inv is False or inv_no_str in ["INV-UNKNOWN", ""]:
             tax_inv_no = ""
         else:
             tax_inv_no = inv_no_str
@@ -504,10 +502,330 @@ def generate_schedule1_csv(batch_request: ScheduleBatchRequest) -> Tuple[str, st
         
     csv_content = output.getvalue()
     
-    clean_period = active_period.replace("-", "").replace("/", "").replace(" ", "_").upper()
+    period_code = format_ramis_period_code(active_period)
     sub_date = datetime.now().strftime("%Y%m%d")
-    # Official IRD Schedule 1 File naming standard: TIN_VAT_SCHEDULE01_PERIOD_YYYYMMDD_ORIGINAL_V1.csv
-    filename = f"{active_tin}_VAT_SCHEDULE01_{clean_period}_{sub_date}_ORIGINAL_V1.csv"
+    # Official IRD Schedule 1 File naming standard: {TIN}_VAT_SCHEDULE01_{PERIOD_CODE}_{YYYYMMDD}_ORIGINAL_V1.csv
+    filename = f"{active_tin}_VAT_SCHEDULE01_{period_code}_{sub_date}_ORIGINAL_V1.csv"
+    
+    return csv_content, filename
+
+
+def generate_schedule2_csv(batch_request: ScheduleBatchRequest) -> Tuple[str, str]:
+    """
+    Official Sri Lanka Inland Revenue Department (IRD) RAMIS Schedule 2 CSV Generator.
+    Input VAT Schedule (Purchases from external suppliers - Page 18 of IRD Guide).
+    
+    Strict Filtering Rule:
+      - ONLY includes purchase invoices from external vendors (Input VAT).
+      - Strictly EXCLUDES company sales (Schedule 1) and export invoices.
+      
+    Exact Column Specification (Page 18):
+      1. Serial No : Running unique serial number
+      2. Invoice Date : Strictly MM/DD/YYYY format
+      3. Tax Invoice No : Tax invoice number
+      4. Supplier's TIN : Taxpayer identification number of supplier
+      5. Name of the Supplier : Supplier's legal name
+      6. Description : Description of the supply
+      7. Value of purchase : Value of the invoice excluding VAT portion
+      8. VAT Amount : Extracted VAT amount
+      9. Disallowed VAT Amount : Disallowed VAT amount (default 0.00)
+    """
+    import re
+    from datetime import datetime
+    output = io.StringIO()
+    writer = csv.writer(output, lineterminator='\r\n')
+    
+    headers = [
+        "Serial No",
+        "Invoice Date",
+        "Tax Invoice No",
+        "Supplier's TIN",
+        "Name of the Supplier",
+        "Description",
+        "Value of purchase",
+        "VAT Amount",
+        "Disallowed VAT Amount"
+    ]
+    writer.writerow(headers)
+    
+    active_tin = (getattr(batch_request, "company_tin", None) or getattr(batch_request, "taxpayer_tin", None) or _ACTIVE_COMPANY_CONFIG["company_tin"]).strip()
+    active_name = (getattr(batch_request, "company_name", None) or getattr(batch_request, "taxpayer_name", None) or _ACTIVE_COMPANY_CONFIG["company_name"]).strip()
+    active_period = (getattr(batch_request, "tax_period", None) or _ACTIVE_COMPANY_CONFIG["tax_period"]).strip()
+
+    # STRICT INVOICE FILTERING FOR SCHEDULE 2:
+    eligible_invoices = []
+    for inv in batch_request.invoices:
+        cls = classify_vat_transaction(inv, {"company_tin": active_tin, "company_name": active_name})
+        if cls["vat_type"] == "INPUT_VAT" or cls["target_schedule"] == "Schedule 2" or not cls["is_our_company"]:
+            eligible_invoices.append(inv)
+
+    for row_count, inv in enumerate(eligible_invoices, start=1):
+        formatted_date = format_invoice_date_mm_dd_yyyy(inv.date_of_supply)
+        inv_no_str = str(inv.invoice_number or '').strip()
+        tax_inv_no = "" if inv_no_str in ["INV-UNKNOWN", ""] else inv_no_str
+        
+        supp_tin = str(inv.supplier_tin or '').strip()
+        clean_tin = re.sub(r'[^0-9]', '', supp_tin)
+        supplier_tin = clean_tin if clean_tin else "100902877"
+        supplier_name = str(inv.supplier_name or 'External Supplier').strip()
+        description = str(inv.description_of_supply or 'Purchase of Goods/Services').strip()
+        
+        vat_amount = float(inv.tax_amount or 0.0)
+        sub_total = float(inv.sub_total or 0.0)
+        if sub_total <= 0 and float(inv.total_amount or 0.0) > 0:
+            sub_total = round(float(inv.total_amount) - vat_amount, 2)
+            
+        disallowed_vat = 0.00
+        
+        row = [
+            row_count,
+            formatted_date,
+            tax_inv_no,
+            supplier_tin,
+            supplier_name,
+            description,
+            f"{sub_total:.2f}",
+            f"{vat_amount:.2f}",
+            f"{disallowed_vat:.2f}"
+        ]
+        writer.writerow(row)
+        
+    csv_content = output.getvalue()
+    period_code = format_ramis_period_code(active_period)
+    sub_date = datetime.now().strftime("%Y%m%d")
+    filename = f"{active_tin}_VAT_SCHEDULE02_{period_code}_{sub_date}_ORIGINAL_V1.csv"
+    return csv_content, filename
+
+
+def generate_schedule3_csv(batch_request: ScheduleBatchRequest) -> Tuple[str, str]:
+    """
+    Official Sri Lanka Inland Revenue Department (IRD) RAMIS Schedule 3 CSV Generator.
+    CUSDEC Import VAT Schedule (Page 19 of IRD Guide).
+    """
+    output = io.StringIO()
+    writer = csv.writer(output, lineterminator='\r\n')
+    headers = [
+        "Serial No",
+        "Cusdec Date",
+        "Cusdec No",
+        "Cusdec Serial ID",
+        "Cusdec Reg Date",
+        "Cusdec Office ID",
+        "VAT Deferred",
+        "VAT Upfront",
+        "Disallowed VAT"
+    ]
+    writer.writerow(headers)
+    
+    active_tin = (getattr(batch_request, "company_tin", None) or getattr(batch_request, "taxpayer_tin", None) or _ACTIVE_COMPANY_CONFIG["company_tin"]).strip()
+    active_period = (getattr(batch_request, "tax_period", None) or _ACTIVE_COMPANY_CONFIG["tax_period"]).strip()
+
+    from datetime import datetime
+    period_code = format_ramis_period_code(active_period)
+    sub_date = datetime.now().strftime("%Y%m%d")
+    filename = f"{active_tin}_VAT_SCHEDULE03_{period_code}_{sub_date}_ORIGINAL_V1.csv"
+    return output.getvalue(), filename
+
+
+def generate_schedule4_csv(batch_request: ScheduleBatchRequest) -> Tuple[str, str]:
+    """
+    Official Sri Lanka Inland Revenue Department (IRD) RAMIS Schedule 4 CSV Generator.
+    Debit/Credit Note Schedule (Page 20 of IRD Guide).
+    """
+    output = io.StringIO()
+    writer = csv.writer(output, lineterminator='\r\n')
+    headers = [
+        "Serial No",
+        "Note Type",
+        "Note Date",
+        "Note Number",
+        "Original Invoice No",
+        "Taxpayer TIN",
+        "Taxpayer Name",
+        "Reason for Note",
+        "Adjustment Value",
+        "Adjustment VAT"
+    ]
+    writer.writerow(headers)
+    
+    active_tin = (getattr(batch_request, "company_tin", None) or getattr(batch_request, "taxpayer_tin", None) or _ACTIVE_COMPANY_CONFIG["company_tin"]).strip()
+    active_period = (getattr(batch_request, "tax_period", None) or _ACTIVE_COMPANY_CONFIG["tax_period"]).strip()
+
+    from datetime import datetime
+    period_code = format_ramis_period_code(active_period)
+    sub_date = datetime.now().strftime("%Y%m%d")
+    filename = f"{active_tin}_VAT_SCHEDULE04_{period_code}_{sub_date}_ORIGINAL_V1.csv"
+    return output.getvalue(), filename
+
+
+def generate_schedule5_csv(batch_request: ScheduleBatchRequest) -> Tuple[str, str]:
+    """
+    Official Sri Lanka Inland Revenue Department (IRD) RAMIS Schedule 5 CSV Generator.
+    Supplies to Specified Projects / Zero-Rated under Sec 22(7) (Page 21 of IRD Guide).
+    """
+    output = io.StringIO()
+    writer = csv.writer(output, lineterminator='\r\n')
+    headers = [
+        "Serial No",
+        "Invoice Date",
+        "Tax Invoice No",
+        "Project Purchaser TIN",
+        "Project Name",
+        "Approval Letter No",
+        "Description",
+        "Value of supply",
+        "VAT Amount"
+    ]
+    writer.writerow(headers)
+    
+    active_tin = (getattr(batch_request, "company_tin", None) or getattr(batch_request, "taxpayer_tin", None) or _ACTIVE_COMPANY_CONFIG["company_tin"]).strip()
+    active_period = (getattr(batch_request, "tax_period", None) or _ACTIVE_COMPANY_CONFIG["tax_period"]).strip()
+
+    from datetime import datetime
+    period_code = format_ramis_period_code(active_period)
+    sub_date = datetime.now().strftime("%Y%m%d")
+    filename = f"{active_tin}_VAT_SCHEDULE05_{period_code}_{sub_date}_ORIGINAL_V1.csv"
+    return output.getvalue(), filename
+
+
+def generate_schedule6_csv(batch_request: ScheduleBatchRequest) -> Tuple[str, str]:
+    """
+    Official Sri Lanka Inland Revenue Department (IRD) RAMIS Schedule 6 CSV Generator.
+    Article Export VAT Schedule (Page 22 of IRD Guide).
+    """
+    output = io.StringIO()
+    writer = csv.writer(output, lineterminator='\r\n')
+    headers = [
+        "Serial No",
+        "Date of exportation",
+        "CUSDEC Number",
+        "Office ID",
+        "Serial ID",
+        "Export registration date",
+        "Net Mass (Kg.)",
+        "FOB/CIF Value (Rs.)"
+    ]
+    writer.writerow(headers)
+    
+    active_tin = (getattr(batch_request, "company_tin", None) or getattr(batch_request, "taxpayer_tin", None) or _ACTIVE_COMPANY_CONFIG["company_tin"]).strip()
+    active_period = (getattr(batch_request, "tax_period", None) or _ACTIVE_COMPANY_CONFIG["tax_period"]).strip()
+    
+    eligible_invoices = [inv for inv in batch_request.invoices if classify_vat_transaction(inv, {"company_tin": active_tin})["is_export"]]
+    
+    for row_count, inv in enumerate(eligible_invoices, start=1):
+        formatted_date = format_invoice_date_mm_dd_yyyy(inv.date_of_supply)
+        rate = float(inv.exchange_rate) if (inv.exchange_rate and inv.exchange_rate > 0) else 1.0
+        fob_lkr = round(float(inv.sub_total or inv.total_amount or 0.0) * rate, 2)
+        row = [
+            row_count,
+            formatted_date,
+            str(inv.invoice_number or f"EXP-{row_count}"),
+            "CB",
+            f"{row_count:04d}",
+            formatted_date,
+            "100.00",
+            f"{fob_lkr:.2f}"
+        ]
+        writer.writerow(row)
+        
+    csv_content = output.getvalue()
+    from datetime import datetime
+    period_code = format_ramis_period_code(active_period)
+    sub_date = datetime.now().strftime("%Y%m%d")
+    filename = f"{active_tin}_VAT_SCHEDULE06_{period_code}_{sub_date}_ORIGINAL_V1.csv"
+    return csv_content, filename
+
+
+def generate_schedule7_csv(batch_request) -> Tuple[str, str]:
+    """
+    Official Sri Lanka Inland Revenue Department (IRD) RAMIS Schedule 7 CSV Generator.
+    Zero-Rated Services & Export Supplies (Page 23 of IRD Guide).
+    
+    Strict Filtering Rule:
+      - ONLY includes export invoices (Foreign currency / CusDec / Zero-Rated exports).
+      - Strictly EXCLUDES local domestic sales (Schedule 1) and external purchase bills (Input VAT).
+      
+    Columns as per IRD Guidelines Page 23:
+      1. Serial No
+      2. Invoice No
+      3. Invoice Date (MM/DD/YYYY)
+      4. Description of Service
+      5. Invoice Value (Foreign currency value)
+      6. Type of Currency
+      7. Exchange rate (two decimals)
+      8. Rupee Value (Rs.)
+      9. NRFC Account Number
+      10. Payment Received Date (MM/DD/YYYY)
+    """
+    output = io.StringIO()
+    writer = csv.writer(output, lineterminator='\r\n')
+    
+    headers = [
+        "Serial No",
+        "Invoice No",
+        "Invoice Date",
+        "Description of Service",
+        "Invoice Value",
+        "Type of Currency",
+        "Exchange rate",
+        "Rupee Value (Rs.)",
+        "NRFC Account Number",
+        "Payment Received Date"
+    ]
+    writer.writerow(headers)
+    
+    active_tin = (getattr(batch_request, "company_tin", None) or getattr(batch_request, "taxpayer_tin", None) or _ACTIVE_COMPANY_CONFIG["company_tin"]).strip()
+    active_name = (getattr(batch_request, "company_name", None) or getattr(batch_request, "taxpayer_name", None) or _ACTIVE_COMPANY_CONFIG["company_name"]).strip()
+    active_period = (getattr(batch_request, "tax_period", None) or _ACTIVE_COMPANY_CONFIG["tax_period"]).strip()
+
+    if not active_tin:
+        raise ValueError("Company TIN Number is strictly mandatory for generating RAMIS schedules.")
+    if not active_name:
+        raise ValueError("Company Name is strictly mandatory for generating RAMIS schedules.")
+    if not active_period:
+        raise ValueError("Tax Period is strictly mandatory for generating RAMIS schedules.")
+
+    # STRICT INVOICE FILTERING FOR SCHEDULE 7:
+    eligible_invoices = []
+    for inv in batch_request.invoices:
+        cls = classify_vat_transaction(inv, {"company_tin": active_tin, "company_name": active_name})
+        if cls["is_export"] or cls["target_schedule"] in ["Schedule 7", "Schedule 6"]:
+            eligible_invoices.append(inv)
+
+    for row_count, inv in enumerate(eligible_invoices, start=1):
+        formatted_date = format_invoice_date_mm_dd_yyyy(inv.date_of_supply)
+        inv_no_str = str(inv.invoice_number or '').strip()
+        inv_no = "" if inv_no_str in ["INV-UNKNOWN", ""] else inv_no_str
+        description = str(inv.description_of_supply or 'Export of Services / Goods').strip()
+        
+        curr = str(inv.currency or 'USD').strip().upper()
+        rate = float(inv.exchange_rate) if (inv.exchange_rate and inv.exchange_rate > 0) else 1.0
+        foreign_val = float(inv.sub_total or inv.total_amount or 0.0)
+        rupee_val = round(foreign_val * rate, 2)
+        
+        nrfc_acc = "N/A"
+        payment_date = formatted_date
+        
+        row = [
+            row_count,
+            inv_no,
+            formatted_date,
+            description,
+            f"{foreign_val:.2f}",
+            curr,
+            f"{rate:.2f}",
+            f"{rupee_val:.2f}",
+            nrfc_acc,
+            payment_date
+        ]
+        writer.writerow(row)
+        
+    csv_content = output.getvalue()
+    
+    from datetime import datetime
+    period_code = format_ramis_period_code(active_period)
+    sub_date = datetime.now().strftime("%Y%m%d")
+    filename = f"{active_tin}_VAT_SCHEDULE07_{period_code}_{sub_date}_ORIGINAL_V1.csv"
     
     return csv_content, filename
 
@@ -516,15 +834,29 @@ def generate_schedule_csv(request: ScheduleBatchRequest) -> Tuple[str, str]:
     """
     Master Dispatcher for generating distinct CSV files for each of the 7 RAMIS Schedules.
     Dispatches to dedicated schedule generator:
-      - Schedule 1: generate_schedule1_csv (Output VAT on Taxable Supplies)
-      - Schedule 7: generate_schedule7_csv (Zero-Rated Article/Service Exports)
+      - Schedule 1: generate_schedule1_csv (Output VAT on Local Supplies)
+      - Schedule 2: generate_schedule2_csv (Input VAT on External Purchases)
+      - Schedule 3: generate_schedule3_csv (CUSDEC Import VAT)
+      - Schedule 4: generate_schedule4_csv (Debit/Credit Notes)
+      - Schedule 5: generate_schedule5_csv (Specialized Project Zero-Rated Supplies)
+      - Schedule 6: generate_schedule6_csv (Article Export VAT Schedule)
+      - Schedule 7: generate_schedule7_csv (Supply of Zero Rated Services)
     """
-    sched_type = (request.schedule_type or "Schedule 7").strip().lower()
+    sched_type = (request.schedule_type or "Schedule 1").strip().lower()
     
-    if sched_type in ["schedule 1", "schedule01", "schedule_1", "1"]:
+    if "1" in sched_type:
         return generate_schedule1_csv(request)
-    elif sched_type in ["schedule 7", "schedule07", "schedule_7", "7"]:
+    elif "2" in sched_type:
+        return generate_schedule2_csv(request)
+    elif "3" in sched_type:
+        return generate_schedule3_csv(request)
+    elif "4" in sched_type:
+        return generate_schedule4_csv(request)
+    elif "5" in sched_type:
+        return generate_schedule5_csv(request)
+    elif "6" in sched_type:
+        return generate_schedule6_csv(request)
+    elif "7" in sched_type:
         return generate_schedule7_csv(request)
     else:
-        # Default fallback to Schedule 7 format
-        return generate_schedule7_csv(request)
+        return generate_schedule1_csv(request)

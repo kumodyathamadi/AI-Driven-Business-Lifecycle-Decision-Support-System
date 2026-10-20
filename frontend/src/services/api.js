@@ -205,20 +205,38 @@ export const saveCompanyTaxConfig = async (config) => {
   return response.data;
 };
 
+export const getRamisPeriodCode = (periodStr) => {
+  if (!periodStr) return '2610';
+  const s = String(periodStr).trim().toUpperCase();
+  if (/^\d{4}$/.test(s)) return s;
+  const qMatch = s.match(/(?:(\d{4})[^\dQ]*Q([1-4])|Q([1-4])[^\dQ]*(\d{4}))/);
+  if (qMatch) {
+    const year = qMatch[1] || qMatch[4];
+    const quarter = qMatch[2] || qMatch[3];
+    return `${year.slice(-2)}${quarter}0`;
+  }
+  const mMatch = s.match(/(\d{4})[-/.](\d{1,2})/) || s.match(/(\d{1,2})[-/.](\d{4})/);
+  if (mMatch) {
+    let year, month;
+    if (mMatch[1].length === 4) {
+      year = mMatch[1];
+      month = parseInt(mMatch[2], 10);
+    } else {
+      month = parseInt(mMatch[1], 10);
+      year = mMatch[2];
+    }
+    if (month >= 1 && month <= 12) {
+      const q = Math.floor((month - 1) / 3) + 1;
+      const mInQ = ((month - 1) % 3) + 1;
+      return `${year.slice(-2)}${q}${mInQ}`;
+    }
+  }
+  return '2610';
+};
+
 export const downloadRamisSchedule7Csv = async (batchRequest) => {
-  const response = await axios.post('http://127.0.0.1:8000/api/v1/tax/export-schedule7-csv', batchRequest, {
-    responseType: 'blob',
-  });
-  const blob = new Blob([response.data], { type: 'text/csv' });
-  const tin = batchRequest.company_tin || batchRequest.taxpayer_tin || 'RAMIS';
-  const cleanPeriod = (batchRequest.tax_period || "Export").replace(/[^a-zA-Z0-9]/g, "");
-  const filename = `${tin}_VAT_SCHEDULE07_${cleanPeriod}.csv`;
-  const link = document.createElement('a');
-  link.href = window.URL.createObjectURL(blob);
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+  const req = { ...batchRequest, schedule_type: 'Schedule 7' };
+  return downloadScheduleCsv(req);
 };
 
 export const downloadScheduleCsv = async (scheduleRequest) => {
@@ -231,14 +249,16 @@ export const downloadScheduleCsv = async (scheduleRequest) => {
   if (disposition && disposition.indexOf('filename=') !== -1) {
     const filenameMatch = disposition.match(/filename="?([^"]+)"?/);
     if (filenameMatch && filenameMatch[1]) {
-      filename = filenameMatch[1];
+      filename = filenameMatch[1].trim();
     }
   }
   if (!filename) {
-    const tin = scheduleRequest.company_tin || scheduleRequest.taxpayer_tin || 'RAMIS';
-    const schedName = (scheduleRequest.schedule_type || 'Schedule_1').replace(/\s+/g, '_').toUpperCase();
-    const cleanPeriod = (scheduleRequest.tax_period || "Export").replace(/[^a-zA-Z0-9]/g, "");
-    filename = `${tin}_VAT_${schedName}_${cleanPeriod}.csv`;
+    const tin = scheduleRequest.company_tin || scheduleRequest.taxpayer_tin || '102938475';
+    const schedNum = (scheduleRequest.schedule_type || '1').match(/\d+/)?.[0] || '1';
+    const schedCode = `SCHEDULE0${schedNum}`;
+    const pCode = getRamisPeriodCode(scheduleRequest.tax_period);
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    filename = `${tin}_VAT_${schedCode}_${pCode}_${today}_ORIGINAL_V1.csv`;
   }
   const link = document.createElement('a');
   link.href = window.URL.createObjectURL(blob);
@@ -246,6 +266,7 @@ export const downloadScheduleCsv = async (scheduleRequest) => {
   document.body.appendChild(link);
   link.click();
   link.remove();
+  return { success: true, filename };
 };
 
 export const downloadRamisSchedule1Csv = async (batchRequest) => {

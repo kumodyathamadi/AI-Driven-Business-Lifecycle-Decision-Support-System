@@ -21,7 +21,11 @@ import {
   AlertOctagon,
   Trash2,
   Calendar,
-  Filter
+  Filter,
+  X,
+  FileSpreadsheet,
+  Layers,
+  Info
 } from 'lucide-react';
 import {
   uploadInvoicePdf,
@@ -59,6 +63,8 @@ export default function ClearLedgerDashboard() {
   const [taxPeriod, setTaxPeriod] = useState('2026-Q1');
   const [selectedSchedule, setSelectedSchedule] = useState('Schedule 7');
   const [savingConfig, setSavingConfig] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [selectedScheduleToExport, setSelectedScheduleToExport] = useState('Schedule 1');
 
   // Strict validation flags: Company TIN and Company Name are strictly mandatory
   const isTinValid = Boolean(companyTin && String(companyTin).trim().length > 0);
@@ -576,6 +582,96 @@ export default function ClearLedgerDashboard() {
     }
   });
 
+  // RAMIS 4-Digit Period Code Formatter
+  const getRamisPeriodCode = (periodStr) => {
+    if (!periodStr) return '2610';
+    const s = String(periodStr).trim().toUpperCase();
+    if (/^\d{4}$/.test(s)) return s;
+    const qMatch = s.match(/(?:(\d{4})[^\dQ]*Q([1-4])|Q([1-4])[^\dQ]*(\d{4}))/);
+    if (qMatch) {
+      const year = qMatch[1] || qMatch[4];
+      const quarter = qMatch[2] || qMatch[3];
+      return `${year.slice(-2)}${quarter}0`;
+    }
+    const mMatch = s.match(/(\d{4})[-/.](\d{1,2})/) || s.match(/(\d{1,2})[-/.](\d{4})/);
+    if (mMatch) {
+      let year, month;
+      if (mMatch[1].length === 4) {
+        year = mMatch[1];
+        month = parseInt(mMatch[2], 10);
+      } else {
+        month = parseInt(mMatch[1], 10);
+        year = mMatch[2];
+      }
+      if (month >= 1 && month <= 12) {
+        const q = Math.floor((month - 1) / 3) + 1;
+        const mInQ = ((month - 1) % 3) + 1;
+        return `${year.slice(-2)}${q}${mInQ}`;
+      }
+    }
+    return '2610';
+  };
+
+  // Helper to determine Schedule & VAT transaction classification
+  const getInvoiceClassification = (inv) => {
+    const gTin = String(companyTin || taxpayerTin || '').trim();
+    const gName = String(companyName || '').trim();
+    const cleanGTin = gTin.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    const cleanGName = gName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+    const sTin = String(inv.supplier_tin || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    const sName = String(inv.supplier_name || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    const cTin = String(inv.customer_tin || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    const cName = String(inv.customer_name || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+    const curr = String(inv.currency || 'LKR').trim().toUpperCase();
+    const desc = String(inv.description_of_supply || '').toLowerCase();
+    const isExportDesc = desc.includes('cusdec') || desc.includes('export') || desc.includes('fob') || desc.includes('foreign') || desc.includes('air freight');
+    const isForeignCurr = curr !== 'LKR' && curr !== 'RS' && curr !== 'SLR' && curr !== '';
+    const isExport = isForeignCurr || isExportDesc || (inv.tax_category === 'Zero-Rated' && isForeignCurr);
+
+    const matchesSupplierTin = cleanGTin && sTin && (cleanGTin === sTin || (cleanGTin.length >= 9 && sTin.length >= 9 && cleanGTin.slice(0, 9) === sTin.slice(0, 9)));
+    const matchesSupplierName = cleanGName && sName && (cleanGName === sName || cleanGName.includes(sName) || sName.includes(cleanGName));
+    const isOurCompany = matchesSupplierTin || matchesSupplierName;
+
+    const isWeArePurchaser = cleanGTin && cTin && cleanGTin === cTin;
+    const isExplicitPurchase = isWeArePurchaser && !matchesSupplierTin;
+
+    if (isExplicitPurchase || (!isOurCompany && inv.vat_type === 'INPUT_VAT') || (!isOurCompany && sTin && sTin !== cleanGTin)) {
+      return {
+        vat_type: 'INPUT_VAT',
+        target_schedule: 'Schedule 2',
+        category_name: 'Input Tax - Local Purchases (Schedule 2)',
+        is_our_company: false,
+        is_export: false
+      };
+    }
+
+    if (isExport) {
+      return {
+        vat_type: 'OUTPUT_VAT',
+        target_schedule: 'Schedule 7',
+        category_name: 'Output Tax - Export of Goods/Services (Schedule 7)',
+        is_our_company: true,
+        is_export: true
+      };
+    }
+
+    return {
+      vat_type: 'OUTPUT_VAT',
+      target_schedule: 'Schedule 1',
+      category_name: 'Output Tax - Local Supplies at Standard 18% (Schedule 1)',
+      is_our_company: true,
+      is_export: false
+    };
+  };
+
+  // Open Export Schedule CSV modal with specified schedule pre-selected
+  const handleOpenExportModal = (targetSchedule = 'Schedule 1') => {
+    setSelectedScheduleToExport(targetSchedule);
+    setShowExportModal(true);
+  };
+
   // Download RAMIS Schedule 7 CSV (exports displayed/filtered or all invoices)
   const handleDownloadSchedule7 = async () => {
     if (!isCompanyConfigValid) {
@@ -662,7 +758,7 @@ export default function ClearLedgerDashboard() {
   };
 
   // Generic RAMIS Schedule CSV Exporter (Schedule 1 through Schedule 7)
-  const handleDownloadSchedule = async (scheduleTypeToExport = selectedSchedule) => {
+  const handleDownloadSchedule = async (scheduleTypeToExport = selectedScheduleToExport) => {
     if (!isCompanyConfigValid) {
       setStatusMessage({
         type: 'error',
@@ -670,14 +766,43 @@ export default function ClearLedgerDashboard() {
       });
       return;
     }
-    const exportList = filterByPeriod ? displayedInvoices : taxInvoices;
-    if (exportList.length === 0) {
+    const baseList = filterByPeriod ? displayedInvoices : taxInvoices;
+    if (baseList.length === 0) {
       setStatusMessage({ type: 'error', text: `No invoices available to export for period ${taxPeriod}.` });
       return;
     }
+
+    // STRICT INVOICE FILTERING PER SCHEDULE CATEGORY
+    const eligibleInvoices = baseList.filter(inv => {
+      const cls = getInvoiceClassification(inv);
+      if (scheduleTypeToExport === 'Schedule 1') {
+        // Output VAT: Local sales only (not purchase bills, not exports)
+        return cls.target_schedule === 'Schedule 1' || (cls.vat_type === 'OUTPUT_VAT' && !cls.is_export);
+      } else if (scheduleTypeToExport === 'Schedule 2') {
+        // Input VAT: Vendor purchases only
+        return cls.target_schedule === 'Schedule 2' || cls.vat_type === 'INPUT_VAT';
+      } else if (scheduleTypeToExport === 'Schedule 7') {
+        // Service Exports in foreign currency
+        return cls.is_export || cls.target_schedule === 'Schedule 7';
+      } else if (scheduleTypeToExport === 'Schedule 6') {
+        // Article exports
+        return cls.is_export || cls.target_schedule === 'Schedule 6';
+      } else {
+        return true;
+      }
+    });
+
+    if (eligibleInvoices.length === 0) {
+      setStatusMessage({
+        type: 'error',
+        text: `Export Blocked: No eligible invoices found for ${scheduleTypeToExport} in period ${taxPeriod}. Schedule 1 requires local sales invoices only (vendor purchases and exports are excluded).`
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      const normalizedInvoices = exportList.map(inv => {
+      const normalizedInvoices = eligibleInvoices.map(inv => {
         let dateVal = String(inv.date_of_supply || '01/01/2026').trim();
         if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}$/.test(dateVal)) {
           const parts = dateVal.split(/[\/-]/);
@@ -692,14 +817,15 @@ export default function ClearLedgerDashboard() {
           sub_total: Number(inv.sub_total || 0),
           tax_amount: Number(inv.tax_amount || 0),
           total_amount: Number(inv.total_amount || 0),
-          currency: inv.currency || 'EUR',
-          tax_category: inv.tax_category || 'Zero-Rated',
+          currency: inv.currency || 'LKR',
+          tax_category: inv.tax_category || 'Standard 18%',
           customer_name: inv.customer_name || 'Direct Consumer',
-          customer_tin: inv.customer_tin || '1146888607000',
+          customer_tin: inv.customer_tin || '100902877',
           supplier_name: inv.supplier_name || companyName,
           supplier_tin: inv.supplier_tin || companyTin,
           exchange_rate: Number(inv.exchange_rate || 1.0),
-          description_of_supply: inv.description_of_supply || 'Commercial Supply'
+          description_of_supply: inv.description_of_supply || 'Commercial Supply',
+          is_tax_invoice: inv.is_tax_invoice !== false
         };
       });
 
@@ -710,11 +836,13 @@ export default function ClearLedgerDashboard() {
         tax_period: taxPeriod,
         invoices: normalizedInvoices
       };
-      await downloadScheduleCsv(payload);
+      const res = await downloadScheduleCsv(payload);
+      const downloadedName = res?.filename || `${companyTin}_VAT_${scheduleTypeToExport}.csv`;
       setStatusMessage({
         type: 'success',
-        text: `Successfully generated and downloaded RAMIS ${scheduleTypeToExport} CSV for ${companyName} (${taxPeriod})!`
+        text: `Successfully generated and downloaded official RAMIS ${scheduleTypeToExport} CSV: ${downloadedName} (${eligibleInvoices.length} invoice(s) included)!`
       });
+      setShowExportModal(false);
     } catch (err) {
       let msg = err.message || 'Failed to download schedule CSV.';
       if (err.response?.data) {
@@ -1529,7 +1657,7 @@ export default function ClearLedgerDashboard() {
                   </button>
                 )}
                 <button
-                  onClick={handleDownloadSchedule7}
+                  onClick={() => handleOpenExportModal('Schedule 7')}
                   disabled={loading || taxInvoices.length === 0}
                   style={{
                     background: 'rgba(34, 197, 94, 0.2)',
@@ -1545,9 +1673,10 @@ export default function ClearLedgerDashboard() {
                     gap: '0.4rem',
                     opacity: taxInvoices.length === 0 ? 0.6 : 1
                   }}
+                  title="Open RAMIS Schedule CSV Exporter"
                 >
                   <Download size={14} />
-                  Export RAMIS Schedule 7 CSV
+                  Export RAMIS Schedule CSV
                 </button>
               </div>
             </div>
@@ -2377,9 +2506,9 @@ export default function ClearLedgerDashboard() {
                 </select>
 
                 <button
-                  onClick={handleDownloadSchedule1}
+                  onClick={() => handleOpenExportModal('Schedule 1')}
                   disabled={loading || displayedInvoices.length === 0 || !isCompanyConfigValid}
-                  title="Export Official Schedule 1 CSV (Output VAT on Local Supplies)"
+                  title="Configure & Export Official Schedule 1 CSV (Output VAT on Local Supplies)"
                   style={{
                     background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
                     color: '#ffffff',
@@ -2400,9 +2529,9 @@ export default function ClearLedgerDashboard() {
                   Export Schedule 1 CSV (Sales)
                 </button>
                 <button
-                  onClick={() => handleDownloadSchedule(selectedSchedule)}
+                  onClick={() => handleOpenExportModal(selectedSchedule)}
                   disabled={loading || displayedInvoices.length === 0 || !isCompanyConfigValid}
-                  title={!isCompanyConfigValid ? 'Company TIN and Registered Name are mandatory' : `Download ${selectedSchedule} CSV`}
+                  title={!isCompanyConfigValid ? 'Company TIN and Registered Name are mandatory' : `Open Export Dialog for ${selectedSchedule}`}
                   style={{
                     background: 'linear-gradient(135deg, #22c55e, #16a34a)',
                     color: '#ffffff',
@@ -3254,6 +3383,347 @@ export default function ClearLedgerDashboard() {
 
         </div>
       )}
+
+      {/* ========================================================= */}
+      {/* INTERACTIVE RAMIS SCHEDULE CSV EXPORT MODAL               */}
+      {/* ========================================================= */}
+      {showExportModal && (() => {
+        const activeBatch = filterByPeriod ? displayedInvoices : taxInvoices;
+        const eligibleInvoices = activeBatch.filter(inv => {
+          const cls = getInvoiceClassification(inv);
+          if (selectedScheduleToExport === 'Schedule 1') {
+            return cls.target_schedule === 'Schedule 1' || (cls.vat_type === 'OUTPUT_VAT' && !cls.is_export);
+          } else if (selectedScheduleToExport === 'Schedule 2') {
+            return cls.target_schedule === 'Schedule 2' || cls.vat_type === 'INPUT_VAT';
+          } else if (selectedScheduleToExport === 'Schedule 7') {
+            return cls.is_export || cls.target_schedule === 'Schedule 7';
+          } else if (selectedScheduleToExport === 'Schedule 6') {
+            return cls.is_export || cls.target_schedule === 'Schedule 6';
+          }
+          return false;
+        });
+
+        const excludedInvoices = activeBatch.filter(inv => !eligibleInvoices.includes(inv));
+        const periodCode = getRamisPeriodCode(taxPeriod);
+        const schedNum = (selectedScheduleToExport || '1').match(/\d+/)?.[0] || '1';
+        const schedCode = `SCHEDULE0${schedNum}`;
+        const subDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        const previewFileName = `${companyTin || '102938475'}_VAT_${schedCode}_${periodCode}_${subDate}_ORIGINAL_V1.csv`;
+
+        let ruleExplanation = '';
+        let columnsList = [];
+
+        if (selectedScheduleToExport === 'Schedule 1') {
+          ruleExplanation = 'Schedule 1 strictly includes local domestic sales invoices issued by your company (Standard 18%). External purchase bills (Input VAT) and zero-rated exports are strictly excluded.';
+          columnsList = ['Serial No', 'Invoice Date', 'Tax Invoice No', "Purchaser's TIN", 'Name of the Purchaser', 'Description', 'Value of supply', 'VAT Amount'];
+        } else if (selectedScheduleToExport === 'Schedule 2') {
+          ruleExplanation = 'Schedule 2 strictly includes vendor purchase bills from external suppliers where your company claims Input VAT. Local sales and exports are strictly excluded.';
+          columnsList = ['Serial No', 'Invoice Date', 'Tax Invoice No', "Supplier's TIN", 'Name of the Supplier', 'Description', 'Value of purchase', 'VAT Amount', 'Disallowed VAT Amount'];
+        } else if (selectedScheduleToExport === 'Schedule 7') {
+          ruleExplanation = 'Schedule 7 strictly includes zero-rated service export supplies in foreign currency (Cage D1). Local sales and purchases are strictly excluded.';
+          columnsList = ['Serial No', 'Invoice No', 'Invoice Date', 'Description of Service', 'Invoice Value', 'Type of Currency', 'Exchange rate', 'Rupee Value (Rs.)', 'NRFC Account Number', 'Payment Received Date'];
+        } else if (selectedScheduleToExport === 'Schedule 6') {
+          ruleExplanation = 'Schedule 6 strictly includes article exports declared under Customs CUSDEC forms (Cage D).';
+          columnsList = ['Serial No', 'Date of exportation', 'CUSDEC Number', 'Office ID', 'Serial ID', 'Export registration date', 'Net Mass (Kg.)', 'FOB/CIF Value (Rs.)'];
+        } else {
+          ruleExplanation = `Dedicated IRD RAMIS format generator for ${selectedScheduleToExport}.`;
+          columnsList = ['Serial No', 'Invoice Date', 'Invoice No', 'TIN', 'Name', 'Description', 'Base Value', 'Tax Amount'];
+        }
+
+        return (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1.25rem'
+          }}>
+            <div style={{
+              background: 'linear-gradient(145deg, #1e293b, #0f172a)',
+              border: '1px solid rgba(59, 130, 246, 0.4)',
+              borderRadius: '16px',
+              maxWidth: '680px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(59, 130, 246, 0.15)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1.25rem',
+              padding: '1.75rem'
+            }}>
+              
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(37, 99, 235, 0.35))',
+                    border: '1px solid rgba(59, 130, 246, 0.4)',
+                    padding: '0.65rem',
+                    borderRadius: '10px',
+                    color: '#60a5fa'
+                  }}>
+                    <FileSpreadsheet size={24} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#ffffff' }}>
+                      Export RAMIS Schedule CSV
+                    </h3>
+                    <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+                      Sri Lanka Inland Revenue Department (IRD) Format Generator & Audit Filter
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowExportModal(false)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    padding: '0.45rem',
+                    color: '#94a3b8',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.15s'
+                  }}
+                  title="Close Dialog"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Entity & Tax Period Context Banner */}
+              <div style={{
+                background: 'rgba(15, 23, 42, 0.65)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '10px',
+                padding: '0.85rem 1rem',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: '0.75rem',
+                fontSize: '0.78rem'
+              }}>
+                <div>
+                  <span style={{ color: '#94a3b8', display: 'block' }}>Taxpayer TIN:</span>
+                  <span style={{ color: '#60a5fa', fontWeight: 700, fontSize: '0.88rem' }}>{companyTin}</span>
+                </div>
+                <div>
+                  <span style={{ color: '#94a3b8', display: 'block' }}>Registered Legal Entity:</span>
+                  <span style={{ color: '#ffffff', fontWeight: 700, fontSize: '0.85rem' }}>{companyName}</span>
+                </div>
+                <div>
+                  <span style={{ color: '#94a3b8', display: 'block' }}>Filing Period Code:</span>
+                  <span style={{
+                    color: '#4ade80',
+                    fontWeight: 700,
+                    background: 'rgba(34, 197, 94, 0.15)',
+                    padding: '0.15rem 0.5rem',
+                    borderRadius: '5px',
+                    display: 'inline-block'
+                  }}>
+                    {taxPeriod} ({periodCode})
+                  </span>
+                </div>
+              </div>
+
+              {/* Step 1: Schedule Selection Dropdown */}
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#e2e8f0', display: 'block', marginBottom: '0.45rem' }}>
+                  Select RAMIS Schedule to Download:
+                </label>
+                <select
+                  value={selectedScheduleToExport}
+                  onChange={(e) => setSelectedScheduleToExport(e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: 'rgba(30, 41, 59, 0.95)',
+                    border: '1px solid rgba(59, 130, 246, 0.5)',
+                    borderRadius: '10px',
+                    padding: '0.75rem 1rem',
+                    color: '#ffffff',
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                    outline: 'none',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                  }}
+                >
+                  <option value="Schedule 1">Schedule 1 - Output VAT Schedule (Local Taxable Supplies at 18%)</option>
+                  <option value="Schedule 2">Schedule 2 - Input VAT Schedule (Purchases from External Suppliers)</option>
+                  <option value="Schedule 3">Schedule 3 - CusDec Import VAT Schedule (Customs Declarations)</option>
+                  <option value="Schedule 4">Schedule 4 - Debit / Credit Note Schedule</option>
+                  <option value="Schedule 5">Schedule 5 - Specified Projects / Zero-Rated under Sec 22(7)</option>
+                  <option value="Schedule 6">Schedule 6 - Article Export VAT Schedule (CUSDEC Goods Export)</option>
+                  <option value="Schedule 7">Schedule 7 - Service Export VAT Schedule (Zero-Rated Service Exports)</option>
+                </select>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.35rem', lineHeight: '1.4' }}>
+                  {ruleExplanation}
+                </div>
+              </div>
+
+              {/* Step 2: Live Eligibility Breakdown & Exclusions Audit */}
+              <div style={{
+                background: eligibleInvoices.length > 0 ? 'rgba(34, 197, 94, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+                border: `1px solid ${eligibleInvoices.length > 0 ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                borderRadius: '12px',
+                padding: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.65rem'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: eligibleInvoices.length > 0 ? '#4ade80' : '#f87171', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    {eligibleInvoices.length > 0 ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+                    {eligibleInvoices.length} Eligible Invoice{eligibleInvoices.length === 1 ? '' : 's'} Matched for {selectedScheduleToExport}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                    Active batch: {activeBatch.length} invoice(s)
+                  </span>
+                </div>
+
+                {excludedInvoices.length > 0 && (
+                  <div style={{
+                    fontSize: '0.75rem',
+                    color: '#cbd5e1',
+                    background: 'rgba(15, 23, 42, 0.5)',
+                    padding: '0.5rem 0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255, 255, 255, 0.06)'
+                  }}>
+                    <strong style={{ color: '#f59e0b' }}>Strict Isolation:</strong> {excludedInvoices.length} non-matching invoice{excludedInvoices.length === 1 ? '' : 's'}{' '}
+                    (e.g.{' '}
+                    {excludedInvoices.map(i => {
+                      const c = getInvoiceClassification(i);
+                      return `${i.invoice_number} (${c.target_schedule})`;
+                    }).slice(0, 3).join(', ')}
+                    {excludedInvoices.length > 3 ? '...' : ''}){' '}
+                    are strictly excluded from this file as required by IRD audit standards.
+                  </div>
+                )}
+
+                {eligibleInvoices.length === 0 && (
+                  <div style={{ fontSize: '0.78rem', color: '#fca5a5', lineHeight: '1.4' }}>
+                    ⚠️ Warning: No invoices in the current selection qualify for {selectedScheduleToExport}.
+                    {selectedScheduleToExport === 'Schedule 1' && ' Schedule 1 requires local sales invoices issued by your company (excluding purchase bills and foreign exports).'}
+                  </div>
+                )}
+              </div>
+
+              {/* Step 3: Official IRD File Name Preview */}
+              <div style={{
+                background: 'rgba(15, 23, 42, 0.8)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '10px',
+                padding: '0.85rem 1rem'
+              }}>
+                <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#60a5fa', fontWeight: 700, letterSpacing: '0.5px', marginBottom: '0.25rem' }}>
+                  Official IRD RAMIS File Name Preview (Page 24 Standard):
+                </div>
+                <div style={{
+                  fontFamily: 'monospace',
+                  fontSize: '0.85rem',
+                  color: '#ffffff',
+                  wordBreak: 'break-all',
+                  background: 'rgba(30, 41, 59, 0.8)',
+                  padding: '0.45rem 0.65rem',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}>
+                  📄 {previewFileName}
+                </div>
+              </div>
+
+              {/* Step 4: Schedule Column Layout Preview */}
+              <div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, marginBottom: '0.4rem' }}>
+                  CSV Output Column Layout ({columnsList.length} Columns):
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                  {columnsList.map((col, cIdx) => (
+                    <span
+                      key={cIdx}
+                      style={{
+                        background: 'rgba(59, 130, 246, 0.12)',
+                        border: '1px solid rgba(59, 130, 246, 0.25)',
+                        color: '#93c5fd',
+                        borderRadius: '6px',
+                        padding: '0.2rem 0.5rem',
+                        fontSize: '0.72rem',
+                        fontWeight: 600
+                      }}
+                    >
+                      {cIdx + 1}. {col}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                alignItems: 'center',
+                gap: '0.75rem',
+                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                paddingTop: '1.25rem',
+                marginTop: '0.25rem'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setShowExportModal(false)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    color: '#cbd5e1',
+                    borderRadius: '8px',
+                    padding: '0.65rem 1.25rem',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleDownloadSchedule(selectedScheduleToExport)}
+                  disabled={loading || eligibleInvoices.length === 0}
+                  style={{
+                    background: eligibleInvoices.length === 0 ? 'rgba(59, 130, 246, 0.25)' : 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '0.65rem 1.5rem',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    cursor: (loading || eligibleInvoices.length === 0) ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    boxShadow: eligibleInvoices.length > 0 ? '0 4px 14px rgba(37, 99, 235, 0.4)' : 'none',
+                    opacity: (loading || eligibleInvoices.length === 0) ? 0.6 : 1
+                  }}
+                >
+                  <Download size={16} />
+                  {loading ? 'Generating CSV...' : `Download ${selectedScheduleToExport} CSV`}
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );

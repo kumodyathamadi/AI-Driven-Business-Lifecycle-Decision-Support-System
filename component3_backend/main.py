@@ -51,6 +51,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition", "X-RAMIS-Schedule", "X-RAMIS-Tax-Period", "X-RAMIS-Company-TIN"],
 )
 
 @app.get("/health")
