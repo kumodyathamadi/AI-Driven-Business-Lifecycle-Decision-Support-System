@@ -6,7 +6,7 @@ An AI-driven decision support system tailored for Sri Lankan Small and Medium En
 
 ---
 
-## Architecture Overview
+## Architecture Overview pLan
 
 ```
 Form / NLP Intake ──> FastAPI Backend ──> Preprocessor ──> Random Forest Classifier (Feasibility)
