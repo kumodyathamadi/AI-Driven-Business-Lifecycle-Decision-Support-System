@@ -59,6 +59,11 @@ export default function ClearLedgerDashboard() {
   const [selectedSchedule, setSelectedSchedule] = useState('Schedule 7');
   const [savingConfig, setSavingConfig] = useState(false);
 
+  // Strict validation flags: Company TIN and Company Name are strictly mandatory
+  const isTinValid = Boolean(companyTin && String(companyTin).trim().length > 0);
+  const isNameValid = Boolean(companyName && String(companyName).trim().length > 0);
+  const isCompanyConfigValid = isTinValid && isNameValid;
+
   // Synchronize companyTin and taxpayerTin
   const handleCompanyTinChange = (val) => {
     setCompanyTin(val);
@@ -109,15 +114,23 @@ export default function ClearLedgerDashboard() {
     loadGlobalConfig();
   }, []);
 
-  // Save Global Tax Configuration to backend
+  // Save Global Tax Configuration to backend with mandatory validation
   const handleSaveTaxConfig = async () => {
+    if (!isCompanyConfigValid) {
+      setStatusMessage({
+        type: 'error',
+        text: 'Validation Error: Both Company TIN Number and Registered Company Name are strictly mandatory.'
+      });
+      return;
+    }
     setSavingConfig(true);
     try {
       await saveCompanyTaxConfig({
-        company_tin: companyTin,
-        company_name: companyName,
+        company_tin: String(companyTin).trim(),
+        company_name: String(companyName).trim(),
         tax_period: taxPeriod
       });
+      setTaxpayerTin(String(companyTin).trim());
       setStatusMessage({
         type: 'success',
         text: `RAMIS Global Tax Configuration saved: ${companyName} (TIN: ${companyTin}) for ${taxPeriod}.`
@@ -352,9 +365,16 @@ export default function ClearLedgerDashboard() {
     }
   }, [taxInvoices]);
 
-  // OCR Upload Handler
+  // OCR Upload Handler (Enforces mandatory Company TIN & Name)
   const handleFileUpload = async (file) => {
     if (!file) return;
+    if (!isCompanyConfigValid) {
+      setStatusMessage({
+        type: 'error',
+        text: 'Upload Blocked: Company TIN Number and Registered Company Name are strictly mandatory before uploading invoices.'
+      });
+      return;
+    }
     setUploadedFile(file);
     setLoading(true);
     setOcrError(null);
@@ -490,6 +510,13 @@ export default function ClearLedgerDashboard() {
 
   // Download RAMIS Schedule 7 CSV (exports displayed/filtered or all invoices)
   const handleDownloadSchedule7 = async () => {
+    if (!isCompanyConfigValid) {
+      setStatusMessage({
+        type: 'error',
+        text: 'Export Blocked: Company TIN Number and Registered Company Name are strictly mandatory.'
+      });
+      return;
+    }
     const exportList = filterByPeriod ? displayedInvoices : taxInvoices;
     if (exportList.length === 0) {
       setStatusMessage({ type: 'error', text: `No invoices available to export for period ${taxPeriod}.` });
@@ -563,6 +590,13 @@ export default function ClearLedgerDashboard() {
 
   // Generic RAMIS Schedule CSV Exporter (Schedule 1 through Schedule 7)
   const handleDownloadSchedule = async (scheduleTypeToExport = selectedSchedule) => {
+    if (!isCompanyConfigValid) {
+      setStatusMessage({
+        type: 'error',
+        text: 'Export Blocked: Company TIN Number and Registered Company Name are strictly mandatory.'
+      });
+      return;
+    }
     const exportList = filterByPeriod ? displayedInvoices : taxInvoices;
     if (exportList.length === 0) {
       setStatusMessage({ type: 'error', text: `No invoices available to export for period ${taxPeriod}.` });
@@ -944,20 +978,22 @@ export default function ClearLedgerDashboard() {
 
             <button
               onClick={handleSaveTaxConfig}
-              disabled={savingConfig}
+              disabled={savingConfig || !isCompanyConfigValid}
+              title={!isCompanyConfigValid ? 'Company TIN and Registered Name are mandatory' : 'Save Global Setup'}
               style={{
-                background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                background: !isCompanyConfigValid ? '#475569' : 'linear-gradient(135deg, #2563eb, #1d4ed8)',
                 color: '#ffffff',
                 border: 'none',
                 borderRadius: '8px',
                 padding: '0.45rem 1rem',
                 fontSize: '0.75rem',
                 fontWeight: 700,
-                cursor: savingConfig ? 'not-allowed' : 'pointer',
+                cursor: (savingConfig || !isCompanyConfigValid) ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                boxShadow: '0 2px 8px rgba(37, 99, 235, 0.3)'
+                boxShadow: isCompanyConfigValid ? '0 2px 8px rgba(37, 99, 235, 0.3)' : 'none',
+                opacity: !isCompanyConfigValid ? 0.6 : 1
               }}
             >
               <RefreshCw size={13} className={savingConfig ? 'animate-spin' : ''} />
@@ -973,26 +1009,38 @@ export default function ClearLedgerDashboard() {
           gap: '1rem',
           alignItems: 'start'
         }}>
-          {/* Pillar 1: Company TIN */}
+          {/* Pillar 1: Company TIN (Strictly Mandatory) */}
           <div style={{
             background: 'rgba(15, 23, 42, 0.6)',
             padding: '0.85rem 1rem',
             borderRadius: '10px',
-            border: '1px solid rgba(255, 255, 255, 0.07)'
+            border: `1px solid ${!isTinValid ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255, 255, 255, 0.07)'}`
           }}>
-            <label style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>
-              Company TIN Number (RAMIS)
+            <label style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem', fontWeight: 600 }}>
+              <span>Company TIN Number (RAMIS) <span style={{ color: '#ef4444' }}>*</span></span>
+              <span style={{
+                fontSize: '0.62rem',
+                padding: '0.1rem 0.4rem',
+                borderRadius: '4px',
+                fontWeight: 700,
+                background: isTinValid ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.2)',
+                color: isTinValid ? '#4ade80' : '#f87171',
+                border: `1px solid ${isTinValid ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.4)'}`
+              }}>
+                {isTinValid ? '✓ Configured' : 'MANDATORY'}
+              </span>
             </label>
             <input
               type="text"
               value={companyTin}
               onChange={(e) => handleCompanyTinChange(e.target.value)}
-              placeholder="e.g. 102938475"
+              placeholder="e.g. 102938475 (Mandatory)"
               style={{
                 width: '100%',
                 boxSizing: 'border-box',
                 background: 'rgba(30, 41, 59, 0.9)',
-                border: '1px solid rgba(59, 130, 246, 0.4)',
+                border: `1px solid ${isTinValid ? 'rgba(59, 130, 246, 0.4)' : '#ef4444'}`,
+                boxShadow: !isTinValid ? '0 0 0 1px rgba(239, 68, 68, 0.5)' : 'none',
                 borderRadius: '6px',
                 padding: '0.5rem 0.75rem',
                 color: '#ffffff',
@@ -1001,31 +1049,49 @@ export default function ClearLedgerDashboard() {
                 outline: 'none'
               }}
             />
-            <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.3rem' }}>
-              Used in RAMIS CSV export headers and audit cross-referencing
-            </div>
+            {!isTinValid ? (
+              <div style={{ fontSize: '0.68rem', color: '#f87171', marginTop: '0.3rem', fontWeight: 600 }}>
+                ⚠ Company TIN is strictly mandatory before uploading invoices.
+              </div>
+            ) : (
+              <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.3rem' }}>
+                Used in RAMIS CSV export headers and audit cross-referencing
+              </div>
+            )}
           </div>
 
-          {/* Pillar 2: Company Name */}
+          {/* Pillar 2: Company Name (Strictly Mandatory) */}
           <div style={{
             background: 'rgba(15, 23, 42, 0.6)',
             padding: '0.85rem 1rem',
             borderRadius: '10px',
-            border: '1px solid rgba(255, 255, 255, 0.07)'
+            border: `1px solid ${!isNameValid ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255, 255, 255, 0.07)'}`
           }}>
-            <label style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>
-              Registered Company / Business Name
+            <label style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem', fontWeight: 600 }}>
+              <span>Registered Business Name <span style={{ color: '#ef4444' }}>*</span></span>
+              <span style={{
+                fontSize: '0.62rem',
+                padding: '0.1rem 0.4rem',
+                borderRadius: '4px',
+                fontWeight: 700,
+                background: isNameValid ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.2)',
+                color: isNameValid ? '#4ade80' : '#f87171',
+                border: `1px solid ${isNameValid ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.4)'}`
+              }}>
+                {isNameValid ? '✓ Configured' : 'MANDATORY'}
+              </span>
             </label>
             <input
               type="text"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
-              placeholder="e.g. STAR FLORA (PVT) LTD"
+              placeholder="e.g. STAR FLORA (PVT) LTD (Mandatory)"
               style={{
                 width: '100%',
                 boxSizing: 'border-box',
                 background: 'rgba(30, 41, 59, 0.9)',
-                border: '1px solid rgba(59, 130, 246, 0.4)',
+                border: `1px solid ${isNameValid ? 'rgba(59, 130, 246, 0.4)' : '#ef4444'}`,
+                boxShadow: !isNameValid ? '0 0 0 1px rgba(239, 68, 68, 0.5)' : 'none',
                 borderRadius: '6px',
                 padding: '0.5rem 0.75rem',
                 color: '#ffffff',
@@ -1034,9 +1100,15 @@ export default function ClearLedgerDashboard() {
                 outline: 'none'
               }}
             />
-            <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.3rem' }}>
-              Legal taxpayer entity name declared to IRD
-            </div>
+            {!isNameValid ? (
+              <div style={{ fontSize: '0.68rem', color: '#f87171', marginTop: '0.3rem', fontWeight: 600 }}>
+                ⚠ Registered Company Name is strictly mandatory.
+              </div>
+            ) : (
+              <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.3rem' }}>
+                Legal taxpayer entity name declared to IRD
+              </div>
+            )}
           </div>
 
           {/* Pillar 3: Tax Period Selector (Frequency + Year + Quarter/Month) */}
@@ -1560,30 +1632,55 @@ export default function ClearLedgerDashboard() {
             </div>
           </div>
 
+          {/* Mandatory Check Warning Banner for Upload */}
+          {!isCompanyConfigValid && (
+            <div style={{
+              background: 'rgba(239, 68, 68, 0.12)',
+              border: '1px solid rgba(239, 68, 68, 0.4)',
+              borderRadius: '12px',
+              padding: '1rem 1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.85rem'
+            }}>
+              <AlertOctagon size={24} color="#ef4444" style={{ flexShrink: 0 }} />
+              <div>
+                <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#ffffff' }}>
+                  Invoice Upload Locked: Mandatory Entity Information Required
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#fca5a5', marginTop: '0.2rem' }}>
+                  Sri Lanka IRD RAMIS compliance requires both <strong>Company TIN Number</strong> and <strong>Registered Company Name</strong> before invoices can be processed. Please enter them in the Global Setup banner above.
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Upload Dropzone */}
           <div style={{
-            background: 'rgba(30, 41, 59, 0.7)',
-            border: '2px dashed rgba(59, 130, 246, 0.4)',
+            background: !isCompanyConfigValid ? 'rgba(30, 41, 59, 0.35)' : 'rgba(30, 41, 59, 0.7)',
+            border: `2px dashed ${!isCompanyConfigValid ? 'rgba(239, 68, 68, 0.4)' : 'rgba(59, 130, 246, 0.4)'}`,
             borderRadius: '16px',
             padding: '2.5rem 1.5rem',
             textAlign: 'center',
-            cursor: 'pointer',
-            transition: 'border 0.2s'
+            cursor: !isCompanyConfigValid ? 'not-allowed' : 'pointer',
+            opacity: !isCompanyConfigValid ? 0.65 : 1,
+            transition: 'all 0.2s'
           }}>
             <input
               type="file"
               accept=".pdf"
               id="pdfUploadInput"
+              disabled={!isCompanyConfigValid || loading}
               style={{ display: 'none' }}
               onChange={(e) => handleFileUpload(e.target.files[0])}
             />
-            <label htmlFor="pdfUploadInput" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ background: 'rgba(59, 130, 246, 0.15)', padding: '1rem', borderRadius: '50%', color: '#60a5fa' }}>
-                <UploadCloud size={36} />
+            <label htmlFor={isCompanyConfigValid ? "pdfUploadInput" : undefined} style={{ cursor: !isCompanyConfigValid ? 'not-allowed' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ background: !isCompanyConfigValid ? 'rgba(239, 68, 68, 0.15)' : 'rgba(59, 130, 246, 0.15)', padding: '1rem', borderRadius: '50%', color: !isCompanyConfigValid ? '#f87171' : '#60a5fa' }}>
+                {!isCompanyConfigValid ? <AlertTriangle size={36} /> : <UploadCloud size={36} />}
               </div>
               <div>
                 <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff' }}>
-                  {loading ? 'Processing Document with OCR & Rules...' : 'Click to Upload Invoice PDF'}
+                  {!isCompanyConfigValid ? 'Upload Locked: Configure Mandatory Company TIN & Name First' : loading ? 'Processing Document with OCR & Rules...' : 'Click to Upload Invoice PDF'}
                 </div>
                 <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.25rem' }}>
                   Supports Digital PDFs & Multi-Page Scanned Customs Declarations (CusDec, Starflora, Standard VAT)
@@ -2111,7 +2208,8 @@ export default function ClearLedgerDashboard() {
 
                 <button
                   onClick={() => handleDownloadSchedule(selectedSchedule)}
-                  disabled={loading || displayedInvoices.length === 0}
+                  disabled={loading || displayedInvoices.length === 0 || !isCompanyConfigValid}
+                  title={!isCompanyConfigValid ? 'Company TIN and Registered Name are mandatory' : `Download ${selectedSchedule} CSV`}
                   style={{
                     background: 'linear-gradient(135deg, #22c55e, #16a34a)',
                     color: '#ffffff',

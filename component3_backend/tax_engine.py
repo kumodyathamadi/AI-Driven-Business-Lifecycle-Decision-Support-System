@@ -25,13 +25,21 @@ def get_company_config() -> dict:
     return _ACTIVE_COMPANY_CONFIG.copy()
 
 def update_company_config(config_data: dict) -> dict:
-    """Updates the globally configured company TIN, name, and active tax period."""
-    if "company_tin" in config_data and config_data["company_tin"]:
-        _ACTIVE_COMPANY_CONFIG["company_tin"] = str(config_data["company_tin"]).strip()
-    if "company_name" in config_data and config_data["company_name"]:
-        _ACTIVE_COMPANY_CONFIG["company_name"] = str(config_data["company_name"]).strip()
-    if "tax_period" in config_data and config_data["tax_period"]:
-        _ACTIVE_COMPANY_CONFIG["tax_period"] = str(config_data["tax_period"]).strip()
+    """Updates the globally configured company TIN, name, and active tax period with mandatory checks."""
+    tin = str(config_data.get("company_tin", "")).strip()
+    name = str(config_data.get("company_name", "")).strip()
+    period = str(config_data.get("tax_period", "")).strip()
+
+    if not tin:
+        raise ValueError("Company TIN Number is strictly mandatory and cannot be empty.")
+    if not name:
+        raise ValueError("Company Name is strictly mandatory and cannot be empty.")
+    if not period:
+        raise ValueError("Tax Period is strictly mandatory and cannot be empty.")
+
+    _ACTIVE_COMPANY_CONFIG["company_tin"] = tin
+    _ACTIVE_COMPANY_CONFIG["company_name"] = name
+    _ACTIVE_COMPANY_CONFIG["tax_period"] = period
     return _ACTIVE_COMPANY_CONFIG.copy()
 
 STANDARD_VAT_RATE = 18.0
@@ -219,6 +227,13 @@ def generate_schedule7_csv(batch_request: Schedule7BatchRequest) -> Tuple[str, s
     active_tin = (getattr(batch_request, "company_tin", None) or getattr(batch_request, "taxpayer_tin", None) or _ACTIVE_COMPANY_CONFIG["company_tin"]).strip()
     active_name = (getattr(batch_request, "company_name", None) or getattr(batch_request, "taxpayer_name", None) or _ACTIVE_COMPANY_CONFIG["company_name"]).strip()
     active_period = (getattr(batch_request, "tax_period", None) or _ACTIVE_COMPANY_CONFIG["tax_period"]).strip()
+
+    if not active_tin:
+        raise ValueError("Company TIN Number is strictly mandatory for generating RAMIS schedules.")
+    if not active_name:
+        raise ValueError("Company Name is strictly mandatory for generating RAMIS schedules.")
+    if not active_period:
+        raise ValueError("Tax Period is strictly mandatory for generating RAMIS schedules.")
 
     for idx, inv in enumerate(batch_request.invoices, start=1):
         analyzed = categorize_and_calculate_tax(inv)

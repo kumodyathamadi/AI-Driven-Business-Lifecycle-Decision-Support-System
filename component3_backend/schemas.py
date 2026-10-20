@@ -74,15 +74,31 @@ class Form2540Summary(BaseModel):
 
 
 class GlobalTaxConfig(BaseModel):
-    company_tin: str = Field("102938475", description="Company Taxpayer Identification Number (TIN)")
-    company_name: str = Field("STAR FLORA (PVT) LTD", description="Registered Legal Business / Company Name")
-    tax_period: str = Field("2026-Q1", description="Tax assessment period (e.g. '2026-Q1', '2026-02')")
+    company_tin: str = Field(..., min_length=1, description="Company Taxpayer Identification Number (TIN) - Strictly Mandatory")
+    company_name: str = Field(..., min_length=1, description="Registered Legal Business / Company Name - Strictly Mandatory")
+    tax_period: str = Field("2026-Q1", min_length=1, description="Tax assessment period (e.g. '2026-Q1', '2026-02')")
+
+    @field_validator('company_tin')
+    @classmethod
+    def validate_tin(cls, v: str) -> str:
+        s = str(v).strip()
+        if not s:
+            raise ValueError("Company TIN Number is strictly mandatory and cannot be empty.")
+        return s
+
+    @field_validator('company_name')
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        s = str(v).strip()
+        if not s:
+            raise ValueError("Company Name is strictly mandatory and cannot be empty.")
+        return s
 
 
 class ScheduleBatchRequest(BaseModel):
     schedule_type: str = Field("Schedule 7", description="RAMIS Schedule type ('Schedule 1' through 'Schedule 7')")
-    company_tin: Optional[str] = Field(None, description="Company Taxpayer Identification Number (TIN)")
-    company_name: Optional[str] = Field(None, description="Registered Legal Business / Company Name")
+    company_tin: Optional[str] = Field(None, description="Company Taxpayer Identification Number (TIN) - Mandatory")
+    company_name: Optional[str] = Field(None, description="Registered Legal Business / Company Name - Mandatory")
     tax_period: str = Field(..., description="Tax taxable period code (e.g. '2026-Q1', '2026-02')")
     taxpayer_tin: Optional[str] = Field(None, description="Taxpayer TIN (alias for company_tin)")
     taxpayer_name: Optional[str] = Field(None, description="Taxpayer Name (alias for company_name)")
@@ -92,18 +108,22 @@ class ScheduleBatchRequest(BaseModel):
     @classmethod
     def sync_company_identifiers(cls, data: Any) -> Any:
         if isinstance(data, dict):
-            c_tin = data.get("company_tin") or data.get("taxpayer_tin") or "102938475"
-            data["company_tin"] = str(c_tin)
-            data["taxpayer_tin"] = str(c_tin)
-            c_name = data.get("company_name") or data.get("taxpayer_name") or "STAR FLORA (PVT) LTD"
-            data["company_name"] = str(c_name)
-            data["taxpayer_name"] = str(c_name)
+            c_tin = str(data.get("company_tin") or data.get("taxpayer_tin") or "").strip()
+            c_name = str(data.get("company_name") or data.get("taxpayer_name") or "").strip()
+            if not c_tin:
+                raise ValueError("Company TIN Number is strictly mandatory for generating RAMIS schedules.")
+            if not c_name:
+                raise ValueError("Company Name is strictly mandatory for generating RAMIS schedules.")
+            data["company_tin"] = c_tin
+            data["taxpayer_tin"] = c_tin
+            data["company_name"] = c_name
+            data["taxpayer_name"] = c_name
         return data
 
 
 class Schedule7BatchRequest(BaseModel):
-    taxpayer_tin: Optional[str] = Field(None, description="Taxpayer Identification Number (TIN) of the declaring entity")
-    taxpayer_name: Optional[str] = Field(None, description="Registered legal name of the declaring taxpayer")
+    taxpayer_tin: Optional[str] = Field(None, description="Taxpayer Identification Number (TIN) of the declaring entity - Mandatory")
+    taxpayer_name: Optional[str] = Field(None, description="Registered legal name of the declaring taxpayer - Mandatory")
     company_tin: Optional[str] = Field(None, description="Company Taxpayer Identification Number (TIN)")
     company_name: Optional[str] = Field(None, description="Registered Legal Business / Company Name")
     tax_period: str = Field(..., description="Tax taxable period code (e.g. '2026-Q1', '2026-02')")
@@ -113,12 +133,16 @@ class Schedule7BatchRequest(BaseModel):
     @classmethod
     def sync_company_identifiers(cls, data: Any) -> Any:
         if isinstance(data, dict):
-            c_tin = data.get("company_tin") or data.get("taxpayer_tin") or "102938475"
-            data["company_tin"] = str(c_tin)
-            data["taxpayer_tin"] = str(c_tin)
-            c_name = data.get("company_name") or data.get("taxpayer_name") or "STAR FLORA (PVT) LTD"
-            data["company_name"] = str(c_name)
-            data["taxpayer_name"] = str(c_name)
+            c_tin = str(data.get("company_tin") or data.get("taxpayer_tin") or "").strip()
+            c_name = str(data.get("company_name") or data.get("taxpayer_name") or "").strip()
+            if not c_tin:
+                raise ValueError("Company TIN Number is strictly mandatory for generating RAMIS schedules.")
+            if not c_name:
+                raise ValueError("Company Name is strictly mandatory for generating RAMIS schedules.")
+            data["company_tin"] = c_tin
+            data["taxpayer_tin"] = c_tin
+            data["company_name"] = c_name
+            data["taxpayer_name"] = c_name
         return data
 
 
