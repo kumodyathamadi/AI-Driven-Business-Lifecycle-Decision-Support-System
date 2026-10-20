@@ -38,6 +38,7 @@ from backend.app.compliance.action_predictor import (
     build_registration_guidance,
 )
 from backend.app.compliance.br_form_generator import generate_br_application_pdf
+from backend.app.compliance.stage_form_generator import generate_stage_form_pdf
 from backend.app.compliance.dossier_generator import generate_compliance_dossier_pdf
 from fastapi.responses import FileResponse
 
@@ -637,6 +638,59 @@ def generate_business_registration_form(payload: BrFormGenerationRequest) -> Res
     except Exception as exc:
         logger.exception("Failed to generate BR Application Form PDF: %s", exc)
         raise HTTPException(status_code=500, detail=f"Failed to generate application form: {str(exc)}")
+
+
+@router.post("/generate-stage-form")
+def generate_stage_form_endpoint(payload: Dict[str, Any]) -> Response:
+    """
+    Generates an official Sri Lankan statutory registration form PDF
+    tailored to the requested stage (1, 2, 3, 4, or 5).
+    """
+    try:
+        stage = int(payload.get("stage", 1))
+        pdf_bytes = generate_stage_form_pdf(stage, payload)
+        b_name = payload.get("business_name", "Business")
+        safe_name = "".join(c for c in b_name if c.isalnum() or c in ("-", "_")).strip() or "Business"
+
+        filenames = {
+            1: f"WP_BN_01_Name_Search_Clearance_{safe_name}.pdf",
+            2: f"Grama_Niladhari_Report_{safe_name}.pdf",
+            3: f"BR_Application_Form1_{safe_name}.pdf",
+            4: f"Municipal_Trade_License_Application_{safe_name}.pdf",
+            5: f"RAMIS_TIN_Labour_FormD_{safe_name}.pdf",
+        }
+        filename = filenames.get(stage, f"Stage_{stage}_Statutory_Form_{safe_name}.pdf")
+
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Access-Control-Expose-Headers": "Content-Disposition",
+            },
+        )
+    except Exception as exc:
+        logger.exception("Failed to generate stage form PDF: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Failed to generate stage {payload.get('stage')} form: {str(exc)}")
+
+
+@router.get("/generate-stage-form/download")
+def download_stage_form_get(
+    stage: int = Query(1, ge=1, le=5),
+    business_name: str = "CEYLON ARTISAN BAKEHOUSE",
+    district: str = "Colombo",
+) -> Response:
+    """GET endpoint to easily download or test stage-specific PDF forms."""
+    sample_payload = {
+        "stage": stage,
+        "business_name": business_name,
+        "district": district,
+        "legal_form": "sole_proprietorship",
+        "divisional_secretariat": f"{district} Divisional Secretariat",
+        "grama_niladhari": f"{district} Central (GN Division 512)",
+        "local_authority": f"{district} Municipal Council",
+    }
+    return generate_stage_form_endpoint(sample_payload)
 
 
 @router.get("/sample-br-form/download")
