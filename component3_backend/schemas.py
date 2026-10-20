@@ -18,6 +18,9 @@ class InvoiceData(BaseModel):
     customer_tin: Optional[str] = Field(None, description="Customer TIN number")
     exchange_rate: Optional[float] = Field(1.0, gt=0.0, description="Exchange rate to LKR for foreign currencies")
     description_of_supply: Optional[str] = Field("General Supply", description="Nature / Description of goods or services")
+    is_tax_invoice: Optional[bool] = Field(True, description="Whether document is explicitly identified as a Tax Invoice")
+    vat_type: Optional[str] = Field("OUTPUT_VAT", description="'OUTPUT_VAT' (Sales) or 'INPUT_VAT' (Purchases)")
+    target_schedule: Optional[str] = Field("Schedule 1", description="Assigned RAMIS Schedule ('Schedule 1', 'Schedule 2', 'Schedule 7', etc.)")
 
     @field_validator('date_of_supply', mode='before')
     @classmethod
@@ -49,6 +52,9 @@ class TaxCalculationResult(BaseModel):
     tax_amount_lkr: float
     total_value_lkr: float
     description_of_supply: str
+    vat_type: str = "OUTPUT_VAT"
+    target_schedule: str = "Schedule 1"
+    is_tax_invoice: bool = True
 
 
 class CageSummary(BaseModel):
@@ -236,6 +242,12 @@ class ExtractedAmountDetails(BaseModel):
     customer_tin: Optional[str] = Field("1146888607000", description="Extracted customer / consignee TIN")
     is_math_valid: bool = Field(..., description="Whether Subtotal + Tax == Total")
     math_difference: float = Field(..., description="Numerical difference in mathematical consistency")
+    supplier_name: Optional[str] = Field(None, description="Extracted supplier / vendor name")
+    supplier_tin: Optional[str] = Field(None, description="Extracted supplier TIN")
+    description: Optional[str] = Field("General Supply", description="Description of goods or services")
+    is_tax_invoice: bool = Field(True, description="Whether document is identified as a Tax Invoice")
+    vat_type: str = Field("OUTPUT_VAT", description="'OUTPUT_VAT' (Sales) or 'INPUT_VAT' (Purchases)")
+    target_schedule: str = Field("Schedule 1", description="Target RAMIS schedule (e.g. 'Schedule 1', 'Schedule 2', 'Schedule 7')")
 
 
 class StepLog(BaseModel):

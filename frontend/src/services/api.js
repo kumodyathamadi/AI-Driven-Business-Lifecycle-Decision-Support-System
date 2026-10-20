@@ -226,16 +226,31 @@ export const downloadScheduleCsv = async (scheduleRequest) => {
     responseType: 'blob',
   });
   const blob = new Blob([response.data], { type: 'text/csv' });
-  const tin = scheduleRequest.company_tin || scheduleRequest.taxpayer_tin || 'RAMIS';
-  const schedName = (scheduleRequest.schedule_type || 'Schedule_7').replace(/\s+/g, '_').toUpperCase();
-  const cleanPeriod = (scheduleRequest.tax_period || "Export").replace(/[^a-zA-Z0-9]/g, "");
-  const filename = `${tin}_VAT_${schedName}_${cleanPeriod}.csv`;
+  let filename = '';
+  const disposition = response.headers && (response.headers['content-disposition'] || response.headers['Content-Disposition']);
+  if (disposition && disposition.indexOf('filename=') !== -1) {
+    const filenameMatch = disposition.match(/filename="?([^"]+)"?/);
+    if (filenameMatch && filenameMatch[1]) {
+      filename = filenameMatch[1];
+    }
+  }
+  if (!filename) {
+    const tin = scheduleRequest.company_tin || scheduleRequest.taxpayer_tin || 'RAMIS';
+    const schedName = (scheduleRequest.schedule_type || 'Schedule_1').replace(/\s+/g, '_').toUpperCase();
+    const cleanPeriod = (scheduleRequest.tax_period || "Export").replace(/[^a-zA-Z0-9]/g, "");
+    filename = `${tin}_VAT_${schedName}_${cleanPeriod}.csv`;
+  }
   const link = document.createElement('a');
   link.href = window.URL.createObjectURL(blob);
   link.download = filename;
   document.body.appendChild(link);
   link.click();
   link.remove();
+};
+
+export const downloadRamisSchedule1Csv = async (batchRequest) => {
+  const req = { ...batchRequest, schedule_type: 'Schedule 1' };
+  return downloadScheduleCsv(req);
 };
 
 

@@ -26,6 +26,7 @@ import {
 import {
   uploadInvoicePdf,
   downloadRamisSchedule7Csv,
+  downloadRamisSchedule1Csv,
   downloadScheduleCsv,
   fetchCompanyTaxConfig,
   saveCompanyTaxConfig,
@@ -147,52 +148,115 @@ export default function ClearLedgerDashboard() {
   };
 
   const [taxInvoices, setTaxInvoices] = useState([
+    // Schedule 1: Local Sales (Standard 18% Output VAT)
+    {
+      invoice_number: 'SF-DOM-101',
+      customer_tin: '200000001',
+      customer_name: 'Colombo Grand Florists Ltd',
+      supplier_name: 'STAR FLORA (PVT) LTD',
+      supplier_tin: '102938475',
+      date_of_supply: '15/01/2026',
+      sub_total: 100000.00,
+      tax_amount: 18000.00,
+      total_amount: 118000.00,
+      currency: 'LKR',
+      tax_category: 'Standard 18%',
+      vat_type: 'OUTPUT_VAT',
+      target_schedule: 'Schedule 1',
+      is_tax_invoice: true,
+      description_of_supply: 'Supply of Premium Cut Foliage for Hotel Banquet Arrangements',
+      status: 'AUTO_PASS'
+    },
+    // Input Tax: External Vendor Purchase (Claimable Input VAT)
+    {
+      invoice_number: '26SEP_TS10_48',
+      customer_tin: '102938475',
+      customer_name: 'STAR FLORA (PVT) LTD',
+      supplier_name: 'CaSE Development (Pvt) Ltd',
+      supplier_tin: '100968789',
+      date_of_supply: '09/01/2026',
+      sub_total: 456038.50,
+      tax_amount: 82086.93,
+      total_amount: 538125.43,
+      currency: 'LKR',
+      tax_category: 'Standard 18%',
+      vat_type: 'INPUT_VAT',
+      target_schedule: 'Schedule 2',
+      is_tax_invoice: true,
+      description_of_supply: 'Commercial Office & Warehouse Rent September 2026',
+      status: 'AUTO_PASS'
+    },
+    // Schedule 7: Zero-Rated Direct Exports (Output VAT 0% - Cage D)
     {
       invoice_number: '3425',
       customer_tin: '1146888607000',
       customer_name: 'STARFLORA HOLLAND B.V.',
+      supplier_name: 'STAR FLORA (PVT) LTD',
+      supplier_tin: '102938475',
       date_of_supply: '06/01/2026',
       sub_total: 3399.50,
       tax_amount: 0.00,
       total_amount: 3399.50,
       currency: 'EUR',
       tax_category: 'Zero-Rated',
+      vat_type: 'OUTPUT_VAT',
+      target_schedule: 'Schedule 7',
+      is_tax_invoice: true,
+      description_of_supply: 'Export of Fresh Cut Foliage (Customs CusDec E 1429)',
       status: 'AUTO_PASS'
     },
     {
       invoice_number: '3426',
       customer_tin: '1140859877000',
       customer_name: 'FRESH FROM SOURCE B.V.',
+      supplier_name: 'STAR FLORA (PVT) LTD',
+      supplier_tin: '102938475',
       date_of_supply: '08/01/2026',
       sub_total: 7822.50,
       tax_amount: 0.00,
       total_amount: 7822.50,
       currency: 'EUR',
       tax_category: 'Zero-Rated',
+      vat_type: 'OUTPUT_VAT',
+      target_schedule: 'Schedule 7',
+      is_tax_invoice: true,
+      description_of_supply: 'Export of Fresh Cut Foliage (Customs CusDec E 1430)',
       status: 'AUTO_PASS'
     },
     {
       invoice_number: '3427',
       customer_tin: '1140859877000',
       customer_name: 'FRESH FROM SOURCE B.V.',
+      supplier_name: 'STAR FLORA (PVT) LTD',
+      supplier_tin: '102938475',
       date_of_supply: '16/01/2026',
       sub_total: 8742.40,
       tax_amount: 0.00,
       total_amount: 8742.40,
       currency: 'EUR',
       tax_category: 'Zero-Rated',
+      vat_type: 'OUTPUT_VAT',
+      target_schedule: 'Schedule 7',
+      is_tax_invoice: true,
+      description_of_supply: 'Export of Fresh Cut Foliage (Customs CusDec E 1431)',
       status: 'AUTO_PASS'
     },
     {
       invoice_number: '3428',
       customer_tin: '1146888607000',
       customer_name: 'STARFLORA HOLLAND B.V.',
+      supplier_name: 'STAR FLORA (PVT) LTD',
+      supplier_tin: '102938475',
       date_of_supply: '16/01/2026',
       sub_total: 2334.00,
       tax_amount: 0.00,
       total_amount: 2334.00,
       currency: 'EUR',
       tax_category: 'Zero-Rated',
+      vat_type: 'OUTPUT_VAT',
+      target_schedule: 'Schedule 7',
+      is_tax_invoice: true,
+      description_of_supply: 'Export of Fresh Cut Foliage (Customs CusDec E 1432)',
       status: 'AUTO_PASS'
     }
   ]);
@@ -411,18 +475,22 @@ export default function ClearLedgerDashboard() {
 
         const newEntry = {
           invoice_number: ext.invoice_number || 'INV-UNKNOWN',
-          customer_tin: ext.customer_tin || '1146888607000',
+          customer_tin: ext.customer_tin || '100902877',
           customer_name: ext.customer_name || 'Unverified Customer',
           date_of_supply: ext.invoice_date || '01/01/2026',
           sub_total: ext.sub_total || 0,
           tax_amount: ext.tax_amount || 0,
           total_amount: ext.total_amount || 0,
-          currency: ext.currency || 'EUR',
-          tax_category: ext.tax_category || 'Zero-Rated',
+          currency: ext.currency || 'LKR',
+          tax_category: ext.tax_category || 'Standard 18%',
           status: isAnomaly ? 'REVIEW_REQUIRED' : 'AUTO_PASS',
           flagged_reasons: reasons,
-          supplier_name: companyName,
-          supplier_tin: companyTin
+          supplier_name: ext.supplier_name || companyName,
+          supplier_tin: ext.supplier_tin || companyTin,
+          description_of_supply: ext.description || 'Commercial Supply',
+          is_tax_invoice: ext.is_tax_invoice !== undefined ? ext.is_tax_invoice : true,
+          vat_type: ext.vat_type || 'OUTPUT_VAT',
+          target_schedule: ext.target_schedule || 'Schedule 1'
         };
 
         setTaxInvoices(prev => [newEntry, ...prev.filter(x => x.invoice_number !== newEntry.invoice_number)]);
@@ -586,6 +654,11 @@ export default function ClearLedgerDashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Dedicated Schedule 1 Exporter (Output VAT on Local Supplies)
+  const handleDownloadSchedule1 = async () => {
+    return handleDownloadSchedule('Schedule 1');
   };
 
   // Generic RAMIS Schedule CSV Exporter (Schedule 1 through Schedule 7)
@@ -798,10 +871,12 @@ export default function ClearLedgerDashboard() {
     }
   };
 
-  // Calculate Tax Metrics on displayed/current invoices
+  // Calculate Tax Metrics on displayed/current invoices (Input vs. Output VAT)
   const cageDTotal = displayedInvoices.filter(i => i.tax_category === 'Zero-Rated').reduce((s, i) => s + (Number(i.total_amount) || 0), 0);
-  const cageATotal = displayedInvoices.filter(i => i.tax_category === 'Standard').reduce((s, i) => s + (Number(i.total_amount) || 0), 0);
-  const outputVatLkr = displayedInvoices.filter(i => i.tax_category === 'Standard').reduce((s, i) => s + (Number(i.tax_amount) || 0), 0);
+  const cageATotal = displayedInvoices.filter(i => (i.tax_category === 'Standard' || i.tax_category === 'Standard 18%') && i.vat_type !== 'INPUT_VAT').reduce((s, i) => s + (Number(i.total_amount) || 0), 0);
+  const outputVatLkr = displayedInvoices.filter(i => i.vat_type !== 'INPUT_VAT' && (i.tax_category === 'Standard' || i.tax_category === 'Standard 18%')).reduce((s, i) => s + (Number(i.tax_amount) || 0), 0);
+  const inputVatLkr = displayedInvoices.filter(i => i.vat_type === 'INPUT_VAT').reduce((s, i) => s + (Number(i.tax_amount) || 0), 0);
+  const netVatPosition = outputVatLkr - inputVatLkr;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', color: '#f8fafc' }}>
@@ -1339,34 +1414,47 @@ export default function ClearLedgerDashboard() {
               </div>
             </div>
 
-            <div style={{ background: 'rgba(30, 41, 59, 0.7)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', padding: '1.25rem' }}>
+            <div style={{ background: 'rgba(30, 41, 59, 0.7)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '12px', padding: '1.25rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.8rem', fontWeight: 600 }}>
-                <span>OUTPUT VAT PAYABLE (CAGE A)</span>
-                <DollarSign size={18} color="#f59e0b" />
+                <span>OUTPUT VAT (SALES - SCHED 1)</span>
+                <DollarSign size={18} color="#60a5fa" />
               </div>
-              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#fbbf24', marginTop: '0.5rem' }}>
+              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#60a5fa', marginTop: '0.5rem' }}>
                 Rs. {outputVatLkr.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </div>
               <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>
-                Form 2540 Standard 18% Rate
+                Local Supplies Standard 18% (Cage A)
+              </div>
+            </div>
+
+            <div style={{ background: 'rgba(30, 41, 59, 0.7)', border: '1px solid rgba(168, 85, 247, 0.3)', borderRadius: '12px', padding: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.8rem', fontWeight: 600 }}>
+                <span>INPUT VAT (PURCHASES - CLAIMABLE)</span>
+                <Scale size={18} color="#c084fc" />
+              </div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#c084fc', marginTop: '0.5rem' }}>
+                Rs. {inputVatLkr.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#4ade80', marginTop: '0.25rem' }}>
+                Claimable from IRD (Cage I & Cage 6)
               </div>
             </div>
 
             <div style={{
-              background: reviewQueue.length > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(30, 41, 59, 0.7)',
-              border: `1px solid ${reviewQueue.length > 0 ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255, 255, 255, 0.1)'}`,
+              background: netVatPosition >= 0 ? 'rgba(245, 158, 11, 0.12)' : 'rgba(34, 197, 94, 0.12)',
+              border: `1px solid ${netVatPosition >= 0 ? 'rgba(245, 158, 11, 0.4)' : 'rgba(34, 197, 94, 0.4)'}`,
               borderRadius: '12px',
               padding: '1.25rem'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.8rem', fontWeight: 600 }}>
-                <span>FRAUD RISK STATUS</span>
-                {reviewQueue.length > 0 ? <AlertTriangle size={18} color="#ef4444" /> : <ShieldCheck size={18} color="#4ade80" />}
+                <span>NET RAMIS POSITION (CAGE 16 / 15)</span>
+                {netVatPosition >= 0 ? <DollarSign size={18} color="#fbbf24" /> : <CheckCircle2 size={18} color="#4ade80" />}
               </div>
-              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: reviewQueue.length > 0 ? '#ef4444' : '#4ade80', marginTop: '0.5rem' }}>
-                {reviewQueue.length > 0 ? `${reviewQueue.length} Flagged` : 'All Clear'}
+              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: netVatPosition >= 0 ? '#fbbf24' : '#4ade80', marginTop: '0.5rem' }}>
+                Rs. {Math.abs(netVatPosition).toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </div>
-              <div style={{ fontSize: '0.75rem', color: reviewQueue.length > 0 ? '#fca5a5' : '#94a3b8', marginTop: '0.25rem' }}>
-                {reviewQueue.length > 0 ? 'Action Required: Human Review Queue' : 'Isolation Forest (4% Contamination)'}
+              <div style={{ fontSize: '0.75rem', color: netVatPosition >= 0 ? '#fde68a' : '#86efac', marginTop: '0.25rem' }}>
+                {netVatPosition >= 0 ? 'Net Tax Payable to IRD (Cage 16)' : 'Gross Refund Claim Due (Cage 15)'}
               </div>
             </div>
 
@@ -1485,7 +1573,8 @@ export default function ClearLedgerDashboard() {
                   <thead>
                     <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', color: '#94a3b8' }}>
                       <th style={{ padding: '0.75rem' }}>Invoice #</th>
-                      <th style={{ padding: '0.75rem' }}>Customer / Consignee</th>
+                      <th style={{ padding: '0.75rem' }}>Party (Buyer / Supplier)</th>
+                      <th style={{ padding: '0.75rem' }}>VAT Type / Schedule</th>
                       <th style={{ padding: '0.75rem' }}>Date</th>
                       <th style={{ padding: '0.75rem' }}>Category</th>
                       <th style={{ padding: '0.75rem' }}>Total Amount</th>
@@ -1505,7 +1594,39 @@ export default function ClearLedgerDashboard() {
                         <td style={{ padding: '0.75rem', fontWeight: 600, color: isReviewNeeded ? '#f87171' : '#60a5fa' }}>
                           {inv.invoice_number}
                         </td>
-                        <td style={{ padding: '0.75rem' }}>{inv.customer_name}</td>
+                        <td style={{ padding: '0.75rem' }}>
+                          <div style={{ fontWeight: 600 }}>{inv.vat_type === 'INPUT_VAT' ? (inv.supplier_name || 'External Vendor') : inv.customer_name}</div>
+                          <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                            {inv.vat_type === 'INPUT_VAT' ? `Supplier TIN: ${inv.supplier_tin || 'N/A'}` : `Purchaser TIN: ${inv.customer_tin || '100902877'}`}
+                          </div>
+                        </td>
+                        <td style={{ padding: '0.75rem' }}>
+                          {inv.vat_type === 'INPUT_VAT' ? (
+                            <span style={{
+                              background: 'rgba(168, 85, 247, 0.15)',
+                              color: '#c084fc',
+                              border: '1px solid rgba(168, 85, 247, 0.3)',
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              fontWeight: 700
+                            }}>
+                              Input Tax (Purchase)
+                            </span>
+                          ) : (
+                            <span style={{
+                              background: inv.target_schedule === 'Schedule 7' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                              color: inv.target_schedule === 'Schedule 7' ? '#4ade80' : '#60a5fa',
+                              border: `1px solid ${inv.target_schedule === 'Schedule 7' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`,
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              fontWeight: 700
+                            }}>
+                              {inv.target_schedule === 'Schedule 7' ? 'Output Tax (Export S7)' : 'Output Tax (Sales S1)'}
+                            </span>
+                          )}
+                        </td>
                         <td style={{ padding: '0.75rem', color: '#94a3b8' }}>{inv.date_of_supply}</td>
                         <td style={{ padding: '0.75rem' }}>
                           <span style={{
@@ -1887,6 +2008,55 @@ export default function ClearLedgerDashboard() {
                 </div>
               </div>
 
+              {/* VAT Classification & Schedule Assignment Banner */}
+              <div style={{
+                background: ocrResult.extracted_amounts.vat_type === 'INPUT_VAT' ? 'rgba(168, 85, 247, 0.12)' : 'rgba(59, 130, 246, 0.12)',
+                border: `1px solid ${ocrResult.extracted_amounts.vat_type === 'INPUT_VAT' ? 'rgba(168, 85, 247, 0.35)' : 'rgba(59, 130, 246, 0.35)'}`,
+                borderRadius: '10px',
+                padding: '1rem 1.25rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.65rem'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Scale size={18} color={ocrResult.extracted_amounts.vat_type === 'INPUT_VAT' ? '#c084fc' : '#60a5fa'} />
+                    <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#ffffff' }}>
+                      VAT Classification: {ocrResult.extracted_amounts.vat_type === 'INPUT_VAT' ? 'Input Tax (Purchase from External Vendor)' : 'Output Tax (Company Sales)'}
+                    </span>
+                  </div>
+                  <span style={{
+                    background: ocrResult.extracted_amounts.vat_type === 'INPUT_VAT' ? 'rgba(168, 85, 247, 0.25)' : 'rgba(59, 130, 246, 0.25)',
+                    color: ocrResult.extracted_amounts.vat_type === 'INPUT_VAT' ? '#c084fc' : '#93c5fd',
+                    padding: '0.2rem 0.65rem',
+                    borderRadius: '6px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700
+                  }}>
+                    {ocrResult.extracted_amounts.target_schedule === 'Schedule 1' ? 'Assigned: Schedule 1 (Local Output VAT)' : ocrResult.extracted_amounts.target_schedule === 'Schedule 7' ? 'Assigned: Schedule 7 (Zero-Rated Exports)' : 'Assigned: Schedule 2 (Claimable Input Tax)'}
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem', fontSize: '0.78rem', color: '#cbd5e1' }}>
+                  <div>
+                    <span style={{ color: '#94a3b8' }}>Supplier (Issuer):</span>{' '}
+                    <strong>{ocrResult.extracted_amounts.supplier_name || 'Our Company'}</strong>{' '}
+                    {ocrResult.extracted_amounts.supplier_tin && `(TIN: ${ocrResult.extracted_amounts.supplier_tin})`}
+                  </div>
+                  <div>
+                    <span style={{ color: '#94a3b8' }}>Purchaser (Client):</span>{' '}
+                    <strong>{ocrResult.extracted_amounts.customer_name || 'Direct Consumer'}</strong>{' '}
+                    {ocrResult.extracted_amounts.customer_tin && `(TIN: ${ocrResult.extracted_amounts.customer_tin})`}
+                  </div>
+                  <div>
+                    <span style={{ color: '#94a3b8' }}>Tax Engine Action:</span>{' '}
+                    <span style={{ color: ocrResult.extracted_amounts.vat_type === 'INPUT_VAT' ? '#4ade80' : '#60a5fa', fontWeight: 600 }}>
+                      {ocrResult.extracted_amounts.vat_type === 'INPUT_VAT' ? '✓ Input VAT Claimable from IRD (Cage I & 6)' : '✓ Output VAT Declared in Schedule 1 / Form 2540 Cage A'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               {/* Toggle Step Logs Accordion */}
               <div>
                 <button
@@ -2207,6 +2377,29 @@ export default function ClearLedgerDashboard() {
                 </select>
 
                 <button
+                  onClick={handleDownloadSchedule1}
+                  disabled={loading || displayedInvoices.length === 0 || !isCompanyConfigValid}
+                  title="Export Official Schedule 1 CSV (Output VAT on Local Supplies)"
+                  style={{
+                    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '0.6rem 1.1rem',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: (loading || displayedInvoices.length === 0) ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    boxShadow: '0 4px 14px rgba(59, 130, 246, 0.3)',
+                    opacity: (loading || displayedInvoices.length === 0) ? 0.6 : 1
+                  }}
+                >
+                  <Download size={15} />
+                  Export Schedule 1 CSV (Sales)
+                </button>
+                <button
                   onClick={() => handleDownloadSchedule(selectedSchedule)}
                   disabled={loading || displayedInvoices.length === 0 || !isCompanyConfigValid}
                   title={!isCompanyConfigValid ? 'Company TIN and Registered Name are mandatory' : `Download ${selectedSchedule} CSV`}
@@ -2379,7 +2572,39 @@ export default function ClearLedgerDashboard() {
                         <td style={{ padding: '0.75rem', fontWeight: 600, color: isReviewNeeded ? '#f87171' : '#60a5fa' }}>
                           {inv.invoice_number}
                         </td>
-                        <td style={{ padding: '0.75rem' }}>{inv.customer_name}</td>
+                        <td style={{ padding: '0.75rem' }}>
+                          <div style={{ fontWeight: 600 }}>{inv.vat_type === 'INPUT_VAT' ? (inv.supplier_name || 'External Vendor') : inv.customer_name}</div>
+                          <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                            {inv.vat_type === 'INPUT_VAT' ? `Supplier TIN: ${inv.supplier_tin || 'N/A'}` : `Purchaser TIN: ${inv.customer_tin || '100902877'}`}
+                          </div>
+                        </td>
+                        <td style={{ padding: '0.75rem' }}>
+                          {inv.vat_type === 'INPUT_VAT' ? (
+                            <span style={{
+                              background: 'rgba(168, 85, 247, 0.15)',
+                              color: '#c084fc',
+                              border: '1px solid rgba(168, 85, 247, 0.3)',
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              fontWeight: 700
+                            }}>
+                              Input Tax (Purchase)
+                            </span>
+                          ) : (
+                            <span style={{
+                              background: inv.target_schedule === 'Schedule 7' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                              color: inv.target_schedule === 'Schedule 7' ? '#4ade80' : '#60a5fa',
+                              border: `1px solid ${inv.target_schedule === 'Schedule 7' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`,
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              fontWeight: 700
+                            }}>
+                              {inv.target_schedule === 'Schedule 7' ? 'Output Tax (Export S7)' : 'Output Tax (Sales S1)'}
+                            </span>
+                          )}
+                        </td>
                         <td style={{ padding: '0.75rem', color: '#94a3b8' }}>{inv.date_of_supply}</td>
                         <td style={{ padding: '0.75rem' }}>
                           <span style={{

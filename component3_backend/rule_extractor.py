@@ -18,6 +18,8 @@ and validates arithmetic consistency: Subtotal + Tax = Total.
 import re
 from typing import Dict, Any, List, Optional, Tuple
 from collections import defaultdict
+from schemas import InvoiceData
+from tax_engine import classify_vat_transaction, get_company_config
 
 
 class ContextAwareAmountExtractor:
@@ -411,15 +413,45 @@ class ContextAwareAmountExtractor:
             "06042000", "nlams", "slal", "ktex1", "cfr", "fob", "cash"
         }
 
+        # Check if explicitly identified as a Tax Invoice
+        is_tax_invoice = bool(re.search(r'\bTAX\s+INVOICE\b', document_text, re.IGNORECASE))
+
+        # Check explicit VAT Amount pattern and apply Schedule 1 Mathematical Formula:
+        # Value of supply = (VAT Amount / 18) * 100
+        m_vat_explicit = re.search(r'VAT(?:\s*Amount)?[^\n\r:]*:[^\S\r\n]*(?:Rs\.?|LKR)?\s*([0-9,]+\.[0-9]{2})', document_text, re.IGNORECASE)
+        if m_vat_explicit:
+            try:
+                vat_val = float(m_vat_explicit.group(1).replace(',', ''))
+                if vat_val > 0:
+                    candidate_tax = vat_val
+                    tax_category_detected = "Standard 18%"
+                    # Mathematically derive Value of supply = (VAT Amount / 18) * 100
+                    derived_sub = round((vat_val / 18.0) * 100.0, 2)
+                    candidate_subtotal = derived_sub
+                    candidate_total = round(derived_sub + vat_val, 2)
+            except ValueError:
+                pass
+
         # Invoice Number extraction
         inv_number = "INV-UNKNOWN"
+
+        # Priority 0: Look for explicit Tax Invoice No
+        m_tax_no = re.search(r'Tax\s*Invoice\s*(?:No\.?|Number|#)[^\S\r\n]*[:#;=-]*[^\S\r\n]*([A-Za-z0-9_\-\/]+)', document_text, re.IGNORECASE)
+        if m_tax_no:
+            t_cand = m_tax_no.group(1).strip()
+            if t_cand and t_cand.lower() not in ["date", "no", "number"] and not re.match(r'^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$', t_cand):
+                inv_number = t_cand
 
         # Search line-by-line without crossing newlines
         for line in lines:
             line_str = line.strip()
             # 1. Look for explicit Invoice Number / INVOICE NO / Customs Invoice No / Ref. No on the SAME line
+            # Skip line if it is just a date anchor like "Date of Invoice"
+            if re.search(r'Date\s*of\s*Invoice', line_str, re.IGNORECASE):
+                continue
+
             m_inv = re.search(
-                r'(?:INVOICE\s*NO|Invoice\s*Number|Customs\s*Invoice\s*(?:No|Number)?|Invoice\s*(?:No|#)?|Ref\.?\s*No|Ret\.?\s*No)[^\S\r\n]*[:#;=-]*[^\S\r\n]*([A-Za-z0-9/_-]+)',
+                r'(?:Tax\s*Invoice\s*(?:No\.?|Number|#)|INVOICE\s*NO|Invoice\s*Number|Customs\s*Invoice\s*(?:No|Number)?|Invoice\s*(?:No|#)?|Ref\.?\s*No|Ret\.?\s*No)[^\S\r\n]*[:#;=-]*[^\S\r\n]*([A-Za-z0-9/_-]+)',
                 line_str,
                 re.IGNORECASE
             )
@@ -466,30 +498,56 @@ class ContextAwareAmountExtractor:
                         inv_number = cand
                         break
 
-        # Customer / Consignee extraction
+        # Supplier & Purchaser Extraction
+        supplier_name = None
+        supplier_tin = None
+        m_sup_tin = re.search(r"Supplier['s\s]*TIN[^\S\r\n]*[:#;=-]*[^\S\r\n]*([0-9\-]+)", document_text, re.IGNORECASE)
+        if m_sup_tin:
+            supplier_tin = m_sup_tin.group(1).strip()
+        m_sup_name = re.search(r"Supplier['s\s]*Name[^\S\r\n]*[:#;=-]*[^\S\r\n]*([^\n\r]+)", document_text, re.IGNORECASE)
+        if m_sup_name:
+            supplier_name = m_sup_name.group(1).strip()
+
+        # Customer / Consignee / Purchaser extraction
         customer_name = "Extracted Invoice Client"
         customer_tin = "1146888607000"
+
+        m_pur_tin = re.search(r"Purchaser['s\s]*TIN[^\S\r\n]*[:#;=-]*[^\S\r\n]*([0-9\-]+)", document_text, re.IGNORECASE)
+        if m_pur_tin:
+            customer_tin = m_pur_tin.group(1).strip()
+        m_pur_name = re.search(r"Purchaser['s\s]*Name[^\S\r\n]*[:#;=-]*[^\S\r\n]*([^\n\r]+)", document_text, re.IGNORECASE)
+        if m_pur_name:
+            customer_name = m_pur_name.group(1).strip()
+
+        # Description extraction
+        description_extracted = None
+        m_desc = re.search(r'Description[^\S\r\n]*[:#;=-]*[^\S\r\n]*\n*([^\n\r]+)', document_text, re.IGNORECASE)
+        if m_desc:
+            d_cand = m_desc.group(1).strip()
+            if len(d_cand) > 3 and not d_cand.lower().startswith("amount"):
+                description_extracted = d_cand
         doc_upper = document_text.upper()
-        if "OZ IMPORT" in doc_upper or "COLORIGINZ" in doc_upper:
-            customer_name = "OZ IMPORT BV (COLORIGINZ)"
-        elif "FRESH FROM SOURCE" in doc_upper:
-            customer_name = "FRESH FROM SOURCE B.V."
-        elif "STARFLORA HOLLAND" in doc_upper:
-            customer_name = "STARFLORA HOLLAND B.V."
-        elif "SHARE VABIX" in doc_upper:
-            customer_name = "SHARE VABIX SSL AIR FREIGHT B.V."
-        else:
-            m_cons = re.search(r'8\s*Consignee[^\n]*\n+([^\n]+)', document_text, re.IGNORECASE)
-            if m_cons:
-                c_line = m_cons.group(1).strip()
-                if len(c_line) > 3 and not c_line.isdigit():
-                    customer_name = c_line
-            elif not is_export:
-                m_cust = re.search(r'(?:Customer|Buyer|Bill\s*To|Client)[:\s]+([^\n,]+)', document_text, re.IGNORECASE)
-                if m_cust:
-                    customer_name = m_cust.group(1).strip()
-                elif lines and len(lines[0]) > 3:
-                    customer_name = lines[0].strip()
+        if customer_name == "Extracted Invoice Client" or not customer_name:
+            if "OZ IMPORT" in doc_upper or "COLORIGINZ" in doc_upper:
+                customer_name = "OZ IMPORT BV (COLORIGINZ)"
+            elif "FRESH FROM SOURCE" in doc_upper:
+                customer_name = "FRESH FROM SOURCE B.V."
+            elif "STARFLORA HOLLAND" in doc_upper:
+                customer_name = "STARFLORA HOLLAND B.V."
+            elif "SHARE VABIX" in doc_upper:
+                customer_name = "SHARE VABIX SSL AIR FREIGHT B.V."
+            else:
+                m_cons = re.search(r'8\s*Consignee[^\n]*\n+([^\n]+)', document_text, re.IGNORECASE)
+                if m_cons:
+                    c_line = m_cons.group(1).strip()
+                    if len(c_line) > 3 and not c_line.isdigit():
+                        customer_name = c_line
+                elif not is_export:
+                    m_cust = re.search(r'(?:Customer|Buyer|Bill\s*To|Client)[:\s]+([^\n,]+)', document_text, re.IGNORECASE)
+                    if m_cust:
+                        customer_name = m_cust.group(1).strip()
+                    elif lines and len(lines[0]) > 3 and lines[0].strip().upper() not in ["TAX INVOICE", "INVOICE", "CUSDEC"]:
+                        customer_name = lines[0].strip()
 
         # Invoice Date extraction
         inv_date = None
@@ -586,6 +644,29 @@ class ContextAwareAmountExtractor:
             "details": f"Final Confidence: {confidence}%. Decision: {decision} ({routing}). Flagged reasons: {review_reasons or 'None'}."
         })
 
+        # Classify VAT Transaction against Global Company Configuration
+        active_config = get_company_config()
+        if not supplier_name and is_export:
+            supplier_name = active_config.get("company_name", "STAR FLORA (PVT) LTD")
+            supplier_tin = active_config.get("company_tin", "102938475")
+
+        test_inv = InvoiceData(
+            invoice_number=inv_number,
+            date_of_supply=inv_date if (inv_date and inv_date != "UNVERIFIED-DATE") else "2026-01-01",
+            sub_total=candidate_subtotal or 0.0,
+            tax_amount=candidate_tax or 0.0,
+            total_amount=candidate_total or 0.0,
+            currency=detected_currency,
+            tax_category=tax_category_detected,
+            supplier_name=supplier_name,
+            supplier_tin=supplier_tin,
+            customer_name=customer_name,
+            customer_tin=customer_tin,
+            description_of_supply=description_extracted or "General Supply",
+            is_tax_invoice=is_tax_invoice
+        )
+        vat_class = classify_vat_transaction(test_inv, active_config)
+
         return {
             "status": "success",
             "confidence_score": confidence,
@@ -602,6 +683,12 @@ class ContextAwareAmountExtractor:
                 "invoice_date": inv_date,
                 "customer_name": customer_name,
                 "customer_tin": customer_tin,
+                "supplier_name": supplier_name,
+                "supplier_tin": supplier_tin,
+                "description": description_extracted or "General Supply",
+                "is_tax_invoice": is_tax_invoice,
+                "vat_type": vat_class["vat_type"],
+                "target_schedule": vat_class["target_schedule"],
                 "is_math_valid": is_math_valid,
                 "math_difference": round(math_difference, 2)
             },
