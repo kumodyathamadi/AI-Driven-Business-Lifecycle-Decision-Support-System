@@ -392,14 +392,14 @@ class RiskFeatureEngineer:
         working_cap = merged["working_capital_latest_lkr"].to_numpy(dtype=float)
 
         op_profit_mean = rev_mean - exp_mean
-        op_margin = (rev_mean - exp_mean) / np.maximum(EPSILON, rev_mean)
-        cash_runway = np.maximum(0.0, cash_latest) / np.maximum(EPSILON, exp_mean)
-        cash_runway_min = np.maximum(0.0, cash_min) / np.maximum(EPSILON, exp_mean)
-        debt_burden = np.maximum(0.0, repay) / np.maximum(EPSILON, rev_mean)
-        dscr = op_profit_mean / np.maximum(EPSILON, repay)
-        working_cap_ratio = working_cap / np.maximum(EPSILON, rev_mean)
+        op_margin = (rev_mean - exp_mean) / rev_mean.clip(min=EPSILON)
+        cash_runway = cash_latest.clip(min=0.0) / exp_mean.clip(min=EPSILON)
+        cash_runway_min = cash_min.clip(min=0.0) / exp_mean.clip(min=EPSILON)
+        debt_burden = repay.clip(min=0.0) / rev_mean.clip(min=EPSILON)
+        dscr = op_profit_mean / repay.clip(min=EPSILON)
+        working_cap_ratio = working_cap / rev_mean.clip(min=EPSILON)
         net_cash_flow = op_profit_mean - repay
-        rev_volatility = rev_std / np.maximum(EPSILON, rev_mean)
+        rev_volatility = rev_std / rev_mean.clip(min=EPSILON)
 
         merged["monthly_revenue_mean_lkr"] = rev_mean.round(2)
         merged["monthly_revenue_std_lkr"] = rev_std.round(2)
@@ -479,14 +479,14 @@ class RiskFeatureEngineer:
         debt_repay = action_merged["monthly_debt_repayment_lkr"].to_numpy(dtype=float)
         curr_staff = action_merged["employee_count"].to_numpy(dtype=float)
 
-        inv_to_cash = np.maximum(0.0, inv) / np.maximum(EPSILON, cash_latest)
-        add_cost_to_rev = np.maximum(0.0, add_cost) / np.maximum(EPSILON, rev_mean)
-        post_cash = np.maximum(0.0, cash_latest - inv)
-        post_exp = np.maximum(EPSILON, exp_mean + add_cost)
+        inv_to_cash = inv.clip(min=0.0) / cash_latest.clip(min=EPSILON)
+        add_cost_to_rev = add_cost.clip(min=0.0) / rev_mean.clip(min=EPSILON)
+        post_cash = (cash_latest - inv).clip(min=0.0)
+        post_exp = (exp_mean + add_cost).clip(min=EPSILON)
         post_runway = post_cash / post_exp
         post_net_flow = (rev_mean + rev_change) - (exp_mean + add_cost) - debt_repay
-        cap_gap = np.maximum(0.0, np.minimum(1.0, 1.0 - cap_score))
-        staff_growth = np.maximum(0.0, req_staff) / np.maximum(1.0, curr_staff)
+        cap_gap = (1.0 - cap_score).clip(min=0.0, max=1.0)
+        staff_growth = req_staff.clip(min=0.0) / curr_staff.clip(min=1.0)
 
         action_merged["investment_to_cash_ratio"] = inv_to_cash.round(4)
         action_merged["additional_cost_to_revenue_ratio"] = add_cost_to_rev.round(4)
