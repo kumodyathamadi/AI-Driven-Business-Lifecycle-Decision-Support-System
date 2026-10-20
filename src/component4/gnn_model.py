@@ -294,7 +294,7 @@ def build_inductive_subgraphs(
     }
 
 
-def compute_evaluation_metrics(y_true: Union[np.ndarray, List[int]], y_pred: Union[np.ndarray, List[int]]) -> Dict[str, Any]:
+def compute_evaluation_metrics(y_true: Any, y_pred: Any) -> Dict[str, Any]:
     """
     Computes rigorous, consistent binary and three-class evaluation metrics across all models.
 
@@ -727,8 +727,8 @@ class GNNInferenceEngine:
             "binary_evaluation": ext_metrics["binary_evaluation"],
             "class_imbalance_disclosure": {
                 "total_records": n_nodes,
-                "dataset_class_distribution": pd.Series(y_int).value_counts().to_dict(),
-                "test_class_distribution": pd.Series(y_int[test_mask]).value_counts().to_dict(),
+                "dataset_class_distribution": pd.Series(list(y_int)).value_counts().to_dict(),
+                "test_class_distribution": pd.Series(list(y_int[test_mask])).value_counts().to_dict(),
                 "high_risk_cases_total": high_count_total,
                 "high_risk_cases_test": high_count_test,
                 "scientific_limitation_statement": (
@@ -878,11 +878,22 @@ class GNNInferenceEngine:
             edge_index = torch.tensor([edges_src, edges_dst], dtype=torch.long)
             edge_weight = torch.tensor(weights, dtype=torch.float)
 
-            self.model.eval()
+            if self.model is None:
+                self._load_or_train_model()
+
+            active_model = self.model
+            if active_model is None:
+                return GNNInferenceResult(
+                    gnn_applicable=False,
+                    gnn_status="MODEL_UNAVAILABLE",
+                    explanation="GNN model checkpoint is unavailable."
+                )
+
+            active_model.eval()
             with torch.no_grad():
-                logits = self.model(dummy_x.to(self.device), edge_index.to(self.device), edge_weight.to(self.device))
+                logits = active_model(dummy_x.to(self.device), edge_index.to(self.device), edge_weight.to(self.device))
                 probs = F.softmax(logits[0], dim=-1).cpu().numpy()
-                emb = self.model.extract_embedding(dummy_x.to(self.device), edge_index.to(self.device), edge_weight.to(self.device))[0].cpu().numpy()
+                emb = active_model.extract_embedding(dummy_x.to(self.device), edge_index.to(self.device), edge_weight.to(self.device))[0].cpu().numpy()
 
             pred_idx = int(np.argmax(probs))
             pred_label = IDX_TO_RISK_LABEL[pred_idx]

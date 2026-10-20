@@ -444,7 +444,8 @@ class BusinessPlanIngestionService:
                 text = para.text.strip()
                 if not text:
                     continue
-                if para.style.name.startswith("Heading") or text.isupper():
+                style_name = getattr(para.style, "name", "") if para.style else ""
+                if (style_name and style_name.startswith("Heading")) or text.isupper():
                     if current_paras:
                         source_sections[current_section] = "\n".join(current_paras)
                         current_paras = []
