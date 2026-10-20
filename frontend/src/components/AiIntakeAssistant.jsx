@@ -62,12 +62,12 @@ const EMPTY_FORM_STATE = {
   supplier_availability_score: '',
 };
 
-export default function AiIntakeAssistant({ 
-  onCompleteIntake, 
-  onSwitchToManual, 
-  initialStage = null, 
-  initialGoal = null, 
-  loading = false 
+export default function AiIntakeAssistant({
+  onCompleteIntake,
+  onSwitchToManual,
+  initialStage = null,
+  initialGoal = null,
+  loading = false
 }) {
   // Steps: 'type_select' | 'expansion_select' | 'chat' | 'form'
   const [intakeStep, setIntakeStep] = useState(() => {
@@ -124,7 +124,7 @@ export default function AiIntakeAssistant({
 
     let welcomeText = '';
     if (stage === 'New') {
-      welcomeText = "Hello! I'm your **SME360 AI Business Intake Assistant**.\n\nTell me about the business you want to start in Sri Lanka! You can describe it in your own words:\n• What products or services you plan to offer (e.g. Grocery, Bakery, Garments, or Salon)\n• Where you want to locate it (e.g. Homagama, Negombo, Panadura)\n• Your starting capital and expected monthly budget\n• Any experience, staffing, or customer expectations you have\n\n*Feel free to write in English, Singlish, or mixed phrasing. You can click **Continue to Form** at any time to review and edit your prefilled details.*";
+      welcomeText = "Hello! I'm your **SME360 AI Business Intake Assistant**.\n\nTell me about the business you want to start in Sri Lanka! You can describe it in your own words:\n• What products or services you plan to offer (e.g. Grocery, Bakery, Garments, or Salon)\n• Where you want to locate it (e.g. Colombo, Kaluthara, Gampaha)\n• Your starting capital and expected monthly budget\n• Any experience, staffing, or customer expectations you have\n\n*Feel free to write in English. You can click **Continue to Form** at any time to review and edit your prefilled details.*";
     } else {
       welcomeText = "Welcome! Let's craft your **Personalized Business Growth Plan**.\n\nTell me about your existing business and how you would like to grow:\n• Your current business name, category, and location in Sri Lanka\n• Existing products or services you offer\n• Your growth vision (e.g. attracting new customers, improving sales & marketing, expanding reach, adding offerings, improving capacity, or opening locations)\n• Available growth capital and monthly operating budget\n• Current team size, equipment readiness, and operational hurdles\n\n*Describe in natural language, and click **Continue to Form** whenever you are ready.*";
     }
@@ -488,12 +488,12 @@ export default function AiIntakeAssistant({
             </div>
 
             {/* 2-Column Selection Cards */}
-            <div 
-              style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
-                gap: '1.5rem', 
-                marginTop: '0.25rem' 
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                gap: '1.5rem',
+                marginTop: '0.25rem'
               }}
             >
               {/* Option A: New Startup */}
@@ -515,11 +515,11 @@ export default function AiIntakeAssistant({
                   </div>
 
                   {/* Rocket Icon Graphic */}
-                  <div 
-                    style={{ 
-                      width: '84px', 
-                      height: '84px', 
-                      flexShrink: 0, 
+                  <div
+                    style={{
+                      width: '84px',
+                      height: '84px',
+                      flexShrink: 0,
                       borderRadius: '16px',
                       background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(59, 130, 246, 0.15))',
                       border: '1px solid rgba(6, 182, 212, 0.4)',
@@ -559,11 +559,11 @@ export default function AiIntakeAssistant({
                   </div>
 
                   {/* Growth Building Icon Graphic */}
-                  <div 
-                    style={{ 
-                      width: '84px', 
-                      height: '84px', 
-                      flexShrink: 0, 
+                  <div
+                    style={{
+                      width: '84px',
+                      height: '84px',
+                      flexShrink: 0,
                       borderRadius: '16px',
                       background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(217, 70, 239, 0.15))',
                       border: '1px solid rgba(168, 85, 247, 0.4)',
@@ -623,12 +623,12 @@ export default function AiIntakeAssistant({
               </button>
             </div>
 
-            <div 
-              style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
-                gap: '1.25rem', 
-                marginTop: '0.5rem' 
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gap: '1.25rem',
+                marginTop: '0.5rem'
               }}
             >
               {/* Expansion Option 1: Expand / Open a New Branch */}
@@ -650,15 +650,15 @@ export default function AiIntakeAssistant({
                   outline: 'none'
                 }}
               >
-                <div 
-                  style={{ 
-                    width: '52px', 
-                    height: '52px', 
-                    borderRadius: '12px', 
-                    background: 'linear-gradient(135deg, #6366f1, #818cf8)', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
+                <div
+                  style={{
+                    width: '52px',
+                    height: '52px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #6366f1, #818cf8)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     color: '#ffffff',
                     boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)'
                   }}
@@ -700,15 +700,15 @@ export default function AiIntakeAssistant({
                   outline: 'none'
                 }}
               >
-                <div 
-                  style={{ 
-                    width: '52px', 
-                    height: '52px', 
-                    borderRadius: '12px', 
-                    background: 'linear-gradient(135deg, #f59e0b, #ea580c)', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
+                <div
+                  style={{
+                    width: '52px',
+                    height: '52px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     color: '#ffffff',
                     boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)'
                   }}
@@ -754,52 +754,52 @@ export default function AiIntakeAssistant({
 
                 {/* Stage Badge */}
                 {selectedStage === 'New' ? (
-                  <span 
-                    style={{ 
-                      background: 'rgba(56, 189, 248, 0.15)', 
-                      color: '#38bdf8', 
-                      border: '1px solid rgba(56, 189, 248, 0.35)', 
-                      padding: '0.25rem 0.75rem', 
-                      borderRadius: '20px', 
-                      fontSize: '0.75rem', 
-                      fontWeight: 700, 
-                      display: 'inline-flex', 
-                      alignItems: 'center', 
-                      gap: '0.35rem' 
+                  <span
+                    style={{
+                      background: 'rgba(56, 189, 248, 0.15)',
+                      color: '#38bdf8',
+                      border: '1px solid rgba(56, 189, 248, 0.35)',
+                      padding: '0.25rem 0.75rem',
+                      borderRadius: '20px',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem'
                     }}
                   >
                     <Rocket size={13} /> New Startup
                   </span>
                 ) : selectedGoal === 'Open New Branch' ? (
-                  <span 
-                    style={{ 
-                      background: 'rgba(129, 140, 248, 0.15)', 
-                      color: '#818cf8', 
-                      border: '1px solid rgba(129, 140, 248, 0.35)', 
-                      padding: '0.25rem 0.75rem', 
-                      borderRadius: '20px', 
-                      fontSize: '0.75rem', 
-                      fontWeight: 700, 
-                      display: 'inline-flex', 
-                      alignItems: 'center', 
-                      gap: '0.35rem' 
+                  <span
+                    style={{
+                      background: 'rgba(129, 140, 248, 0.15)',
+                      color: '#818cf8',
+                      border: '1px solid rgba(129, 140, 248, 0.35)',
+                      padding: '0.25rem 0.75rem',
+                      borderRadius: '20px',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem'
                     }}
                   >
                     <Building2 size={13} /> Branch Expansion
                   </span>
                 ) : (
-                  <span 
-                    style={{ 
-                      background: 'rgba(245, 158, 11, 0.15)', 
-                      color: '#fbbf24', 
-                      border: '1px solid rgba(245, 158, 11, 0.35)', 
-                      padding: '0.25rem 0.75rem', 
-                      borderRadius: '20px', 
-                      fontSize: '0.75rem', 
-                      fontWeight: 700, 
-                      display: 'inline-flex', 
-                      alignItems: 'center', 
-                      gap: '0.35rem' 
+                  <span
+                    style={{
+                      background: 'rgba(245, 158, 11, 0.15)',
+                      color: '#fbbf24',
+                      border: '1px solid rgba(245, 158, 11, 0.35)',
+                      padding: '0.25rem 0.75rem',
+                      borderRadius: '20px',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem'
                     }}
                   >
                     <Layers size={13} /> Product Line Expansion
@@ -823,11 +823,11 @@ export default function AiIntakeAssistant({
                   type="button"
                   onClick={handleContinueToForm}
                   className="btn btn-primary"
-                  style={{ 
-                    fontSize: '0.82rem', 
-                    padding: '0.5rem 1.15rem', 
-                    display: 'flex', 
-                    alignItems: 'center', 
+                  style={{
+                    fontSize: '0.82rem',
+                    padding: '0.5rem 1.15rem',
+                    display: 'flex',
+                    alignItems: 'center',
                     gap: '0.45rem',
                     fontWeight: 700,
                     boxShadow: '0 4px 14px rgba(56, 189, 248, 0.35)'
@@ -852,8 +852,8 @@ export default function AiIntakeAssistant({
                 {/* Chat Stream Messages Viewport */}
                 <div className="chat-stream-viewport">
                   {chatMessages.map((msg) => (
-                    <div 
-                      key={msg.id} 
+                    <div
+                      key={msg.id}
                       className={`chat-message-row ${msg.role}`}
                     >
                       <div className={`chat-avatar ${msg.role}`}>
@@ -965,12 +965,12 @@ export default function AiIntakeAssistant({
                       Extracted Profile
                     </h4>
                   </div>
-                  <span 
-                    style={{ 
-                      fontSize: '0.72rem', 
-                      background: 'rgba(56, 189, 248, 0.15)', 
-                      color: '#38bdf8', 
-                      padding: '0.15rem 0.55rem', 
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      background: 'rgba(56, 189, 248, 0.15)',
+                      color: '#38bdf8',
+                      padding: '0.15rem 0.55rem',
                       borderRadius: '12px',
                       fontWeight: 700
                     }}
@@ -985,7 +985,7 @@ export default function AiIntakeAssistant({
 
                 {/* Captured Fields List */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, overflowY: 'auto' }}>
-                  
+
                   {/* Business Name */}
                   <div className={`live-fact-item ${prefilledFormData?.business_name ? 'extracted' : 'missing'}`}>
                     <span className="live-fact-label">Business Name</span>
@@ -1105,7 +1105,7 @@ export default function AiIntakeAssistant({
       {/* ========================================================================= */}
       {intakeStep === 'form' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', animation: 'fadeIn 0.25s ease-in-out' }}>
-          
+
           {/* AI Prefill Notice Banner */}
           {aiFilledKeys.size > 0 && (
             <div className="ai-prefill-banner">
@@ -1142,52 +1142,52 @@ export default function AiIntakeAssistant({
             isStageLocked={selectedStage === 'New' && (stageSelectedByUser || prefilledFormData?.business_stage === 'New')}
             stageBadge={
               selectedStage === 'New' ? (
-                <span 
-                  style={{ 
-                    background: 'rgba(56, 189, 248, 0.15)', 
-                    color: '#38bdf8', 
-                    border: '1px solid rgba(56, 189, 248, 0.35)', 
-                    padding: '0.2rem 0.65rem', 
-                    borderRadius: '16px', 
-                    fontSize: '0.75rem', 
-                    fontWeight: 700, 
-                    display: 'inline-flex', 
-                    alignItems: 'center', 
-                    gap: '0.35rem' 
+                <span
+                  style={{
+                    background: 'rgba(56, 189, 248, 0.15)',
+                    color: '#38bdf8',
+                    border: '1px solid rgba(56, 189, 248, 0.35)',
+                    padding: '0.2rem 0.65rem',
+                    borderRadius: '16px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem'
                   }}
                 >
                   <Rocket size={12} /> New Startup
                 </span>
               ) : selectedGoal === 'Open New Branch' ? (
-                <span 
-                  style={{ 
-                    background: 'rgba(129, 140, 248, 0.15)', 
-                    color: '#818cf8', 
-                    border: '1px solid rgba(129, 140, 248, 0.35)', 
-                    padding: '0.2rem 0.65rem', 
-                    borderRadius: '16px', 
-                    fontSize: '0.75rem', 
-                    fontWeight: 700, 
-                    display: 'inline-flex', 
-                    alignItems: 'center', 
-                    gap: '0.35rem' 
+                <span
+                  style={{
+                    background: 'rgba(129, 140, 248, 0.15)',
+                    color: '#818cf8',
+                    border: '1px solid rgba(129, 140, 248, 0.35)',
+                    padding: '0.2rem 0.65rem',
+                    borderRadius: '16px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem'
                   }}
                 >
                   <Building2 size={12} /> Branch Expansion
                 </span>
               ) : (
-                <span 
-                  style={{ 
-                    background: 'rgba(245, 158, 11, 0.15)', 
-                    color: '#fbbf24', 
-                    border: '1px solid rgba(245, 158, 11, 0.35)', 
-                    padding: '0.2rem 0.65rem', 
-                    borderRadius: '16px', 
-                    fontSize: '0.75rem', 
-                    fontWeight: 700, 
-                    display: 'inline-flex', 
-                    alignItems: 'center', 
-                    gap: '0.35rem' 
+                <span
+                  style={{
+                    background: 'rgba(245, 158, 11, 0.15)',
+                    color: '#fbbf24',
+                    border: '1px solid rgba(245, 158, 11, 0.35)',
+                    padding: '0.2rem 0.65rem',
+                    borderRadius: '16px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem'
                   }}
                 >
                   <Layers size={12} /> New Product Line

@@ -1,16 +1,16 @@
 import React from 'react';
-import { 
-  Sparkles, 
-  Check, 
-  Download, 
-  FileText, 
-  Share2, 
-  Printer, 
-  Loader2, 
-  Building2, 
-  MapPin, 
-  Layers, 
-  Compass 
+import {
+  Sparkles,
+  Check,
+  Download,
+  FileText,
+  Share2,
+  Printer,
+  Loader2,
+  Building2,
+  MapPin,
+  Layers,
+  Compass
 } from 'lucide-react';
 import { FeasibilityBadge } from '../common/Badge';
 import { formatConfidence } from '../../utils/formatters';
@@ -48,7 +48,7 @@ export default function PlanHeader({
           <div className="bp-hero-badges">
             <span className="bp-badge-pill official">
               <Sparkles size={13} />
-              <span>Official AI Decision Plan</span>
+              <span>Official Decision Plan</span>
             </span>
 
             {isAdopted ? (
@@ -112,7 +112,7 @@ export default function PlanHeader({
 
         {/* Action Controls */}
         <div className="bp-hero-actions">
-          <button 
+          <button
             onClick={onDownloadPdf}
             disabled={downloadingPdf}
             className="btn btn-primary"
@@ -132,7 +132,7 @@ export default function PlanHeader({
             )}
           </button>
 
-          <button 
+          <button
             onClick={onDownloadDocx}
             disabled={downloadingDocx}
             className="btn btn-secondary"
@@ -152,7 +152,7 @@ export default function PlanHeader({
             )}
           </button>
 
-          <button 
+          <button
             onClick={onShareLink}
             className="btn btn-secondary"
             style={{ padding: '0.65rem 0.85rem', fontSize: '0.825rem' }}
@@ -162,7 +162,7 @@ export default function PlanHeader({
             <span>{copiedLink ? 'Copied' : 'Share'}</span>
           </button>
 
-          <button 
+          <button
             onClick={onPrint}
             className="btn btn-secondary"
             style={{ padding: '0.65rem 0.85rem', fontSize: '0.825rem' }}
