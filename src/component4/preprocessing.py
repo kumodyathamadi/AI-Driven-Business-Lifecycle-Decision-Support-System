@@ -564,9 +564,11 @@ class Component4RiskDataPipeline:
         if self.scaler is None or self.sector_encoder is None or self.stage_encoder is None:
             raise RuntimeError("Preprocessor transformers are not fitted.")
 
-        scaled_num = self.scaler.transform(node_df[num_cols])
-        encoded_sec = self.sector_encoder.transform(node_df[[sector_col]])
-        encoded_stg = self.stage_encoder.transform(node_df[[stage_col]])
+        scaled_num = np.asarray(self.scaler.transform(node_df[num_cols]))
+        sec_out = self.sector_encoder.transform(node_df[[sector_col]])
+        stg_out = self.stage_encoder.transform(node_df[[stage_col]])
+        encoded_sec = np.asarray(sec_out.toarray() if hasattr(sec_out, "toarray") else sec_out)
+        encoded_stg = np.asarray(stg_out.toarray() if hasattr(stg_out, "toarray") else stg_out)
 
         feature_matrix = np.hstack([scaled_num, encoded_sec, encoded_stg])
 
