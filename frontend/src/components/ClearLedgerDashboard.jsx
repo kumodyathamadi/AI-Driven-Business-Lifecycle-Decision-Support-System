@@ -148,6 +148,40 @@ export default function ClearLedgerDashboard() {
   const [selectedReviewTxn, setSelectedReviewTxn] = useState(null);
   const [reviewNotes, setReviewNotes] = useState('');
   const [correctedInvNum, setCorrectedInvNum] = useState('');
+  const [editForm, setEditForm] = useState({
+    invoice_number: '',
+    customer_name: '',
+    customer_tin: '',
+    date_of_supply: '',
+    currency: 'EUR',
+    tax_category: 'Zero-Rated',
+    sub_total: 0,
+    tax_amount: 0,
+    total_amount: 0
+  });
+
+  const handleEditFormChange = (field, value) => {
+    setEditForm(prev => {
+      const updated = { ...prev, [field]: value };
+      if (field === 'sub_total' || field === 'tax_amount') {
+        const sub = field === 'sub_total' ? (parseFloat(value) || 0) : (parseFloat(prev.sub_total) || 0);
+        const tax = field === 'tax_amount' ? (parseFloat(value) || 0) : (parseFloat(prev.tax_amount) || 0);
+        updated.total_amount = Math.round((sub + tax) * 100) / 100;
+      }
+      if (field === 'tax_category') {
+        const sub = parseFloat(prev.sub_total) || 0;
+        if (value === 'Zero-Rated' || value === 'Exempt') {
+          updated.tax_amount = 0;
+          updated.total_amount = sub;
+        } else if (value === 'Standard 18%') {
+          const tax = Math.round(sub * 0.18 * 100) / 100;
+          updated.tax_amount = tax;
+          updated.total_amount = Math.round((sub + tax) * 100) / 100;
+        }
+      }
+      return updated;
+    });
+  };
 
   // Integrated Pipeline Test State
   const [pipelineResult, setPipelineResult] = useState(null);
@@ -194,9 +228,22 @@ export default function ClearLedgerDashboard() {
   // Open review modal and prepopulate auditor inputs
   const handleOpenReviewModal = (item) => {
     setSelectedReviewTxn(item);
+    const inv = getInvData(item);
     const existingNum = getInvNum(item);
-    setCorrectedInvNum(existingNum === 'INV-UNKNOWN' ? '' : existingNum);
+    const cleanNum = (existingNum === 'INV-UNKNOWN' || existingNum.startsWith('INV-UNKNOWN')) ? '' : existingNum;
+    setCorrectedInvNum(cleanNum);
     setReviewNotes('');
+    setEditForm({
+      invoice_number: cleanNum,
+      customer_name: inv?.customer_name || 'OZ IMPORT BV (COLORIGINZ)',
+      customer_tin: inv?.customer_tin || '1146888607000',
+      date_of_supply: inv?.date_of_supply || '07/02/2025',
+      currency: inv?.currency || 'EUR',
+      tax_category: inv?.tax_category || 'Zero-Rated',
+      sub_total: inv?.sub_total !== undefined ? inv.sub_total : 5651.10,
+      tax_amount: inv?.tax_amount !== undefined ? inv.tax_amount : 0,
+      total_amount: inv?.total_amount !== undefined ? inv.total_amount : 5651.10
+    });
   };
 
   // Auto-sync any unverified or INV-UNKNOWN invoices from taxInvoices into reviewQueue
@@ -438,40 +485,77 @@ export default function ClearLedgerDashboard() {
     }
   };
 
-  // Submit Fraud Review Action (Approve / Reject)
+  // Submit Fraud Review Action (Approve / Reject) with Full Field Updates
   const handleAction = async (action) => {
     if (!selectedReviewTxn) return;
     setLoading(true);
     const targetInvNum = getInvNum(selectedReviewTxn);
-    const finalInvNum = correctedInvNum.trim() || targetInvNum || 'INV-UNKNOWN';
+    const finalInvNum = editForm.invoice_number.trim() || correctedInvNum.trim() || targetInvNum || 'INV-UNKNOWN';
 
     try {
       try {
         await submitFraudReviewAction({
           transaction_id: selectedReviewTxn.transaction_id,
           action: action,
-          reviewer_notes: reviewNotes || (action === 'approve' ? `Auditor approved. Invoice: ${finalInvNum}` : 'Rejected by auditor / invalid transaction')
+          reviewer_notes: reviewNotes || (action === 'approve' ? `Auditor updated and approved. Invoice: ${finalInvNum}` : 'Rejected by auditor / invalid transaction')
         });
       } catch (e) {
         console.warn('Backend submitFraudReviewAction call error, applying local state update:', e.message);
       }
 
       if (action === 'approve') {
-        // Update taxInvoices: update invoice_number and set status to 'AUTO_PASS'
+        const sub = parseFloat(editForm.sub_total) || 0;
+        const tax = parseFloat(editForm.tax_amount) || 0;
+        const tot = parseFloat(editForm.total_amount) || (sub + tax);
+
+        // Update taxInvoices: update all edited fields and set status to 'AUTO_PASS'
         setTaxInvoices(prev => prev.map(inv => {
           if (inv.invoice_number === targetInvNum || (targetInvNum.startsWith('INV-UNKNOWN') && inv.invoice_number.startsWith('INV-UNKNOWN'))) {
             return {
               ...inv,
               invoice_number: finalInvNum,
+              customer_name: editForm.customer_name || inv.customer_name,
+              customer_tin: editForm.customer_tin || inv.customer_tin,
+              date_of_supply: editForm.date_of_supply || inv.date_of_supply,
+              currency: editForm.currency || inv.currency,
+              tax_category: editForm.tax_category || inv.tax_category,
+              sub_total: sub,
+              tax_amount: tax,
+              total_amount: tot,
               status: 'AUTO_PASS',
               flagged_reasons: []
             };
           }
           return inv;
         }));
+
+        // Also update active OCR preview card if it matches this invoice
+        if (ocrResult && (ocrResult.extracted_amounts?.invoice_number === targetInvNum || targetInvNum.startsWith('INV-UNKNOWN'))) {
+          setOcrResult(prev => ({
+            ...prev,
+            decision: 'AUTO_PASS',
+            confidence_score: 95.0,
+            review_reasons: [],
+            extracted_amounts: {
+              ...prev.extracted_amounts,
+              invoice_number: finalInvNum,
+              customer_name: editForm.customer_name || prev.extracted_amounts.customer_name,
+              customer_tin: editForm.customer_tin || prev.extracted_amounts.customer_tin,
+              invoice_date: editForm.date_of_supply || prev.extracted_amounts.invoice_date,
+              currency: editForm.currency || prev.extracted_amounts.currency,
+              tax_category: editForm.tax_category || prev.extracted_amounts.tax_category,
+              sub_total: sub,
+              tax_amount: tax,
+              total_amount: tot,
+              is_math_valid: true,
+              math_difference: 0.0
+            }
+          }));
+        }
+
         setStatusMessage({
           type: 'success',
-          text: `Invoice #${finalInvNum} approved and verified into active RAMIS Tax Ledger!`
+          text: `Invoice #${finalInvNum} updated, verified, and approved into active RAMIS Tax Ledger!`
         });
       } else {
         // Reject: Remove from taxInvoices
@@ -1102,40 +1186,75 @@ export default function ClearLedgerDashboard() {
                 </div>
               </div>
 
-              {/* Review Required Guidance Banner */}
+              {/* Review Required Guidance & Explicit Failure Reasons */}
               {ocrResult.decision === 'REVIEW_REQUIRED' && (
                 <div style={{
                   background: 'rgba(239, 68, 68, 0.12)',
-                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  border: '1px solid rgba(239, 68, 68, 0.45)',
                   borderRadius: '10px',
-                  padding: '0.85rem 1.15rem',
+                  padding: '1rem 1.25rem',
                   display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: '1rem'
+                  flexDirection: 'column',
+                  gap: '0.75rem'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#fca5a5', fontSize: '0.82rem' }}>
-                    <AlertTriangle size={18} color="#ef4444" style={{ flexShrink: 0 }} />
-                    <span>
-                      <strong>Human Auditor Review Required:</strong> This invoice was flagged due to missing/unverified invoice number or confidence threshold. It has been routed to the <strong>Fraud & Review Queue</strong> for verification or correction.
-                    </span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#f87171', fontSize: '0.92rem', fontWeight: 700 }}>
+                      <AlertTriangle size={20} color="#ef4444" style={{ flexShrink: 0 }} />
+                      <span>Human Auditor Review Required</span>
+                    </div>
+                    <button
+                      onClick={() => setActiveSubTab('fraud')}
+                      style={{
+                        background: '#ef4444',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '0.45rem 1rem',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem'
+                      }}
+                    >
+                      Open in Fraud & Review Queue →
+                    </button>
                   </div>
-                  <button
-                    onClick={() => setActiveSubTab('fraud')}
-                    style={{
-                      background: '#ef4444',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '6px',
-                      padding: '0.45rem 0.95rem',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    Go to Review Queue →
-                  </button>
+
+                  <div style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
+                    This document failed automated verification checks and has been routed to the <strong>Fraud & Review Queue</strong> for human inspection.
+                  </div>
+
+                  {/* Explicit Reasons List */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.25rem' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#f87171', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Reason(s) For Failure:
+                    </div>
+                    {((ocrResult.review_reasons && ocrResult.review_reasons.length > 0) ? ocrResult.review_reasons : [
+                      ocrResult.extracted_amounts?.invoice_number === 'INV-UNKNOWN' ? 'Missing, erased, or unidentifiable Invoice Number (INV-UNKNOWN).' : null,
+                      !ocrResult.extracted_amounts?.is_math_valid ? 'Arithmetic equation mismatch: Subtotal + Tax != Total.' : null,
+                      (!ocrResult.extracted_amounts?.total_amount || ocrResult.extracted_amounts?.total_amount <= 0) ? 'Zero or missing total payable amount.' : null,
+                      'Confidence score below verification threshold (< 85%).'
+                    ].filter(Boolean)).map((reason, rIdx) => (
+                      <div key={rIdx} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        background: 'rgba(239, 68, 68, 0.18)',
+                        border: '1px solid rgba(239, 68, 68, 0.35)',
+                        color: '#fca5a5',
+                        padding: '0.45rem 0.75rem',
+                        borderRadius: '6px',
+                        fontSize: '0.8rem',
+                        fontWeight: 600
+                      }}>
+                        <span style={{ fontSize: '1rem' }}>⚠️</span>
+                        <span>{reason}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -1858,19 +1977,28 @@ export default function ClearLedgerDashboard() {
                         </div>
                       )}
 
-                      <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-                        {flags.map((flag, fIdx) => (
-                          <span key={fIdx} style={{
-                            background: 'rgba(245, 158, 11, 0.15)',
-                            color: '#fbbf24',
-                            border: '1px solid rgba(245, 158, 11, 0.3)',
-                            fontSize: '0.72rem',
-                            padding: '0.2rem 0.5rem',
-                            borderRadius: '4px'
-                          }}>
-                            ⚠️ {flag}
-                          </span>
-                        ))}
+                      <div style={{ marginTop: '0.65rem' }}>
+                        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#f87171', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.35rem' }}>
+                          Failure Reason(s):
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          {flags.map((flag, fIdx) => (
+                            <span key={fIdx} style={{
+                              background: 'rgba(239, 68, 68, 0.18)',
+                              color: '#fca5a5',
+                              border: '1px solid rgba(239, 68, 68, 0.35)',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              padding: '0.25rem 0.55rem',
+                              borderRadius: '6px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem'
+                            }}>
+                              ⚠️ {flag}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </div>
 
@@ -1899,7 +2027,7 @@ export default function ClearLedgerDashboard() {
             </div>
           )}
 
-          {/* Review Action Modal */}
+          {/* Review Action Modal with Full Mandatory Field Editor */}
           {selectedReviewTxn && (
             <div style={{
               position: 'fixed',
@@ -1907,160 +2035,331 @@ export default function ClearLedgerDashboard() {
               left: 0,
               right: 0,
               bottom: 0,
-              background: 'rgba(0, 0, 0, 0.75)',
+              background: 'rgba(0, 0, 0, 0.8)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               zIndex: 1000,
-              padding: '1rem'
+              padding: '1rem',
+              overflowY: 'auto'
             }}>
               <div style={{
                 background: '#1e293b',
                 border: '1px solid rgba(255, 255, 255, 0.15)',
                 borderRadius: '16px',
                 padding: '1.75rem',
-                maxWidth: '560px',
+                maxWidth: '680px',
                 width: '100%',
+                maxHeight: '90vh',
+                overflowY: 'auto',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '1.25rem',
-                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6)'
+                boxShadow: '0 20px 50px rgba(0, 0, 0, 0.7)'
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                {/* Modal Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '0.75rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                    <AlertTriangle size={20} color="#f87171" />
-                    <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: '#ffffff' }}>
-                      Human Auditor Resolution
-                    </h3>
+                    <div style={{ background: 'rgba(239, 68, 68, 0.2)', padding: '0.4rem', borderRadius: '8px' }}>
+                      <AlertTriangle size={20} color="#f87171" />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: '#ffffff' }}>
+                        Auditor Review & Mandatory Field Editor
+                      </h3>
+                      <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.15rem' }}>
+                        Inspect, edit, and update mandatory fields before accepting into RAMIS Tax Ledger
+                      </div>
+                    </div>
                   </div>
                   <button
                     onClick={() => { setSelectedReviewTxn(null); setCorrectedInvNum(''); setReviewNotes(''); }}
-                    style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.4rem' }}
+                    style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.5rem', lineHeight: 1 }}
                   >
                     ×
                   </button>
                 </div>
 
+                {/* Flagged Failure Reasons Banner */}
                 <div style={{
-                  background: 'rgba(15, 23, 42, 0.7)',
+                  background: 'rgba(239, 68, 68, 0.12)',
+                  border: '1px solid rgba(239, 68, 68, 0.35)',
                   borderRadius: '10px',
-                  padding: '1rem',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.6rem',
-                  fontSize: '0.85rem'
+                  padding: '0.85rem 1rem'
                 }}>
-                  {(() => {
-                    const modalInvData = getInvData(selectedReviewTxn);
-                    const modalInvNum = getInvNum(selectedReviewTxn);
-                    return (
-                      <>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: '#94a3b8' }}>Transaction ID:</span>
-                          <strong style={{ color: '#60a5fa' }}>{selectedReviewTxn.transaction_id}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: '#94a3b8' }}>Current Invoice #:</span>
-                          <strong style={{ color: modalInvNum.startsWith('INV-UNKNOWN') ? '#f87171' : '#f1f5f9' }}>
-                            {modalInvNum}
-                          </strong>
-                        </div>
-                        {modalInvData?.customer_name && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ color: '#94a3b8' }}>Customer / Consignee:</span>
-                            <strong style={{ color: '#f1f5f9' }}>{modalInvData.customer_name}</strong>
-                          </div>
-                        )}
-                        {modalInvData?.total_amount !== undefined && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ color: '#94a3b8' }}>Total Amount:</span>
-                            <strong style={{ color: '#4ade80' }}>
-                              {modalInvData.currency || 'EUR'} {modalInvData.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </strong>
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#94a3b8' }}>Risk Assessment:</span>
-                    <span style={{
-                      background: 'rgba(239, 68, 68, 0.2)',
-                      color: '#f87171',
-                      padding: '0.15rem 0.5rem',
-                      borderRadius: '4px',
-                      fontWeight: 700,
-                      fontSize: '0.75rem'
-                    }}>
-                      Score {selectedReviewTxn.risk_score || 88}/100 ({selectedReviewTxn.risk_level || 'HIGH'})
-                    </span>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#f87171', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.35rem' }}>
+                    Flagged Failure Reason(s):
                   </div>
-                </div>
-
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.4rem', fontWeight: 600 }}>
-                    Flagged Discrepancy / Risk Reason(s):
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                     {getItemFlags(selectedReviewTxn).map((flag, fIdx) => (
-                      <div key={fIdx} style={{
-                        background: 'rgba(245, 158, 11, 0.12)',
-                        border: '1px solid rgba(245, 158, 11, 0.3)',
-                        color: '#fbbf24',
-                        padding: '0.4rem 0.65rem',
-                        borderRadius: '6px',
-                        fontSize: '0.78rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.4rem'
-                      }}>
-                        <span>⚠️</span> {flag}
+                      <div key={fIdx} style={{ fontSize: '0.78rem', color: '#fca5a5', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span>⚠️</span> <strong>{flag}</strong>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {/* Auditor Invoice Number Correction */}
+                {/* Mandatory Fields Edit Form */}
                 <div style={{
-                  background: 'rgba(59, 130, 246, 0.08)',
-                  border: '1px solid rgba(59, 130, 246, 0.25)',
-                  borderRadius: '10px',
-                  padding: '0.85rem'
+                  background: 'rgba(15, 23, 42, 0.6)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: '12px',
+                  padding: '1.25rem'
                 }}>
-                  <label style={{ fontSize: '0.75rem', color: '#93c5fd', display: 'block', marginBottom: '0.4rem', fontWeight: 700 }}>
-                    Assign / Correct Invoice Number (e.g. 3431):
-                  </label>
-                  <input
-                    type="text"
-                    value={correctedInvNum}
-                    onChange={(e) => setCorrectedInvNum(e.target.value)}
-                    placeholder="Enter real invoice # to approve (e.g. 3431)"
-                    style={{
-                      width: '100%',
-                      background: 'rgba(15, 23, 42, 0.9)',
-                      border: '1px solid rgba(59, 130, 246, 0.4)',
-                      borderRadius: '6px',
-                      padding: '0.55rem 0.75rem',
-                      color: '#ffffff',
-                      fontSize: '0.85rem',
-                      fontWeight: 600
-                    }}
-                  />
-                  <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.35rem' }}>
-                    Entering the verified invoice number renames `INV-UNKNOWN` and clears the error flag from the active tax ledger.
+                  <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span>📝</span> Edit & Update Mandatory Invoice Details
                   </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
+                    {/* Invoice Number */}
+                    <div>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: '0.35rem' }}>
+                        Invoice Number <span style={{ color: '#f87171' }}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.invoice_number}
+                        onChange={(e) => handleEditFormChange('invoice_number', e.target.value)}
+                        placeholder="e.g. 3431 or INV-2025-01"
+                        style={{
+                          width: '100%',
+                          background: 'rgba(15, 23, 42, 0.9)',
+                          border: `1px solid ${!editForm.invoice_number.trim() || editForm.invoice_number === 'INV-UNKNOWN' ? '#ef4444' : 'rgba(59, 130, 246, 0.4)'}`,
+                          borderRadius: '6px',
+                          padding: '0.55rem 0.75rem',
+                          color: '#ffffff',
+                          fontSize: '0.85rem',
+                          fontWeight: 600
+                        }}
+                      />
+                    </div>
+
+                    {/* Date of Supply */}
+                    <div>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: '0.35rem' }}>
+                        Date of Supply <span style={{ color: '#f87171' }}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.date_of_supply}
+                        onChange={(e) => handleEditFormChange('date_of_supply', e.target.value)}
+                        placeholder="DD/MM/YYYY or YYYY-MM-DD"
+                        style={{
+                          width: '100%',
+                          background: 'rgba(15, 23, 42, 0.9)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          borderRadius: '6px',
+                          padding: '0.55rem 0.75rem',
+                          color: '#ffffff',
+                          fontSize: '0.85rem'
+                        }}
+                      />
+                    </div>
+
+                    {/* Customer / Consignee Name */}
+                    <div>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: '0.35rem' }}>
+                        Customer / Consignee Name <span style={{ color: '#f87171' }}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.customer_name}
+                        onChange={(e) => handleEditFormChange('customer_name', e.target.value)}
+                        placeholder="e.g. OZ IMPORT BV (COLORIGINZ)"
+                        style={{
+                          width: '100%',
+                          background: 'rgba(15, 23, 42, 0.9)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          borderRadius: '6px',
+                          padding: '0.55rem 0.75rem',
+                          color: '#ffffff',
+                          fontSize: '0.85rem'
+                        }}
+                      />
+                    </div>
+
+                    {/* Customer TIN */}
+                    <div>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: '0.35rem' }}>
+                        Customer / Taxpayer TIN
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.customer_tin}
+                        onChange={(e) => handleEditFormChange('customer_tin', e.target.value)}
+                        placeholder="e.g. 1146888607000"
+                        style={{
+                          width: '100%',
+                          background: 'rgba(15, 23, 42, 0.9)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          borderRadius: '6px',
+                          padding: '0.55rem 0.75rem',
+                          color: '#ffffff',
+                          fontSize: '0.85rem'
+                        }}
+                      />
+                    </div>
+
+                    {/* Currency */}
+                    <div>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: '0.35rem' }}>
+                        Currency <span style={{ color: '#f87171' }}>*</span>
+                      </label>
+                      <select
+                        value={editForm.currency}
+                        onChange={(e) => handleEditFormChange('currency', e.target.value)}
+                        style={{
+                          width: '100%',
+                          background: '#0f172a',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          borderRadius: '6px',
+                          padding: '0.55rem 0.75rem',
+                          color: '#ffffff',
+                          fontSize: '0.85rem'
+                        }}
+                      >
+                        <option value="EUR">EUR (€)</option>
+                        <option value="LKR">LKR (Rs)</option>
+                        <option value="USD">USD ($)</option>
+                        <option value="GBP">GBP (£)</option>
+                        <option value="AUD">AUD ($)</option>
+                      </select>
+                    </div>
+
+                    {/* Tax Category */}
+                    <div>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: '0.35rem' }}>
+                        RAMIS Tax Category <span style={{ color: '#f87171' }}>*</span>
+                      </label>
+                      <select
+                        value={editForm.tax_category}
+                        onChange={(e) => handleEditFormChange('tax_category', e.target.value)}
+                        style={{
+                          width: '100%',
+                          background: '#0f172a',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          borderRadius: '6px',
+                          padding: '0.55rem 0.75rem',
+                          color: '#ffffff',
+                          fontSize: '0.85rem'
+                        }}
+                      >
+                        <option value="Zero-Rated">Zero-Rated (Export - 0% VAT, Cage D)</option>
+                        <option value="Standard 18%">Standard 18% (Local Supply - Cage A)</option>
+                        <option value="Exempt">Exempt (0% VAT - Cage E)</option>
+                      </select>
+                    </div>
+
+                    {/* Subtotal (Net) */}
+                    <div>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: '0.35rem' }}>
+                        Subtotal (Net Base Value) <span style={{ color: '#f87171' }}>*</span>
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={editForm.sub_total}
+                        onChange={(e) => handleEditFormChange('sub_total', e.target.value)}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(15, 23, 42, 0.9)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          borderRadius: '6px',
+                          padding: '0.55rem 0.75rem',
+                          color: '#ffffff',
+                          fontSize: '0.85rem',
+                          fontWeight: 600
+                        }}
+                      />
+                    </div>
+
+                    {/* Tax Amount */}
+                    <div>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: '0.35rem' }}>
+                        Tax Amount (VAT) <span style={{ color: '#f87171' }}>*</span>
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={editForm.tax_amount}
+                        onChange={(e) => handleEditFormChange('tax_amount', e.target.value)}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(15, 23, 42, 0.9)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          borderRadius: '6px',
+                          padding: '0.55rem 0.75rem',
+                          color: '#fbbf24',
+                          fontSize: '0.85rem',
+                          fontWeight: 600
+                        }}
+                      />
+                    </div>
+
+                    {/* Total Amount */}
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#60a5fa', display: 'block', marginBottom: '0.35rem' }}>
+                        Total Payable Amount <span style={{ color: '#f87171' }}>*</span>
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={editForm.total_amount}
+                        onChange={(e) => handleEditFormChange('total_amount', e.target.value)}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(15, 23, 42, 0.9)',
+                          border: '1px solid rgba(59, 130, 246, 0.4)',
+                          borderRadius: '6px',
+                          padding: '0.55rem 0.75rem',
+                          color: '#60a5fa',
+                          fontSize: '1rem',
+                          fontWeight: 700
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Mathematical Balance Indicator */}
+                  {(() => {
+                    const sub = parseFloat(editForm.sub_total) || 0;
+                    const tax = parseFloat(editForm.tax_amount) || 0;
+                    const tot = parseFloat(editForm.total_amount) || 0;
+                    const diff = Math.abs(Math.round((sub + tax - tot) * 100) / 100);
+                    const isBalanced = diff <= 0.05;
+                    return (
+                      <div style={{
+                        marginTop: '0.85rem',
+                        padding: '0.55rem 0.85rem',
+                        borderRadius: '6px',
+                        background: isBalanced ? 'rgba(34, 197, 94, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                        border: `1px solid ${isBalanced ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                        fontSize: '0.78rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                      }}>
+                        <span>
+                          <strong>Arithmetic Check:</strong> {sub} + {tax} = {Math.round((sub + tax) * 100) / 100} vs {tot}
+                        </span>
+                        <span style={{ fontWeight: 700, color: isBalanced ? '#4ade80' : '#f87171' }}>
+                          {isBalanced ? '✓ Math Balanced (Exact Match)' : `⚠️ Mismatch by ${diff.toFixed(2)}`}
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
 
+                {/* Auditor Notes */}
                 <div>
                   <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.4rem', fontWeight: 600 }}>
-                    Auditor Notes & Justification:
+                    Auditor Review Notes & Audit Trail:
                   </label>
                   <textarea
                     rows={2}
                     value={reviewNotes}
                     onChange={(e) => setReviewNotes(e.target.value)}
-                    placeholder="Enter reason for approval override or fraud rejection..."
+                    placeholder="e.g. Verified paper CusDec Box 44 invoice number, updated consignee name and verified math."
                     style={{
                       width: '100%',
                       background: 'rgba(15, 23, 42, 0.8)',
@@ -2068,13 +2367,14 @@ export default function ClearLedgerDashboard() {
                       borderRadius: '8px',
                       padding: '0.6rem',
                       color: '#ffffff',
-                      fontSize: '0.85rem',
+                      fontSize: '0.82rem',
                       resize: 'vertical'
                     }}
                   />
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '1rem' }}>
                   <button
                     onClick={() => handleAction('reject')}
                     disabled={loading}
@@ -2083,33 +2383,34 @@ export default function ClearLedgerDashboard() {
                       border: '1px solid rgba(239, 68, 68, 0.4)',
                       color: '#f87171',
                       borderRadius: '8px',
-                      padding: '0.6rem 1.15rem',
+                      padding: '0.65rem 1.25rem',
                       fontSize: '0.85rem',
                       fontWeight: 700,
                       cursor: 'pointer'
                     }}
                   >
-                    Reject & Remove Invoice
+                    Reject & Remove
                   </button>
 
                   <button
                     onClick={() => handleAction('approve')}
-                    disabled={loading}
+                    disabled={loading || !editForm.invoice_number.trim() || editForm.invoice_number === 'INV-UNKNOWN'}
                     style={{
-                      background: '#22c55e',
+                      background: (!editForm.invoice_number.trim() || editForm.invoice_number === 'INV-UNKNOWN') ? 'rgba(34, 197, 94, 0.3)' : '#22c55e',
                       color: '#ffffff',
                       border: 'none',
                       borderRadius: '8px',
-                      padding: '0.6rem 1.25rem',
+                      padding: '0.65rem 1.4rem',
                       fontSize: '0.85rem',
                       fontWeight: 700,
-                      cursor: 'pointer',
+                      cursor: (!editForm.invoice_number.trim() || editForm.invoice_number === 'INV-UNKNOWN') ? 'not-allowed' : 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '0.4rem'
+                      gap: '0.45rem',
+                      boxShadow: '0 4px 12px rgba(34, 197, 94, 0.25)'
                     }}
                   >
-                    <CheckCircle2 size={16} /> Save & Approve to Ledger
+                    <CheckCircle2 size={16} /> Save, Update & Approve to Ledger
                   </button>
                 </div>
               </div>

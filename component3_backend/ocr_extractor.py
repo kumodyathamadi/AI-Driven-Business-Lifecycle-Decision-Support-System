@@ -96,15 +96,16 @@ def extract_amounts_from_text(document_text: str) -> OCRExtractionResponse:
     ]
     # Automatically enqueue into Human Review Queue if review is required or invoice number is unknown
     if raw_res["decision"] == "REVIEW_REQUIRED" or amounts_data.get("invoice_number") == "INV-UNKNOWN":
-        reasons = []
-        if amounts_data.get("invoice_number") == "INV-UNKNOWN":
-            reasons.append("Unidentified or missing Invoice Number (INV-UNKNOWN).")
-        if not amounts_data.get("is_math_valid", True):
-            reasons.append("Arithmetic equation mismatch: Subtotal + Tax != Total.")
-        if amounts_data.get("total_amount", 0.0) <= 0:
-            reasons.append("Zero or missing total payable amount.")
+        reasons = list(raw_res.get("review_reasons", []))
         if not reasons:
-            reasons.append("Low extraction confidence score or unverified document format.")
+            if amounts_data.get("invoice_number") == "INV-UNKNOWN":
+                reasons.append("Unidentified or missing Invoice Number (INV-UNKNOWN).")
+            if not amounts_data.get("is_math_valid", True):
+                reasons.append("Arithmetic equation mismatch: Subtotal + Tax != Total.")
+            if amounts_data.get("total_amount", 0.0) <= 0:
+                reasons.append("Zero or missing total payable amount.")
+            if not reasons:
+                reasons.append("Low extraction confidence score or unverified document format.")
             
         enqueue_ocr_anomaly(
             invoice_number=amounts_data["invoice_number"],
@@ -116,11 +117,16 @@ def extract_amounts_from_text(document_text: str) -> OCRExtractionResponse:
             reasons=reasons
         )
 
+    final_reasons = list(raw_res.get("review_reasons", []))
+    if raw_res["decision"] == "REVIEW_REQUIRED" and not final_reasons:
+        final_reasons.append("Document flagged for manual review due to verification policy.")
+
     return OCRExtractionResponse(
         status="success",
         confidence_score=raw_res["confidence_score"],
         decision=raw_res["decision"],
         routing=raw_res["routing"],
+        review_reasons=final_reasons,
         extracted_amounts=amounts_obj,
         step_logs=step_logs_objs,
         rejected_decoys_count=raw_res["rejected_decoys_count"],

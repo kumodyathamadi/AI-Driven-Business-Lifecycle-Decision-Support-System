@@ -182,6 +182,7 @@ class OCRExtractionResponse(BaseModel):
     confidence_score: float = Field(..., description="Extraction confidence score (0 to 100%)")
     decision: str = Field(..., description="'AUTO_PASS' or 'REVIEW_REQUIRED'")
     routing: str = Field(..., description="Target routing pipeline")
+    review_reasons: List[str] = Field(default_factory=list, description="Specific reasons why review is required")
     extracted_amounts: ExtractedAmountDetails
     step_logs: List[StepLog]
     rejected_decoys_count: int

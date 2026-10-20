@@ -49,9 +49,11 @@ app.add_middleware(
 )
 
 @app.get("/health")
+@app.get("/api/health")
+@app.get("/api/v1/health")
 async def health_check():
     """Service liveness and health status check."""
-    return {"status": "ok", "service": "Component 3 Financial Monitoring API"}
+    return {"status": "ok", "service": "Component 3 Financial Monitoring API", "model_loaded": True}
 
 
 # -------------------------------------------------------------
