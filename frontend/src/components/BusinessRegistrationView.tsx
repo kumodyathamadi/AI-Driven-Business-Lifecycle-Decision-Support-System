@@ -713,61 +713,83 @@ export const BusinessRegistrationView: React.FC = () => {
     setDownloadSuccess(false);
 
     try {
-      if (activeRoadmapStage === 3) {
-        // Download official Form 1 PDF from FastAPI backend
-        const response = await fetch('http://127.0.0.1:8000/api/v1/component2/generate-br-form', {
+      const stagePayload = {
+        stage: activeRoadmapStage,
+        ...formData,
+        ...stage1Data,
+        ...stage2Data,
+        ...stage4Data,
+        ...stage5Data,
+      };
+
+      const safeName = (formData.business_name || 'Business').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '');
+      const filenameMap: Record<number, string> = {
+        1: `WP_BN_01_Name_Search_Clearance_${safeName}.pdf`,
+        2: `Grama_Niladhari_Report_${safeName}.pdf`,
+        3: `BR_Application_Form1_${safeName}.pdf`,
+        4: `Municipal_Trade_License_Application_${safeName}.pdf`,
+        5: `RAMIS_TIN_Labour_FormD_${safeName}.pdf`,
+      };
+      const targetFilename = filenameMap[activeRoadmapStage] || `Stage_${activeRoadmapStage}_Application_${safeName}.pdf`;
+
+      // 1. Primary: Request genuine binary PDF from FastAPI backend
+      let pdfDownloaded = false;
+      try {
+        const endpoint = activeRoadmapStage === 3
+          ? 'http://127.0.0.1:8000/api/v1/component2/generate-br-form'
+          : 'http://127.0.0.1:8000/api/v1/component2/generate-stage-form';
+
+        const response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(stagePayload),
         });
 
-        if (!response.ok) {
-          const fallbackRes = await fetch(
-            `http://127.0.0.1:8000/api/v1/component2/sample-br-form/download?business_name=${encodeURIComponent(
-              formData.business_name
-            )}&legal_form=${encodeURIComponent(formData.legal_form)}&district=${encodeURIComponent(formData.district)}`
-          );
-          if (!fallbackRes.ok) throw new Error('Failed to generate application form');
-          const blob = await fallbackRes.blob();
-          triggerDownload(blob, `Official_BR_Form1_${formData.business_name.replace(/\s+/g, '_')}.pdf`);
-        } else {
+        if (response.ok) {
           const blob = await response.blob();
-          triggerDownload(blob, `Official_BR_Form1_${formData.business_name.replace(/\s+/g, '_')}.pdf`);
+          triggerDownload(blob, targetFilename);
+          setDownloadMessage(`Official ${STAGE_META[activeRoadmapStage].title.split('.')[1]?.trim()} (PDF) downloaded successfully!`);
+          pdfDownloaded = true;
         }
-        setDownloadMessage('Official Form 1 (Statement of Particulars) PDF has been downloaded successfully!');
-      } else {
-        // Generate statutory formatted official application docket for Stages 1, 2, 4, 5
+      } catch (backendErr) {
+        console.warn('Backend PDF endpoint unreachable, opening browser print-to-PDF...', backendErr);
+      }
+
+      // 2. Fallback: If backend was not reached, launch browser print dialog (Save as PDF)
+      if (!pdfDownloaded) {
         const stageMeta = STAGE_META[activeRoadmapStage];
-        const htmlContent = `<!DOCTYPE html>
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(`<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
   <title>${stageMeta.title} - ${formData.business_name}</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; padding: 40px; color: #1e293b; line-height: 1.6; }
-    .header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 20px; margin-bottom: 25px; }
-    .emblem { font-size: 24px; font-weight: bold; color: #0f172a; }
-    .statute { font-size: 13px; color: #64748b; font-weight: 600; text-transform: uppercase; margin-top: 4px; }
-    h1 { font-size: 18px; margin: 12px 0 4px; color: #0f172a; }
-    h2 { font-size: 14px; font-weight: 500; color: #334155; margin: 0; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
-    th, td { border: 1px solid #cbd5e1; padding: 10px 14px; text-align: left; }
-    th { background: #f8fafc; font-weight: 700; width: 35%; color: #334155; }
+    @page { size: A4 portrait; margin: 15mm; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; padding: 20px; color: #0f172a; line-height: 1.5; font-size: 12px; }
+    .header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 18px; }
+    .emblem { font-size: 15px; font-weight: 800; color: #0f172a; letter-spacing: 0.5px; }
+    .statute { font-size: 11px; color: #475569; font-weight: 700; text-transform: uppercase; margin-top: 3px; }
+    h1 { font-size: 16px; margin: 10px 0 3px; color: #0f172a; font-weight: 800; }
+    h2 { font-size: 12px; font-weight: 600; color: #334155; margin: 0; }
+    table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 11.5px; }
+    th, td { border: 1px solid #cbd5e1; padding: 7px 10px; text-align: left; }
+    th { background: #f8fafc; font-weight: 700; width: 34%; color: #334155; }
     td { background: #ffffff; color: #0f172a; font-weight: 500; }
-    .section-title { background: #e2e8f0; font-weight: 800; font-size: 14px; color: #0f172a; }
-    .checklist { margin-top: 25px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; }
-    .checklist-title { font-weight: 700; font-size: 13px; color: #0f172a; margin-bottom: 10px; }
-    .footer { margin-top: 40px; display: flex; justify-content: space-between; font-size: 12px; border-top: 1px dashed #cbd5e1; padding-top: 20px; }
-    .sign-box { width: 220px; border-top: 1px solid #0f172a; text-align: center; padding-top: 8px; margin-top: 50px; font-weight: 600; }
+    .section-title { background: #e2e8f0; font-weight: 800; font-size: 12px; color: #0f172a; }
+    .checklist { margin-top: 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 16px; font-size: 11px; }
+    .checklist-title { font-weight: 800; font-size: 11.5px; color: #0f172a; margin-bottom: 6px; }
+    .footer { margin-top: 25px; display: flex; justify-content: space-between; font-size: 10.5px; border-top: 1px dashed #cbd5e1; padding-top: 12px; }
+    .sign-box { width: 200px; border-top: 1px solid #0f172a; text-align: center; padding-top: 6px; margin-top: 35px; font-weight: 700; }
   </style>
 </head>
 <body>
   <div class="header">
     <div class="emblem">DEMOCRATIC SOCIALIST REPUBLIC OF SRI LANKA</div>
-    <div class="statute">WESTERN PROVINCE BUSINESS REGISTRATION SYSTEM</div>
+    <div class="statute">WESTERN PROVINCIAL COUNCIL — DEPARTMENT OF BUSINESS NAMES</div>
     <h1>${stageMeta.title}</h1>
     <h2>${stageMeta.title_si}</h2>
-    <p style="font-size: 12px; color: #64748b; margin-top: 8px;">Prescribed Filing Dossier | Generated via SME360 Decision Support</p>
   </div>
 
   <table>
@@ -782,7 +804,7 @@ export const BusinessRegistrationView: React.FC = () => {
     <tr><th>National Identity Card (NIC)</th><td>${formData.owner_nic}</td></tr>
     <tr><th>Contact Phone &amp; Email</th><td>${formData.phone} | ${formData.email}</td></tr>
 
-    <tr class="section-title"><td colspan="2">2. STAGE ${activeRoadmapStage} SPECIFIC STATUTORY PARTICULARS</td></tr>
+    <tr class="section-title"><td colspan="2">2. STAGE ${activeRoadmapStage} SPECIFIC PARTICULARS</td></tr>
     ${
       activeRoadmapStage === 1
         ? `<tr><th>Alternative Name Choice 1</th><td>${stage1Data.alt_name_1}</td></tr>
@@ -790,9 +812,9 @@ export const BusinessRegistrationView: React.FC = () => {
            <tr><th>Name Meaning &amp; Origin</th><td>${stage1Data.name_meaning}</td></tr>
            <tr><th>Language Scripts</th><td>${stage1Data.language_scripts}</td></tr>
            <tr><th>Search Date &amp; Validity</th><td>${stage1Data.search_date} (${stage1Data.reservation_period})</td></tr>
-           <tr><th>Statutory Fee</th><td>LKR 250 - 500 (Prescribed WP Duty)</td></tr>`
+           <tr><th>Statutory Duty Fee</th><td>LKR 250 - 500 (Payable at DS Cashier)</td></tr>`
         : activeRoadmapStage === 2
-        ? `<tr><th>Premises Legal Title</th><td>${stage2Data.ownership_type.replace(/_/g, ' ').toUpperCase()}</td></tr>
+        ? `<tr><th>Premises Legal Tenancy Title</th><td>${stage2Data.ownership_type.replace(/_/g, ' ').toUpperCase()}</td></tr>
            <tr><th>Property Owner / Landlord</th><td>${stage2Data.landlord_name} (${stage2Data.landlord_phone})</td></tr>
            <tr><th>Deed / Stamped Lease Ref</th><td>${stage2Data.deed_lease_no}</td></tr>
            <tr><th>Electoral Register Serial No</th><td>${stage2Data.electoral_no} (House: ${stage2Data.house_no})</td></tr>
@@ -837,13 +859,14 @@ export const BusinessRegistrationView: React.FC = () => {
       Applicant / Declarant Signature
     </div>
   </div>
+  <script>
+    window.onload = function() { window.print(); }
+  </script>
 </body>
-</html>`;
-
-        const blob = new Blob([htmlContent], { type: 'text/html' });
-        const safeName = formData.business_name.replace(/\s+/g, '_');
-        triggerDownload(blob, `Stage_${activeRoadmapStage}_${stageMeta.title.replace(/[^a-zA-Z0-9]/g, '_')}_${safeName}.html`);
-        setDownloadMessage(`Official Stage ${activeRoadmapStage} statutory dossier has been successfully generated!`);
+</html>`);
+          printWindow.document.close();
+          setDownloadMessage(`Official Stage ${activeRoadmapStage} PDF print dialog opened. Select "Save as PDF" to save!`);
+        }
       }
 
       setDownloadSuccess(true);
