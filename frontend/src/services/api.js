@@ -268,4 +268,12 @@ export const getRecentComponent4Assessments = async (limit = 15) => {
   return response.data;
 };
 
+/**
+ * Retrieves persistent registered Component 4 business profiles
+ */
+export const getComponent4Businesses = async (limit = 50) => {
+  const response = await apiClient.get(`/component4/businesses?limit=${limit}`);
+  return response.data;
+};
+
 

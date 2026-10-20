@@ -71,21 +71,39 @@ def list_analysis_records(
 ):
     """
     Lists recent SME business analysis runs stored in the database.
+    Safely extracts available_capital_lkr and business_name from stored input/profile JSON.
+    Provides both predicted_label and feasibility_label for seamless UI compatibility.
     """
     records = db.query(AnalysisRecord).order_by(AnalysisRecord.created_at.desc()).limit(limit).all()
-    return [
-        {
+    out = []
+    for rec in records:
+        inp = rec.input_profile if isinstance(rec.input_profile, dict) else {}
+        sp = rec.structured_profile if isinstance(rec.structured_profile, dict) else {}
+
+        capital = inp.get("available_capital_lkr")
+        if capital is None and "business_input" in sp and isinstance(sp["business_input"], dict):
+            capital = sp["business_input"].get("available_capital_lkr")
+
+        b_name = inp.get("business_name")
+        if not b_name and "business_input" in sp and isinstance(sp["business_input"], dict):
+            b_name = sp["business_input"].get("business_name")
+        if not b_name and "business_plan" in sp and isinstance(sp["business_plan"], dict):
+            b_name = sp["business_plan"].get("business_name")
+
+        out.append({
             "id": rec.id,
+            "business_name": b_name,
             "business_stage": rec.business_stage,
             "business_category": rec.business_category,
             "district": rec.district,
             "feasibility_label": rec.feasibility_label,
+            "predicted_label": rec.feasibility_label,
             "confidence_score": rec.confidence_score,
+            "available_capital_lkr": capital,
             "original_business_description": rec.original_business_description,
             "created_at": rec.created_at.isoformat() if rec.created_at else None
-        }
-        for rec in records
-    ]
+        })
+    return out
 
 
 @router.get("/record/{record_id}", response_model=Dict[str, Any])

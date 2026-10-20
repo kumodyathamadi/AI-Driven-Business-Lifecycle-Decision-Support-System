@@ -574,6 +574,46 @@ def list_recent_assessments(
     }
 
 
+@router.get("/businesses")
+def list_component4_businesses(
+    limit: int = 50,
+    db: Session = Depends(get_db)
+):
+    """Lists persistent registered Component 4 business profiles with latest risk status."""
+    profiles = db.query(Component4BusinessProfile).order_by(
+        Component4BusinessProfile.updated_at.desc()
+    ).limit(limit).all()
+
+    businesses = []
+    for p in profiles:
+        latest_run = db.query(Component4AssessmentRun).filter_by(business_id=p.id).order_by(
+            Component4AssessmentRun.created_at.desc()
+        ).first()
+
+        businesses.append({
+            "id": p.id,
+            "business_name": p.business_name,
+            "registration_number": p.registration_number,
+            "district": p.district,
+            "province": p.province,
+            "business_category": p.business_category,
+            "business_stage": p.business_stage,
+            "source_origin": p.source_origin,
+            "latest_risk_category": latest_run.overall_risk_category if latest_run else None,
+            "composite_risk_score": latest_run.composite_risk_score if latest_run else None,
+            "latest_assessment_id": latest_run.id if latest_run else None,
+            "assessment_count": len(p.assessment_runs) if p.assessment_runs else 0,
+            "created_at": p.created_at.isoformat() if p.created_at else None,
+            "updated_at": p.updated_at.isoformat() if p.updated_at else None,
+        })
+
+    return {
+        "success": True,
+        "total": len(businesses),
+        "businesses": businesses
+    }
+
+
 @router.get("/analysis/{analysis_id}")
 def get_analysis_by_id(analysis_id: str, db: Session = Depends(get_db)):
     """Retrieves saved analysis results by analysis identifier from disk or database."""
