@@ -112,6 +112,352 @@ const SAMPLE_PRESETS: Record<string, BrFormData> = {
     residence_address: 'No. 5, Temple Road, Yakkala',
     commencement_date: '2026-11-10',
   },
+export interface RoadmapStep {
+  step: number;
+  title: string;
+  title_si: string;
+  auth: string;
+  time: string;
+  fee: string;
+  icon: string;
+  desc: string;
+  mandatory_docs: string[];
+  statutory_form: string;
+  official_portal?: string;
+  pro_tip: string;
+}
+
+export interface EntityRoadmapConfig {
+  entity_label: string;
+  entity_label_si: string;
+  badge: string;
+  badge_color: string;
+  statute: string;
+  governing_body: string;
+  filing_portal: string;
+  est_timeline: string;
+  est_cost: string;
+  description: string;
+  steps: RoadmapStep[];
+}
+
+export const ROADMAP_DATA_BY_ENTITY: Record<'sole_proprietorship' | 'partnership' | 'private_limited', EntityRoadmapConfig> = {
+  sole_proprietorship: {
+    entity_label: 'Sole Proprietorship',
+    entity_label_si: 'තනි පුද්ගල ව්‍යාපාරය',
+    badge: 'Western Province Individual Enterprise',
+    badge_color: 'bg-teal-100 text-teal-800 border-teal-200',
+    statute: 'Western Province Business Names Statute No. 04 of 1990',
+    governing_body: 'Divisional Secretariat (Business Names Division)',
+    filing_portal: 'Divisional Secretariat Office (Based on business location)',
+    est_timeline: '4 - 8 Days',
+    est_cost: 'LKR 5,750 - 11,000 (Govt Duty + Municipal)',
+    description: 'Direct individual owner liability and sole authority. Registration is completed directly through the local Divisional Secretariat and local municipal council.',
+    steps: [
+      {
+        step: 1,
+        title: 'Name Search & Clearance',
+        title_si: 'ව්‍යාපාර නාමය සෙවීම සහ අනුමැතිය',
+        auth: 'Divisional Secretariat',
+        time: '1 Day',
+        fee: 'LKR 250 - 500',
+        icon: 'fa-magnifying-glass',
+        desc: 'Submit the proposed trading name at the Divisional Secretariat to confirm that the name is not identical, deceptively similar, or legally restricted under WP Business Names Statute Section 4.',
+        mandatory_docs: [
+          'Proposed Business Name Query Form (WP/BN/01)',
+          'Applicant National Identity Card (NIC) Photocopy',
+        ],
+        statutory_form: 'Business Name Inquiry Slip',
+        official_portal: 'Divisional Secretariat — Business Names Counter',
+        pro_tip: 'Avoid prohibited words such as "State", "President", or single generic dictionary words without distinguishing prefixes.',
+      },
+      {
+        step: 2,
+        title: 'Grama Niladhari Report',
+        title_si: 'ග්‍රාම නිලධාරී පරීක්ෂාව සහ වාර්තාව',
+        auth: 'Grama Niladhari Officer',
+        time: '1 - 2 Days',
+        fee: 'Free (Statutory Duty)',
+        icon: 'fa-user-check',
+        desc: 'The GN Officer visits and inspects the physical business premises, confirms applicant residence within the division, and verifies property ownership or commercial lease deed.',
+        mandatory_docs: [
+          'Deed of Ownership or Stamped Commercial Lease Agreement',
+          'Electoral Register confirmation or recent Utility Bill',
+          'Applicant Certified NIC copy',
+        ],
+        statutory_form: 'GN Residence & Premises Assessment Report (වසමේ වාර්තාව)',
+        official_portal: 'Local Grama Niladhari Office (අදාළ ග්‍රාම නිලධාරී වසම)',
+        pro_tip: 'If operating from a rented building, ensure the property owner signs a written consent letter or tenancy contract with valid revenue stamps.',
+      },
+      {
+        step: 3,
+        title: 'Statutory Form 1 Filing',
+        title_si: 'Form 1 අයදුම්පත භාරදීම සහ BR සහතිකය',
+        auth: 'Department of Business Names',
+        time: '1 - 3 Days',
+        fee: 'LKR 2,500',
+        icon: 'fa-file-signature',
+        desc: 'Submit the completed Form 1 Statement of Particulars to the Divisional Secretary. Upon inspection of submitted documents, the official Business Registration Certificate (BR) is issued.',
+        mandatory_docs: [
+          'Completed & Signed Form 1 Statement of Particulars',
+          'Original GN Inspection Assessment Report',
+          'Certified copy of Applicant NIC (certified by JP / Attorney)',
+          'Registered Deed / Tenancy Agreement copy',
+        ],
+        statutory_form: 'Form 1 (Statement of Particulars - Individual)',
+        official_portal: 'Divisional Secretariat — Business Registration Unit',
+        pro_tip: 'Display the original laminated Business Registration certificate visibly inside your retail premises for local authority inspections.',
+      },
+      {
+        step: 4,
+        title: 'Municipal Trade Tax & Health Clearance',
+        title_si: 'නගර සභා වෙළඳ බද්ද සහ සෞඛ්‍ය බලපත්‍රය',
+        auth: 'Municipal / Urban Council (e.g., CMC, KMC)',
+        time: '2 - 5 Days',
+        fee: 'LKR 3,000 - 8,000',
+        icon: 'fa-city',
+        desc: 'Register under Municipal Council By-Laws to obtain commercial trade tax clearance and public health inspection pass (PHI food hygiene pass for food establishments or salons).',
+        mandatory_docs: [
+          'Certified copy of Business Registration (BR) Certificate',
+          'Municipal Assessment Rates payment receipt',
+          'Store floor plan / Layout sketch',
+        ],
+        statutory_form: 'Municipal Trade Tax & Licence Application',
+        official_portal: 'Relevant Municipal Council / Urban Council Office',
+        pro_tip: 'Food businesses must coordinate with the local Public Health Inspector (PHI) for kitchen hygiene and medical fitness passes for handlers.',
+      },
+      {
+        step: 5,
+        title: 'RAMIS TIN & Labour EPF/ETF',
+        title_si: 'TIN අංකය සහ සේවක ලියාපදිංචිය',
+        auth: 'Inland Revenue & Labour Dept',
+        time: '1 - 3 Days',
+        fee: 'Free Registration',
+        icon: 'fa-receipt',
+        desc: 'Obtain mandatory individual Taxpayer Identification Number (TIN) via IRD RAMIS portal. If hiring one or more employees, register with Department of Labour for EPF/ETF contributions.',
+        mandatory_docs: [
+          'Individual NIC & BR Certificate copy',
+          'RAMIS Online Registration submission',
+          'Employee list with NICs and wage schedule (if hiring)',
+        ],
+        statutory_form: 'RAMIS Taxpayer Registration & Labour Form D',
+        official_portal: 'Inland Revenue RAMIS (www.ird.gov.lk) & Labour Dept',
+        pro_tip: 'Opening a commercial business current bank account in Sri Lanka now strictly requires the mandatory RAMIS TIN document.',
+      },
+    ],
+  },
+  partnership: {
+    entity_label: 'Partnership',
+    entity_label_si: 'හවුල් ව්‍යාපාරය',
+    badge: 'Co-Founder Model (2 - 20 Partners)',
+    badge_color: 'bg-blue-100 text-blue-800 border-blue-200',
+    statute: 'Partnership Ordinance No. 22 of 1890 & WP Statute No. 04 of 1990',
+    governing_body: 'Divisional Secretariat & Notarial Legal Execution',
+    filing_portal: 'Divisional Secretariat (Department of Business Names)',
+    est_timeline: '7 - 14 Days',
+    est_cost: 'LKR 11,750 - 27,000 (Deed + Govt Duty)',
+    description: 'Shared capital and joint liability among co-founders. Governed by a legally executed Partnership Agreement drafted by an Attorney-at-Law and filed at the Divisional Secretariat.',
+    steps: [
+      {
+        step: 1,
+        title: 'Partnership Name Verification',
+        title_si: 'හවුල් ව්‍යාපාර නාමය සෙවීම සහ වෙන්කිරීම',
+        auth: 'Divisional Secretariat',
+        time: '1 Day',
+        fee: 'LKR 250 - 500',
+        icon: 'fa-magnifying-glass',
+        desc: 'Check availability of the proposed firm name across the Western Province business register to ensure it is distinct and does not mislead the public.',
+        mandatory_docs: [
+          'Partnership Name Reservation Application',
+          'Primary Partner NIC copy',
+        ],
+        statutory_form: 'WP Partnership Name Inquiry Form',
+        official_portal: 'Divisional Secretariat — Business Registration Unit',
+        pro_tip: 'Firm names cannot include words like "Limited" or "Incorporated" which imply limited liability.',
+      },
+      {
+        step: 2,
+        title: 'Partnership Agreement / Deed Drafting',
+        title_si: 'හවුල් ගිවිසුම සකස් කිරීම සහ නොතාරිස් සහතිකය',
+        auth: 'Attorney-at-Law & Notary Public',
+        time: '2 - 4 Days',
+        fee: 'LKR 6,000 - 15,000 (Legal Drafting)',
+        icon: 'fa-handshake',
+        desc: 'Draft and execute a legally binding Partnership Deed specifying capital contribution ratios, profit/loss sharing percentages, partner duties, signing mandates, and dissolution rules.',
+        mandatory_docs: [
+          'Agreed Commercial Partnership Terms',
+          'NIC copies of all participating partners',
+          'Capital contribution breakdown & bank operating instructions',
+        ],
+        statutory_form: 'Notarized Deed of Partnership (හවුල් ගිවිසුම් පත්‍රය)',
+        official_portal: 'Office of an Attorney-at-Law / Notary Public',
+        pro_tip: 'Under the Prevention of Frauds Ordinance, any partnership with capital exceeding LKR 1,000 must be in writing and notarized to be legally enforceable.',
+      },
+      {
+        step: 3,
+        title: 'Multi-Partner Grama Niladhari Clearances',
+        title_si: 'සියලු හවුල්කරුවන්ගේ පදිංචිය හා පරිශ්‍රය තහවුරු කිරීම',
+        auth: 'Local Grama Niladhari Officers',
+        time: '1 - 2 Days',
+        fee: 'Free (Statutory Duty)',
+        icon: 'fa-users',
+        desc: 'Premises inspection by the GN officer where the business is situated, along with individual residence verification reports for all resident partners in Sri Lanka.',
+        mandatory_docs: [
+          'Premises Lease Deed signed with the Partnership',
+          'Residence verification extracts for all partners',
+          'Certified NIC copies for each partner',
+        ],
+        statutory_form: 'GN Premises Report & Partner Residence Certificates',
+        official_portal: 'Respective Grama Niladhari Divisions for each partner',
+        pro_tip: 'All partner names, initials, and addresses on the statutory Form 1 must match their GN certificates and NICs exactly.',
+      },
+      {
+        step: 4,
+        title: 'Statutory Form 1 Partnership Filing',
+        title_si: 'හවුල් ව්‍යාපාර Form 1 ලියාපදිංචිය සහ සහතිකය',
+        auth: 'Divisional Secretariat (Business Names)',
+        time: '1 - 3 Days',
+        fee: 'LKR 3,500',
+        icon: 'fa-file-signature',
+        desc: 'Submit Form 1 (Statement of Particulars for Partnership) signed by ALL partners, along with the certified Deed of Partnership to obtain the Partnership BR Certificate.',
+        mandatory_docs: [
+          'Form 1 Statement of Particulars signed by ALL partners',
+          'Certified copy of the Notarized Deed of Partnership',
+          'Certified copies of NICs of all partners',
+          'Original GN reports and premises tenancy agreement',
+        ],
+        statutory_form: 'Form 1 (Statement of Particulars - Partnership)',
+        official_portal: 'Divisional Secretariat — Business Registration Unit',
+        pro_tip: 'Every single partner must sign Form 1 personally in blue ink, or submit a registered Power of Attorney if overseas.',
+      },
+      {
+        step: 5,
+        title: 'Partnership RAMIS TIN & Joint Bank Account',
+        title_si: 'හවුල් TIN අංකය, බැංකු ගිණුම සහ සේවක EPF',
+        auth: 'Inland Revenue & Commercial Bank',
+        time: '2 - 4 Days',
+        fee: 'LKR 3,000 - 8,000 (Municipal Trade Tax)',
+        icon: 'fa-building-columns',
+        desc: 'Register a dedicated Partnership TIN with the IRD, open a joint commercial bank account in the firm name, and pay municipal council trade tax.',
+        mandatory_docs: [
+          'Partnership BR Certificate Copy',
+          'Certified Partnership Deed copy',
+          'Partnership IRD TIN Certificate',
+          'KYC documents of all signing partners',
+        ],
+        statutory_form: 'RAMIS Partnership TIN Registration & Bank Mandate',
+        official_portal: 'Inland Revenue RAMIS Portal & Commercial Bank Branch',
+        pro_tip: 'Ensure the bank mandate clearly specifies whether cheques and transfers require all partners to sign or any single partner to sign.',
+      },
+    ],
+  },
+  private_limited: {
+    entity_label: 'Private Limited Company (Pvt Ltd)',
+    entity_label_si: 'සීමාසහිත පුද්ගලික සමාගම',
+    badge: 'Statutory Corporate Entity (Separate Legal Personality)',
+    badge_color: 'bg-purple-100 text-purple-800 border-purple-200',
+    statute: 'Companies Act No. 07 of 2007 (Section 4)',
+    governing_body: 'Department of the Registrar of Companies (eROC — Samagam Medura)',
+    filing_portal: 'eROC Online Portal (eroc.drc.gov.lk) / Samagam Medura, Battaramulla',
+    est_timeline: '5 - 10 Days',
+    est_cost: 'LKR 18,500 - 32,000 (Statutory Filing + Secretarial)',
+    description: 'Incorporation as an independent corporate legal entity with limited liability for shareholders. Registration is governed nationally by the Registrar of Companies (eROC), NOT the Divisional Secretariat.',
+    steps: [
+      {
+        step: 1,
+        title: 'eROC Online Name Reservation',
+        title_si: 'eROC හරහා සමාගම් නාමය වෙන්කරවා ගැනීම',
+        auth: 'Registrar of Companies (eROC)',
+        time: '1 - 2 Days',
+        fee: 'LKR 1,000 + Taxes (~LKR 1,180)',
+        icon: 'fa-globe',
+        desc: 'Submit the proposed corporate name ending in "(Private) Limited" or "(Pvt) Ltd" via the official eROC online portal (eroc.drc.gov.lk). Once approved, the name is reserved for 3 months.',
+        mandatory_docs: [
+          'Proposed Company Name in English & Sinhala/Tamil script',
+          'Main commercial business object description',
+          'Applicant NIC / Passport details on eROC account',
+        ],
+        statutory_form: 'eROC Name Reservation Application (Online)',
+        official_portal: 'eROC System (https://eroc.drc.gov.lk)',
+        pro_tip: 'Perform a name search on the eROC portal beforehand to ensure your proposed corporate name does not phonetically conflict with an active company.',
+      },
+      {
+        step: 2,
+        title: 'Articles of Association & Secretarial Appointment',
+        title_si: 'සමාගම් ව්‍යවස්ථාව සහ සමාගම් ලේකම් පත්කිරීම',
+        auth: 'Certified Company Secretary & Legal Counsel',
+        time: '2 - 3 Days',
+        fee: 'LKR 10,000 - 18,000 (Secretarial Retainer)',
+        icon: 'fa-file-shield',
+        desc: 'Adopt Model Articles under First Schedule or draft custom Articles of Association. Under Section 221 of Companies Act, appoint a licensed Company Secretary to handle statutory compliances.',
+        mandatory_docs: [
+          'Articles of Association (Drafted or Model Articles)',
+          'Consent of Secretary (Form 19) signed by licensed secretary',
+          'Company Secretary professional registration license copy',
+        ],
+        statutory_form: 'Articles of Association & Statutory Form 19',
+        official_portal: 'Department of the Registrar of Companies (Samagam Medura)',
+        pro_tip: 'Every Sri Lankan Pvt Ltd company is required by law to have a qualified Company Secretary to file annual returns and board resolutions.',
+      },
+      {
+        step: 3,
+        title: 'Statutory Incorporation Filing & Certificate (PV Number)',
+        title_si: 'eROC Form 1, 18, 19 සහ සංස්ථාගත සහතිකය ලබාගැනීම',
+        auth: 'Registrar General of Companies',
+        time: '2 - 4 Days',
+        fee: 'LKR 18,500 (Form 1: 15,000 + Form 18: 2,000 + Form 19: 1,500)',
+        icon: 'fa-certificate',
+        desc: 'Electronically upload Form 1 (Application for Registration of a Company), Form 18 (Consent of Directors), and Form 19 (Consent of Secretary). Upon approval, receive the Certificate of Incorporation with official PV number.',
+        mandatory_docs: [
+          'Form 1 (Application for Incorporation of a Company)',
+          'Form 18 signed by each appointed director',
+          'Form 19 signed by the licensed company secretary',
+          'Signed Articles of Association',
+        ],
+        statutory_form: 'Companies Act Statutory Forms 1, 18 & 19',
+        official_portal: 'eROC Portal & Samagam Medura, Battaramulla',
+        pro_tip: 'The issued Certificate of Incorporation containing your unique "PV" number establishes your company as a distinct legal person separate from owners.',
+      },
+      {
+        step: 4,
+        title: 'Company Seal, Bank Account & Share Capital',
+        title_si: 'සමාගම් මුද්‍රාව, බැංකු ගිණුම සහ කොටස් නිකුතුව',
+        auth: 'Commercial Corporate Bank & Secretary',
+        time: '1 - 2 Days',
+        fee: 'LKR 2,000 - 4,000 (Seal fabrication & documentation)',
+        icon: 'fa-stamp',
+        desc: 'Fabricate the official embossed Company Seal, adopt an initial Board resolution to open a corporate bank account, and formally issue share certificates to initial subscribers.',
+        mandatory_docs: [
+          'Original Certificate of Incorporation (PV Certificate)',
+          'Certified true copies of Form 1, 18, 19 and Articles of Association',
+          'Board of Directors Resolution authorizing bank account opening',
+          'Directors and Secretary KYC documents',
+        ],
+        statutory_form: 'Company Share Certificates & Corporate Bank Mandate',
+        official_portal: 'Corporate Commercial Bank Branch',
+        pro_tip: 'Stated initial share capital should be deposited directly into the newly opened corporate bank account to satisfy company capitalization records.',
+      },
+      {
+        step: 5,
+        title: 'Corporate RAMIS TIN, Gazette Notice & EPF/ETF',
+        title_si: 'ආයතනික TIN අංකය, ගැසට් නිවේදනය සහ සේවක අර්ථසාධක',
+        auth: 'Inland Revenue Dept, Government Press & Labour Dept',
+        time: '2 - 4 Days',
+        fee: 'LKR 3,500 - 7,000 (Gazette Notice & Municipal License)',
+        icon: 'fa-newspaper',
+        desc: 'Publish statutory public notice of incorporation in daily newspapers and the Government Gazette within 30 days. Obtain Corporate TIN from IRD and register company as an employer for EPF/ETF.',
+        mandatory_docs: [
+          'Certificate of Incorporation copy',
+          'Certified Director List (Form 18)',
+          'Government Gazette notice publication receipt',
+          'Municipal Council Trade Tax registration',
+        ],
+        statutory_form: 'RAMIS Corporate TIN Registration & Gazette Notice',
+        official_portal: 'Inland Revenue Department (RAMIS) & Dept of Government Printing',
+        pro_tip: 'Failing to publish the incorporation notice in the Government Gazette within 30 days of registration incurs statutory penalties under Section 9 of the Companies Act.',
+      },
+    ],
+  },
 };
 
 export const BusinessRegistrationView: React.FC = () => {
