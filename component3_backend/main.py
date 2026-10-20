@@ -5,6 +5,8 @@ from fastapi.responses import Response
 from schemas import (
     InvoiceData,
     Schedule7BatchRequest,
+    ScheduleBatchRequest,
+    GlobalTaxConfig,
     BatchTaxProcessResponse,
     FraudCheckRequest,
     FraudRiskAssessment,
@@ -18,7 +20,10 @@ from schemas import (
 from tax_engine import (
     categorize_and_calculate_tax,
     process_batch_invoices,
-    generate_schedule7_csv
+    generate_schedule7_csv,
+    generate_schedule_csv,
+    get_company_config,
+    update_company_config
 )
 from anomaly_detector import (
     evaluate_transaction_risk,
@@ -105,6 +110,52 @@ async def export_schedule7_csv_endpoint(batch_request: Schedule7BatchRequest):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Failed to generate RAMIS Schedule 7 CSV: {str(e)}"
+        )
+
+
+@app.get("/api/v1/tax/config", response_model=GlobalTaxConfig, status_code=status.HTTP_200_OK)
+async def get_tax_config_endpoint():
+    """Returns the globally configured Company TIN, Legal Name, and Tax Period."""
+    try:
+        return get_company_config()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch global tax configuration: {str(e)}"
+        )
+
+
+@app.post("/api/v1/tax/config", response_model=GlobalTaxConfig, status_code=status.HTTP_200_OK)
+async def update_tax_config_endpoint(config: GlobalTaxConfig):
+    """Updates the active global Company TIN, Legal Name, and Tax Period."""
+    try:
+        return update_company_config(config.model_dump())
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Failed to update global tax configuration: {str(e)}"
+        )
+
+
+@app.post("/api/v1/tax/export-schedule-csv", status_code=status.HTTP_200_OK)
+async def export_schedule_csv_endpoint(batch_request: ScheduleBatchRequest):
+    """Generates a category-specific CSV file for any of the 7 RAMIS Schedules."""
+    try:
+        csv_content, filename = generate_schedule_csv(batch_request)
+        return Response(
+            content=csv_content,
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "X-RAMIS-Schedule": batch_request.schedule_type,
+                "X-RAMIS-Company-TIN": batch_request.company_tin or batch_request.taxpayer_tin or "",
+                "X-RAMIS-Tax-Period": batch_request.tax_period
+            }
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Failed to generate RAMIS Schedule CSV: {str(e)}"
         )
 
 

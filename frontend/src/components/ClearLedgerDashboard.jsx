@@ -26,6 +26,9 @@ import {
 import {
   uploadInvoicePdf,
   downloadRamisSchedule7Csv,
+  downloadScheduleCsv,
+  fetchCompanyTaxConfig,
+  saveCompanyTaxConfig,
   fetchFraudReviewQueue,
   submitFraudReviewAction,
   runIntegratedPipeline,
@@ -43,14 +46,24 @@ export default function ClearLedgerDashboard() {
   const [ocrError, setOcrError] = useState(null);
   const [showStepLogs, setShowStepLogs] = useState(false);
 
-  // RAMIS Tax Engine States & Period Options (Quarterly vs Monthly)
+  // RAMIS Tax Engine States & Global Company Identifiers
+  const [companyTin, setCompanyTin] = useState('102938475');
+  const [companyName, setCompanyName] = useState('STAR FLORA (PVT) LTD');
+  const [taxpayerTin, setTaxpayerTin] = useState('102938475');
   const [periodType, setPeriodType] = useState('quarterly'); // 'quarterly' | 'monthly'
   const [selectedYear, setSelectedYear] = useState('2026');
   const [selectedQuarter, setSelectedQuarter] = useState('Q1'); // 'Q1', 'Q2', 'Q3', 'Q4'
   const [selectedMonth, setSelectedMonth] = useState('01'); // '01' to '12'
   const [filterByPeriod, setFilterByPeriod] = useState(false);
   const [taxPeriod, setTaxPeriod] = useState('2026-Q1');
-  const [taxpayerTin, setTaxpayerTin] = useState('102938475');
+  const [selectedSchedule, setSelectedSchedule] = useState('Schedule 7');
+  const [savingConfig, setSavingConfig] = useState(false);
+
+  // Synchronize companyTin and taxpayerTin
+  const handleCompanyTinChange = (val) => {
+    setCompanyTin(val);
+    setTaxpayerTin(val);
+  };
 
   // Synchronize taxPeriod string whenever period controls change
   useEffect(() => {
@@ -60,6 +73,65 @@ export default function ClearLedgerDashboard() {
       setTaxPeriod(`${selectedYear}-${selectedMonth}`);
     }
   }, [periodType, selectedYear, selectedQuarter, selectedMonth]);
+
+  // Load Global Tax Configuration from backend on mount
+  useEffect(() => {
+    const loadGlobalConfig = async () => {
+      try {
+        const config = await fetchCompanyTaxConfig();
+        if (config) {
+          if (config.company_tin) {
+            setCompanyTin(config.company_tin);
+            setTaxpayerTin(config.company_tin);
+          }
+          if (config.company_name) {
+            setCompanyName(config.company_name);
+          }
+          if (config.tax_period) {
+            setTaxPeriod(config.tax_period);
+            if (/^\d{4}-Q[1-4]$/i.test(config.tax_period)) {
+              const parts = config.tax_period.split('-');
+              setSelectedYear(parts[0]);
+              setSelectedQuarter(parts[1].toUpperCase());
+              setPeriodType('quarterly');
+            } else if (/^\d{4}-\d{2}$/.test(config.tax_period)) {
+              const parts = config.tax_period.split('-');
+              setSelectedYear(parts[0]);
+              setSelectedMonth(parts[1]);
+              setPeriodType('monthly');
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Could not load global company tax config from backend:', err.message);
+      }
+    };
+    loadGlobalConfig();
+  }, []);
+
+  // Save Global Tax Configuration to backend
+  const handleSaveTaxConfig = async () => {
+    setSavingConfig(true);
+    try {
+      await saveCompanyTaxConfig({
+        company_tin: companyTin,
+        company_name: companyName,
+        tax_period: taxPeriod
+      });
+      setStatusMessage({
+        type: 'success',
+        text: `RAMIS Global Tax Configuration saved: ${companyName} (TIN: ${companyTin}) for ${taxPeriod}.`
+      });
+    } catch (err) {
+      console.error('Failed to save tax config:', err);
+      setStatusMessage({
+        type: 'error',
+        text: `Failed to persist global tax configuration: ${err.message}`
+      });
+    } finally {
+      setSavingConfig(false);
+    }
+  };
 
   const [taxInvoices, setTaxInvoices] = useState([
     {
@@ -328,7 +400,9 @@ export default function ClearLedgerDashboard() {
           currency: ext.currency || 'EUR',
           tax_category: ext.tax_category || 'Zero-Rated',
           status: isAnomaly ? 'REVIEW_REQUIRED' : 'AUTO_PASS',
-          flagged_reasons: reasons
+          flagged_reasons: reasons,
+          supplier_name: companyName,
+          supplier_tin: companyTin
         };
 
         setTaxInvoices(prev => [newEntry, ...prev.filter(x => x.invoice_number !== newEntry.invoice_number)]);
@@ -452,15 +526,17 @@ export default function ClearLedgerDashboard() {
       });
 
       const payload = {
-        taxpayer_tin: taxpayerTin || '102938475',
-        taxpayer_name: 'STAR FLORA (PVT) LTD',
+        company_tin: companyTin,
+        company_name: companyName,
+        taxpayer_tin: companyTin,
+        taxpayer_name: companyName,
         tax_period: taxPeriod,
         invoices: normalizedInvoices
       };
       await downloadRamisSchedule7Csv(payload);
       setStatusMessage({
         type: 'success',
-        text: `Successfully generated and downloaded RAMIS Schedule 7 CSV for ${taxPeriod} (${normalizedInvoices.length} invoices)!`
+        text: `Successfully generated and downloaded RAMIS Schedule 7 CSV for ${companyName} (${taxPeriod})!`
       });
     } catch (err) {
       let msg = err.message || 'Failed to download CSV.';
@@ -480,6 +556,76 @@ export default function ClearLedgerDashboard() {
         }
       }
       setStatusMessage({ type: 'error', text: `Failed to download CSV: ${msg}` });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Generic RAMIS Schedule CSV Exporter (Schedule 1 through Schedule 7)
+  const handleDownloadSchedule = async (scheduleTypeToExport = selectedSchedule) => {
+    const exportList = filterByPeriod ? displayedInvoices : taxInvoices;
+    if (exportList.length === 0) {
+      setStatusMessage({ type: 'error', text: `No invoices available to export for period ${taxPeriod}.` });
+      return;
+    }
+    setLoading(true);
+    try {
+      const normalizedInvoices = exportList.map(inv => {
+        let dateVal = String(inv.date_of_supply || '01/01/2026').trim();
+        if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}$/.test(dateVal)) {
+          const parts = dateVal.split(/[\/-]/);
+          const day = parts[0].padStart(2, '0');
+          const month = parts[1].padStart(2, '0');
+          const year = parts[2];
+          dateVal = `${year}-${month}-${day}`;
+        }
+        return {
+          invoice_number: String(inv.invoice_number || 'INV-0001'),
+          date_of_supply: dateVal,
+          sub_total: Number(inv.sub_total || 0),
+          tax_amount: Number(inv.tax_amount || 0),
+          total_amount: Number(inv.total_amount || 0),
+          currency: inv.currency || 'EUR',
+          tax_category: inv.tax_category || 'Zero-Rated',
+          customer_name: inv.customer_name || 'Direct Consumer',
+          customer_tin: inv.customer_tin || '1146888607000',
+          supplier_name: inv.supplier_name || companyName,
+          supplier_tin: inv.supplier_tin || companyTin,
+          exchange_rate: Number(inv.exchange_rate || 1.0),
+          description_of_supply: inv.description_of_supply || 'Commercial Supply'
+        };
+      });
+
+      const payload = {
+        schedule_type: scheduleTypeToExport,
+        company_tin: companyTin,
+        company_name: companyName,
+        tax_period: taxPeriod,
+        invoices: normalizedInvoices
+      };
+      await downloadScheduleCsv(payload);
+      setStatusMessage({
+        type: 'success',
+        text: `Successfully generated and downloaded RAMIS ${scheduleTypeToExport} CSV for ${companyName} (${taxPeriod})!`
+      });
+    } catch (err) {
+      let msg = err.message || 'Failed to download schedule CSV.';
+      if (err.response?.data) {
+        if (err.response.data instanceof Blob) {
+          try {
+            const text = await err.response.data.text();
+            const parsed = JSON.parse(text);
+            msg = parsed.detail || text;
+          } catch (e) {
+            msg = `Error (${err.response.status}): Could not process CSV download`;
+          }
+        } else if (err.response.data?.detail) {
+          msg = typeof err.response.data.detail === 'string'
+            ? err.response.data.detail
+            : JSON.stringify(err.response.data.detail);
+        }
+      }
+      setStatusMessage({ type: 'error', text: `Failed to download RAMIS CSV: ${msg}` });
     } finally {
       setLoading(false);
     }
@@ -726,6 +872,312 @@ export default function ClearLedgerDashboard() {
           </button>
         </div>
       )}
+
+      {/* ========================================================= */}
+      {/* GLOBAL RAMIS FILING & TAXPAYER CONFIGURATION              */}
+      {/* ========================================================= */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95))',
+        border: '1px solid rgba(59, 130, 246, 0.35)',
+        borderRadius: '16px',
+        padding: '1.25rem 1.5rem',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+      }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          marginBottom: '1rem',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          paddingBottom: '0.85rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <div style={{
+              background: 'rgba(59, 130, 246, 0.2)',
+              border: '1px solid rgba(59, 130, 246, 0.4)',
+              borderRadius: '8px',
+              padding: '0.45rem',
+              color: '#60a5fa'
+            }}>
+              <Building2 size={20} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: '#ffffff', letterSpacing: '-0.2px' }}>
+                  Global RAMIS Taxpayer & Filing Setup
+                </h3>
+                <span style={{
+                  background: 'rgba(59, 130, 246, 0.15)',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  color: '#93c5fd',
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  padding: '0.15rem 0.5rem',
+                  borderRadius: '12px'
+                }}>
+                  IRD Sri Lanka
+                </span>
+              </div>
+              <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
+                Applies globally across OCR invoice intake, IRD schedules (Schedule 1–7), and fraud auditing
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              background: 'rgba(34, 197, 94, 0.12)',
+              border: '1px solid rgba(34, 197, 94, 0.25)',
+              borderRadius: '8px',
+              padding: '0.35rem 0.75rem',
+              fontSize: '0.75rem',
+              color: '#4ade80'
+            }}>
+              <span>Active Period:</span>
+              <strong style={{ color: '#ffffff', letterSpacing: '0.3px' }}>{taxPeriod}</strong>
+            </div>
+
+            <button
+              onClick={handleSaveTaxConfig}
+              disabled={savingConfig}
+              style={{
+                background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '0.45rem 1rem',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: savingConfig ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                boxShadow: '0 2px 8px rgba(37, 99, 235, 0.3)'
+              }}
+            >
+              <RefreshCw size={13} className={savingConfig ? 'animate-spin' : ''} />
+              {savingConfig ? 'Saving...' : 'Save Setup'}
+            </button>
+          </div>
+        </div>
+
+        {/* Global Inputs Grid: 3 Pillars */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          gap: '1rem',
+          alignItems: 'start'
+        }}>
+          {/* Pillar 1: Company TIN */}
+          <div style={{
+            background: 'rgba(15, 23, 42, 0.6)',
+            padding: '0.85rem 1rem',
+            borderRadius: '10px',
+            border: '1px solid rgba(255, 255, 255, 0.07)'
+          }}>
+            <label style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>
+              Company TIN Number (RAMIS)
+            </label>
+            <input
+              type="text"
+              value={companyTin}
+              onChange={(e) => handleCompanyTinChange(e.target.value)}
+              placeholder="e.g. 102938475"
+              style={{
+                width: '100%',
+                boxSizing: 'border-box',
+                background: 'rgba(30, 41, 59, 0.9)',
+                border: '1px solid rgba(59, 130, 246, 0.4)',
+                borderRadius: '6px',
+                padding: '0.5rem 0.75rem',
+                color: '#ffffff',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                outline: 'none'
+              }}
+            />
+            <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.3rem' }}>
+              Used in RAMIS CSV export headers and audit cross-referencing
+            </div>
+          </div>
+
+          {/* Pillar 2: Company Name */}
+          <div style={{
+            background: 'rgba(15, 23, 42, 0.6)',
+            padding: '0.85rem 1rem',
+            borderRadius: '10px',
+            border: '1px solid rgba(255, 255, 255, 0.07)'
+          }}>
+            <label style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>
+              Registered Company / Business Name
+            </label>
+            <input
+              type="text"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              placeholder="e.g. STAR FLORA (PVT) LTD"
+              style={{
+                width: '100%',
+                boxSizing: 'border-box',
+                background: 'rgba(30, 41, 59, 0.9)',
+                border: '1px solid rgba(59, 130, 246, 0.4)',
+                borderRadius: '6px',
+                padding: '0.5rem 0.75rem',
+                color: '#ffffff',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                outline: 'none'
+              }}
+            />
+            <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.3rem' }}>
+              Legal taxpayer entity name declared to IRD
+            </div>
+          </div>
+
+          {/* Pillar 3: Tax Period Selector (Frequency + Year + Quarter/Month) */}
+          <div style={{
+            background: 'rgba(15, 23, 42, 0.6)',
+            padding: '0.85rem 1rem',
+            borderRadius: '10px',
+            border: '1px solid rgba(255, 255, 255, 0.07)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+              <label style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>
+                Tax Period Selection
+              </label>
+              {/* Frequency Toggle */}
+              <div style={{
+                background: 'rgba(30, 41, 59, 0.8)',
+                padding: '0.15rem',
+                borderRadius: '6px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'inline-flex',
+                gap: '0.2rem'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setPeriodType('quarterly')}
+                  style={{
+                    background: periodType === 'quarterly' ? '#3b82f6' : 'transparent',
+                    color: periodType === 'quarterly' ? '#ffffff' : '#94a3b8',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '0.2rem 0.5rem',
+                    fontSize: '0.68rem',
+                    fontWeight: periodType === 'quarterly' ? 700 : 500,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Quarterly
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPeriodType('monthly')}
+                  style={{
+                    background: periodType === 'monthly' ? '#3b82f6' : 'transparent',
+                    color: periodType === 'monthly' ? '#ffffff' : '#94a3b8',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '0.2rem 0.5rem',
+                    fontSize: '0.68rem',
+                    fontWeight: periodType === 'monthly' ? 700 : 500,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Monthly
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              {/* Year Select */}
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                style={{
+                  width: '90px',
+                  background: 'rgba(30, 41, 59, 0.9)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  borderRadius: '6px',
+                  padding: '0.45rem 0.5rem',
+                  color: '#ffffff',
+                  fontSize: '0.8rem',
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="2026">2026</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+                <option value="2023">2023</option>
+              </select>
+
+              {/* Sub-period Selection */}
+              {periodType === 'quarterly' ? (
+                <div style={{ display: 'flex', gap: '0.25rem', flex: 1 }}>
+                  {['Q1', 'Q2', 'Q3', 'Q4'].map(q => (
+                    <button
+                      key={q}
+                      type="button"
+                      onClick={() => setSelectedQuarter(q)}
+                      style={{
+                        flex: 1,
+                        background: selectedQuarter === q ? 'rgba(59, 130, 246, 0.35)' : 'rgba(30, 41, 59, 0.9)',
+                        border: `1px solid ${selectedQuarter === q ? '#60a5fa' : 'rgba(255, 255, 255, 0.1)'}`,
+                        color: selectedQuarter === q ? '#93c5fd' : '#cbd5e1',
+                        borderRadius: '5px',
+                        padding: '0.45rem 0.2rem',
+                        fontSize: '0.75rem',
+                        fontWeight: selectedQuarter === q ? 700 : 500,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  style={{
+                    flex: 1,
+                    background: 'rgba(30, 41, 59, 0.9)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    borderRadius: '6px',
+                    padding: '0.45rem 0.5rem',
+                    color: '#ffffff',
+                    fontSize: '0.8rem',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="01">01 - January</option>
+                  <option value="02">02 - February</option>
+                  <option value="03">03 - March</option>
+                  <option value="04">04 - April</option>
+                  <option value="05">05 - May</option>
+                  <option value="06">06 - June</option>
+                  <option value="07">07 - July</option>
+                  <option value="08">08 - August</option>
+                  <option value="09">09 - September</option>
+                  <option value="10">10 - October</option>
+                  <option value="11">11 - November</option>
+                  <option value="12">12 - December</option>
+                </select>
+              )}
+            </div>
+            <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.3rem' }}>
+              Selected Taxable Period Code: <strong style={{ color: '#93c5fd' }}>{taxPeriod}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Sub-Navigation Tabs */}
       <div style={{
@@ -1074,6 +1526,40 @@ export default function ClearLedgerDashboard() {
       {activeSubTab === 'ocr' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
+          {/* Active Declaring Entity Banner */}
+          <div style={{
+            background: 'rgba(59, 130, 246, 0.1)',
+            border: '1px solid rgba(59, 130, 246, 0.25)',
+            borderRadius: '12px',
+            padding: '0.85rem 1.25rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '0.75rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <Building2 size={18} color="#60a5fa" />
+              <span style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>
+                Active Declaring Entity: <strong style={{ color: '#ffffff' }}>{companyName}</strong> (TIN: <strong style={{ color: '#60a5fa' }}>{companyTin}</strong>)
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Target Tax Period:</span>
+              <span style={{
+                background: 'rgba(34, 197, 94, 0.15)',
+                color: '#4ade80',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+                padding: '0.2rem 0.6rem',
+                borderRadius: '6px',
+                fontSize: '0.75rem',
+                fontWeight: 700
+              }}>
+                {taxPeriod}
+              </span>
+            </div>
+          </div>
+
           {/* Upload Dropzone */}
           <div style={{
             background: 'rgba(30, 41, 59, 0.7)',
@@ -1597,29 +2083,55 @@ export default function ClearLedgerDashboard() {
                 </label>
               </div>
 
-              {/* Download RAMIS CSV Button */}
-              <button
-                onClick={handleDownloadSchedule7}
-                disabled={loading || displayedInvoices.length === 0}
-                style={{
-                  background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '10px',
-                  padding: '0.65rem 1.25rem',
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  cursor: (loading || displayedInvoices.length === 0) ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  boxShadow: '0 4px 14px rgba(34, 197, 94, 0.3)',
-                  opacity: (loading || displayedInvoices.length === 0) ? 0.6 : 1
-                }}
-              >
-                <Download size={16} />
-                Export Schedule 7 CSV ({taxPeriod})
-              </button>
+              {/* Schedule Type Selection & Export Controls */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <select
+                  value={selectedSchedule}
+                  onChange={(e) => setSelectedSchedule(e.target.value)}
+                  style={{
+                    background: 'rgba(30, 41, 59, 0.9)',
+                    border: '1px solid rgba(59, 130, 246, 0.4)',
+                    borderRadius: '8px',
+                    padding: '0.6rem 0.85rem',
+                    color: '#ffffff',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="Schedule 1">Schedule 1 - Standard Rate 18%</option>
+                  <option value="Schedule 2">Schedule 2 - Zero-Rated Local (0%)</option>
+                  <option value="Schedule 3">Schedule 3 - Exempt Supplies</option>
+                  <option value="Schedule 4">Schedule 4 - Deemed Supplies</option>
+                  <option value="Schedule 5">Schedule 5 - Import Supplies</option>
+                  <option value="Schedule 6">Schedule 6 - Input Tax Credit Claim</option>
+                  <option value="Schedule 7">Schedule 7 - Direct Exports & CusDec (0%)</option>
+                </select>
+
+                <button
+                  onClick={() => handleDownloadSchedule(selectedSchedule)}
+                  disabled={loading || displayedInvoices.length === 0}
+                  style={{
+                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '0.6rem 1.15rem',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: (loading || displayedInvoices.length === 0) ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    boxShadow: '0 4px 14px rgba(34, 197, 94, 0.3)',
+                    opacity: (loading || displayedInvoices.length === 0) ? 0.6 : 1
+                  }}
+                >
+                  <Download size={15} />
+                  Download {selectedSchedule} CSV
+                </button>
+              </div>
             </div>
           </div>
 

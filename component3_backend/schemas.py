@@ -1,5 +1,5 @@
 # component3_backend/schemas.py
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional, List, Dict, Any
 from datetime import date, datetime
 
@@ -73,11 +73,53 @@ class Form2540Summary(BaseModel):
     grand_total_output_tax_lkr: float
 
 
+class GlobalTaxConfig(BaseModel):
+    company_tin: str = Field("102938475", description="Company Taxpayer Identification Number (TIN)")
+    company_name: str = Field("STAR FLORA (PVT) LTD", description="Registered Legal Business / Company Name")
+    tax_period: str = Field("2026-Q1", description="Tax assessment period (e.g. '2026-Q1', '2026-02')")
+
+
+class ScheduleBatchRequest(BaseModel):
+    schedule_type: str = Field("Schedule 7", description="RAMIS Schedule type ('Schedule 1' through 'Schedule 7')")
+    company_tin: Optional[str] = Field(None, description="Company Taxpayer Identification Number (TIN)")
+    company_name: Optional[str] = Field(None, description="Registered Legal Business / Company Name")
+    tax_period: str = Field(..., description="Tax taxable period code (e.g. '2026-Q1', '2026-02')")
+    taxpayer_tin: Optional[str] = Field(None, description="Taxpayer TIN (alias for company_tin)")
+    taxpayer_name: Optional[str] = Field(None, description="Taxpayer Name (alias for company_name)")
+    invoices: List[InvoiceData] = Field(default_factory=list, description="List of validated invoice items to process")
+
+    @model_validator(mode='before')
+    @classmethod
+    def sync_company_identifiers(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            c_tin = data.get("company_tin") or data.get("taxpayer_tin") or "102938475"
+            data["company_tin"] = str(c_tin)
+            data["taxpayer_tin"] = str(c_tin)
+            c_name = data.get("company_name") or data.get("taxpayer_name") or "STAR FLORA (PVT) LTD"
+            data["company_name"] = str(c_name)
+            data["taxpayer_name"] = str(c_name)
+        return data
+
+
 class Schedule7BatchRequest(BaseModel):
-    taxpayer_tin: str = Field(..., description="Taxpayer Identification Number (TIN) of the declaring entity")
+    taxpayer_tin: Optional[str] = Field(None, description="Taxpayer Identification Number (TIN) of the declaring entity")
     taxpayer_name: Optional[str] = Field(None, description="Registered legal name of the declaring taxpayer")
-    tax_period: str = Field(..., description="Tax taxable period code (e.g. '2024-Q1', '202410', '2411')")
+    company_tin: Optional[str] = Field(None, description="Company Taxpayer Identification Number (TIN)")
+    company_name: Optional[str] = Field(None, description="Registered Legal Business / Company Name")
+    tax_period: str = Field(..., description="Tax taxable period code (e.g. '2026-Q1', '2026-02')")
     invoices: List[InvoiceData] = Field(..., min_length=1, description="List of validated invoice items to process")
+
+    @model_validator(mode='before')
+    @classmethod
+    def sync_company_identifiers(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            c_tin = data.get("company_tin") or data.get("taxpayer_tin") or "102938475"
+            data["company_tin"] = str(c_tin)
+            data["taxpayer_tin"] = str(c_tin)
+            c_name = data.get("company_name") or data.get("taxpayer_name") or "STAR FLORA (PVT) LTD"
+            data["company_name"] = str(c_name)
+            data["taxpayer_name"] = str(c_name)
+        return data
 
 
 class BatchTaxProcessResponse(BaseModel):

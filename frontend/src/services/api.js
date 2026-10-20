@@ -192,12 +192,27 @@ export const processBatchTax = async (batchRequest) => {
   return response.data;
 };
 
+/**
+ * Global RAMIS Tax Configuration API
+ */
+export const fetchCompanyTaxConfig = async () => {
+  const response = await axios.get('http://127.0.0.1:8000/api/v1/tax/config');
+  return response.data;
+};
+
+export const saveCompanyTaxConfig = async (config) => {
+  const response = await axios.post('http://127.0.0.1:8000/api/v1/tax/config', config);
+  return response.data;
+};
+
 export const downloadRamisSchedule7Csv = async (batchRequest) => {
   const response = await axios.post('http://127.0.0.1:8000/api/v1/tax/export-schedule7-csv', batchRequest, {
     responseType: 'blob',
   });
   const blob = new Blob([response.data], { type: 'text/csv' });
-  const filename = `RAMIS_VAT_Schedule_7_${batchRequest.tax_period || 'Export'}.csv`;
+  const tin = batchRequest.company_tin || batchRequest.taxpayer_tin || 'RAMIS';
+  const cleanPeriod = (batchRequest.tax_period || "Export").replace(/[^a-zA-Z0-9]/g, "");
+  const filename = `${tin}_VAT_SCHEDULE07_${cleanPeriod}.csv`;
   const link = document.createElement('a');
   link.href = window.URL.createObjectURL(blob);
   link.download = filename;
@@ -205,6 +220,24 @@ export const downloadRamisSchedule7Csv = async (batchRequest) => {
   link.click();
   link.remove();
 };
+
+export const downloadScheduleCsv = async (scheduleRequest) => {
+  const response = await axios.post('http://127.0.0.1:8000/api/v1/tax/export-schedule-csv', scheduleRequest, {
+    responseType: 'blob',
+  });
+  const blob = new Blob([response.data], { type: 'text/csv' });
+  const tin = scheduleRequest.company_tin || scheduleRequest.taxpayer_tin || 'RAMIS';
+  const schedName = (scheduleRequest.schedule_type || 'Schedule_7').replace(/\s+/g, '_').toUpperCase();
+  const cleanPeriod = (scheduleRequest.tax_period || "Export").replace(/[^a-zA-Z0-9]/g, "");
+  const filename = `${tin}_VAT_${schedName}_${cleanPeriod}.csv`;
+  const link = document.createElement('a');
+  link.href = window.URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+};
+
 
 export const checkTransactionFraud = async (fraudRequest) => {
   const response = await axios.post('http://127.0.0.1:8000/api/v1/fraud/check-transaction', fraudRequest);

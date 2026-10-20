@@ -8,8 +8,31 @@ from schemas import (
     CageSummary,
     Form2540Summary,
     Schedule7BatchRequest,
-    BatchTaxProcessResponse
+    ScheduleBatchRequest,
+    BatchTaxProcessResponse,
+    GlobalTaxConfig
 )
+
+# Active Global RAMIS Entity & Period Configuration
+_ACTIVE_COMPANY_CONFIG = {
+    "company_tin": "102938475",
+    "company_name": "STAR FLORA (PVT) LTD",
+    "tax_period": "2026-Q1"
+}
+
+def get_company_config() -> dict:
+    """Returns the current globally configured company TIN, name, and active period."""
+    return _ACTIVE_COMPANY_CONFIG.copy()
+
+def update_company_config(config_data: dict) -> dict:
+    """Updates the globally configured company TIN, name, and active tax period."""
+    if "company_tin" in config_data and config_data["company_tin"]:
+        _ACTIVE_COMPANY_CONFIG["company_tin"] = str(config_data["company_tin"]).strip()
+    if "company_name" in config_data and config_data["company_name"]:
+        _ACTIVE_COMPANY_CONFIG["company_name"] = str(config_data["company_name"]).strip()
+    if "tax_period" in config_data and config_data["tax_period"]:
+        _ACTIVE_COMPANY_CONFIG["tax_period"] = str(config_data["tax_period"]).strip()
+    return _ACTIVE_COMPANY_CONFIG.copy()
 
 STANDARD_VAT_RATE = 18.0
 
@@ -193,6 +216,10 @@ def generate_schedule7_csv(batch_request: Schedule7BatchRequest) -> Tuple[str, s
     ]
     writer.writerow(headers)
     
+    active_tin = (getattr(batch_request, "company_tin", None) or getattr(batch_request, "taxpayer_tin", None) or _ACTIVE_COMPANY_CONFIG["company_tin"]).strip()
+    active_name = (getattr(batch_request, "company_name", None) or getattr(batch_request, "taxpayer_name", None) or _ACTIVE_COMPANY_CONFIG["company_name"]).strip()
+    active_period = (getattr(batch_request, "tax_period", None) or _ACTIVE_COMPANY_CONFIG["tax_period"]).strip()
+
     for idx, inv in enumerate(batch_request.invoices, start=1):
         analyzed = categorize_and_calculate_tax(inv)
         
@@ -205,13 +232,12 @@ def generate_schedule7_csv(batch_request: Schedule7BatchRequest) -> Tuple[str, s
             cust_tin = "UNREGISTERED"
             
         cust_name = inv.customer_name.strip() if (inv.customer_name and inv.customer_name.strip()) else "Direct Consumer"
-        taxpayer_name = batch_request.taxpayer_name.strip() if (batch_request.taxpayer_name and batch_request.taxpayer_name.strip()) else "Declaring Taxpayer"
         
         row = [
             idx,
-            batch_request.tax_period,
-            batch_request.taxpayer_tin,
-            taxpayer_name,
+            active_period,
+            active_tin,
+            active_name,
             cust_tin,
             cust_name,
             analyzed.invoice_number,
@@ -230,7 +256,23 @@ def generate_schedule7_csv(batch_request: Schedule7BatchRequest) -> Tuple[str, s
     csv_content = output.getvalue()
     
     # Standard RAMIS upload filename format: [TIN]_VAT_SCHEDULE07_[PERIOD].csv
-    clean_period = batch_request.tax_period.replace("-", "").replace("/", "").replace(" ", "_").upper()
-    filename = f"{batch_request.taxpayer_tin}_VAT_SCHEDULE07_{clean_period}.csv"
+    clean_period = active_period.replace("-", "").replace("/", "").replace(" ", "_").upper()
+    filename = f"{active_tin}_VAT_SCHEDULE07_{clean_period}.csv"
     
     return csv_content, filename
+
+
+def generate_schedule_csv(request: ScheduleBatchRequest) -> Tuple[str, str]:
+    """
+    Master Dispatcher for generating distinct CSV files for each of the 7 RAMIS Schedules.
+    Currently delegates to Schedule 7 format as baseline, ready for individual custom
+    schedule format implementations (Schedule 1, Schedule 2, Schedule 3, Schedule 4,
+    Schedule 5, Schedule 6, Schedule 7).
+    """
+    sched_type = (request.schedule_type or "Schedule 7").strip()
+    
+    # Ready for individual schedule generator branching:
+    # if sched_type == "Schedule 1": return generate_schedule1_csv(request)
+    # ...
+    # Baseline fallback:
+    return generate_schedule7_csv(request)
