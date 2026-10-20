@@ -466,61 +466,236 @@ export const BusinessRegistrationView: React.FC = () => {
   const [formData, setFormData] = useState<BrFormData>(SAMPLE_PRESETS.bakery);
   const [isGenerating, setIsGenerating] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [downloadMessage, setDownloadMessage] = useState<string>('');
   const [activeRoadmapStage, setActiveRoadmapStage] = useState<number>(1);
-  const [checklist, setChecklist] = useState<Record<string, boolean>>({
-    doc_nic: true,
-    doc_gn: true,
-    doc_deed: true,
-    doc_rates: false,
-    doc_form1: true,
+
+  // Stage 1 Extra Data: Name Search & Clearance (WP/BN/01)
+  const [stage1Data, setStage1Data] = useState({
+    alt_name_1: 'CEYLON HERITAGE BAKERY',
+    alt_name_2: 'ISLAND ARTISAN BAKES',
+    name_meaning: 'Artisan Sri Lankan traditional bakes with modern quality standards and natural ingredients',
+    language_scripts: 'English & Sinhala',
+    search_date: new Date().toISOString().split('T')[0],
+    reservation_period: '3 Months (Statutory Validity under WP Statute Sec. 4)',
   });
+
+  // Stage 2 Extra Data: Grama Niladhari Report
+  const [stage2Data, setStage2Data] = useState({
+    ownership_type: 'commercial_lease',
+    landlord_name: 'Mr. K. A. Perera',
+    landlord_phone: '+94 77 345 6789',
+    deed_lease_no: 'Lease Agreement No. 2024/481',
+    electoral_no: 'EL/COL/512/048',
+    house_no: 'No. 12/B',
+    residence_duration: '6 Years',
+    inspection_readiness: 'Premises ready for on-site officer inspection',
+  });
+
+  // Stage 4 Extra Data: Municipal Council Trade Tax & Health
+  const [stage4Data, setStage4Data] = useState({
+    assessment_no: 'CMC/WR/2026/8941',
+    trade_category: 'Food Manufacturing & Bakery Products',
+    floor_area: '1,250 Sq. Ft.',
+    fire_safety: 'Fire Extinguishers Installed (CO2 + Foam)',
+    phi_division: 'PHI Range 03 - Thimbirigasyaya Division',
+    food_handlers_certified: 5,
+    waste_disposal: 'Municipal Council Daily Collection & Sealed Grease Trap',
+    license_year: '2026 / 2027',
+    br_certificate_no: 'WP/COL/2026/10492',
+  });
+
+  // Stage 5 Extra Data: RAMIS TIN & Labour EPF/ETF
+  const [stage5Data, setStage5Data] = useState({
+    taxpayer_type: 'Sole Proprietorship Enterprise',
+    ird_unit: 'Colombo South Metropolitan Unit (Chitampalam Gardiner Mw)',
+    tin_status: 'New RAMIS TIN Application Required',
+    labour_office: 'Colombo South Labour Office (Narahenpita)',
+    monthly_payroll: 350000,
+    epf_status: 'Mandatory Form D Employer Registration (12% + 8%)',
+    etf_status: 'Mandatory 3% Employer Contribution',
+    bank_name: 'Commercial Bank of Ceylon',
+    bank_branch: 'Bambalapitiya Branch',
+    bank_account: '1000849201',
+  });
+
+  // Dynamic Checklists per Stage
+  const [stageChecklists, setStageChecklists] = useState<Record<number, Record<string, boolean>>>({
+    1: { s1_form: true, s1_nic: true, s1_meaning: true, s1_fee: false },
+    2: { s2_deed: true, s2_consent: true, s2_utility: true, s2_electoral: false, s2_nic: true },
+    3: { s3_form1: true, s3_gn_rep: true, s3_nic: true, s3_deed: true, s3_duty: false },
+    4: { s4_br: true, s4_rates: false, s4_phi: true, s4_plan: true, s4_fire: true },
+    5: { s5_br_copy: true, s5_tin_slip: true, s5_labour_d: false, s5_staff_list: true, s5_bank: true },
+  });
+
+  const STAGE_CHECKLIST_CONFIG: Record<number, { key: string; label: string; desc: string }[]> = {
+    1: [
+      { key: 's1_form', label: 'Proposed Name Inquiry Form (WP/BN/01)', desc: 'Official inquiry slip filled in duplicate' },
+      { key: 's1_nic', label: 'Applicant Certified NIC Copy', desc: 'Certified photocopy of National Identity Card' },
+      { key: 's1_meaning', label: 'Name Meaning & Origin Brief', desc: 'Explanation if using specialized or transliterated words' },
+      { key: 's1_fee', label: 'Statutory Search Duty Receipt (LKR 250 - 500)', desc: 'Divisional Secretariat cashier receipt' },
+    ],
+    2: [
+      { key: 's2_deed', label: 'Deed or Stamped Commercial Lease', desc: 'Premises lease agreement or proof of property ownership' },
+      { key: 's2_consent', label: 'Property Owner Consent Letter', desc: 'Signed declaration permitting commercial operation' },
+      { key: 's2_utility', label: 'Recent Premises Utility Bill', desc: 'Electricity or water bill within last 3 months' },
+      { key: 's2_electoral', label: 'Electoral Register Residence Confirmation', desc: 'Proof of applicant residence in GN division' },
+      { key: 's2_nic', label: 'Certified NIC Copy of Applicant', desc: 'Certified by Justice of the Peace (JP)' },
+    ],
+    3: [
+      { key: 's3_form1', label: 'Signed Form 1 (Statement of Particulars)', desc: 'Completed statutory registration application form' },
+      { key: 's3_gn_rep', label: 'Original Grama Niladhari Assessment Report', desc: 'Signed inspection report from GN Officer' },
+      { key: 's3_nic', label: 'Certified Applicant NIC / Passport', desc: 'Certified copy verified against original document' },
+      { key: 's3_deed', label: 'Registered Premises Lease / Deed Copy', desc: 'Valid commercial tenancy contract' },
+      { key: 's3_duty', label: 'Statutory Registration Fee Receipt (LKR 2,500)', desc: 'Divisional Secretariat cashier payment' },
+    ],
+    4: [
+      { key: 's4_br', label: 'Certified BR Certificate Copy', desc: 'Copy of issued Form 1 Business Registration' },
+      { key: 's4_rates', label: 'Municipal Assessment Rates Receipt', desc: 'Latest municipal council property tax receipt' },
+      { key: 's4_phi', label: 'PHI Cleanliness & Hygiene Pass', desc: 'Public Health Inspector clearance pass for premises' },
+      { key: 's4_plan', label: 'Premises Floor Plan / Layout Sketch', desc: 'Dimensional sketch of trade space and equipment' },
+      { key: 's4_fire', label: 'Fire Extinguisher Certification', desc: 'Inspected and certified fire extinguisher equipment' },
+    ],
+    5: [
+      { key: 's5_br_copy', label: 'Business Registration (BR) Copy', desc: 'Proof of registered business enterprise' },
+      { key: 's5_tin_slip', label: 'RAMIS Online Registration Slip', desc: 'Inland Revenue system confirmation printout' },
+      { key: 's5_labour_d', label: 'Labour Dept Form D (Employer Reg)', desc: 'Registration of establishment under EPF Act' },
+      { key: 's5_staff_list', label: 'Employee Schedule & NIC Copies', desc: 'Staff wage roster and National ID copies' },
+      { key: 's5_bank', label: 'Commercial Bank Account Mandate', desc: 'Bank letter verifying operational business account' },
+    ],
+  };
+
+  const STAGE_SUBMISSION_INFO: Record<number, { title: string; subtitle: string; desc: string; hours: string; time: string; fee: string }> = {
+    1: {
+      title: 'Business Names Inquiry Counter',
+      subtitle: 'WP Business Names Division',
+      desc: `Submit your Proposed Business Name Inquiry Form (WP/BN/01) in person at ${formData.divisional_secretariat} (Business Names Counter) to verify name uniqueness.`,
+      hours: 'Mon - Fri (8:30 AM - 3:00 PM)',
+      time: '1 Day (Same-day clearance)',
+      fee: 'LKR 250 - 500',
+    },
+    2: {
+      title: 'Local Grama Niladhari Office',
+      subtitle: `${formData.grama_niladhari}`,
+      desc: `Meet your local Grama Niladhari officer at the division office with ownership/lease documents to schedule the physical premises inspection.`,
+      hours: 'Tue & Thu: 9:00 AM - 12:30 PM (or by appointment)',
+      time: '1 - 2 Days',
+      fee: 'Free (Statutory Public Duty)',
+    },
+    3: {
+      title: 'Business Registration Unit',
+      subtitle: 'Divisional Secretariat Office',
+      desc: `Submit your completed and signed Form 1 package along with the GN report to the Business Names Registrar at ${formData.divisional_secretariat}.`,
+      hours: 'Mon - Fri (8:30 AM - 4:15 PM)',
+      time: '1 - 3 Business Days',
+      fee: 'LKR 2,500',
+    },
+    4: {
+      title: 'Municipal / Urban Council Health & Revenue Dept',
+      subtitle: `${formData.local_authority}`,
+      desc: `Present your BR certificate at ${formData.local_authority} to obtain commercial trade tax clearance and arrange PHI hygiene inspection.`,
+      hours: 'Mon - Fri (9:00 AM - 3:30 PM)',
+      time: '2 - 5 Days',
+      fee: 'LKR 3,000 - 8,000',
+    },
+    5: {
+      title: 'Inland Revenue Dept (RAMIS) & Dept of Labour',
+      subtitle: 'Taxpayer & Social Security Services',
+      desc: `Submit mandatory TIN registration on the IRD RAMIS portal (www.ird.gov.lk) and file Form D with the Department of Labour if hiring employees.`,
+      hours: 'Online 24/7 (RAMIS) | Dept: 8:30 AM - 4:15 PM',
+      time: '1 - 3 Days',
+      fee: 'Free Registration',
+    },
+  };
+
+  const STAGE_META: Record<number, {
+    badge: string;
+    badge_color: string;
+    title: string;
+    title_si: string;
+    icon: string;
+    icon_color: string;
+    desc: string;
+    btn_label: string;
+    btn_icon: string;
+  }> = {
+    1: {
+      badge: 'Official Statutory Form (WP/BN/01)',
+      badge_color: 'bg-blue-100 text-blue-800 border-blue-200',
+      title: '3. Business Name Search & Clearance Application',
+      title_si: 'ව්‍යාපාර නාමය සෙවීම සහ වෙන්කිරීමේ අයදුම්පත (WP/BN/01)',
+      icon: 'fa-magnifying-glass',
+      icon_color: 'text-blue-600',
+      desc: 'Prescribed form under Western Province Business Names Statute Section 4 to verify uniqueness and secure name reservation.',
+      btn_label: 'Download Name Search Form (PDF)',
+      btn_icon: 'fa-file-pdf',
+    },
+    2: {
+      badge: 'Grama Niladhari Assessment Form',
+      badge_color: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+      title: '3. Grama Niladhari Assessment & Residence Verification Report',
+      title_si: 'ග්‍රාම නිලධාරී පරීක්ෂාව සහ පදිංචි සහතික වාර්තාව (වසමේ වාර්තාව)',
+      icon: 'fa-user-check',
+      icon_color: 'text-indigo-600',
+      desc: 'Official inspection dossier for the Grama Niladhari officer to certify physical premises legality, tenancy rights, and applicant residence.',
+      btn_label: 'Download GN Assessment Report (PDF)',
+      btn_icon: 'fa-file-signature',
+    },
+    3: {
+      badge: 'Official Statutory Form 1',
+      badge_color: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+      title: '3. Statement of Particulars (Form 1) Particulars',
+      title_si: 'ව්‍යවස්ථාපිත Form 1 අයදුම්පත (Statement of Particulars)',
+      icon: 'fa-pen-to-square',
+      icon_color: 'text-emerald-600',
+      desc: 'Data entered below is mapped directly to the official Sri Lanka Business Registration PDF filed at the Divisional Secretariat.',
+      btn_label: 'Download Form 1 (PDF)',
+      btn_icon: 'fa-file-pdf',
+    },
+    4: {
+      badge: 'Municipal Trade Tax & Health Form',
+      badge_color: 'bg-amber-100 text-amber-800 border-amber-200',
+      title: '3. Municipal Trade Tax & Health License Application',
+      title_si: 'නගර සභා වෙළඳ බද්ද සහ සෞඛ්‍ය බලපත්‍ර අයදුම්පත',
+      icon: 'fa-city',
+      icon_color: 'text-amber-600',
+      desc: 'Application for Local Authority Trade Tax registration, municipal rates assessment, and Public Health Inspector (PHI) food hygiene certification.',
+      btn_label: 'Download Municipal License Form (PDF)',
+      btn_icon: 'fa-file-invoice',
+    },
+    5: {
+      badge: 'RAMIS TIN & Labour Form D',
+      badge_color: 'bg-purple-100 text-purple-800 border-purple-200',
+      title: '3. RAMIS TIN & Labour EPF/ETF Registration Form',
+      title_si: 'TIN අංකය සහ සේවක අර්ථසාධක (EPF/ETF) ලියාපදිංචි අයදුම්පත',
+      icon: 'fa-receipt',
+      icon_color: 'text-purple-600',
+      desc: 'Mandatory statutory registration with Inland Revenue Department (RAMIS) for TIN and Department of Labour for EPF/ETF compliance.',
+      btn_label: 'Download TIN & EPF Dossier (PDF)',
+      btn_icon: 'fa-file-shield',
+    },
+  };
 
   const currentRoadmap = ROADMAP_DATA_BY_ENTITY[formData.legal_form] || ROADMAP_DATA_BY_ENTITY.sole_proprietorship;
   const activeStepData = currentRoadmap.steps.find((s) => s.step === activeRoadmapStage) || currentRoadmap.steps[0];
 
+  const currentChecklistState = stageChecklists[activeRoadmapStage] || {};
+  const currentChecklistItems = STAGE_CHECKLIST_CONFIG[activeRoadmapStage] || [];
+
   const toggleChecklist = (key: string) => {
-    setChecklist((prev) => ({ ...prev, [key]: !prev[key] }));
+    setStageChecklists((prev) => ({
+      ...prev,
+      [activeRoadmapStage]: {
+        ...prev[activeRoadmapStage],
+        [key]: !prev[activeRoadmapStage]?.[key],
+      },
+    }));
   };
 
   const checklistScore = Math.round(
-    (Object.values(checklist).filter(Boolean).length / Object.keys(checklist).length) * 100
+    currentChecklistItems.length > 0
+      ? (currentChecklistItems.filter((item) => currentChecklistState[item.key]).length / currentChecklistItems.length) * 100
+      : 100
   );
-
-  const handleDownloadPdf = async () => {
-    setIsGenerating(true);
-    setDownloadSuccess(false);
-
-    try {
-      const response = await fetch('http://127.0.0.1:8000/api/v1/component2/generate-br-form', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        // Fallback to sample BR form endpoint
-        const fallbackRes = await fetch(
-          `http://127.0.0.1:8000/api/v1/component2/sample-br-form/download?business_name=${encodeURIComponent(
-            formData.business_name
-          )}&legal_form=${encodeURIComponent(formData.legal_form)}&district=${encodeURIComponent(formData.district)}`
-        );
-        if (!fallbackRes.ok) throw new Error('Failed to generate application form');
-        const blob = await fallbackRes.blob();
-        triggerDownload(blob, `Official_BR_Form1_${formData.business_name.replace(/\s+/g, '_')}.pdf`);
-      } else {
-        const blob = await response.blob();
-        triggerDownload(blob, `Official_BR_Form1_${formData.business_name.replace(/\s+/g, '_')}.pdf`);
-      }
-
-      setDownloadSuccess(true);
-      setTimeout(() => setDownloadSuccess(false), 5000);
-    } catch (err) {
-      console.error(err);
-      alert('Could not download PDF from backend. Make sure backend is running at http://127.0.0.1:8000.');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
 
   const triggerDownload = (blob: Blob, filename: string) => {
     const url = window.URL.createObjectURL(blob);
@@ -531,6 +706,154 @@ export const BusinessRegistrationView: React.FC = () => {
     a.click();
     a.remove();
     window.URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadStageForm = async () => {
+    setIsGenerating(true);
+    setDownloadSuccess(false);
+
+    try {
+      if (activeRoadmapStage === 3) {
+        // Download official Form 1 PDF from FastAPI backend
+        const response = await fetch('http://127.0.0.1:8000/api/v1/component2/generate-br-form', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+
+        if (!response.ok) {
+          const fallbackRes = await fetch(
+            `http://127.0.0.1:8000/api/v1/component2/sample-br-form/download?business_name=${encodeURIComponent(
+              formData.business_name
+            )}&legal_form=${encodeURIComponent(formData.legal_form)}&district=${encodeURIComponent(formData.district)}`
+          );
+          if (!fallbackRes.ok) throw new Error('Failed to generate application form');
+          const blob = await fallbackRes.blob();
+          triggerDownload(blob, `Official_BR_Form1_${formData.business_name.replace(/\s+/g, '_')}.pdf`);
+        } else {
+          const blob = await response.blob();
+          triggerDownload(blob, `Official_BR_Form1_${formData.business_name.replace(/\s+/g, '_')}.pdf`);
+        }
+        setDownloadMessage('Official Form 1 (Statement of Particulars) PDF has been downloaded successfully!');
+      } else {
+        // Generate statutory formatted official application docket for Stages 1, 2, 4, 5
+        const stageMeta = STAGE_META[activeRoadmapStage];
+        const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${stageMeta.title} - ${formData.business_name}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; padding: 40px; color: #1e293b; line-height: 1.6; }
+    .header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 20px; margin-bottom: 25px; }
+    .emblem { font-size: 24px; font-weight: bold; color: #0f172a; }
+    .statute { font-size: 13px; color: #64748b; font-weight: 600; text-transform: uppercase; margin-top: 4px; }
+    h1 { font-size: 18px; margin: 12px 0 4px; color: #0f172a; }
+    h2 { font-size: 14px; font-weight: 500; color: #334155; margin: 0; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
+    th, td { border: 1px solid #cbd5e1; padding: 10px 14px; text-align: left; }
+    th { background: #f8fafc; font-weight: 700; width: 35%; color: #334155; }
+    td { background: #ffffff; color: #0f172a; font-weight: 500; }
+    .section-title { background: #e2e8f0; font-weight: 800; font-size: 14px; color: #0f172a; }
+    .checklist { margin-top: 25px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; }
+    .checklist-title { font-weight: 700; font-size: 13px; color: #0f172a; margin-bottom: 10px; }
+    .footer { margin-top: 40px; display: flex; justify-content: space-between; font-size: 12px; border-top: 1px dashed #cbd5e1; padding-top: 20px; }
+    .sign-box { width: 220px; border-top: 1px solid #0f172a; text-align: center; padding-top: 8px; margin-top: 50px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="emblem">DEMOCRATIC SOCIALIST REPUBLIC OF SRI LANKA</div>
+    <div class="statute">WESTERN PROVINCE BUSINESS REGISTRATION SYSTEM</div>
+    <h1>${stageMeta.title}</h1>
+    <h2>${stageMeta.title_si}</h2>
+    <p style="font-size: 12px; color: #64748b; margin-top: 8px;">Prescribed Filing Dossier | Generated via SME360 Decision Support</p>
+  </div>
+
+  <table>
+    <tr class="section-title"><td colspan="2">1. GENERAL BUSINESS &amp; JURISDICTION PROFILE</td></tr>
+    <tr><th>Proposed Trading Name</th><td><strong>${formData.business_name}</strong></td></tr>
+    <tr><th>Legal Structure</th><td>${formData.legal_form.replace(/_/g, ' ').toUpperCase()}</td></tr>
+    <tr><th>Target Divisional Secretariat</th><td>${formData.divisional_secretariat}</td></tr>
+    <tr><th>Grama Niladhari Division</th><td>${formData.grama_niladhari}</td></tr>
+    <tr><th>Local Municipal / Urban Council</th><td>${formData.local_authority}</td></tr>
+    <tr><th>Principal Business Address</th><td>${formData.address}</td></tr>
+    <tr><th>Applicant / Owner Name</th><td>${formData.owner_name}</td></tr>
+    <tr><th>National Identity Card (NIC)</th><td>${formData.owner_nic}</td></tr>
+    <tr><th>Contact Phone &amp; Email</th><td>${formData.phone} | ${formData.email}</td></tr>
+
+    <tr class="section-title"><td colspan="2">2. STAGE ${activeRoadmapStage} SPECIFIC STATUTORY PARTICULARS</td></tr>
+    ${
+      activeRoadmapStage === 1
+        ? `<tr><th>Alternative Name Choice 1</th><td>${stage1Data.alt_name_1}</td></tr>
+           <tr><th>Alternative Name Choice 2</th><td>${stage1Data.alt_name_2}</td></tr>
+           <tr><th>Name Meaning &amp; Origin</th><td>${stage1Data.name_meaning}</td></tr>
+           <tr><th>Language Scripts</th><td>${stage1Data.language_scripts}</td></tr>
+           <tr><th>Search Date &amp; Validity</th><td>${stage1Data.search_date} (${stage1Data.reservation_period})</td></tr>
+           <tr><th>Statutory Fee</th><td>LKR 250 - 500 (Prescribed WP Duty)</td></tr>`
+        : activeRoadmapStage === 2
+        ? `<tr><th>Premises Legal Title</th><td>${stage2Data.ownership_type.replace(/_/g, ' ').toUpperCase()}</td></tr>
+           <tr><th>Property Owner / Landlord</th><td>${stage2Data.landlord_name} (${stage2Data.landlord_phone})</td></tr>
+           <tr><th>Deed / Stamped Lease Ref</th><td>${stage2Data.deed_lease_no}</td></tr>
+           <tr><th>Electoral Register Serial No</th><td>${stage2Data.electoral_no} (House: ${stage2Data.house_no})</td></tr>
+           <tr><th>Residence Duration in Division</th><td>${stage2Data.residence_duration}</td></tr>
+           <tr><th>Inspection Status</th><td>${stage2Data.inspection_readiness}</td></tr>`
+        : activeRoadmapStage === 4
+        ? `<tr><th>Assessment Account Number</th><td>${stage4Data.assessment_no}</td></tr>
+           <tr><th>Trade License Classification</th><td>${stage4Data.trade_category}</td></tr>
+           <tr><th>Total Usable Floor Area</th><td>${stage4Data.floor_area}</td></tr>
+           <tr><th>Public Health Inspector (PHI)</th><td>${stage4Data.phi_division}</td></tr>
+           <tr><th>Food Handlers Medical Certified</th><td>${stage4Data.food_handlers_certified} Personnel</td></tr>
+           <tr><th>Fire Safety Equipment</th><td>${stage4Data.fire_safety}</td></tr>
+           <tr><th>Waste &amp; Drainage Arrangement</th><td>${stage4Data.waste_disposal}</td></tr>
+           <tr><th>BR Certificate Reference</th><td>${stage4Data.br_certificate_no} (${stage4Data.license_year})</td></tr>`
+        : `<tr><th>Taxpayer Classification</th><td>${stage5Data.taxpayer_type}</td></tr>
+           <tr><th>Inland Revenue Regional Unit</th><td>${stage5Data.ird_unit}</td></tr>
+           <tr><th>RAMIS TIN Application Status</th><td>${stage5Data.tin_status}</td></tr>
+           <tr><th>Labour Department Office</th><td>${stage5Data.labour_office}</td></tr>
+           <tr><th>Total Employees / Headcount</th><td>${formData.employee_count} Persons</td></tr>
+           <tr><th>Estimated Monthly Payroll</th><td>LKR ${stage5Data.monthly_payroll.toLocaleString()}</td></tr>
+           <tr><th>Statutory Social Security</th><td>EPF: 12% + 8% | ETF: 3% Employer</td></tr>
+           <tr><th>Designated Remittance Bank</th><td>${stage5Data.bank_name} (${stage5Data.bank_branch}) - A/C: ${stage5Data.bank_account}</td></tr>`
+    }
+  </table>
+
+  <div class="checklist">
+    <div class="checklist-title">MANDATORY STATUTORY DOCUMENTS CHECKLIST</div>
+    <ul>
+      ${(STAGE_CHECKLIST_CONFIG[activeRoadmapStage] || [])
+        .map((c) => `<li><strong>${c.label}</strong> — ${c.desc}</li>`)
+        .join('')}
+    </ul>
+  </div>
+
+  <div class="footer">
+    <div>
+      <p>Prepared for: <strong>${STAGE_SUBMISSION_INFO[activeRoadmapStage]?.title}</strong></p>
+      <p>Office: ${STAGE_SUBMISSION_INFO[activeRoadmapStage]?.subtitle}</p>
+      <p>Date: ${new Date().toLocaleDateString('en-GB')}</p>
+    </div>
+    <div class="sign-box">
+      Applicant / Declarant Signature
+    </div>
+  </div>
+</body>
+</html>`;
+
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const safeName = formData.business_name.replace(/\s+/g, '_');
+        triggerDownload(blob, `Stage_${activeRoadmapStage}_${stageMeta.title.replace(/[^a-zA-Z0-9]/g, '_')}_${safeName}.html`);
+        setDownloadMessage(`Official Stage ${activeRoadmapStage} statutory dossier has been successfully generated!`);
+      }
+
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 6000);
+    } catch (err) {
+      console.error(err);
+      alert('Could not download form. Please verify connection to server.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -918,28 +1241,62 @@ export const BusinessRegistrationView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Form Inputs (2 Cols) */}
         <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-5">
+          {/* Stage Fast-Navigation Tab Bar */}
+          <div className="flex items-center gap-1.5 p-1.5 bg-slate-100/90 rounded-2xl overflow-x-auto border border-slate-200/70">
+            {[1, 2, 3, 4, 5].map((stgNum) => {
+              const meta = STAGE_META[stgNum];
+              const isCurrent = activeRoadmapStage === stgNum;
+              return (
+                <button
+                  key={stgNum}
+                  type="button"
+                  onClick={() => setActiveRoadmapStage(stgNum)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                    isCurrent
+                      ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80 ring-1 ring-slate-900/5'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                  }`}
+                >
+                  <span
+                    className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-extrabold ${
+                      isCurrent ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    {stgNum}
+                  </span>
+                  <span className="hidden sm:inline">{meta.title.split('.')[1]?.trim().split(' ')[0] || `Stage ${stgNum}`}</span>
+                  <span className="sm:hidden">Stage {stgNum}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Dynamic Stage Header */}
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
             <div>
-              <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200 mb-1">
-                Official Statutory Form 1
+              <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border mb-1 ${STAGE_META[activeRoadmapStage].badge_color}`}>
+                {STAGE_META[activeRoadmapStage].badge}
               </span>
               <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                <i className="fa-solid fa-pen-to-square text-emerald-600" />
-                3. Statement of Particulars (Form 1) Particulars
+                <i className={`fa-solid ${STAGE_META[activeRoadmapStage].icon} ${STAGE_META[activeRoadmapStage].icon_color}`} />
+                {STAGE_META[activeRoadmapStage].title}
               </h3>
-              <p className="text-xs text-slate-500">
-                Data entered below is mapped directly to the official Sri Lanka Business Registration PDF.
+              <p className="text-xs text-blue-800 font-semibold mt-0.5">
+                {STAGE_META[activeRoadmapStage].title_si}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                {STAGE_META[activeRoadmapStage].desc}
               </p>
             </div>
 
             <button
               type="button"
-              onClick={handleDownloadPdf}
+              onClick={handleDownloadStageForm}
               disabled={isGenerating}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs shadow-md transition-all cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-extrabold text-xs shadow-md transition-all cursor-pointer disabled:opacity-50"
             >
-              <i className={`fa-solid ${isGenerating ? 'fa-spinner fa-spin' : 'fa-file-pdf'}`} />
-              <span>{isGenerating ? 'Generating Official PDF...' : 'Download Form 1 (PDF)'}</span>
+              <i className={`fa-solid ${isGenerating ? 'fa-spinner fa-spin' : STAGE_META[activeRoadmapStage].btn_icon}`} />
+              <span>{isGenerating ? 'Generating Official Form...' : STAGE_META[activeRoadmapStage].btn_label}</span>
             </button>
           </div>
 
@@ -948,197 +1305,747 @@ export const BusinessRegistrationView: React.FC = () => {
             <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center justify-between">
               <span className="flex items-center gap-2 font-semibold">
                 <i className="fa-solid fa-circle-check text-emerald-600 text-sm" />
-                Official Form 1 PDF has been successfully generated and downloaded to your computer!
+                {downloadMessage}
               </span>
               <button
                 type="button"
                 onClick={() => setDownloadSuccess(false)}
-                className="text-emerald-700 hover:text-emerald-900 text-xs font-bold"
+                className="text-emerald-700 hover:text-emerald-900 text-xs font-bold cursor-pointer"
               >
                 ✕
               </button>
             </div>
           )}
 
-          {/* Input Fields Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-            {/* Business Name */}
-            <div className="sm:col-span-2">
-              <label className="block font-bold text-slate-700 mb-1">
-                Proposed Business Name (ව්‍යාපාරික නාමය)
-              </label>
-              <input
-                type="text"
-                value={formData.business_name}
-                onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
-                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
-              />
-            </div>
+          {/* ------------------------------------------------------------- */}
+          {/* STAGE 1: NAME SEARCH & CLEARANCE (WP/BN/01) FORM PARTICULARS  */}
+          {/* ------------------------------------------------------------- */}
+          {activeRoadmapStage === 1 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs animate-fadeIn">
+              <div className="sm:col-span-2">
+                <label className="block font-bold text-slate-700 mb-1">
+                  1st Choice: Proposed Business Name (ප්‍රමුඛ ව්‍යාපාරික නාමය)
+                </label>
+                <input
+                  type="text"
+                  value={formData.business_name}
+                  onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
+                  placeholder="e.g. CEYLON ARTISAN BAKEHOUSE"
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
 
-            {/* Target Divisional Secretariat */}
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">
-                Target Divisional Secretariat (ප්‍රාදේශීය ලේකම් කාර්යාලය)
-              </label>
-              <select
-                value={formData.divisional_secretariat}
-                onChange={(e) => setFormData({ ...formData, divisional_secretariat: e.target.value })}
-                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
-              >
-                <option value="Thimbirigasyaya Divisional Secretariat">Thimbirigasyaya DS (Colombo Central)</option>
-                <option value="Colombo Divisional Secretariat">Colombo DS (Fort / Pettah)</option>
-                <option value="Sri Jayawardenepura Kotte DS">Kotte DS (Rajagiriya / Nugegoda)</option>
-                <option value="Kaduwela Divisional Secretariat">Kaduwela DS (Malabe / Battaramulla)</option>
-                <option value="Dehiwala-Mount Lavinia DS">Dehiwala DS (Mount Lavinia)</option>
-                <option value="Gampaha Divisional Secretariat">Gampaha DS</option>
-                <option value="Negombo Divisional Secretariat">Negombo DS</option>
-                <option value="Kalutara Divisional Secretariat">Kalutara DS</option>
-              </select>
-            </div>
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  2nd Choice: Alternative Name (විකල්ප නාමය 1)
+                </label>
+                <input
+                  type="text"
+                  value={stage1Data.alt_name_1}
+                  onChange={(e) => setStage1Data({ ...stage1Data, alt_name_1: e.target.value })}
+                  placeholder="e.g. CEYLON HERITAGE BAKERY"
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
 
-            {/* Local Authority */}
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">
-                Local Municipal / Urban Council (පළාත් පාලන ආයතනය)
-              </label>
-              <input
-                type="text"
-                value={formData.local_authority}
-                onChange={(e) => setFormData({ ...formData, local_authority: e.target.value })}
-                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
-              />
-            </div>
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  3rd Choice: Alternative Name (විකල්ප නාමය 2)
+                </label>
+                <input
+                  type="text"
+                  value={stage1Data.alt_name_2}
+                  onChange={(e) => setStage1Data({ ...stage1Data, alt_name_2: e.target.value })}
+                  placeholder="e.g. ISLAND ARTISAN BAKES"
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
 
-            {/* Grama Niladhari Division */}
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">
-                Grama Niladhari Division (ග්‍රාම නිලධාරී වසම)
-              </label>
-              <input
-                type="text"
-                value={formData.grama_niladhari}
-                onChange={(e) => setFormData({ ...formData, grama_niladhari: e.target.value })}
-                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
-              />
-            </div>
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Target Divisional Secretariat (ප්‍රාදේශීය ලේකම් කාර්යාලය)
+                </label>
+                <select
+                  value={formData.divisional_secretariat}
+                  onChange={(e) => setFormData({ ...formData, divisional_secretariat: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                >
+                  <option value="Thimbirigasyaya Divisional Secretariat">Thimbirigasyaya DS (Colombo Central)</option>
+                  <option value="Colombo Divisional Secretariat">Colombo DS (Fort / Pettah)</option>
+                  <option value="Sri Jayawardenepura Kotte DS">Kotte DS (Rajagiriya / Nugegoda)</option>
+                  <option value="Kaduwela Divisional Secretariat">Kaduwela DS (Malabe / Battaramulla)</option>
+                  <option value="Dehiwala-Mount Lavinia DS">Dehiwala DS (Mount Lavinia)</option>
+                  <option value="Gampaha Divisional Secretariat">Gampaha DS</option>
+                  <option value="Negombo Divisional Secretariat">Negombo DS</option>
+                  <option value="Kalutara Divisional Secretariat">Kalutara DS</option>
+                </select>
+              </div>
 
-            {/* Sector / Commercial Category */}
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">
-                Commercial Sector &amp; Activities
-              </label>
-              <input
-                type="text"
-                value={formData.sector}
-                onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
-                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
-              />
-            </div>
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Commercial Sector &amp; Trade Line
+                </label>
+                <input
+                  type="text"
+                  value={formData.sector}
+                  onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
 
-            {/* Physical Business Address */}
-            <div className="sm:col-span-2">
-              <label className="block font-bold text-slate-700 mb-1">
-                Principal Place of Business (ව්‍යාපාරය පවත්වාගෙන යන ස්ථානය)
-              </label>
-              <input
-                type="text"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
-              />
-            </div>
+              <div className="sm:col-span-2">
+                <label className="block font-bold text-slate-700 mb-1">
+                  Meaning &amp; Justification of Name (නාමයේ අර්ථය හෝ විශේෂත්වය)
+                </label>
+                <input
+                  type="text"
+                  value={stage1Data.name_meaning}
+                  onChange={(e) => setStage1Data({ ...stage1Data, name_meaning: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
 
-            {/* Proprietor Full Name */}
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">
-                Applicant / Owner Full Name (අයදුම්කරුගේ සම්පූර්ණ නම)
-              </label>
-              <input
-                type="text"
-                value={formData.owner_name}
-                onChange={(e) => setFormData({ ...formData, owner_name: e.target.value })}
-                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
-              />
-            </div>
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Language Scripts</label>
+                <input
+                  type="text"
+                  value={stage1Data.language_scripts}
+                  onChange={(e) => setStage1Data({ ...stage1Data, language_scripts: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
 
-            {/* NIC Number */}
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">
-                National Identity Card (NIC) (ජාතික හැඳුනුම්පත් අංකය)
-              </label>
-              <input
-                type="text"
-                value={formData.owner_nic}
-                onChange={(e) => setFormData({ ...formData, owner_nic: e.target.value })}
-                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
-              />
-            </div>
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Statutory Reservation Validity</label>
+                <input
+                  type="text"
+                  value={stage1Data.reservation_period}
+                  readOnly
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700"
+                />
+              </div>
 
-            {/* Phone & Email */}
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">Contact Phone</label>
-              <input
-                type="text"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
-              />
-            </div>
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Applicant Full Name (අයදුම්කරුගේ නම)</label>
+                <input
+                  type="text"
+                  value={formData.owner_name}
+                  onChange={(e) => setFormData({ ...formData, owner_name: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
 
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">Contact Email</label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
-              />
-            </div>
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Applicant National ID (NIC)</label>
+                <input
+                  type="text"
+                  value={formData.owner_nic}
+                  onChange={(e) => setFormData({ ...formData, owner_nic: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
 
-            {/* Residence Address */}
-            <div className="sm:col-span-2">
-              <label className="block font-bold text-slate-700 mb-1">
-                Permanent Residential Address (ස්ථිර පදිංචි ලිපිනය)
-              </label>
-              <input
-                type="text"
-                value={formData.residence_address}
-                onChange={(e) => setFormData({ ...formData, residence_address: e.target.value })}
-                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
-              />
-            </div>
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Contact Phone</label>
+                <input
+                  type="text"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
 
-            {/* Commencement Date & Initial Capital */}
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">Commencement Date</label>
-              <input
-                type="date"
-                value={formData.commencement_date}
-                onChange={(e) => setFormData({ ...formData, commencement_date: e.target.value })}
-                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
-              />
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Inquiry Filing Date</label>
+                <input
+                  type="date"
+                  value={stage1Data.search_date}
+                  onChange={(e) => setStage1Data({ ...stage1Data, search_date: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
             </div>
+          )}
 
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">Initial Capital (LKR)</label>
-              <input
-                type="number"
-                value={formData.initial_capital}
-                onChange={(e) => setFormData({ ...formData, initial_capital: parseFloat(e.target.value) || 0 })}
-                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
-              />
+          {/* ------------------------------------------------------------- */}
+          {/* STAGE 2: GRAMA NILADHARI ASSESSMENT REPORT PARTICULARS         */}
+          {/* ------------------------------------------------------------- */}
+          {activeRoadmapStage === 2 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs animate-fadeIn">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Grama Niladhari Division (ග්‍රාම නිලධාරී වසම සහ අංකය)
+                </label>
+                <input
+                  type="text"
+                  value={formData.grama_niladhari}
+                  onChange={(e) => setFormData({ ...formData, grama_niladhari: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Divisional Secretariat Division (ප්‍රාදේශීය ලේකම් කොට්ඨාසය)
+                </label>
+                <input
+                  type="text"
+                  value={formData.divisional_secretariat}
+                  onChange={(e) => setFormData({ ...formData, divisional_secretariat: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block font-bold text-slate-700 mb-1">
+                  Physical Business Premises Address (ව්‍යාපාරික ස්ථානයේ ලිපිනය)
+                </label>
+                <input
+                  type="text"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Premises Ownership Rights (පරිශ්‍රයේ නෛතික අයිතිය)
+                </label>
+                <select
+                  value={stage2Data.ownership_type}
+                  onChange={(e) => setStage2Data({ ...stage2Data, ownership_type: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                >
+                  <option value="commercial_lease">Commercial Lease Deed (බදු ගිවිසුම මත)</option>
+                  <option value="sole_owner">Sole Legal Owner (නිරවුල් අයිතිකරු - සින්නක්කර)</option>
+                  <option value="tenancy">Monthly Tenancy with Consent (කුලී පදනම)</option>
+                  <option value="family_consent">Family Property with Written Consent (පවුලේ දේපළක්)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Deed / Stamped Lease Ref No. (ඔප්පු හෝ බදු ගිවිසුම් අංකය)
+                </label>
+                <input
+                  type="text"
+                  value={stage2Data.deed_lease_no}
+                  onChange={(e) => setStage2Data({ ...stage2Data, deed_lease_no: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Property Owner / Landlord Name (දේපළ හිමිකරුගේ නම)
+                </label>
+                <input
+                  type="text"
+                  value={stage2Data.landlord_name}
+                  onChange={(e) => setStage2Data({ ...stage2Data, landlord_name: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Landlord Contact Phone</label>
+                <input
+                  type="text"
+                  value={stage2Data.landlord_phone}
+                  onChange={(e) => setStage2Data({ ...stage2Data, landlord_phone: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Electoral Register Serial No. (ඡන්ද හිමි නාමලේඛන අංකය)
+                </label>
+                <input
+                  type="text"
+                  value={stage2Data.electoral_no}
+                  onChange={(e) => setStage2Data({ ...stage2Data, electoral_no: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Assessment House No. (නිවාස හෝ තක්සේරු අංකය)
+                </label>
+                <input
+                  type="text"
+                  value={stage2Data.house_no}
+                  onChange={(e) => setStage2Data({ ...stage2Data, house_no: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block font-bold text-slate-700 mb-1">
+                  Applicant Permanent Residence Address (අයදුම්කරුගේ ස්ථිර පදිංචි ලිපිනය)
+                </label>
+                <input
+                  type="text"
+                  value={formData.residence_address}
+                  onChange={(e) => setFormData({ ...formData, residence_address: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Continuous Residence Period</label>
+                <input
+                  type="text"
+                  value={stage2Data.residence_duration}
+                  onChange={(e) => setStage2Data({ ...stage2Data, residence_duration: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Premises Inspection Readiness</label>
+                <input
+                  type="text"
+                  value={stage2Data.inspection_readiness}
+                  onChange={(e) => setStage2Data({ ...stage2Data, inspection_readiness: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* ------------------------------------------------------------- */}
+          {/* STAGE 3: OFFICIAL STATUTORY FORM 1 STATEMENT OF PARTICULARS   */}
+          {/* ------------------------------------------------------------- */}
+          {activeRoadmapStage === 3 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs animate-fadeIn">
+              <div className="sm:col-span-2">
+                <label className="block font-bold text-slate-700 mb-1">
+                  Proposed Business Name (ව්‍යාපාරික නාමය)
+                </label>
+                <input
+                  type="text"
+                  value={formData.business_name}
+                  onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Target Divisional Secretariat (ප්‍රාදේශීය ලේකම් කාර්යාලය)
+                </label>
+                <select
+                  value={formData.divisional_secretariat}
+                  onChange={(e) => setFormData({ ...formData, divisional_secretariat: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                >
+                  <option value="Thimbirigasyaya Divisional Secretariat">Thimbirigasyaya DS (Colombo Central)</option>
+                  <option value="Colombo Divisional Secretariat">Colombo DS (Fort / Pettah)</option>
+                  <option value="Sri Jayawardenepura Kotte DS">Kotte DS (Rajagiriya / Nugegoda)</option>
+                  <option value="Kaduwela Divisional Secretariat">Kaduwela DS (Malabe / Battaramulla)</option>
+                  <option value="Dehiwala-Mount Lavinia DS">Dehiwala DS (Mount Lavinia)</option>
+                  <option value="Gampaha Divisional Secretariat">Gampaha DS</option>
+                  <option value="Negombo Divisional Secretariat">Negombo DS</option>
+                  <option value="Kalutara Divisional Secretariat">Kalutara DS</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Local Municipal / Urban Council (පළාත් පාලන ආයතනය)
+                </label>
+                <input
+                  type="text"
+                  value={formData.local_authority}
+                  onChange={(e) => setFormData({ ...formData, local_authority: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Grama Niladhari Division (ග්‍රාම නිලධාරී වසම)
+                </label>
+                <input
+                  type="text"
+                  value={formData.grama_niladhari}
+                  onChange={(e) => setFormData({ ...formData, grama_niladhari: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Commercial Sector &amp; Activities
+                </label>
+                <input
+                  type="text"
+                  value={formData.sector}
+                  onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block font-bold text-slate-700 mb-1">
+                  Principal Place of Business (ව්‍යාපාරය පවත්වාගෙන යන ස්ථානය)
+                </label>
+                <input
+                  type="text"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Applicant / Owner Full Name (අයදුම්කරුගේ සම්පූර්ණ නම)
+                </label>
+                <input
+                  type="text"
+                  value={formData.owner_name}
+                  onChange={(e) => setFormData({ ...formData, owner_name: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  National Identity Card (NIC) (ජාතික හැඳුනුම්පත් අංකය)
+                </label>
+                <input
+                  type="text"
+                  value={formData.owner_nic}
+                  onChange={(e) => setFormData({ ...formData, owner_nic: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Contact Phone</label>
+                <input
+                  type="text"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Contact Email</label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block font-bold text-slate-700 mb-1">
+                  Permanent Residential Address (ස්ථිර පදිංචි ලිපිනය)
+                </label>
+                <input
+                  type="text"
+                  value={formData.residence_address}
+                  onChange={(e) => setFormData({ ...formData, residence_address: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Commencement Date</label>
+                <input
+                  type="date"
+                  value={formData.commencement_date}
+                  onChange={(e) => setFormData({ ...formData, commencement_date: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Initial Capital (LKR)</label>
+                <input
+                  type="number"
+                  value={formData.initial_capital}
+                  onChange={(e) => setFormData({ ...formData, initial_capital: parseFloat(e.target.value) || 0 })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* ------------------------------------------------------------- */}
+          {/* STAGE 4: MUNICIPAL COUNCIL TRADE TAX & HEALTH LICENSE FORM    */}
+          {/* ------------------------------------------------------------- */}
+          {activeRoadmapStage === 4 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs animate-fadeIn">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Local Municipal / Urban Council (පළාත් පාලන ආයතනය)
+                </label>
+                <input
+                  type="text"
+                  value={formData.local_authority}
+                  onChange={(e) => setFormData({ ...formData, local_authority: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Assessment Rates Account No. (තක්සේරු අංකය)
+                </label>
+                <input
+                  type="text"
+                  value={stage4Data.assessment_no}
+                  onChange={(e) => setStage4Data({ ...stage4Data, assessment_no: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Registered Business Name (ලියාපදිංචි ව්‍යාපාර නාමය)
+                </label>
+                <input
+                  type="text"
+                  value={formData.business_name}
+                  onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  BR Certificate Reference No. (BR අංකය)
+                </label>
+                <input
+                  type="text"
+                  value={stage4Data.br_certificate_no}
+                  onChange={(e) => setStage4Data({ ...stage4Data, br_certificate_no: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Trade Classification (වෙළඳ වර්ගීකරණය)
+                </label>
+                <input
+                  type="text"
+                  value={stage4Data.trade_category}
+                  onChange={(e) => setStage4Data({ ...stage4Data, trade_category: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Covered Premises Floor Area (වර්ග අඩි ප්‍රමාණය)
+                </label>
+                <input
+                  type="text"
+                  value={stage4Data.floor_area}
+                  onChange={(e) => setStage4Data({ ...stage4Data, floor_area: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Public Health Inspector (PHI) Division (අදාළ PHI කොට්ඨාසය)
+                </label>
+                <input
+                  type="text"
+                  value={stage4Data.phi_division}
+                  onChange={(e) => setStage4Data({ ...stage4Data, phi_division: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Medical Certified Food Handlers Count
+                </label>
+                <input
+                  type="number"
+                  value={stage4Data.food_handlers_certified}
+                  onChange={(e) => setStage4Data({ ...stage4Data, food_handlers_certified: parseInt(e.target.value) || 0 })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block font-bold text-slate-700 mb-1">
+                  Fire Protection Equipment (ගිනි නිවීමේ පහසුකම්)
+                </label>
+                <input
+                  type="text"
+                  value={stage4Data.fire_safety}
+                  onChange={(e) => setStage4Data({ ...stage4Data, fire_safety: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block font-bold text-slate-700 mb-1">
+                  Solid Waste &amp; Effluent Drainage Arrangement
+                </label>
+                <input
+                  type="text"
+                  value={stage4Data.waste_disposal}
+                  onChange={(e) => setStage4Data({ ...stage4Data, waste_disposal: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* ------------------------------------------------------------- */}
+          {/* STAGE 5: IRD RAMIS TIN & LABOUR EPF/ETF FORM D PARTICULARS    */}
+          {/* ------------------------------------------------------------- */}
+          {activeRoadmapStage === 5 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs animate-fadeIn">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Taxpayer Classification (බදු ගෙවන්නාගේ වර්ගීකරණය)
+                </label>
+                <input
+                  type="text"
+                  value={stage5Data.taxpayer_type}
+                  onChange={(e) => setStage5Data({ ...stage5Data, taxpayer_type: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  RAMIS TIN Application Status (TIN තත්ත්වය)
+                </label>
+                <select
+                  value={stage5Data.tin_status}
+                  onChange={(e) => setStage5Data({ ...stage5Data, tin_status: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                >
+                  <option value="New RAMIS TIN Application Required">New RAMIS TIN Application Required</option>
+                  <option value="Existing Individual TIN Registered">Existing Individual TIN Registered</option>
+                  <option value="TIN Linked to Commercial Bank Mandate">TIN Linked to Commercial Bank Mandate</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Designated IRD Regional Unit (දේශීය ආදායම් ඒකකය)
+                </label>
+                <input
+                  type="text"
+                  value={stage5Data.ird_unit}
+                  onChange={(e) => setStage5Data({ ...stage5Data, ird_unit: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Department of Labour District Office (කම්කරු කාර්යාලය)
+                </label>
+                <input
+                  type="text"
+                  value={stage5Data.labour_office}
+                  onChange={(e) => setStage5Data({ ...stage5Data, labour_office: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Total Active Employees Count (සේවක සංඛ්‍යාව)
+                </label>
+                <input
+                  type="number"
+                  value={formData.employee_count}
+                  onChange={(e) => setFormData({ ...formData, employee_count: parseInt(e.target.value) || 0 })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Estimated Monthly Wage Payroll (LKR)
+                </label>
+                <input
+                  type="number"
+                  value={stage5Data.monthly_payroll}
+                  onChange={(e) => setStage5Data({ ...stage5Data, monthly_payroll: parseFloat(e.target.value) || 0 })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Statutory EPF Contribution (12% + 8%)
+                </label>
+                <input
+                  type="text"
+                  value={stage5Data.epf_status}
+                  readOnly
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Statutory ETF Contribution (3% Employer)
+                </label>
+                <input
+                  type="text"
+                  value={stage5Data.etf_status}
+                  readOnly
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Commercial Bank for Tax / EPF Remittance
+                </label>
+                <input
+                  type="text"
+                  value={stage5Data.bank_name}
+                  onChange={(e) => setStage5Data({ ...stage5Data, bank_name: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Bank Branch &amp; Account Number
+                </label>
+                <input
+                  type="text"
+                  value={stage5Data.bank_account}
+                  onChange={(e) => setStage5Data({ ...stage5Data, bank_account: e.target.value })}
+                  placeholder="e.g. 1000849201"
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Right Sidebar: Document Checklist & Summary (1 Col) */}
+        {/* Right Sidebar: Dynamic Stage Document Checklist & Submission Office */}
         <div className="space-y-5">
-          {/* Document Checklist Card */}
+          {/* Stage-Specific Document Checklist Card */}
           <div className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
                 <i className="fa-solid fa-list-check text-teal-600" />
-                Required Documents Checklist
+                Stage {activeRoadmapStage} Documents Checklist
               </h4>
               <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
                 {checklistScore}% Ready
@@ -1154,38 +2061,12 @@ export const BusinessRegistrationView: React.FC = () => {
             </div>
 
             <p className="text-[11px] text-slate-500 leading-relaxed">
-              Check off documents you have prepared to bring to the Divisional Secretariat:
+              Check off documents you have prepared for <strong>Stage {activeRoadmapStage} ({STAGE_META[activeRoadmapStage].title.split('.')[1]?.trim()})</strong>:
             </p>
 
             <div className="space-y-2 text-xs">
-              {[
-                {
-                  key: 'doc_nic',
-                  label: 'Certified NIC / Passport Copy',
-                  desc: 'Photocopy certified by JP or Grama Niladhari',
-                },
-                {
-                  key: 'doc_gn',
-                  label: 'Grama Niladhari Report',
-                  desc: 'Original signed residence & business assessment report',
-                },
-                {
-                  key: 'doc_deed',
-                  label: 'Deed or Notarized Lease Agreement',
-                  desc: 'Proof of premises rights or landlord consent letter',
-                },
-                {
-                  key: 'doc_rates',
-                  label: 'Municipal Rates Tax Receipt',
-                  desc: 'Assessment tax receipt from Municipal/Urban Council',
-                },
-                {
-                  key: 'doc_form1',
-                  label: 'Printed & Signed Form 1',
-                  desc: 'Downloaded official statutory application form',
-                },
-              ].map((doc) => {
-                const isChecked = checklist[doc.key];
+              {currentChecklistItems.map((doc) => {
+                const isChecked = !!currentChecklistState[doc.key];
                 return (
                   <label
                     key={doc.key}
@@ -1212,31 +2093,44 @@ export const BusinessRegistrationView: React.FC = () => {
             </div>
           </div>
 
-          {/* Submission Guidance Card */}
+          {/* Dynamic Stage-Specific Submission Guidance Card */}
           <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-5 shadow-xs border border-slate-700 space-y-3">
             <div className="flex items-center gap-2">
               <span className="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center text-sm">
                 <i className="fa-solid fa-building-columns" />
               </span>
               <div>
-                <h4 className="text-xs font-bold text-white uppercase tracking-wider">Submission Office</h4>
-                <p className="text-[10px] text-teal-300 font-mono">Business Names Branch</p>
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                  {STAGE_SUBMISSION_INFO[activeRoadmapStage]?.title || 'Submission Office'}
+                </h4>
+                <p className="text-[10px] text-teal-300 font-mono">
+                  {STAGE_SUBMISSION_INFO[activeRoadmapStage]?.subtitle}
+                </p>
               </div>
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed">
-              Submit your printed Form 1 package in person to the <strong>Business Names Registrar</strong> at{' '}
-              <span className="text-white font-semibold">{formData.divisional_secretariat}</span>.
+              {STAGE_SUBMISSION_INFO[activeRoadmapStage]?.desc}
             </p>
 
-            <div className="pt-2 border-t border-slate-700/80 space-y-1 text-[11px] text-slate-300">
+            <div className="pt-2 border-t border-slate-700/80 space-y-1.5 text-[11px] text-slate-300">
               <div className="flex items-center justify-between">
                 <span>Working Hours:</span>
-                <span className="text-white font-semibold">Mon - Fri (8:30 AM - 4:15 PM)</span>
+                <span className="text-white font-semibold">
+                  {STAGE_SUBMISSION_INFO[activeRoadmapStage]?.hours}
+                </span>
               </div>
               <div className="flex items-center justify-between">
-                <span>Certificate Processing:</span>
-                <span className="text-teal-400 font-bold">1 - 3 Business Days</span>
+                <span>Processing Time:</span>
+                <span className="text-teal-400 font-bold">
+                  {STAGE_SUBMISSION_INFO[activeRoadmapStage]?.time}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Statutory Duty:</span>
+                <span className="text-emerald-400 font-bold">
+                  {STAGE_SUBMISSION_INFO[activeRoadmapStage]?.fee}
+                </span>
               </div>
             </div>
           </div>
