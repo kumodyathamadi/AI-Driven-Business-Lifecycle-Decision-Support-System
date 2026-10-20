@@ -65,6 +65,7 @@ export default function ClearLedgerDashboard() {
   const [savingConfig, setSavingConfig] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedScheduleToExport, setSelectedScheduleToExport] = useState('Schedule 1');
+  const [strictScheduleFilter, setStrictScheduleFilter] = useState(true);
 
   // Strict validation flags: Company TIN and Company Name are strictly mandatory
   const isTinValid = Boolean(companyTin && String(companyTin).trim().length > 0);
@@ -772,30 +773,36 @@ export default function ClearLedgerDashboard() {
       return;
     }
 
-    // STRICT INVOICE FILTERING PER SCHEDULE CATEGORY
-    const eligibleInvoices = baseList.filter(inv => {
-      const cls = getInvoiceClassification(inv);
-      if (scheduleTypeToExport === 'Schedule 1') {
-        // Output VAT: Local sales only (not purchase bills, not exports)
-        return cls.target_schedule === 'Schedule 1' || (cls.vat_type === 'OUTPUT_VAT' && !cls.is_export);
-      } else if (scheduleTypeToExport === 'Schedule 2') {
-        // Input VAT: Vendor purchases only
-        return cls.target_schedule === 'Schedule 2' || cls.vat_type === 'INPUT_VAT';
-      } else if (scheduleTypeToExport === 'Schedule 7') {
-        // Service Exports in foreign currency
-        return cls.is_export || cls.target_schedule === 'Schedule 7';
-      } else if (scheduleTypeToExport === 'Schedule 6') {
-        // Article exports
-        return cls.is_export || cls.target_schedule === 'Schedule 6';
-      } else {
-        return true;
+    // INVOICE FILTERING PER SCHEDULE CATEGORY
+    let eligibleInvoices;
+    if (!strictScheduleFilter) {
+      // Include all invoices in the current batch
+      eligibleInvoices = baseList;
+    } else {
+      eligibleInvoices = baseList.filter(inv => {
+        const cls = getInvoiceClassification(inv);
+        if (scheduleTypeToExport === 'Schedule 1') {
+          return cls.target_schedule === 'Schedule 1' || (cls.vat_type === 'OUTPUT_VAT' && !cls.is_export);
+        } else if (scheduleTypeToExport === 'Schedule 2') {
+          return cls.target_schedule === 'Schedule 2' || cls.vat_type === 'INPUT_VAT';
+        } else if (scheduleTypeToExport === 'Schedule 7') {
+          return cls.is_export || cls.target_schedule === 'Schedule 7';
+        } else if (scheduleTypeToExport === 'Schedule 6') {
+          return cls.is_export || cls.target_schedule === 'Schedule 6';
+        } else {
+          return true;
+        }
+      });
+      // Fallback: If strict filtering found 0 invoices, offer all baseList
+      if (eligibleInvoices.length === 0 && baseList.length > 0) {
+        eligibleInvoices = baseList;
       }
-    });
+    }
 
     if (eligibleInvoices.length === 0) {
       setStatusMessage({
         type: 'error',
-        text: `Export Blocked: No eligible invoices found for ${scheduleTypeToExport} in period ${taxPeriod}. Schedule 1 requires local sales invoices only (vendor purchases and exports are excluded).`
+        text: `Export Blocked: No invoices available to export for period ${taxPeriod}.`
       });
       return;
     }
@@ -834,6 +841,7 @@ export default function ClearLedgerDashboard() {
         company_tin: companyTin,
         company_name: companyName,
         tax_period: taxPeriod,
+        strict_filter: strictScheduleFilter,
         invoices: normalizedInvoices
       };
       const res = await downloadScheduleCsv(payload);
@@ -3389,7 +3397,7 @@ export default function ClearLedgerDashboard() {
       {/* ========================================================= */}
       {showExportModal && (() => {
         const activeBatch = filterByPeriod ? displayedInvoices : taxInvoices;
-        const eligibleInvoices = activeBatch.filter(inv => {
+        const strictlyEligible = activeBatch.filter(inv => {
           const cls = getInvoiceClassification(inv);
           if (selectedScheduleToExport === 'Schedule 1') {
             return cls.target_schedule === 'Schedule 1' || (cls.vat_type === 'OUTPUT_VAT' && !cls.is_export);
@@ -3402,6 +3410,7 @@ export default function ClearLedgerDashboard() {
           }
           return false;
         });
+        const eligibleInvoices = strictScheduleFilter ? (strictlyEligible.length > 0 ? strictlyEligible : activeBatch) : activeBatch;
 
         const excludedInvoices = activeBatch.filter(inv => !eligibleInvoices.includes(inv));
         const periodCode = getRamisPeriodCode(taxPeriod);
@@ -3571,6 +3580,71 @@ export default function ClearLedgerDashboard() {
                 </div>
               </div>
 
+              {/* Filter Mode Toggle: Strict IRD Compliance vs Include All Invoices */}
+              <div style={{
+                background: 'rgba(15, 23, 42, 0.65)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '10px',
+                padding: '0.85rem 1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem'
+              }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Batch Inclusion Mode:</span>
+                  <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                    {strictScheduleFilter ? 'Filtering for ' + selectedScheduleToExport : 'Exporting All ' + activeBatch.length + ' Invoices'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => setStrictScheduleFilter(true)}
+                    style={{
+                      flex: 1,
+                      minWidth: '220px',
+                      background: strictScheduleFilter ? 'rgba(59, 130, 246, 0.2)' : 'rgba(30, 41, 59, 0.5)',
+                      border: `1px solid ${strictScheduleFilter ? '#3b82f6' : 'rgba(255, 255, 255, 0.1)'}`,
+                      borderRadius: '8px',
+                      padding: '0.55rem 0.75rem',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    <div style={{ fontSize: '0.78rem', fontWeight: 700, color: strictScheduleFilter ? '#93c5fd' : '#cbd5e1' }}>
+                      ✓ Strict IRD Filter ({strictlyEligible.length} matching)
+                    </div>
+                    <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: '0.15rem' }}>
+                      Only invoices matching {selectedScheduleToExport} category
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setStrictScheduleFilter(false)}
+                    style={{
+                      flex: 1,
+                      minWidth: '220px',
+                      background: !strictScheduleFilter ? 'rgba(34, 197, 94, 0.2)' : 'rgba(30, 41, 59, 0.5)',
+                      border: `1px solid ${!strictScheduleFilter ? '#22c55e' : 'rgba(255, 255, 255, 0.1)'}`,
+                      borderRadius: '8px',
+                      padding: '0.55rem 0.75rem',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    <div style={{ fontSize: '0.78rem', fontWeight: 700, color: !strictScheduleFilter ? '#86efac' : '#cbd5e1' }}>
+                      ★ Include All Invoices ({activeBatch.length} total)
+                    </div>
+                    <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: '0.15rem' }}>
+                      Populate all current batch invoices into this schedule
+                    </div>
+                  </button>
+                </div>
+              </div>
+
               {/* Step 2: Live Eligibility Breakdown & Exclusions Audit */}
               <div style={{
                 background: eligibleInvoices.length > 0 ? 'rgba(34, 197, 94, 0.08)' : 'rgba(239, 68, 68, 0.08)',
@@ -3665,6 +3739,25 @@ export default function ClearLedgerDashboard() {
                       {cIdx + 1}. {col}
                     </span>
                   ))}
+                </div>
+              </div>
+
+              {/* Excel Viewing Guide Alert */}
+              <div style={{
+                background: 'rgba(59, 130, 246, 0.08)',
+                border: '1px solid rgba(59, 130, 246, 0.25)',
+                borderRadius: '10px',
+                padding: '0.75rem 1rem',
+                fontSize: '0.74rem',
+                color: '#93c5fd',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '0.55rem',
+                lineHeight: '1.45'
+              }}>
+                <Info size={16} style={{ flexShrink: 0, marginTop: '0.1rem', color: '#60a5fa' }} />
+                <div>
+                  <strong>Why Microsoft Excel may display <code>#######</code> or <code>2E+08</code>:</strong> Excel opens CSV columns with narrow default widths (8.4 characters). Dates like <code>01/15/2026</code> display as <code>#######</code> and 9-digit TINs display in scientific notation <code>2E+08</code> until column widths are expanded. Press <strong>Ctrl+A</strong> then double-click any column header line in Excel to AutoFit, or open in Notepad to see full plain text.
                 </div>
               </div>
 

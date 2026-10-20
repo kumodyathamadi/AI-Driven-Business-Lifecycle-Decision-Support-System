@@ -108,6 +108,7 @@ class ScheduleBatchRequest(BaseModel):
     tax_period: str = Field(..., description="Tax taxable period code (e.g. '2026-Q1', '2026-02')")
     taxpayer_tin: Optional[str] = Field(None, description="Taxpayer TIN (alias for company_tin)")
     taxpayer_name: Optional[str] = Field(None, description="Taxpayer Name (alias for company_name)")
+    strict_filter: Optional[bool] = Field(True, description="Whether to strictly filter by schedule category")
     invoices: List[InvoiceData] = Field(default_factory=list, description="List of validated invoice items to process")
 
     @model_validator(mode='before')

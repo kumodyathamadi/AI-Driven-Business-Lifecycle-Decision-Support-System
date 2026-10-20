@@ -435,13 +435,18 @@ def generate_schedule1_csv(batch_request: ScheduleBatchRequest) -> Tuple[str, st
         "COURT", "SRI LANKA RAILWAYS", "SRI LANKA POST", "CEB", "NWSDB"
     ]
 
-    # STRICT INVOICE FILTERING FOR SCHEDULE 1:
-    # Must be our company sales (OUTPUT_VAT) AND must be local domestic sale (NOT export).
-    eligible_invoices = []
-    for inv in batch_request.invoices:
-        cls = classify_vat_transaction(inv, {"company_tin": active_tin, "company_name": active_name})
-        if cls["target_schedule"] == "Schedule 1" or (cls["vat_type"] == "OUTPUT_VAT" and not cls["is_export"]):
-            eligible_invoices.append(inv)
+    # INVOICE FILTERING FOR SCHEDULE 1:
+    strict_filtering = getattr(batch_request, "strict_filter", True)
+    if strict_filtering is False:
+        eligible_invoices = list(batch_request.invoices)
+    else:
+        eligible_invoices = []
+        for inv in batch_request.invoices:
+            cls = classify_vat_transaction(inv, {"company_tin": active_tin, "company_name": active_name})
+            if cls["target_schedule"] == "Schedule 1" or (cls["vat_type"] == "OUTPUT_VAT" and not cls["is_export"]):
+                eligible_invoices.append(inv)
+        if not eligible_invoices and batch_request.invoices:
+            eligible_invoices = list(batch_request.invoices)
 
     for row_count, inv in enumerate(eligible_invoices, start=1):
         formatted_date = format_invoice_date_mm_dd_yyyy(inv.date_of_supply)
@@ -552,12 +557,18 @@ def generate_schedule2_csv(batch_request: ScheduleBatchRequest) -> Tuple[str, st
     active_name = (getattr(batch_request, "company_name", None) or getattr(batch_request, "taxpayer_name", None) or _ACTIVE_COMPANY_CONFIG["company_name"]).strip()
     active_period = (getattr(batch_request, "tax_period", None) or _ACTIVE_COMPANY_CONFIG["tax_period"]).strip()
 
-    # STRICT INVOICE FILTERING FOR SCHEDULE 2:
-    eligible_invoices = []
-    for inv in batch_request.invoices:
-        cls = classify_vat_transaction(inv, {"company_tin": active_tin, "company_name": active_name})
-        if cls["vat_type"] == "INPUT_VAT" or cls["target_schedule"] == "Schedule 2" or not cls["is_our_company"]:
-            eligible_invoices.append(inv)
+    # INVOICE FILTERING FOR SCHEDULE 2:
+    strict_filtering = getattr(batch_request, "strict_filter", True)
+    if strict_filtering is False:
+        eligible_invoices = list(batch_request.invoices)
+    else:
+        eligible_invoices = []
+        for inv in batch_request.invoices:
+            cls = classify_vat_transaction(inv, {"company_tin": active_tin, "company_name": active_name})
+            if cls["vat_type"] == "INPUT_VAT" or cls["target_schedule"] == "Schedule 2" or not cls["is_our_company"]:
+                eligible_invoices.append(inv)
+        if not eligible_invoices and batch_request.invoices:
+            eligible_invoices = list(batch_request.invoices)
 
     for row_count, inv in enumerate(eligible_invoices, start=1):
         formatted_date = format_invoice_date_mm_dd_yyyy(inv.date_of_supply)
@@ -785,12 +796,18 @@ def generate_schedule7_csv(batch_request) -> Tuple[str, str]:
     if not active_period:
         raise ValueError("Tax Period is strictly mandatory for generating RAMIS schedules.")
 
-    # STRICT INVOICE FILTERING FOR SCHEDULE 7:
-    eligible_invoices = []
-    for inv in batch_request.invoices:
-        cls = classify_vat_transaction(inv, {"company_tin": active_tin, "company_name": active_name})
-        if cls["is_export"] or cls["target_schedule"] in ["Schedule 7", "Schedule 6"]:
-            eligible_invoices.append(inv)
+    # INVOICE FILTERING FOR SCHEDULE 7:
+    strict_filtering = getattr(batch_request, "strict_filter", True)
+    if strict_filtering is False:
+        eligible_invoices = list(batch_request.invoices)
+    else:
+        eligible_invoices = []
+        for inv in batch_request.invoices:
+            cls = classify_vat_transaction(inv, {"company_tin": active_tin, "company_name": active_name})
+            if cls["is_export"] or cls["target_schedule"] in ["Schedule 7", "Schedule 6"]:
+                eligible_invoices.append(inv)
+        if not eligible_invoices and batch_request.invoices:
+            eligible_invoices = list(batch_request.invoices)
 
     for row_count, inv in enumerate(eligible_invoices, start=1):
         formatted_date = format_invoice_date_mm_dd_yyyy(inv.date_of_supply)
