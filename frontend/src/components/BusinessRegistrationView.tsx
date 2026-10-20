@@ -466,7 +466,7 @@ export const BusinessRegistrationView: React.FC = () => {
   const [formData, setFormData] = useState<BrFormData>(SAMPLE_PRESETS.bakery);
   const [isGenerating, setIsGenerating] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
-  const [activeRoadmapStage, setActiveRoadmapStage] = useState<number>(3);
+  const [activeRoadmapStage, setActiveRoadmapStage] = useState<number>(1);
   const [checklist, setChecklist] = useState<Record<string, boolean>>({
     doc_nic: true,
     doc_gn: true,
@@ -474,6 +474,9 @@ export const BusinessRegistrationView: React.FC = () => {
     doc_rates: false,
     doc_form1: true,
   });
+
+  const currentRoadmap = ROADMAP_DATA_BY_ENTITY[formData.legal_form] || ROADMAP_DATA_BY_ENTITY.sole_proprietorship;
+  const activeStepData = currentRoadmap.steps.find((s) => s.step === activeRoadmapStage) || currentRoadmap.steps[0];
 
   const toggleChecklist = (key: string) => {
     setChecklist((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -570,20 +573,26 @@ export const BusinessRegistrationView: React.FC = () => {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 shrink-0">
             <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
               <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Statutory Filing</span>
-              <span className="text-lg font-extrabold text-white">Form 1 / Form A</span>
-              <span className="block text-[10px] text-teal-400 font-medium mt-0.5">DS Direct Submission</span>
+              <span className="text-lg font-extrabold text-white">
+                {formData.legal_form === 'private_limited' ? 'eROC Forms 1, 18, 19' : formData.legal_form === 'partnership' ? 'Form 1 (Partnership)' : 'Form 1 (Individual)'}
+              </span>
+              <span className="block text-[10px] text-teal-400 font-medium mt-0.5">
+                {formData.legal_form === 'private_limited' ? 'eROC — Samagam Medura' : 'Divisional Secretariat'}
+              </span>
             </div>
 
             <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
               <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Est. Timeline</span>
-              <span className="text-lg font-extrabold text-white">1 - 3 Days</span>
-              <span className="block text-[10px] text-blue-400 font-medium mt-0.5">Upon GN Clearance</span>
+              <span className="text-lg font-extrabold text-white">{currentRoadmap.est_timeline}</span>
+              <span className="block text-[10px] text-blue-400 font-medium mt-0.5">Full Roadmap Cycle</span>
             </div>
 
             <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md col-span-2 sm:col-span-1">
-              <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Statutory Fee</span>
-              <span className="text-lg font-extrabold text-emerald-400">LKR 2,500</span>
-              <span className="block text-[10px] text-emerald-300 font-medium mt-0.5">Government Duty</span>
+              <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Est. Budget</span>
+              <span className="text-lg font-extrabold text-emerald-400">
+                {formData.legal_form === 'private_limited' ? 'LKR 18,500+' : formData.legal_form === 'partnership' ? 'LKR 3,500+' : 'LKR 2,500'}
+              </span>
+              <span className="block text-[10px] text-emerald-300 font-medium mt-0.5">Statutory Filing Duty</span>
             </div>
           </div>
         </div>
@@ -630,7 +639,10 @@ export const BusinessRegistrationView: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
           {/* Sole Proprietorship */}
           <div
-            onClick={() => setFormData({ ...formData, legal_form: 'sole_proprietorship' })}
+            onClick={() => {
+              setFormData({ ...formData, legal_form: 'sole_proprietorship' });
+              setActiveRoadmapStage(1);
+            }}
             className={`p-4 rounded-2xl border-2 transition-all cursor-pointer space-y-2 relative ${
               formData.legal_form === 'sole_proprietorship'
                 ? 'border-teal-500 bg-teal-50/40 shadow-xs'
@@ -657,7 +669,10 @@ export const BusinessRegistrationView: React.FC = () => {
 
           {/* Partnership */}
           <div
-            onClick={() => setFormData({ ...formData, legal_form: 'partnership' })}
+            onClick={() => {
+              setFormData({ ...formData, legal_form: 'partnership' });
+              setActiveRoadmapStage(1);
+            }}
             className={`p-4 rounded-2xl border-2 transition-all cursor-pointer space-y-2 relative ${
               formData.legal_form === 'partnership'
                 ? 'border-teal-500 bg-teal-50/40 shadow-xs'
@@ -684,7 +699,10 @@ export const BusinessRegistrationView: React.FC = () => {
 
           {/* Private Limited Company */}
           <div
-            onClick={() => setFormData({ ...formData, legal_form: 'private_limited' })}
+            onClick={() => {
+              setFormData({ ...formData, legal_form: 'private_limited' });
+              setActiveRoadmapStage(1);
+            }}
             className={`p-4 rounded-2xl border-2 transition-all cursor-pointer space-y-2 relative ${
               formData.legal_form === 'private_limited'
                 ? 'border-teal-500 bg-teal-50/40 shadow-xs'
@@ -712,112 +730,186 @@ export const BusinessRegistrationView: React.FC = () => {
       </div>
 
       {/* ----------------------------------------------------------------- */}
-      {/* 3. 5-STAGE INSTITUTIONAL ROADMAP STEPPER                         */}
+      {/* 3. 5-STAGE INSTITUTIONAL ROADMAP STEPPER (DYNAMIC PER ENTITY)     */}
       {/* ----------------------------------------------------------------- */}
       <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-xs space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <i className="fa-solid fa-route text-blue-600" />
-              2. 5-Stage Institutional Registration Roadmap (පියවරෙන් පියවර මඟපෙන්වීම)
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Chronological procedure required by Western Provincial Council and Municipal Authorities.
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-sm sm:text-base font-extrabold text-slate-900 flex items-center gap-2">
+                <i className="fa-solid fa-route text-blue-600" />
+                2. 5-Stage Institutional Registration Roadmap (පියවරෙන් පියවර මඟපෙන්වීම)
+              </h3>
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${currentRoadmap.badge_color}`}>
+                <i className="fa-solid fa-shield-halved text-[10px]" />
+                {currentRoadmap.entity_label} ({currentRoadmap.entity_label_si})
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 max-w-3xl leading-relaxed">
+              {currentRoadmap.description}
             </p>
           </div>
-          <span className="text-xs font-semibold text-slate-500 self-start sm:self-auto">
-            Click any stage to view execution details
-          </span>
+
+          <div className="flex flex-wrap items-center gap-2 text-xs shrink-0">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 font-semibold">
+              <i className="fa-solid fa-clock text-blue-500" />
+              Total Time: <strong className="text-slate-900">{currentRoadmap.est_timeline}</strong>
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 font-semibold">
+              <i className="fa-solid fa-coins text-emerald-600" />
+              Est. Cost: <strong className="text-slate-900">{currentRoadmap.est_cost}</strong>
+            </span>
+          </div>
         </div>
 
-        {/* 5 Stepper Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          {[
-            {
-              step: 1,
-              title: 'Name Search & Clearance',
-              title_si: 'ව්‍යාපාර නාමය සෙවීම',
-              auth: 'Divisional Secretariat',
-              time: '1 Day',
-              fee: 'LKR 250 - 500',
-              icon: 'fa-magnifying-glass',
-              desc: 'Verify that the proposed business name is not identical or deceptively similar to an existing entity registered in the Western Province.',
-            },
-            {
-              step: 2,
-              title: 'Grama Niladhari Report',
-              title_si: 'ග්‍රාම නිලධාරී වාර්තාව',
-              auth: 'Grama Niladhari Officer',
-              time: '1 - 2 Days',
-              fee: 'Free (Statutory Duty)',
-              icon: 'fa-user-check',
-              desc: 'Local GN inspects the physical business premises, confirms applicant residence, and issues the signed GN assessment report.',
-            },
-            {
-              step: 3,
-              title: 'Statutory Form 1 Filing',
-              title_si: 'Form 1 අයදුම්පත භාරදීම',
-              auth: 'Business Names Department',
-              time: '1 - 3 Days',
-              fee: 'LKR 2,500',
-              icon: 'fa-file-signature',
-              desc: 'Submit the completed Form 1 with certified NIC, deed/lease, and GN certificate to the Divisional Secretariat.',
-            },
-            {
-              step: 4,
-              title: 'Municipal Trade Tax',
-              title_si: 'නගර සභා වෙළඳ බද්ද',
-              auth: 'Municipal / Urban Council',
-              time: '2 - 5 Days',
-              fee: 'LKR 3,000 - 8,000',
-              icon: 'fa-city',
-              desc: 'Under Municipal Council By-laws, obtain the commercial trade tax clearance and public health inspection pass (for food/salons).',
-            },
-            {
-              step: 5,
-              title: 'RAMIS TIN & Labour EPF',
-              title_si: 'TIN අංකය සහ සේවක අර්ථසාධක',
-              auth: 'Inland Revenue & Labour Dept',
-              time: '1 - 3 Days',
-              fee: 'Free Registration',
-              icon: 'fa-receipt',
-              desc: 'Obtain mandatory RAMIS Taxpayer Identification Number (TIN) from IRD and register hired employees under EPF/ETF Act.',
-            },
-          ].map((stg) => {
+        {/* 5 Dynamic Stepper Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          {currentRoadmap.steps.map((stg) => {
             const isSelected = activeRoadmapStage === stg.step;
             return (
               <div
                 key={stg.step}
                 onClick={() => setActiveRoadmapStage(stg.step)}
-                className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-2 ${
+                className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-2 relative group ${
                   isSelected
-                    ? 'border-blue-600 bg-blue-50/50 shadow-xs'
-                    : 'border-slate-200 hover:border-slate-300 bg-slate-50/30'
+                    ? 'border-blue-600 bg-blue-50/60 shadow-md ring-2 ring-blue-500/20'
+                    : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50/80 bg-slate-50/40'
                 }`}
               >
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span
-                      className={`w-6 h-6 rounded-lg text-xs font-extrabold flex items-center justify-center ${
-                        isSelected ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'
+                      className={`w-7 h-7 rounded-xl text-xs font-extrabold flex items-center justify-center transition-colors ${
+                        isSelected ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-200 group-hover:bg-blue-100 text-slate-700'
                       }`}
                     >
                       {stg.step}
                     </span>
-                    <span className="text-[10px] font-bold text-slate-400 font-mono">{stg.time}</span>
+                    <span className="text-[10px] font-bold text-slate-500 font-mono bg-white px-2 py-0.5 rounded-md border border-slate-200/80">
+                      {stg.time}
+                    </span>
                   </div>
-                  <h4 className="font-bold text-slate-900 text-xs leading-snug">{stg.title}</h4>
-                  <p className="text-[10px] text-slate-500 font-medium">{stg.title_si}</p>
+
+                  <div className="pt-1">
+                    <h4 className="font-bold text-slate-900 text-xs leading-snug line-clamp-2">
+                      <i className={`fa-solid ${stg.icon} text-blue-500 mr-1.5 text-[11px]`} />
+                      {stg.title}
+                    </h4>
+                    <p className="text-[10.5px] text-slate-500 font-medium mt-0.5 line-clamp-1">{stg.title_si}</p>
+                  </div>
                 </div>
 
-                <div className="pt-2 border-t border-slate-200/60 text-[10px] space-y-1">
-                  <span className="text-slate-500 block truncate">📍 {stg.auth}</span>
+                <div className="pt-2 border-t border-slate-200/70 text-[10px] space-y-1">
+                  <span className="text-slate-600 block truncate font-medium">📍 {stg.auth}</span>
                   <span className="text-blue-700 font-bold block">{stg.fee}</span>
                 </div>
               </div>
             );
           })}
         </div>
+
+        {/* Selected Stage Interactive Execution Details Drawer / Panel */}
+        {activeStepData && (
+          <div className="rounded-2xl border border-blue-200/80 bg-gradient-to-br from-blue-50/40 via-white to-slate-50/50 p-4 sm:p-6 space-y-4 shadow-xs transition-all">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/70 pb-3.5">
+              <div className="flex items-center gap-3">
+                <span className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-base font-extrabold shadow-sm">
+                  {activeStepData.step}
+                </span>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="text-sm sm:text-base font-extrabold text-slate-900">
+                      Stage {activeStepData.step}: {activeStepData.title}
+                    </h4>
+                    <span className="text-xs text-blue-800 font-semibold bg-blue-100/70 px-2.5 py-0.5 rounded-full">
+                      {activeStepData.title_si}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Authority: <strong className="text-slate-800">{activeStepData.auth}</strong> | Standard Time: <strong className="text-slate-800">{activeStepData.time}</strong> | Govt Duty: <strong className="text-emerald-700">{activeStepData.fee}</strong>
+                  </p>
+                </div>
+              </div>
+
+              {/* Next/Prev Navigation */}
+              <div className="flex items-center gap-2 self-end sm:self-auto">
+                <button
+                  type="button"
+                  disabled={activeRoadmapStage <= 1}
+                  onClick={() => setActiveRoadmapStage((prev) => Math.max(1, prev - 1))}
+                  className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                >
+                  <i className="fa-solid fa-arrow-left mr-1" /> Prev
+                </button>
+                <button
+                  type="button"
+                  disabled={activeRoadmapStage >= 5}
+                  onClick={() => setActiveRoadmapStage((prev) => Math.min(5, prev + 1))}
+                  className="px-2.5 py-1.5 rounded-xl border border-blue-600 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors shadow-xs"
+                >
+                  Next Stage <i className="fa-solid fa-arrow-right ml-1" />
+                </button>
+              </div>
+            </div>
+
+            {/* Description & Execution Details */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Execution Procedure &amp; Guidance
+                  </span>
+                  <p className="text-xs sm:text-sm text-slate-700 leading-relaxed bg-white/80 p-3.5 rounded-xl border border-slate-200/70">
+                    {activeStepData.desc}
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Official Statutory Form &amp; Portal
+                  </span>
+                  <div className="p-3 bg-white/80 rounded-xl border border-slate-200/70 text-xs space-y-1.5">
+                    <div className="flex items-center gap-2 text-slate-800">
+                      <i className="fa-solid fa-file-lines text-teal-600" />
+                      <span>Form: <strong>{activeStepData.statutory_form}</strong></span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <i className="fa-solid fa-building-columns text-blue-600" />
+                      <span>Portal / Office: <strong>{activeStepData.official_portal}</strong></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Mandatory Dossier Documents Checklist
+                  </span>
+                  <div className="p-3 bg-white/80 rounded-xl border border-slate-200/70 space-y-1.5">
+                    {activeStepData.mandatory_docs.map((doc, idx) => (
+                      <div key={idx} className="flex items-start gap-2 text-xs text-slate-700">
+                        <i className="fa-solid fa-circle-check text-emerald-600 mt-0.5 shrink-0" />
+                        <span>{doc}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Legal Pro-Tip */}
+                <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200/80 text-xs text-amber-900 space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-800">
+                    <i className="fa-solid fa-lightbulb text-amber-600" />
+                    <span>Statutory Compliance Pro-Tip:</span>
+                  </div>
+                  <p className="leading-relaxed text-amber-950/90 pl-5">
+                    {activeStepData.pro_tip}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ----------------------------------------------------------------- */}
