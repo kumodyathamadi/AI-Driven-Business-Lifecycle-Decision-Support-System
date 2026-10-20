@@ -6,10 +6,10 @@ import logging
 import os
 import base64
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -602,8 +602,8 @@ class BrFormGenerationRequest(BaseModel):
     divisional_secretariat: Optional[str] = None
     grama_niladhari: Optional[str] = None
     address: Optional[str] = None
-    activities: Union[List[str], str] = Field(default_factory=list)
-    products_services: Union[List[str], str] = Field(default_factory=list)
+    activities: List[str] = Field(default_factory=list)
+    products_services: List[str] = Field(default_factory=list)
     employee_count: Optional[int] = 15
     revenue: Optional[float] = 3500000.0
     initial_capital: Optional[float] = None
@@ -613,15 +613,6 @@ class BrFormGenerationRequest(BaseModel):
     email: Optional[str] = "applicant.business@sme.lk"
     residence_address: Optional[str] = None
     commencement_date: Optional[str] = None
-
-    @field_validator("activities", "products_services", mode="before")
-    @classmethod
-    def parse_list_or_str(cls, v):
-        if isinstance(v, str):
-            return [x.strip() for x in v.split(",") if x.strip()]
-        if isinstance(v, list):
-            return [str(x).strip() for x in v if str(x).strip()]
-        return []
 
 
 @router.post("/generate-br-form")

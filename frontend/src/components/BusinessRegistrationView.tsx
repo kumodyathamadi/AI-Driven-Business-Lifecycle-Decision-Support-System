@@ -114,7 +114,7 @@ const SAMPLE_PRESETS: Record<string, BrFormData> = {
   },
 };
 
-export interface RoadmapStep {
+interface RoadmapStep {
   step: number;
   title: string;
   title_si: string;
@@ -129,7 +129,7 @@ export interface RoadmapStep {
   pro_tip: string;
 }
 
-export interface EntityRoadmapConfig {
+interface EntityRoadmapConfig {
   entity_label: string;
   entity_label_si: string;
   badge: string;
@@ -143,7 +143,7 @@ export interface EntityRoadmapConfig {
   steps: RoadmapStep[];
 }
 
-export const ROADMAP_DATA_BY_ENTITY: Record<'sole_proprietorship' | 'partnership' | 'private_limited', EntityRoadmapConfig> = {
+const ROADMAP_DATA_BY_ENTITY: Record<'sole_proprietorship' | 'partnership' | 'private_limited', EntityRoadmapConfig> = {
   sole_proprietorship: {
     entity_label: 'Sole Proprietorship',
     entity_label_si: 'තනි පුද්ගල ව්‍යාපාරය',
