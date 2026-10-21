@@ -13,7 +13,7 @@ import {
   Clock,
   ExternalLink
 } from 'lucide-react';
-import { getRecentComponent4Assessments, downloadComponent4Report } from '../services/api';
+import { getRecentComponent4Assessments, downloadComponent4Report, downloadComponent4MitigationPlanPdf } from '../services/api';
 
 export default function Component4Reports({
   onSelectAssessment
@@ -22,6 +22,7 @@ export default function Component4Reports({
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [downloadingId, setDownloadingId] = useState(null);
+  const [downloadingPdfId, setDownloadingPdfId] = useState(null);
 
   const loadReports = async () => {
     setLoading(true);
@@ -49,6 +50,17 @@ export default function Component4Reports({
       alert(`Could not download report: ${err.message}`);
     } finally {
       setDownloadingId(null);
+    }
+  };
+
+  const handleDownloadPdf = async (analysisId) => {
+    setDownloadingPdfId(analysisId);
+    try {
+      await downloadComponent4MitigationPlanPdf(analysisId);
+    } catch (err) {
+      alert(`Could not download PDF Mitigation Plan: ${err.message}`);
+    } finally {
+      setDownloadingPdfId(null);
     }
   };
 
@@ -208,14 +220,33 @@ export default function Component4Reports({
                           </button>
 
                           <button
+                            onClick={() => handleDownloadPdf(r.analysis_id)}
+                            disabled={downloadingPdfId === r.analysis_id}
+                            className="btn btn-primary"
+                            style={{
+                              fontSize: '0.75rem',
+                              padding: '0.35rem 0.75rem',
+                              background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)',
+                              color: '#fff',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem'
+                            }}
+                            title="Download professional PDF Mitigation Plan"
+                          >
+                            <FileText size={13} />
+                            <span>{downloadingPdfId === r.analysis_id ? 'Generating...' : 'PDF Plan'}</span>
+                          </button>
+
+                          <button
                             onClick={() => handleDownload(r.analysis_id)}
                             disabled={downloadingId === r.analysis_id}
-                            className="btn btn-primary"
-                            style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
-                            title="Download Markdown summary report"
+                            className="btn btn-secondary"
+                            style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                            title="Download Markdown technical audit report"
                           >
                             <Download size={13} />
-                            <span>{downloadingId === r.analysis_id ? 'Downloading...' : 'Export'}</span>
+                            <span>{downloadingId === r.analysis_id ? '...' : '.MD'}</span>
                           </button>
                         </div>
                       </td>

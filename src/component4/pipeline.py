@@ -46,6 +46,7 @@ from component4.growth_readiness import (
     GrowthReadinessEvaluator,
     GrowthReadinessEvaluation
 )
+from component4.mitigation_pdf_generator import Component4MitigationPDFGenerator
 
 DEFAULT_OUTPUT_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "reports", "component4", "analysis_runs")
@@ -320,6 +321,16 @@ class Component4Pipeline:
                 json.dump(pipeline_result_dict, f, indent=2)
             output_files["json_results"] = json_path
 
+            # Save PDF Mitigation Plan
+            try:
+                pdf_bytes = Component4MitigationPDFGenerator.generate(pipeline_result_dict)
+                pdf_path = os.path.join(run_dir, "mitigation_plan.pdf")
+                with open(pdf_path, "wb") as f:
+                    f.write(pdf_bytes)
+                output_files["mitigation_pdf"] = pdf_path
+            except Exception as e:
+                print(f"Warning: Failed to generate mitigation plan PDF for {analysis_id}: {e}")
+
         return Component4AnalysisPipelineResult(
             analysis_id=analysis_id,
             timestamp=timestamp_str,
@@ -457,6 +468,11 @@ class Component4Pipeline:
             "action_id": f"ACT_{resolved.entity_id}",
             "business_id": resolved.entity_id,
             "variant": "BASELINE",
+            "business_name": resolved.business_name,
+            "business_category": getattr(resolved, "business_category", None) or getattr(plan, "business_category", "General SME"),
+            "business_stage": getattr(resolved, "business_stage", None) or getattr(plan, "business_stage", "Established"),
+            "district": resolved.district,
+            "province": resolved.province,
             "baseline_cash_runway_months": runway if has_stated_capital else None,
             "post_action_cash_runway_months": post_runway if has_stated_capital else None,
             "operating_margin_ratio": op_margin,

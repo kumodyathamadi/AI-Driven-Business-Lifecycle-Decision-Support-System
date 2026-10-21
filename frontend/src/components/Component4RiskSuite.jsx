@@ -50,6 +50,7 @@ import {
   uploadComponent4BusinessPlan,
   getComponent4Graph,
   downloadComponent4Report,
+  downloadComponent4MitigationPlanPdf,
   getComponent4Candidates,
   submitComponent4IntakeAndRun,
   getComponent4BusinessHistory,
@@ -552,6 +553,26 @@ export default function Component4RiskSuite({
       setErrorMsg(`Assessment failed: ${msg}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    const activeAnalysisId = analysisResult?.analysis_id;
+    if (!activeAnalysisId) {
+      setErrorMsg('No active analysis ID found to download PDF mitigation plan.');
+      return;
+    }
+    setDownloadingPdf(true);
+    try {
+      await downloadComponent4MitigationPlanPdf(activeAnalysisId);
+      setSuccessMsg('PDF Mitigation Plan downloaded successfully.');
+    } catch (err) {
+      console.error('Download PDF error:', err);
+      setErrorMsg(`Could not download PDF Mitigation Plan: ${err.message}`);
+    } finally {
+      setDownloadingPdf(false);
     }
   };
 
@@ -2037,19 +2058,35 @@ export default function Component4RiskSuite({
                           <span className={`badge-risk-${(mit.priority || 'MEDIUM').toLowerCase()}`} style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
                             {mit.priority || 'MEDIUM'} PRIORITY
                           </span>
+                          {mit.category && (
+                            <span style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem', borderRadius: '4px', background: 'var(--bg-subtle)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
+                              {mit.category}
+                            </span>
+                          )}
                         </div>
 
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.35rem', lineHeight: 1.45 }}>
-                          {mit.mechanism || mit.description}
+                          {mit.mechanism || mit.description || mit.rationale}
                         </div>
 
-                        <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', fontSize: '0.72rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
-                          <span>Timeline: <strong>{mit.time_horizon || '1-3 months'}</strong></span>
-                          <span>Targets: <strong>{mit.risk_factor?.replace(/_/g, ' ') || 'Solvency'}</strong></span>
+                        <div style={{ display: 'flex', gap: '0.85rem', marginTop: '0.5rem', fontSize: '0.72rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
+                          <span>Timeline: <strong>{mit.suggested_timeline || mit.time_horizon || '1-3 months'}</strong></span>
+                          {mit.responsible_role && (
+                            <span>Role: <strong>{mit.responsible_role}</strong></span>
+                          )}
                           {mit.estimated_cost && (
                             <span>Estimated Resource: <strong style={{ color: 'var(--primary-green)' }}>{mit.estimated_cost}</strong></span>
                           )}
+                          {mit.measurable_indicator && (
+                            <span>Target: <strong style={{ color: 'var(--text-primary)' }}>{mit.measurable_indicator}</strong></span>
+                          )}
                         </div>
+
+                        {mit.reassessment_triggers && (
+                          <div style={{ marginTop: '0.35rem', fontSize: '0.68rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                            Trigger for reassessment: {mit.reassessment_triggers}
+                          </div>
+                        )}
                       </div>
 
                       {/* Status Toggle Switcher */}
@@ -2158,14 +2195,37 @@ export default function Component4RiskSuite({
               <span>Back to GNN Insights</span>
             </button>
 
-            <button
-              type="button"
-              onClick={handleDownloadReport}
-              className="btn btn-primary"
-            >
-              <Download size={15} />
-              <span>Download Assessment Audit Report (.md)</span>
-            </button>
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={handleDownloadPdf}
+                disabled={downloadingPdf}
+                className="btn btn-primary"
+                style={{
+                  background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  fontWeight: 600,
+                  boxShadow: '0 2px 4px rgba(37, 99, 235, 0.25)'
+                }}
+              >
+                <FileText size={16} />
+                <span>{downloadingPdf ? 'Generating PDF...' : 'Download PDF Mitigation Plan (.pdf)'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDownloadReport}
+                className="btn btn-secondary"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}
+                title="Download researcher markdown audit report"
+              >
+                <Download size={15} />
+                <span>Technical Audit (.md)</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

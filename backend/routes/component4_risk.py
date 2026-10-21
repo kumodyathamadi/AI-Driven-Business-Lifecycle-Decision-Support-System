@@ -60,6 +60,7 @@ from component4.pipeline import (
     Component4Pipeline,
     DEFAULT_OUTPUT_DIR
 )
+from component4.mitigation_pdf_generator import Component4MitigationPDFGenerator
 
 router = APIRouter(prefix="/api/component4", tags=["Component 4 — Risk & GNN Decision Support"])
 
@@ -710,6 +711,69 @@ def get_analysis_report(analysis_id: str, download: bool = False):
     except Exception as e:
         clean_msg = sanitize_for_logging(str(e))
         raise HTTPException(status_code=500, detail=f"Failed to load report: {clean_msg}")
+
+
+@router.get("/analysis/{analysis_id}/pdf")
+@router.get("/analysis/{analysis_id}/mitigation-plan.pdf")
+def get_analysis_mitigation_plan_pdf(
+    analysis_id: str,
+    download: bool = False,
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieves or downloads the professional, evidence-based PDF Mitigation Plan.
+    Synthesizes all 5 risk categories, empirical drivers, prioritized mitigations,
+    and growth readiness into a downloadable document with Unicode Sinhala/English support.
+    """
+    target_dir = os.path.join(DEFAULT_OUTPUT_DIR, analysis_id)
+    pdf_path = os.path.join(target_dir, "mitigation_plan.pdf")
+    json_path = os.path.join(target_dir, "analysis_results.json")
+
+    pdf_bytes = None
+    if os.path.exists(pdf_path):
+        try:
+            with open(pdf_path, "rb") as f:
+                pdf_bytes = f.read()
+        except Exception as e:
+            print(f"Warning reading cached PDF: {e}")
+
+    if pdf_bytes is None:
+        analysis_data = None
+        if os.path.exists(json_path):
+            try:
+                with open(json_path, "r", encoding="utf-8") as f:
+                    analysis_data = json.load(f)
+            except Exception as e:
+                print(f"Warning reading json results: {e}")
+
+        if analysis_data is None:
+            run_rec = db.query(Component4AssessmentRun).filter_by(id=analysis_id).first()
+            if run_rec and run_rec.full_results_json:
+                analysis_data = dict(run_rec.full_results_json)
+
+        if analysis_data:
+            try:
+                pdf_bytes = Component4MitigationPDFGenerator.generate(analysis_data)
+                # Cache for next request
+                os.makedirs(target_dir, exist_ok=True)
+                with open(pdf_path, "wb") as f:
+                    f.write(pdf_bytes)
+            except Exception as e:
+                clean_msg = sanitize_for_logging(str(e))
+                raise HTTPException(status_code=500, detail=f"Failed to generate mitigation plan PDF: {clean_msg}")
+
+    if not pdf_bytes:
+        raise HTTPException(status_code=404, detail=f"Analysis ID '{analysis_id}' not found.")
+
+    disposition = "attachment" if download else "inline"
+    filename = f"Component4_Mitigation_Plan_{analysis_id}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'{disposition}; filename="{filename}"'
+        }
+    )
 
 
 @router.get("/graph/{business_id}")

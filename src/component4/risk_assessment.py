@@ -457,7 +457,29 @@ class RiskAssessmentEngine:
         overdue_status = str(data.get("repayment_overdue_status") or data.get("overdue_repayments") or "")
         cap = self._safe_float(data.get("cash_reserves_latest_lkr") or data.get("available_capital_lkr"), default=0.0)
 
-        # Zero-debt enterprise check: zero obligations must yield low risk
+        # Distinguish confirmed zero debt from unconfirmed/missing debt status
+        has_explicit_debt_data = any(
+            data.get(k) is not None for k in [
+                "outstanding_debt_latest_lkr", "outstanding_loan_balance_lkr",
+                "Outstanding_Balance_LKR", "loan_amount_lkr",
+                "monthly_debt_repayment_lkr", "monthly_loan_repayment_lkr",
+                "Monthly_Repayment_LKR", "repayment_overdue_status", "overdue_repayments",
+                "Repayment_Delay_Days", "repayment_delay_days", "Arrears_Amount_LKR", "arrears_amount_lkr"
+            ]
+        ) or bool(data.get("is_zero_debt"))
+
+        if not has_explicit_debt_data:
+            drivers.append({
+                "factor_code": "UNCONFIRMED_DEBT_STATUS",
+                "severity_score": 0.40,
+                "metric_name": "outstanding_debt_status",
+                "observed_value": 0,
+                "threshold": 0,
+                "description": "Debt obligations, monthly loan installments, and repayment history are undeclared. Credit risk is evaluated on conditional baseline assumptions.",
+            })
+            return 0.35, drivers
+
+        # Confirmed zero-debt enterprise check: zero obligations must yield low risk
         if debt_latest <= 0.0 and repay_latest <= 0.0 and delay_days <= 0.0 and arrears <= 0.0 and default_flag <= 0 and "30" not in overdue_status:
             return 0.10, drivers
 
@@ -982,110 +1004,528 @@ class RiskAssessmentEngine:
         drivers: List[Dict[str, Any]],
         data: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
-        """Maps identified primary risk drivers to actionable, tailored recommendations."""
+        """
+        Maps identified primary risk drivers to actionable, tailored recommendations.
+        Fully responsive to:
+        - Category risk level & contributing empirical factors
+        - Business stage (New, Early-stage, Established)
+        - Business category/sector (Food & Beverage, Retail, Manufacturing, Services, Agriculture)
+        - Proposed growth action & required investment outlay
+        - Available evidence & missing information
+
+        Each recommendation contains:
+        - risk_factor & supporting_evidence
+        - action (specific and contextual)
+        - priority (CRITICAL, HIGH, MEDIUM, LOW)
+        - suggested_timeline (and time_horizon)
+        - responsible_role
+        - estimated_cost (supportable calculation or 'Unavailable / Non-monetary')
+        - expected_outcome (and rationale)
+        - measurable_indicator
+        - reassessment_triggers
+        - category
+        - factor_code & targeted_factor
+        - mechanism
+        """
+        stage = str(data.get("business_stage") or data.get("Stage") or "Established").strip().capitalize()
+        category_name = str(data.get("business_category") or data.get("business_sector") or data.get("Sector") or "General SME").strip()
+        growth_action = str(data.get("proposed_growth_action") or "").strip()
+        req_inv = self._safe_float(data.get("required_investment_lkr") or data.get("proposed_growth_budget_lkr") or data.get("initial_inventory_cost_lkr"))
+        costs = self._safe_float(data.get("fixed_monthly_costs_lkr") or data.get("monthly_expenses_mean_lkr"))
+        rev = self._safe_float(data.get("monthly_revenue_lkr") or data.get("monthly_revenue_mean_lkr"))
+        repay = self._safe_float(data.get("monthly_debt_repayment_lkr") or data.get("monthly_loan_repayment_lkr"))
+
         if not drivers:
             return [{
+                "factor_code": "NO_MAJOR_RISK_TRIGGER",
                 "targeted_factor": "NO_MAJOR_RISK_TRIGGER",
+                "category": "Growth Readiness",
+                "risk_factor": "Prudent Baseline Risk Profile",
+                "supporting_evidence": "All evaluated liquidity, debt, concentration, and operational metrics remain within prudent advisory thresholds.",
                 "action": "Proceed with planned expansion under standard monitoring",
+                "priority": "LOW",
+                "suggested_timeline": "Ongoing quarterly review",
+                "time_horizon": "Ongoing quarterly review",
+                "responsible_role": "Managing Director / Operations Lead",
+                "estimated_cost": "Unavailable / Non-monetary (routine operational management)",
+                "expected_outcome": "Controlled operational scaling aligned with demonstrated cash generation",
                 "rationale": "Key liquidity, debt, concentration, and capacity indicators are within prudent advisory thresholds.",
+                "mechanism": "Maintain disciplined monthly tracking of working capital ratios while executing growth milestones.",
+                "measurable_indicator": "Post-action cash runway >= 4.0 months; operating margin >= 15%",
+                "reassessment_triggers": "Monthly revenue falls by > 10% or key counterparty credit terms change",
             }]
 
+        # Comprehensive evidence-aware mitigation library
         mitigation_library = {
             "CRITICAL_CASH_RUNWAY": {
-                "action": "Phase capital investment and retain at least 3 months of operational cash buffer",
+                "category": "Liquidity Risk",
+                "risk_factor": "Liquidity Risk: Immediate Cash Exhaustion",
+                "priority": "CRITICAL",
+                "suggested_timeline": "Immediate (Weeks 1–4)",
+                "responsible_role": "Managing Director / Financial Lead",
+                "action": (
+                    f"Phase capital investment and retain at least 3 months of operational cash buffer before deploying funds for '{growth_action}'"
+                    if growth_action else "Phase capital investment and retain at least 3 months of operational cash buffer"
+                ),
+                "estimated_cost": f"LKR {costs * 3:,.0f} (3 months fixed operating buffer)" if costs > 0 else "3x monthly fixed operating expenses",
+                "expected_outcome": "Restores minimum 3.0-month cash runway to insulate enterprise against unexpected overhead spikes or revenue delays",
                 "rationale": "Immediate cash depletion leaves zero resilience against revenue shocks or unexpected overhead spikes.",
+                "mechanism": "Deposit 3 months of operational fixed costs in an untouchable liquidity reserve before committing expansion outlays.",
+                "measurable_indicator": "Post-action cash runway >= 3.0 months; liquid cash balance >= 3x monthly operating expenses",
+                "reassessment_triggers": "Monthly revenue declines by > 15%, or liquid cash reserves drop below 2.0 months of operating expenses",
             },
             "LOW_CASH_RUNWAY": {
+                "category": "Liquidity Risk",
+                "risk_factor": "Liquidity Risk: Constrained Cash Buffer",
+                "priority": "HIGH",
+                "suggested_timeline": "Month 1–2",
+                "responsible_role": "Managing Director / Financial Lead",
                 "action": "Delay non-essential capital outlays and maintain minimum 2-month cash cushion",
+                "estimated_cost": f"LKR {costs * 2:,.0f} (2 months operating cushion)" if costs > 0 else "2x monthly operating expenses",
+                "expected_outcome": "Stabilizes cash runway above advisory safety threshold before executing major commitments",
                 "rationale": "Cash runway buffer is thin and requires liquidity stabilization before executing major commitments.",
+                "mechanism": "Postpone secondary asset expenditures and accelerate receivable collections to bolster cash buffer.",
+                "measurable_indicator": "Post-action cash runway >= 2.0 months; positive net operating cashflow",
+                "reassessment_triggers": "Net operating cashflow turns negative for two consecutive monthly cycles",
             },
             "OPERATING_LOSS": {
+                "category": "Liquidity Risk",
+                "risk_factor": "Liquidity Risk: Negative Operating Margins",
+                "priority": "HIGH",
+                "suggested_timeline": "Immediate (Weeks 1–6)",
+                "responsible_role": "Managing Director / Operations Lead",
                 "action": "Audit unit economics and restore positive operating margins before expanding",
+                "estimated_cost": "Unavailable / Non-monetary (internal product pricing & cost reduction audit)",
+                "expected_outcome": "Eliminates monthly operational cash drain and achieves cashflow breakeven",
                 "rationale": "Scaling an operation with negative operating margins accelerates cumulative cash burn.",
+                "mechanism": "Discontinue negative-margin SKUs, renegotiate direct input costs, and align selling prices with true unit overheads.",
+                "measurable_indicator": "Operating margin ratio >= +5.0% for at least two consecutive months",
+                "reassessment_triggers": "Operating loss persists beyond 60 days following pricing adjustment",
             },
-            "CRITICAL_DEBT_BURDEN": {
-                "action": "Negotiate loan tenure extension with lender and freeze additional borrowing",
-                "rationale": "Contractual debt repayment consumes a hazardous share of revenue, impairing working capital flexibility.",
-            },
-            "ELEVATED_DEBT_SERVICE": {
-                "action": "Restructure short-term liabilities into longer maturities to improve DSCR above 1.5x",
-                "rationale": "Debt service coverage is tight, leaving minimal safety margin if monthly receipts decline.",
+            "REPAYMENT_DELINQUENCY_30_PLUS_DAYS": {
+                "category": "Credit Risk",
+                "risk_factor": "Credit Risk: Active Loan Repayment Delinquency",
+                "priority": "CRITICAL",
+                "suggested_timeline": "Immediate (Days 1–14)",
+                "responsible_role": "Managing Director / Financial Lead",
+                "action": (
+                    "Establish formal loan restructuring plan with lending institution, cure past-due installments, and freeze additional borrowing"
+                    if stage == "Established" else
+                    "Establish formal loan restructuring plan with lending institution before requesting additional capital"
+                ),
+                "estimated_cost": "Unavailable / Non-monetary (bank loan rescheduling negotiation)",
+                "expected_outcome": "Cures loan arrears, halts legal recovery actions, and restores commercial credit eligibility",
+                "rationale": "Active arrears and defaults block access to low-interest commercial credit lines.",
+                "mechanism": "Present bank credit committee with structured cashflow projections to negotiate tenure extension or temporary grace period.",
+                "measurable_indicator": "Zero overdue loan installments; executed bank restructuring agreement in place",
+                "reassessment_triggers": "Lender issues formal statutory demand notice or past-due period exceeds 45 days",
             },
             "LOAN_DEFAULT_OR_ARREARS": {
+                "category": "Credit Risk",
+                "risk_factor": "Credit Risk: Arrears & Default History",
+                "priority": "CRITICAL",
+                "suggested_timeline": "Immediate (Weeks 1–4)",
+                "responsible_role": "Managing Director / Financial Lead",
                 "action": "Establish formal loan restructuring plan with lending institution before requesting additional capital",
+                "estimated_cost": "Unavailable / Non-monetary (formal bank rescheduling negotiation)",
+                "expected_outcome": "Resolves default classification and re-establishes clean credit standing",
                 "rationale": "Active arrears and defaults block access to low-interest commercial credit lines.",
+                "mechanism": "Execute formal repayment agreement with lending institution and secure written confirmation of regularized status.",
+                "measurable_indicator": "Zero past-due arrears balance; confirmed current status on all debt facilities",
+                "reassessment_triggers": "Any payment missed under agreed restructuring schedule",
+            },
+            "CRITICAL_DEBT_BURDEN": {
+                "category": "Credit Risk",
+                "risk_factor": "Credit Risk: Severe Monthly Debt Burden",
+                "priority": "HIGH",
+                "suggested_timeline": "Month 1–2",
+                "responsible_role": "Managing Director / Financial Lead",
+                "action": "Negotiate loan tenure extension with lender and freeze additional borrowing",
+                "estimated_cost": "Unavailable / Non-monetary (commercial bank refinancing negotiation)",
+                "expected_outcome": "Reduces monthly debt repayment below 20% of monthly revenue and increases debt service coverage",
+                "rationale": "Contractual debt repayment consumes a hazardous share of revenue, impairing working capital flexibility.",
+                "mechanism": "Extend loan tenor from 24 to 48–60 months to lower monthly debt service outlays.",
+                "measurable_indicator": "Monthly debt repayment <= 20% of monthly revenue; DSCR >= 1.50x",
+                "reassessment_triggers": "Monthly revenue declines by > 15% or debt repayment consumes > 30% of revenue",
+            },
+            "ELEVATED_DEBT_SERVICE": {
+                "category": "Credit Risk",
+                "risk_factor": "Credit Risk: Tight Debt Service Coverage",
+                "priority": "MEDIUM",
+                "suggested_timeline": "Month 1–3",
+                "responsible_role": "Managing Director / Financial Lead",
+                "action": "Restructure short-term liabilities into longer maturities to improve DSCR above 1.5x",
+                "estimated_cost": "Unavailable / Non-monetary (debt maturity re-profiling)",
+                "expected_outcome": "Strengthens operating cash buffer available to service contractual debt obligations",
+                "rationale": "Debt service coverage is tight, leaving minimal safety margin if monthly receipts decline.",
+                "mechanism": "Consolidate short-term trade facilities into medium-term amortizing facilities.",
+                "measurable_indicator": "Debt service coverage ratio (DSCR) >= 1.50x",
+                "reassessment_triggers": "Operating cash flow drops below 1.2x monthly debt repayment obligation",
+            },
+            "EXTREME_DEBT_TO_CAPITAL_EXPOSURE": {
+                "category": "Credit Risk",
+                "risk_factor": "Credit Risk: Extreme Debt-to-Capital Exposure",
+                "priority": "CRITICAL",
+                "suggested_timeline": "Immediate (Month 1)",
+                "responsible_role": "Managing Director / Founder",
+                "action": "Subordinate non-essential capital investments, prioritize debt reduction from retained earnings, and build equity reserves before expansion",
+                "estimated_cost": "Unavailable / Non-monetary (capital prioritization policy)",
+                "expected_outcome": "De-leverages balance sheet and establishes equity buffer against liabilities",
+                "rationale": "Severe debt leverage leaves enterprise without equity cushion to absorb shocks.",
+                "mechanism": "Allocate 50% of net monthly operating surplus to debt principal retirement before funding growth assets.",
+                "measurable_indicator": "Debt-to-capital ratio <= 2.5x; available liquid capital > 2x monthly debt installment",
+                "reassessment_triggers": "Liquid reserves drop below 1.5x monthly debt repayment obligation",
+            },
+            "ELEVATED_DEBT_TO_CAPITAL": {
+                "category": "Credit Risk",
+                "risk_factor": "Credit Risk: Elevated Leverage Ratio",
+                "priority": "MEDIUM",
+                "suggested_timeline": "Month 1–3",
+                "responsible_role": "Managing Director / Financial Lead",
+                "action": "Cap new debt obligations and reinvest operating cash flow to improve equity-to-debt ratio",
+                "estimated_cost": "Unavailable / Non-monetary (retained earnings reinvestment)",
+                "expected_outcome": "Brings total debt obligations within safe commercial leverage limits",
+                "rationale": "Elevated debt leverage amplifies vulnerability during economic downturns.",
+                "mechanism": "Retain operating earnings to self-finance working capital requirements.",
+                "measurable_indicator": "Debt-to-capital ratio <= 2.5x",
+                "reassessment_triggers": "Total outstanding debt increases or available capital contracts",
+            },
+            "MONTHLY_DEBT_EXCEEDS_LIQUID_CAPITAL": {
+                "category": "Credit Risk",
+                "risk_factor": "Credit Risk: Monthly Debt Exceeds Liquid Reserves",
+                "priority": "CRITICAL",
+                "suggested_timeline": "Immediate (Days 1–7)",
+                "responsible_role": "Managing Director / Financial Lead",
+                "action": "Negotiate immediate loan installment moratorium with lender and secure emergency bridge working capital",
+                "estimated_cost": f"LKR {repay:,.0f} (minimum 1 installment liquidity injection)" if repay > 0 else "Emergency liquidity injection",
+                "expected_outcome": "Averts immediate technical default and restores positive cash balance",
+                "rationale": "Cash reserves cannot service even a single monthly installment without immediate receipts.",
+                "mechanism": "Apply for bank relief facility or inject owner equity to cover immediate installment.",
+                "measurable_indicator": "Available liquid cash reserves exceed monthly loan installment by at least 1.5x",
+                "reassessment_triggers": "Bank issues notice of overdue payment",
             },
             "NEGATIVE_SALES_GROWTH": {
+                "category": "Market Risk",
+                "risk_factor": "Market Risk: Contractionary Sales Trend",
+                "priority": "HIGH",
+                "suggested_timeline": "Month 1–2",
+                "responsible_role": "Sales & Marketing Lead",
                 "action": "Pilot small-batch test promotions and review competitor pricing before scaling operations",
+                "estimated_cost": "LKR 25,000 – 50,000 (pilot promotional and customer outreach testing)",
+                "expected_outcome": "Reverses negative sales momentum and confirms market demand before deploying capital",
                 "rationale": "Expanding during declining sales burns working capital faster.",
+                "mechanism": "Conduct customer exit surveys, introduce promotional bundling, and benchmark regional Western Province pricing.",
+                "measurable_indicator": "Month-over-month sales growth >= +5.0%; average order value increases by > 8%",
+                "reassessment_triggers": "Monthly revenue contracts by > 5% over two consecutive reporting cycles",
             },
             "WEAK_DEMAND": {
+                "category": "Market Risk",
+                "risk_factor": "Market Risk: Subdued Market Demand",
+                "priority": "MEDIUM",
+                "suggested_timeline": "Month 1–3",
+                "responsible_role": "Sales & Marketing Lead",
                 "action": "Focus on high-velocity core SKUs and bundle complementary offerings to bolster volume",
+                "estimated_cost": "Unavailable / Non-monetary (SKU rationalization and product bundling)",
+                "expected_outcome": "Maximizes revenue yield from active customer base and reduces slow-moving stock holding",
                 "rationale": "Soft consumer demand requires disciplined inventory rather than speculative expansion.",
-            },
-            "IMPORT_DEPENDENCY_RISK": {
-                "action": "Identify local Western Province substitute suppliers and negotiate fixed-price LKR agreements",
-                "rationale": "Heavy import reliance exposes the business to currency fluctuations and port clearance delays.",
-            },
-            "MARGIN_COMPRESSION": {
-                "action": "Implement dynamic tiered pricing and eliminate non-essential administrative overhead",
-                "rationale": "Unabsorbed cost increases steadily deplete operating cash flows.",
-            },
-            "DELIVERY_DELAY_FRICTION": {
-                "action": "Contract secondary backup logistics providers and place restocking orders with extended lead times",
-                "rationale": "Unreliable shipment timelines lead to stockouts and lost customer footfall.",
-            },
-            "LOW_INVENTORY_COVERAGE": {
-                "action": "Maintain minimum 30-day buffer inventory for top 20% highest-turnover items",
-                "rationale": "Thin stock buffers create immediate operational vulnerability during supply chain hiccups.",
-            },
-            "SUPPLY_DISRUPTION_ACTIVE": {
-                "action": "Activate pre-qualified backup supplier and establish safety stock inventory",
-                "rationale": "Active supply shocks threaten fulfillment commitments and customer retention.",
-            },
-            "SUPPLIER_CONCENTRATION": {
-                "action": "Qualify secondary local backup suppliers in Western Province and negotiate split-allocation terms",
-                "rationale": "Excessive reliance on a single supplier creates single-point-of-failure vulnerabilities.",
+                "mechanism": "Concentrate 80% of marketing and inventory budget on the top 20% highest-turnover items.",
+                "measurable_indicator": "Core SKU turnover increases by >= 15%; inventory holding period reduced by > 10 days",
+                "reassessment_triggers": "Demand index remains below 75 for 60 consecutive days",
             },
             "CUSTOMER_CONCENTRATION": {
-                "action": "Diversify commercial client acquisition and enforce milestone advance deposits",
+                "category": "Market Risk",
+                "risk_factor": "Market Risk: High Customer Concentration",
+                "priority": "MEDIUM",
+                "suggested_timeline": "Month 1–3",
+                "responsible_role": "Sales & Marketing Lead",
+                "action": (
+                    "Diversify commercial client acquisition and enforce milestone advance deposits (30-50% upfront)"
+                    if stage in ("New", "Early-stage") else
+                    "Diversify commercial client acquisition and enforce milestone advance deposits"
+                ),
+                "estimated_cost": "Unavailable / Non-monetary (commercial credit policy adjustment)",
+                "expected_outcome": "Eliminates single-counterparty default or churn vulnerability",
                 "rationale": "High sales concentration exposes the SME to severe default or churn risk from a single counterparty.",
+                "mechanism": "Acquire at least 3 new institutional/commercial clients and set a maximum 35% revenue exposure cap per customer.",
+                "measurable_indicator": "Top customer revenue share <= 35%; customer HHI < 0.30",
+                "reassessment_triggers": "Top customer delays milestone payment > 21 days or requests price discount > 10%",
             },
             "PAYMENT_SETTLEMENT_DELAY": {
+                "category": "Market Risk",
+                "risk_factor": "Market Risk: Extended Counterparty Payment Delay",
+                "priority": "MEDIUM",
+                "suggested_timeline": "Weeks 2–6",
+                "responsible_role": "Finance & Collections Lead",
                 "action": "Enforce strict 14-day invoicing terms, offer early-payment discounts, and utilize invoice discounting",
+                "estimated_cost": "Unavailable / Non-monetary (commercial terms adjustment & 2% early-pay discount)",
+                "expected_outcome": "Shortens cash conversion cycle and recovers trapped working capital",
                 "rationale": "Extended receivable settlement cycles lock up critical working capital required for daily operations.",
+                "mechanism": "Offer 2% discount for payments within 10 days; enforce 14-day credit ceiling on trade accounts.",
+                "measurable_indicator": "Days Sales Outstanding (DSO) <= 20 days; zero invoices past 30 days due",
+                "reassessment_triggers": "Average collection period rises above 30 days",
             },
-            "INVESTMENT_EXCEEDS_CASH": {
-                "action": "Restructure investment into phased milestone tranches funded by operational cash generation",
-                "rationale": "Attempting to deploy capital in excess of liquid reserves triggers immediate financial distress.",
+            "ESTIMATED_DEMAND_EVIDENCE": {
+                "category": "Market Risk",
+                "risk_factor": "Market Risk: Unverified Customer Demand Projections",
+                "priority": "HIGH",
+                "suggested_timeline": "Immediate (Weeks 1–4)",
+                "responsible_role": "Managing Director / Sales Lead",
+                "action": "Secure signed purchase orders or pre-order deposits before committing capital to production expansion",
+                "estimated_cost": "Unavailable / Non-monetary (commercial customer engagement)",
+                "expected_outcome": "Validates commercial uptake with binding orders, reducing speculative inventory risk",
+                "rationale": "Customer demand is based on estimates without signed purchase contracts or historical sales records.",
+                "mechanism": "Convert prospective customer interest into written pre-orders with at least 20% advance deposits.",
+                "measurable_indicator": "Confirmed pre-orders covering >= 40% of planned monthly production output",
+                "reassessment_triggers": "Prospective buyers decline written commitments or cancel pre-orders",
             },
-            "HEAVY_CAPITAL_EXPENDITURE": {
-                "action": "Phase capital deployment over 6-9 months and secure supplier vendor-financing",
-                "rationale": "Disbursing a large fraction of reserves leaves the core business vulnerable to working capital shocks.",
+            "IMPORT_DEPENDENCY_RISK": {
+                "category": "Inflation Risk",
+                "risk_factor": "Inflation Risk: Heavy Imported-Input Dependency",
+                "priority": "HIGH",
+                "suggested_timeline": "1–3 Months",
+                "responsible_role": "Procurement Lead & Managing Director",
+                "action": (
+                    "Identify local Western Province substitute suppliers and negotiate fixed-price LKR agreements for key raw materials"
+                    if category_name in ("Manufacturing", "Industrial") else
+                    "Identify local Western Province substitute suppliers and negotiate fixed-price LKR agreements"
+                ),
+                "estimated_cost": "Unavailable / Non-monetary (vendor sourcing and contract negotiation)",
+                "expected_outcome": "Insulates enterprise from currency depreciation, foreign exchange rationing, and port delays",
+                "rationale": "Heavy import reliance exposes the business to currency fluctuations and port clearance delays.",
+                "mechanism": "Qualify domestic producers in Colombo and Gampaha to supply at least 35% of intermediate input requirements.",
+                "measurable_indicator": "Imported input dependency <= 40%; gross profit margin stabilized against USD/LKR swings",
+                "reassessment_triggers": "LKR depreciates by > 5% against USD or import clearance tariffs increase",
+            },
+            "SUPPLIER_PRICE_INFLATION": {
+                "category": "Inflation Risk",
+                "risk_factor": "Inflation Risk: Acute Supplier Price Escalation",
+                "priority": "HIGH",
+                "suggested_timeline": "Immediate (Weeks 1–4)",
+                "responsible_role": "Procurement & Pricing Lead",
+                "action": "Implement dynamic tiered pricing to pass through documented input inflation and lock quarterly supplier price caps",
+                "estimated_cost": "Unavailable / Non-monetary (quarterly contract negotiation and pricing formula)",
+                "expected_outcome": "Protects gross margin from erosion caused by unabsorbed supplier price spikes",
+                "rationale": "Acute input price escalation erodes operating margins unless reflected in customer pricing.",
+                "mechanism": "Incorporate cost-pass-through clauses in commercial client contracts and negotiate 90-day fixed price agreements with suppliers.",
+                "measurable_indicator": "Gross profit margin maintained within 2 percentage points of historical baseline",
+                "reassessment_triggers": "Supplier price increases by > 8% in a single calendar quarter",
+            },
+            "MARGIN_COMPRESSION": {
+                "category": "Inflation Risk",
+                "risk_factor": "Inflation Risk: Unabsorbed Cost Inflation & Margin Compression",
+                "priority": "MEDIUM",
+                "suggested_timeline": "Weeks 2–6",
+                "responsible_role": "Managing Director / Financial Lead",
+                "action": "Implement dynamic tiered pricing and eliminate non-essential administrative overhead",
+                "estimated_cost": "Unavailable / Non-monetary (operational overhead audit and pricing review)",
+                "expected_outcome": "Restores operating margin to target benchmarks",
+                "rationale": "Unabsorbed cost increases steadily deplete operating cash flows.",
+                "mechanism": "Eliminate low-margin overhead expenses and recalibrate product pricing schedules to recover rising input costs.",
+                "measurable_indicator": "Operating margin ratio recovers by >= 3 percentage points",
+                "reassessment_triggers": "Operating margin contracts further by > 2 percentage points",
+            },
+            "SUPPLIER_CONCENTRATION": {
+                "category": "Operational Risk",
+                "risk_factor": "Operational Risk: Excessive Supplier Concentration",
+                "priority": "HIGH",
+                "suggested_timeline": "1–3 Months",
+                "responsible_role": "Procurement & Supply Chain Lead",
+                "action": (
+                    "Qualify secondary local backup suppliers in Western Province for primary materials and negotiate split-allocation terms"
+                    if category_name in ("Manufacturing", "Industrial") else
+                    (
+                        "Qualify secondary local backup suppliers in Western Province for perishable ingredients and sign backup delivery SLAs"
+                        if category_name in ("Food & Beverage", "Bakery", "Restaurant") else
+                        "Qualify secondary local backup suppliers in Western Province and negotiate split-allocation terms"
+                    )
+                ),
+                "estimated_cost": "Unavailable / Non-monetary (procurement vendor evaluation & split contracts)",
+                "expected_outcome": "Eliminates single-point-of-failure vulnerabilities and guarantees uninterrupted input supplies",
+                "rationale": "Excessive reliance on a single supplier creates single-point-of-failure vulnerabilities.",
+                "mechanism": "Contract with secondary pre-qualified vendors in Western Province; split monthly volume 60/40 between primary and backup suppliers.",
+                "measurable_indicator": "Top supplier volume share <= 50%; supplier HHI < 0.30",
+                "reassessment_triggers": "Primary supplier delivery delay exceeds 7 days or prices increase > 10%",
+            },
+            "SUPPLY_DISRUPTION_ACTIVE": {
+                "category": "Operational Risk",
+                "risk_factor": "Operational Risk: Active Supplier Disruption",
+                "priority": "CRITICAL",
+                "suggested_timeline": "Immediate (Days 1–7)",
+                "responsible_role": "Operations & Procurement Lead",
+                "action": "Activate pre-qualified backup supplier and establish safety stock inventory",
+                "estimated_cost": f"LKR {costs * 0.20:,.0f} (safety buffer stock)" if costs > 0 else "Safety buffer stock capital allocation",
+                "expected_outcome": "Restores production continuity and fulfills pending customer orders",
+                "rationale": "Active supply shocks threaten fulfillment commitments and customer retention.",
+                "mechanism": "Immediately shift orders to pre-identified backup supplier in Western Province and build a 15-day emergency stock buffer.",
+                "measurable_indicator": "Zero missed customer order commitments; on-time delivery >= 90%",
+                "reassessment_triggers": "Backup supplier unable to fulfill order volume within 5 business days",
+            },
+            "DELIVERY_DELAY_FRICTION": {
+                "category": "Operational Risk",
+                "risk_factor": "Operational Risk: Inbound Logistics & Delivery Friction",
+                "priority": "MEDIUM",
+                "suggested_timeline": "Weeks 2–6",
+                "responsible_role": "Logistics & Procurement Lead",
+                "action": "Contract secondary backup logistics providers and place restocking orders with extended lead times",
+                "estimated_cost": "Unavailable / Non-monetary (logistics provider contract negotiation)",
+                "expected_outcome": "Normalizes production scheduling and prevents plant stockouts",
+                "rationale": "Unreliable shipment timelines lead to stockouts and lost customer footfall.",
+                "mechanism": "Increase order re-order points by 10 days and retain secondary on-call freight transporters in Western Province.",
+                "measurable_indicator": "Average inbound shipment lead time <= 7 days; zero stockout-related production stoppages",
+                "reassessment_triggers": "Inbound shipment delayed by > 10 days past purchase order date",
+            },
+            "LOW_INVENTORY_COVERAGE": {
+                "category": "Operational Risk",
+                "risk_factor": "Operational Risk: Thin Inventory Buffer Stock",
+                "priority": "MEDIUM",
+                "suggested_timeline": "Month 1–2",
+                "responsible_role": "Inventory & Operations Lead",
+                "action": "Maintain minimum 30-day buffer inventory for top 20% highest-turnover items",
+                "estimated_cost": f"LKR {costs * 0.30:,.0f} (buffer stock working capital)" if costs > 0 else "Working capital allocation for 30-day inventory",
+                "expected_outcome": "Eliminates stockout vulnerability during logistics disruptions",
+                "rationale": "Thin stock buffers create immediate operational vulnerability during supply chain hiccups.",
+                "mechanism": "Implement min-max inventory replenishment rules for top revenue-generating items.",
+                "measurable_indicator": "Inventory coverage ratio >= 30 days for primary items",
+                "reassessment_triggers": "Inventory coverage falls below 15 days of average sales volume",
             },
             "OPERATIONAL_CAPACITY_GAP": {
+                "category": "Operational Risk",
+                "risk_factor": "Operational Risk: Production & Staffing Capacity Deficit",
+                "priority": "MEDIUM",
+                "suggested_timeline": "Month 1–3",
+                "responsible_role": "Operations & HR Lead",
                 "action": "Adopt staged hiring tied to contract demand milestones and lease modular capacity",
+                "estimated_cost": "Performance-linked contractor budget",
+                "expected_outcome": "Expands production capacity in step with confirmed sales orders without excessive fixed payroll",
                 "rationale": "Expansion without addressing the capacity deficit leads to delivery delays, quality degradation, and team burnout.",
+                "mechanism": "Use modular leased equipment and short-term skilled contractors during peak demand surges.",
+                "measurable_indicator": "Capacity utilization between 75% and 85%; on-time order fulfillment >= 95%",
+                "reassessment_triggers": "On-time delivery drops below 90% or machine downtime exceeds 10%",
+            },
+            "STAFFING_CAPACITY_CONSTRAINED": {
+                "category": "Operational Risk",
+                "risk_factor": "Operational Risk: Workforce & Staffing Bottleneck",
+                "priority": "MEDIUM",
+                "suggested_timeline": "Month 1–2",
+                "responsible_role": "Operations & HR Lead",
+                "action": "Partner with local Western Province vocational institutes and implement cross-training for existing personnel",
+                "estimated_cost": "LKR 15,000 – 30,000 (vocational onboarding and cross-training stipend)",
+                "expected_outcome": "Alleviates production bottleneck and builds operational redundancy across key functions",
+                "rationale": "Headcount constraint limits production and customer service scaling.",
+                "mechanism": "Cross-train existing team members on multi-station operations and establish apprentice pipelines.",
+                "measurable_indicator": "Zero unfilled critical shifts; worker productivity increases by > 10%",
+                "reassessment_triggers": "Critical technical role remains vacant for > 30 calendar days",
+            },
+            "INVESTMENT_EXCEEDS_CASH": {
+                "category": "Growth Readiness",
+                "risk_factor": "Growth Readiness: Capital Outlay Exceeds Available Reserves",
+                "priority": "CRITICAL",
+                "suggested_timeline": "Immediate (Pre-expansion)",
+                "responsible_role": "Managing Director / Board",
+                "action": (
+                    f"Restructure investment into phased milestone tranches funded by operational cash generation for '{growth_action}'"
+                    if growth_action else "Restructure investment into phased milestone tranches funded by operational cash generation"
+                ),
+                "estimated_cost": f"Phase 1 outlay: LKR {req_inv * 0.35:,.0f} (35% initial tranche)" if req_inv > 0 else "Phased milestone capital allocation (30-40% initial tranche)",
+                "expected_outcome": "Protects core liquidity and allows project self-funding from intermediate operational cashflow",
+                "rationale": "Attempting to deploy capital in excess of liquid reserves triggers immediate financial distress.",
+                "mechanism": "Partition project into 3 milestones; disburse subsequent tranches only after preceding milestone yields revenue.",
+                "measurable_indicator": "Investment-to-cash ratio <= 0.50x; post-action runway maintained >= 3.0 months",
+                "reassessment_triggers": "Milestone 1 project costs exceed budget by > 10% or cash runway dips < 2.5 months",
+            },
+            "HEAVY_CAPITAL_EXPENDITURE": {
+                "category": "Growth Readiness",
+                "risk_factor": "Growth Readiness: Heavy Capital Absorption",
+                "priority": "HIGH",
+                "suggested_timeline": "Pre-expansion (Month 1)",
+                "responsible_role": "Managing Director / Financial Lead",
+                "action": "Phase capital deployment over 6-9 months and secure supplier vendor-financing",
+                "estimated_cost": f"LKR {req_inv * 0.5:,.0f} (50% upfront, balance vendor-financed)" if req_inv > 0 else "50% upfront, balance vendor-financed",
+                "expected_outcome": "Preserves liquid reserves for operational working capital while executing expansion",
+                "rationale": "Disbursing a large fraction of reserves leaves the core business vulnerable to working capital shocks.",
+                "mechanism": "Negotiate 180-day deferred payment or lease-to-own terms with equipment vendors.",
+                "measurable_indicator": "Liquid cash reserves remain above 3.0 months of operating burn throughout rollout",
+                "reassessment_triggers": "Project expenditure exceeds quarterly allocation by > 15%",
             },
             "UNKNOWN_LIQUIDITY_RESERVES": {
+                "category": "Liquidity Risk",
+                "risk_factor": "Data Sufficiency: Undeclared Liquid Cash Reserves",
+                "priority": "HIGH",
+                "suggested_timeline": "Immediate (Weeks 1–2)",
+                "responsible_role": "Managing Director / Financial Lead",
                 "action": "Verify bank balance statements and establish confirmed liquid reserve visibility",
+                "estimated_cost": "Unavailable / Non-monetary (bank balance statement verification)",
+                "expected_outcome": "Enables reliable calculation of runway protection and prevents unforeseen cash shortfalls",
                 "rationale": "Operating without confirmed liquid reserves prevents calculating reliable runway protection.",
+                "mechanism": "Upload certified bank statements confirming available starting capital and operating accounts.",
+                "measurable_indicator": "Verified bank statement showing liquid cash balances updated monthly",
+                "reassessment_triggers": "Submission of formal bank statement or liquid asset certification",
+            },
+            "UNCONFIRMED_DEBT_STATUS": {
+                "category": "Credit Risk",
+                "risk_factor": "Data Sufficiency: Undeclared Debt & Liabilities",
+                "priority": "MEDIUM",
+                "suggested_timeline": "Immediate (Weeks 1–2)",
+                "responsible_role": "Managing Director / Financial Lead",
+                "action": "Verify existing loan contracts, repayment schedules, and debt guarantee commitments",
+                "estimated_cost": "Unavailable / Non-monetary (documentary verification)",
+                "expected_outcome": "Establishes accurate debt burden and debt service coverage visibility",
+                "rationale": "Debt obligations, monthly loan installments, and repayment history are undeclared.",
+                "mechanism": "Declare current commercial loan balances, monthly installment commitments, and CRIB status.",
+                "measurable_indicator": "Complete documentation of all credit facilities and repayment terms",
+                "reassessment_triggers": "Submission of verified debt facility statements",
             },
         }
 
         recommendations = []
-        seen_actions = set()
+        seen_factors = set()
 
         for d in drivers:
-            code = d["factor_code"]
+            code = d.get("factor_code", "UNKNOWN")
+            if code in seen_factors:
+                continue
             template = mitigation_library.get(code)
-            if template and template["action"] not in seen_actions:
-                seen_actions.add(template["action"])
-                recommendations.append({
+            if template:
+                seen_factors.add(code)
+                rec = {
+                    "factor_code": code,
                     "targeted_factor": code,
+                    "category": template["category"],
+                    "risk_factor": template["risk_factor"],
+                    "supporting_evidence": str(d.get("description", "")),
                     "action": template["action"],
+                    "priority": template["priority"],
+                    "suggested_timeline": template["suggested_timeline"],
+                    "time_horizon": template["suggested_timeline"],
+                    "responsible_role": template["responsible_role"],
+                    "estimated_cost": template["estimated_cost"],
+                    "expected_outcome": template["expected_outcome"],
                     "rationale": template["rationale"],
-                })
+                    "mechanism": template["mechanism"],
+                    "measurable_indicator": template["measurable_indicator"],
+                    "reassessment_triggers": template["reassessment_triggers"],
+                }
+                recommendations.append(rec)
+
+        if not recommendations:
+            return [{
+                "factor_code": "NO_MAJOR_RISK_TRIGGER",
+                "targeted_factor": "NO_MAJOR_RISK_TRIGGER",
+                "category": "Growth Readiness",
+                "risk_factor": "Prudent Baseline Risk Profile",
+                "supporting_evidence": "All evaluated liquidity, debt, concentration, and operational metrics remain within prudent advisory thresholds.",
+                "action": "Proceed with planned expansion under standard monitoring",
+                "priority": "LOW",
+                "suggested_timeline": "Ongoing quarterly review",
+                "time_horizon": "Ongoing quarterly review",
+                "responsible_role": "Managing Director / Operations Lead",
+                "estimated_cost": "Unavailable / Non-monetary (routine operational management)",
+                "expected_outcome": "Controlled operational scaling aligned with demonstrated cash generation",
+                "rationale": "Key liquidity, debt, concentration, and capacity indicators are within prudent advisory thresholds.",
+                "mechanism": "Maintain disciplined monthly tracking of working capital ratios while executing growth milestones.",
+                "measurable_indicator": "Post-action cash runway >= 4.0 months; operating margin >= 15%",
+                "reassessment_triggers": "Monthly revenue falls by > 10% or key counterparty credit terms change",
+            }]
 
         return recommendations
 
@@ -1288,9 +1728,22 @@ class RiskAssessmentEngine:
                 "description": "Essential financial history records (revenue, expenses, cash reserves) are missing or incomplete. Reliable automated assessment cannot be established.",
             }],
             recommended_mitigations=[{
+                "factor_code": "INSUFFICIENT_EVIDENCE",
                 "targeted_factor": "INSUFFICIENT_EVIDENCE",
+                "category": "Evidence & Record Keeping",
+                "risk_factor": "Data Sufficiency: Missing Financial Records",
+                "supporting_evidence": "Essential financial history records (revenue, expenses, cash reserves) are missing or incomplete.",
                 "action": "Complete basic financial record-keeping before executing strategic expansion",
+                "priority": "HIGH",
+                "suggested_timeline": "Immediate (Weeks 1–4)",
+                "time_horizon": "Immediate (Weeks 1–4)",
+                "responsible_role": "Managing Director / Financial Lead",
+                "estimated_cost": "Unavailable / Non-monetary (bookkeeping setup & administrative documentation)",
+                "expected_outcome": "Establishes verified financial records enabling calibrated risk evaluation",
                 "rationale": "Accurate monthly revenue, expense, and cash tracking are mandatory prerequisites for sound decision support.",
+                "mechanism": "Implement standard bookkeeping ledger or digital records tracking monthly receipts and expenditures.",
+                "measurable_indicator": "3 consecutive months of documented bank statements and cash receipts",
+                "reassessment_triggers": "Submission of verified revenue, expense, and liquid balance records",
             }],
             can_proceed_immediately=False,
             has_critical_red_flag=False,

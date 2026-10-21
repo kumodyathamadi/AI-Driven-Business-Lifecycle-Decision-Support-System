@@ -233,6 +233,27 @@ export const downloadComponent4Report = async (analysisId) => {
 };
 
 /**
+ * Downloads generated professional PDF Mitigation Plan for Component 4 analysis
+ */
+export const downloadComponent4MitigationPlanPdf = async (analysisId) => {
+  try {
+    const response = await apiClient.get(`/component4/analysis/${analysisId}/mitigation-plan.pdf?download=true`, {
+      responseType: 'blob',
+    });
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(blob);
+    link.download = `Component4_Mitigation_Plan_${analysisId}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  } catch (error) {
+    console.error('Download Component 4 PDF Mitigation Plan Error:', error);
+    throw error;
+  }
+};
+
+/**
  * Fetches candidate Western Province businesses for entity resolution confirmation
  */
 export const getComponent4Candidates = async (district = '', category = '') => {
