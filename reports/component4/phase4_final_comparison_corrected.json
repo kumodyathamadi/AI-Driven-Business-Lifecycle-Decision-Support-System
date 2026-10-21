@@ -1,0 +1,665 @@
+{
+  "report_metadata": {
+    "title": "Component 4 \u2014 Phase 4 Final Research Comparison (Corrected Audit)",
+    "generation_timestamp": "2026-10-21 15:42:13",
+    "audit_status": "VERIFIED_ACCURATE",
+    "git_branch": "Component_4_Tharindu",
+    "git_commit": "47240cd",
+    "evaluation_standard": "Independent Empirical Audit, Zero Cross-Business Leakage, Held-out Test Disclosure"
+  },
+  "dataset_split_and_target_verification": {
+    "total_businesses": 1000,
+    "split_ratio": "70% Train (700), 15% Validation (150), 15% Test (150)",
+    "random_seed": 42,
+    "feature_window": "Months 18-23 strictly preceding Month 24",
+    "target_provenance": "Month 24 Overall_Risk_Label from data/Risk_Assessment.csv (Synthetic Formula)",
+    "exact_ground_truth_support": {
+      "train": {
+        "Low": 519,
+        "Medium": 180,
+        "High": 1
+      },
+      "validation": {
+        "Low": 118,
+        "Medium": 31,
+        "High": 1
+      },
+      "test": {
+        "Low": 121,
+        "Medium": 29,
+        "High": 0
+      }
+    },
+    "discrepancy_resolution_validation_support": {
+      "discrepancy_reported": "Earlier report gives validation support 118/31/1 while chat text gave 114/30/6.",
+      "root_cause_audit": "Audit confirms 118/31/1 (Low: 118, Medium: 31, High: 1) is the true, code-verified ground truth in reports/component4/phase3_validation_experiments.json, reports/component4/phase3_validation_experiments.md, and the underlying dataset. The numbers 114/30/6 occurred solely in the conversational summary text due to an LLM arithmetic conflation: the assistant calculated 76% of 150 = 114 (which is the test accuracy of the candidate model: 114/150) and erroneously drafted it into the validation support section alongside 30 (approximate Mediums) and 6 (the number of false-positive High predictions made by GNN v2.1). No file on disk ever contained 114/30/6 as ground-truth support.",
+      "canonical_ground_truth": {
+        "Low": 118,
+        "Medium": 31,
+        "High": 1
+      }
+    }
+  },
+  "recomputed_test_metrics": {
+    "Random Forest Baseline": {
+      "confusion_matrix": [
+        [
+          70,
+          51,
+          0
+        ],
+        [
+          16,
+          13,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "correct_count": 83,
+      "total_count": 150,
+      "accuracy": 0.5533,
+      "balanced_accuracy_3class": 0.5134,
+      "balanced_accuracy_binary": 0.5134,
+      "macro_f1_3class": 0.3186,
+      "macro_f1_binary": 0.4779,
+      "predicted_counts": {
+        "Low": 86,
+        "Medium": 64,
+        "High": 0
+      },
+      "per_class": {
+        "Low": {
+          "precision": 0.814,
+          "recall": 0.5785,
+          "f1_score": 0.6763,
+          "support": 121
+        },
+        "Medium": {
+          "precision": 0.2031,
+          "recall": 0.4483,
+          "f1_score": 0.2796,
+          "support": 29
+        },
+        "High": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1_score": 0.0,
+          "support": 0,
+          "evaluable": false,
+          "note": "Support = 0 in held-out test cohort; precision and recall are mathematically unevaluable."
+        }
+      }
+    },
+    "GNN v2.1 Baseline (Isolated Subgraph)": {
+      "confusion_matrix": [
+        [
+          76,
+          40,
+          5
+        ],
+        [
+          17,
+          11,
+          1
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "correct_count": 87,
+      "total_count": 150,
+      "accuracy": 0.58,
+      "balanced_accuracy_3class": 0.5037,
+      "balanced_accuracy_binary": 0.5037,
+      "macro_f1_3class": 0.3284,
+      "macro_f1_binary": 0.4926,
+      "predicted_counts": {
+        "Low": 93,
+        "Medium": 51,
+        "High": 6
+      },
+      "per_class": {
+        "Low": {
+          "precision": 0.8172,
+          "recall": 0.6281,
+          "f1_score": 0.7103,
+          "support": 121
+        },
+        "Medium": {
+          "precision": 0.2157,
+          "recall": 0.3793,
+          "f1_score": 0.275,
+          "support": 29
+        },
+        "High": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1_score": 0.0,
+          "support": 0,
+          "evaluable": false,
+          "note": "Support = 0 in held-out test cohort; precision and recall are mathematically unevaluable."
+        }
+      }
+    },
+    "GNN v2.1 Baseline (Extended Network)": {
+      "confusion_matrix": [
+        [
+          109,
+          10,
+          2
+        ],
+        [
+          25,
+          3,
+          1
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "correct_count": 112,
+      "total_count": 150,
+      "accuracy": 0.7467,
+      "balanced_accuracy_3class": 0.5021,
+      "balanced_accuracy_binary": 0.5021,
+      "macro_f1_3class": 0.3326,
+      "macro_f1_binary": 0.4989,
+      "predicted_counts": {
+        "Low": 134,
+        "Medium": 13,
+        "High": 3
+      },
+      "per_class": {
+        "Low": {
+          "precision": 0.8134,
+          "recall": 0.9008,
+          "f1_score": 0.8549,
+          "support": 121
+        },
+        "Medium": {
+          "precision": 0.2308,
+          "recall": 0.1034,
+          "f1_score": 0.1429,
+          "support": 29
+        },
+        "High": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1_score": 0.0,
+          "support": 0,
+          "evaluable": false,
+          "note": "Support = 0 in held-out test cohort; precision and recall are mathematically unevaluable."
+        }
+      }
+    },
+    "Selected Candidate Focal g=1.5 (Isolated Subgraph)": {
+      "confusion_matrix": [
+        [
+          111,
+          10,
+          0
+        ],
+        [
+          26,
+          3,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "correct_count": 114,
+      "total_count": 150,
+      "accuracy": 0.76,
+      "balanced_accuracy_3class": 0.5104,
+      "balanced_accuracy_binary": 0.5104,
+      "macro_f1_3class": 0.3344,
+      "macro_f1_binary": 0.5017,
+      "predicted_counts": {
+        "Low": 137,
+        "Medium": 13,
+        "High": 0
+      },
+      "per_class": {
+        "Low": {
+          "precision": 0.8102,
+          "recall": 0.9174,
+          "f1_score": 0.8605,
+          "support": 121
+        },
+        "Medium": {
+          "precision": 0.2308,
+          "recall": 0.1034,
+          "f1_score": 0.1429,
+          "support": 29
+        },
+        "High": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1_score": 0.0,
+          "support": 0,
+          "evaluable": false,
+          "note": "Support = 0 in held-out test cohort; precision and recall are mathematically unevaluable."
+        }
+      }
+    },
+    "Selected Candidate Focal g=1.5 (Extended Network)": {
+      "confusion_matrix": [
+        [
+          119,
+          2,
+          0
+        ],
+        [
+          29,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "correct_count": 119,
+      "total_count": 150,
+      "accuracy": 0.7933,
+      "balanced_accuracy_3class": 0.4917,
+      "balanced_accuracy_binary": 0.4917,
+      "macro_f1_3class": 0.2949,
+      "macro_f1_binary": 0.4424,
+      "predicted_counts": {
+        "Low": 148,
+        "Medium": 2,
+        "High": 0
+      },
+      "per_class": {
+        "Low": {
+          "precision": 0.8041,
+          "recall": 0.9835,
+          "f1_score": 0.8848,
+          "support": 121
+        },
+        "Medium": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1_score": 0.0,
+          "support": 29
+        },
+        "High": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1_score": 0.0,
+          "support": 0,
+          "evaluable": false,
+          "note": "Support = 0 in held-out test cohort; precision and recall are mathematically unevaluable."
+        }
+      }
+    },
+    "Sensitivity Candidate Focal g=3.0 (Isolated Subgraph)": {
+      "confusion_matrix": [
+        [
+          90,
+          31,
+          0
+        ],
+        [
+          23,
+          6,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "correct_count": 96,
+      "total_count": 150,
+      "accuracy": 0.64,
+      "balanced_accuracy_3class": 0.4753,
+      "balanced_accuracy_binary": 0.4753,
+      "macro_f1_3class": 0.317,
+      "macro_f1_binary": 0.4755,
+      "predicted_counts": {
+        "Low": 113,
+        "Medium": 37,
+        "High": 0
+      },
+      "per_class": {
+        "Low": {
+          "precision": 0.7965,
+          "recall": 0.7438,
+          "f1_score": 0.7692,
+          "support": 121
+        },
+        "Medium": {
+          "precision": 0.1622,
+          "recall": 0.2069,
+          "f1_score": 0.1818,
+          "support": 29
+        },
+        "High": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1_score": 0.0,
+          "support": 0,
+          "evaluable": false,
+          "note": "Support = 0 in held-out test cohort; precision and recall are mathematically unevaluable."
+        }
+      }
+    },
+    "Sensitivity Candidate Focal g=3.0 (Extended Network)": {
+      "confusion_matrix": [
+        [
+          111,
+          10,
+          0
+        ],
+        [
+          28,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "correct_count": 112,
+      "total_count": 150,
+      "accuracy": 0.7467,
+      "balanced_accuracy_3class": 0.4759,
+      "balanced_accuracy_binary": 0.4759,
+      "macro_f1_3class": 0.3013,
+      "macro_f1_binary": 0.4519,
+      "predicted_counts": {
+        "Low": 139,
+        "Medium": 11,
+        "High": 0
+      },
+      "per_class": {
+        "Low": {
+          "precision": 0.7986,
+          "recall": 0.9174,
+          "f1_score": 0.8538,
+          "support": 121
+        },
+        "Medium": {
+          "precision": 0.0909,
+          "recall": 0.0345,
+          "f1_score": 0.05,
+          "support": 29
+        },
+        "High": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1_score": 0.0,
+          "support": 0,
+          "evaluable": false,
+          "note": "Support = 0 in held-out test cohort; precision and recall are mathematically unevaluable."
+        }
+      }
+    }
+  },
+  "bootstrap_confidence_intervals": {
+    "Random Forest Baseline": {
+      "accuracy": {
+        "mean": 0.5534,
+        "ci_95": [
+          0.4733,
+          0.64
+        ]
+      },
+      "balanced_accuracy_3class": {
+        "mean": 0.515,
+        "ci_95": [
+          0.4097,
+          0.6187
+        ]
+      },
+      "macro_f1_3class": {
+        "mean": 0.318,
+        "ci_95": [
+          0.2646,
+          0.3724
+        ]
+      }
+    },
+    "GNN v2.1 Baseline (Isolated Subgraph)": {
+      "accuracy": {
+        "mean": 0.5797,
+        "ci_95": [
+          0.4998,
+          0.66
+        ]
+      },
+      "balanced_accuracy_3class": {
+        "mean": 0.5033,
+        "ci_95": [
+          0.4088,
+          0.5985
+        ]
+      },
+      "macro_f1_3class": {
+        "mean": 0.3273,
+        "ci_95": [
+          0.2758,
+          0.3806
+        ]
+      }
+    },
+    "GNN v2.1 Baseline (Extended Network)": {
+      "accuracy": {
+        "mean": 0.7467,
+        "ci_95": [
+          0.6733,
+          0.8133
+        ]
+      },
+      "balanced_accuracy_3class": {
+        "mean": 0.5014,
+        "ci_95": [
+          0.4468,
+          0.5693
+        ]
+      },
+      "macro_f1_3class": {
+        "mean": 0.3309,
+        "ci_95": [
+          0.2858,
+          0.3889
+        ]
+      }
+    },
+    "Selected Candidate Focal g=1.5 (Isolated Subgraph)": {
+      "accuracy": {
+        "mean": 0.7587,
+        "ci_95": [
+          0.6867,
+          0.8202
+        ]
+      },
+      "balanced_accuracy_3class": {
+        "mean": 0.5096,
+        "ci_95": [
+          0.4553,
+          0.5751
+        ]
+      },
+      "macro_f1_3class": {
+        "mean": 0.3325,
+        "ci_95": [
+          0.285,
+          0.3892
+        ]
+      }
+    },
+    "Selected Candidate Focal g=1.5 (Extended Network)": {
+      "accuracy": {
+        "mean": 0.7938,
+        "ci_95": [
+          0.7267,
+          0.86
+        ]
+      },
+      "balanced_accuracy_3class": {
+        "mean": 0.4919,
+        "ci_95": [
+          0.4788,
+          0.5
+        ]
+      },
+      "macro_f1_3class": {
+        "mean": 0.2949,
+        "ci_95": [
+          0.2806,
+          0.3082
+        ]
+      }
+    },
+    "Sensitivity Candidate Focal g=3.0 (Isolated Subgraph)": {
+      "accuracy": {
+        "mean": 0.6402,
+        "ci_95": [
+          0.5667,
+          0.7133
+        ]
+      },
+      "balanced_accuracy_3class": {
+        "mean": 0.4755,
+        "ci_95": [
+          0.3988,
+          0.5625
+        ]
+      },
+      "macro_f1_3class": {
+        "mean": 0.3161,
+        "ci_95": [
+          0.2696,
+          0.3656
+        ]
+      }
+    },
+    "Sensitivity Candidate Focal g=3.0 (Extended Network)": {
+      "accuracy": {
+        "mean": 0.7477,
+        "ci_95": [
+          0.68,
+          0.8133
+        ]
+      },
+      "balanced_accuracy_3class": {
+        "mean": 0.4763,
+        "ci_95": [
+          0.4414,
+          0.5228
+        ]
+      },
+      "macro_f1_3class": {
+        "mean": 0.3007,
+        "ci_95": [
+          0.2745,
+          0.3443
+        ]
+      }
+    }
+  },
+  "paired_hypothesis_tests": {
+    "Selected Candidate Focal g=1.5 (Isolated Subgraph) vs Random Forest Baseline": {
+      "delta_accuracy": {
+        "mean": 0.207,
+        "ci_95": [
+          0.1065,
+          0.3133
+        ],
+        "statistically_significant": true
+      },
+      "delta_balanced_accuracy": {
+        "mean": -0.0055,
+        "ci_95": [
+          -0.1287,
+          0.1187
+        ],
+        "statistically_significant": false
+      },
+      "delta_macro_f1": {
+        "mean": 0.0148,
+        "ci_95": [
+          -0.0628,
+          0.101
+        ],
+        "statistically_significant": false
+      }
+    },
+    "Selected Candidate Focal g=1.5 (Isolated Subgraph) vs GNN v2.1 Baseline (Isolated Subgraph)": {
+      "delta_accuracy": {
+        "mean": 0.1804,
+        "ci_95": [
+          0.0933,
+          0.2602
+        ],
+        "statistically_significant": true
+      },
+      "delta_balanced_accuracy": {
+        "mean": 0.0082,
+        "ci_95": [
+          -0.0993,
+          0.1102
+        ],
+        "statistically_significant": false
+      },
+      "delta_macro_f1": {
+        "mean": 0.0071,
+        "ci_95": [
+          -0.0547,
+          0.0762
+        ],
+        "statistically_significant": false
+      }
+    },
+    "GNN v2.1 Baseline (Isolated Subgraph) vs Random Forest Baseline": {
+      "delta_accuracy": {
+        "mean": 0.0269,
+        "ci_95": [
+          -0.0933,
+          0.1467
+        ],
+        "statistically_significant": false
+      },
+      "delta_balanced_accuracy": {
+        "mean": -0.0089,
+        "ci_95": [
+          -0.1777,
+          0.1541
+        ],
+        "statistically_significant": false
+      },
+      "delta_macro_f1": {
+        "mean": 0.0102,
+        "ci_95": [
+          -0.0713,
+          0.0948
+        ],
+        "statistically_significant": false
+      }
+    }
+  },
+  "metric_definition_and_consistency_notes": {
+    "binary_vs_three_class_relationship": "Because the held-out test set contains zero High-risk businesses (support = 0), High-risk F1 is 0.0 for all models. Consequently, the 3-class Macro-F1 is mathematically identical to (2/3) * Binary Macro-F1. For example, for the Selected Candidate: 0.5017 * (2/3) = 0.3344 exactly. Similarly, balanced_accuracy_score() averages recall across classes present in y_true (Low and Medium), making test balanced accuracy mathematically identical to binary balanced accuracy.",
+    "confusion_matrix_consistency_audit": "In the previous conversational summary, the candidate confusion matrix was mistyped as [[110, 11, 0], [26, 3, 0], [0, 0, 0]], which falsely implied 113 correct predictions (75.33%) and predicted counts 136/14/0. The actual array on disk and in reports/component4/final_research_validation_report.json has always been [[111, 10, 0], [26, 3, 0], [0, 0, 0]], which yields exactly 111 + 3 = 114 correct predictions (114/150 = 76.00%) and predicted counts 137 / 13 / 0. Similarly, GNN v2.1 was mistyped as [[77, 39, 5], [16, 11, 2], [0, 0, 0]] (implying 93/50/7), whereas the real array on disk is [[76, 40, 5], [17, 11, 1], [0, 0, 0]], which yields exactly 87 correct predictions (58.00%) and predicted counts 93 / 51 / 6.",
+    "high_risk_disclosure": "High-risk support in the held-out test cohort is 0. High-risk recall, precision, and F1 on unseen test data are empirically and statistically unevaluable. No claim of successful High-risk detection or default prediction on unseen businesses is supported by the data.",
+    "gnn_vs_rf_significance_conclusion": "Paired bootstrap testing reveals that while the Focal Loss GNN achieves a statistically significant improvement in raw accuracy over RF (+20.70%, 95% CI [+10.65%, +31.33%]) by aligning with the majority Low-risk class (111/121), it does NOT achieve statistically significant superiority in Balanced Accuracy (Delta = -0.55%, 95% CI [-12.87%, +11.87%]) or Macro-F1 (Delta = +0.0148, 95% CI [-0.0628, +0.1010]). Random Forest achieved higher Medium-risk recall (44.8% vs 10.3%). Any claim of general GNN superiority over Random Forest is unsupported by the empirical evidence."
+  }
+}
