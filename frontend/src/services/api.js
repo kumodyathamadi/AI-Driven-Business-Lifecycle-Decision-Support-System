@@ -305,4 +305,21 @@ export const getComponent4ModelStatus = async () => {
   return response.data;
 };
 
+/**
+ * Retrieves recent Component 1 generated business plans stored in database
+ */
+export const getComponent1Plans = async (limit = 20) => {
+  const response = await apiClient.get(`/component4/component1-plans?limit=${limit}`);
+  return response.data;
+};
+
+/**
+ * Loads a Component 1 business plan directly into Component 4 workflow
+ */
+export const loadComponent1Plan = async (recordId) => {
+  const response = await apiClient.post(`/component4/plan/load-component1/${recordId}`);
+  return response.data;
+};
+
+
 

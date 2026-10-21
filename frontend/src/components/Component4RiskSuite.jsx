@@ -57,7 +57,9 @@ import {
   getRecentComponent4Assessments,
   getComponent4Analysis,
   getComponent4Businesses,
-  getComponent4ModelStatus
+  getComponent4ModelStatus,
+  getComponent1Plans,
+  loadComponent1Plan
 } from '../services/api';
 import { formatLKR } from './Dashboard';
 
@@ -145,6 +147,12 @@ export default function Component4RiskSuite({
   const [existingBusinesses, setExistingBusinesses] = useState([]);
   const [showBusinessPicker, setShowBusinessPicker] = useState(false);
   const [loadingExisting, setLoadingExisting] = useState(false);
+
+  // Component 1 Plan picker modal
+  const [component1Plans, setComponent1Plans] = useState([]);
+  const [showC1Picker, setShowC1Picker] = useState(false);
+  const [loadingC1Plans, setLoadingC1Plans] = useState(false);
+  const [capitalIncludesLoan, setCapitalIncludesLoan] = useState(null);
 
   // Conflict Resolution State (Step 2)
   const [conflictingFields, setConflictingFields] = useState({});
@@ -236,6 +244,66 @@ export default function Component4RiskSuite({
       console.warn('Could not fetch existing businesses:', err);
     } finally {
       setLoadingExisting(false);
+    }
+  };
+
+  const loadC1Plans = async () => {
+    setLoadingC1Plans(true);
+    try {
+      const res = await getComponent1Plans(25);
+      if (Array.isArray(res)) {
+        setComponent1Plans(res);
+      }
+    } catch (err) {
+      console.warn('Could not fetch Component 1 business plans:', err);
+    } finally {
+      setLoadingC1Plans(false);
+    }
+  };
+
+  const handleSelectC1Plan = async (recordId) => {
+    setLoading(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    setShowC1Picker(false);
+    try {
+      const res = await loadComponent1Plan(recordId);
+      if (!res.success) {
+        setErrorMsg(res.error || 'Failed to parse Component 1 business plan.');
+        return;
+      }
+      setUploadedFilePath(res.file_path);
+      setExtractedData(res.extraction);
+      setAvailableFacts(res.available_facts || {});
+      setIsReusedProfile(Boolean(res.existing_business_id));
+
+      const targetId = res.existing_business_id || res.suggested_business_id || res.resolved_entity?.entity_id || '';
+      setConfirmedBusinessId(targetId);
+
+      // Check for any conflicting values in extracted plan
+      const conflicts = {};
+      const rawConflicts = res.conflicts || res.extraction?.conflicting_values;
+      if (rawConflicts) {
+        Object.entries(rawConflicts).forEach(([k, c]) => {
+          conflicts[k] = {
+            field_label: k.replace(/_/g, ' '),
+            options: c.options || [],
+            message: c.message,
+            conflict_type: c.conflict_type,
+            resolved_value: null,
+            status: 'conflicting'
+          };
+        });
+      }
+      setConflictingFields(conflicts);
+      setIsDemoProfile(false);
+
+      setSuccessMsg(`Successfully imported Component 1 business plan for '${res.extraction?.business_name || 'Enterprise'}'. Review profile facts and confirm any flagged discrepancies.`);
+      setCurrentStep(2);
+    } catch (err) {
+      setErrorMsg(`Failed to import Component 1 plan: ${err.response?.data?.detail || err.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -418,15 +486,30 @@ export default function Component4RiskSuite({
         status: 'resolved'
       }
     }));
-    // Also record in availableFacts as user_confirmed
-    setAvailableFacts(prev => ({
-      ...prev,
-      [fieldKey]: {
-        value: chosenValue,
-        provenance: 'user_confirmed',
-        source_reference: 'User resolved conflicting plan values'
-      }
-    }));
+
+    if (fieldKey === 'capital_loan_structure' || fieldKey === 'capital_includes_loan') {
+      setCapitalIncludesLoan(Boolean(chosenValue));
+    }
+
+    if (fieldKey === 'business_category') {
+      setAvailableFacts(prev => ({
+        ...prev,
+        business_category: {
+          value: chosenValue,
+          provenance: 'user_confirmed',
+          source_reference: 'User resolved sector discrepancy'
+        }
+      }));
+    } else {
+      setAvailableFacts(prev => ({
+        ...prev,
+        [fieldKey]: {
+          value: chosenValue,
+          provenance: 'user_confirmed',
+          source_reference: 'User resolved conflicting plan values'
+        }
+      }));
+    }
   };
 
   // STEP 2: Editable Fact Change Handler
@@ -515,12 +598,23 @@ export default function Component4RiskSuite({
           payment_delay_days: r.payment_delay_days ? Number(r.payment_delay_days) : null
         }));
 
+      const conflictResolutions = {};
+      Object.entries(conflictingFields).forEach(([k, conf]) => {
+        if (conf.resolved_value !== null && conf.resolved_value !== undefined) {
+          conflictResolutions[k] = conf.resolved_value;
+        }
+      });
+
       const payload = {
         plan_file_path: uploadedFilePath,
         confirmed_business_id: confirmedBusinessId || null,
         business_name: availableFacts.business_name?.value || null,
         district: availableFacts.district?.value || null,
         business_category: availableFacts.business_category?.value || null,
+        conflict_resolutions: conflictResolutions,
+        capital_includes_loan: capitalIncludesLoan !== null
+          ? capitalIncludesLoan
+          : (conflictResolutions['capital_loan_structure'] !== undefined ? Boolean(conflictResolutions['capital_loan_structure']) : null),
         completed_fields: completedFields,
         declared_relationships: validRels
       };
@@ -791,6 +885,19 @@ export default function Component4RiskSuite({
 
               <button
                 type="button"
+                onClick={() => { setShowC1Picker(true); loadC1Plans(); }}
+                className="btn btn-secondary"
+                style={{ flex: '1 1 240px', justifyContent: 'flex-start', padding: '0.85rem 1rem', border: '1px solid var(--primary-green-border)', background: 'var(--primary-green-subtle)' }}
+              >
+                <Sparkles size={18} style={{ color: 'var(--primary-green)' }} />
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.825rem', color: 'var(--primary-green)' }}>Import Component 1 Business Plan</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Directly load feasibility plans from database</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
                 onClick={handleLoadHellooGlowSample}
                 className="btn btn-secondary"
                 style={{ flex: '1 1 240px', justifyContent: 'flex-start', padding: '0.85rem 1rem' }}
@@ -803,6 +910,85 @@ export default function Component4RiskSuite({
               </button>
             </div>
           </div>
+
+          {/* Modal Picker for Component 1 Business Plans */}
+          {showC1Picker && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+              padding: '1rem'
+            }}>
+              <div className="content-card" style={{ maxWidth: '650px', width: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column', margin: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>Import Component 1 Generated Business Plan</h3>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                      Select a business plan previously evaluated under Component 1 feasibility analysis
+                    </div>
+                  </div>
+                  <button onClick={() => setShowC1Picker(false)} className="btn btn-subtle" style={{ padding: '0.2rem' }}>
+                    <XCircle size={18} />
+                  </button>
+                </div>
+
+                <div style={{ overflowY: 'auto', padding: '1rem 0', flex: 1 }}>
+                  {loadingC1Plans ? (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                      <RefreshCw size={20} className="animate-spin" style={{ margin: '0 auto 0.5rem auto' }} />
+                      Loading Component 1 plans...
+                    </div>
+                  ) : component1Plans.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                      No saved Component 1 analysis records found in database.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {component1Plans.map(p => (
+                        <div
+                          key={p.id}
+                          onClick={() => handleSelectC1Plan(p.id)}
+                          style={{
+                            padding: '0.75rem 1rem',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: 'var(--radius-sm)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            background: 'var(--bg-surface)'
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary)' }}>
+                              {p.business_name}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+                              <span>Sector: <b>{p.business_category}</b> &middot; Stage: <b>{p.business_stage}</b> &middot; {p.district}</span>
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+                              <span>Available Capital: <b>LKR {Number(p.available_capital_lkr || 0).toLocaleString()}</b></span>
+                              <span style={{ marginLeft: '0.75rem' }}>Feasibility: <b style={{ color: 'var(--primary-green)' }}>{p.feasibility_label}</b></span>
+                            </div>
+                          </div>
+                          <button className="btn btn-primary" style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}>
+                            Import Plan
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Modal Picker for Existing Businesses */}
           {showBusinessPicker && (

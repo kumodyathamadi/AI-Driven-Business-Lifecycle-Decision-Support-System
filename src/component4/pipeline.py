@@ -162,6 +162,12 @@ class Component4Pipeline:
                         plan.provenance_notes.append(f"Field '{key}' supplied via dynamic intake ({prov}).")
                         if key in plan.missing_fields:
                             plan.missing_fields.remove(key)
+                        if key in plan.conflicting_values:
+                            plan.conflicting_values[key]["status"] = "resolved"
+                            plan.conflicting_values[key]["resolved_value"] = extracted_val
+                    if key == "capital_includes_loan" and "capital_loan_structure" in plan.conflicting_values:
+                        plan.conflicting_values["capital_loan_structure"]["status"] = "resolved"
+                        plan.conflicting_values["capital_loan_structure"]["resolved_value"] = extracted_val
                 elif extracted_val is None or str(extracted_val).lower() in ("unknown", "not available"):
                     plan.field_provenance[key] = "UNKNOWN"
 
@@ -509,8 +515,22 @@ class Component4Pipeline:
             "supplier_delay_days": plan.supplier_delay_days or avg_delay,
             "debt_guarantees": plan.debt_guarantees_or_obligations,
             "proposed_growth_action": plan.proposed_growth_action,
-            "required_investment_lkr": inv,
             "is_zero_debt": (loan == 0.0 and monthly_repay == 0.0 and delay_days == 0.0),
+            "target_capital_lkr": plan.target_capital_lkr,
+            "capital_includes_loan": plan.capital_includes_loan,
+            "customer_demand_score": plan.customer_demand_score,
+            "available_staff_count": plan.available_staff_count,
+            "required_staff_count": plan.required_staff_count,
+            "available_equipment_score": plan.available_equipment_score,
+            "required_equipment_score": plan.required_equipment_score,
+            "supplier_availability_score": plan.supplier_availability_score,
+            "location_suitability_score": plan.location_suitability_score,
+            "entrepreneur_experience_years": plan.entrepreneur_experience_years,
+            "expected_price_lkr": plan.expected_price_lkr,
+            "pricing_details": plan.pricing_details,
+            "conflicting_values": plan.conflicting_values,
+            "financial_assumptions": plan.financial_assumptions,
+            "business_description": plan.business_description,
         }
 
     def _generate_markdown_report(

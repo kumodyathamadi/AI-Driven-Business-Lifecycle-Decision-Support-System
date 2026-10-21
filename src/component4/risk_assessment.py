@@ -613,8 +613,14 @@ class RiskAssessmentEngine:
         cfg = self.config
         drivers = []
 
-        cus_hhi = self._safe_float(data.get("customer_hhi"), default=0.20)
-        cus_cr1 = self._safe_float(data.get("customer_cr1_share"), default=0.30)
+        cus_dep = data.get("customer_concentration_percentage") or data.get("customer_dependency_percentage")
+        if cus_dep is not None:
+            c_ratio = self._safe_float(cus_dep) / 100.0 if self._safe_float(cus_dep) > 1.0 else self._safe_float(cus_dep)
+            cus_cr1 = round(c_ratio, 4)
+            cus_hhi = round(c_ratio ** 2, 4)
+        else:
+            cus_hhi = self._safe_float(data.get("customer_hhi"), default=0.20)
+            cus_cr1 = self._safe_float(data.get("customer_cr1_share"), default=0.30)
         payment_delay = self._safe_float(
             data.get("counterparty_payment_delay_mean_days") or data.get("Average_Collection_Period_Days"),
             default=15.0
@@ -785,8 +791,14 @@ class RiskAssessmentEngine:
         cfg = self.config
         drivers = []
 
-        sup_hhi = self._safe_float(data.get("supplier_hhi"), default=0.20)
-        sup_cr1 = self._safe_float(data.get("supplier_cr1_share"), default=0.30)
+        sup_dep = data.get("supplier_dependency_percentage") or data.get("supplier_concentration_percentage")
+        if sup_dep is not None:
+            s_ratio = self._safe_float(sup_dep) / 100.0 if self._safe_float(sup_dep) > 1.0 else self._safe_float(sup_dep)
+            sup_cr1 = round(s_ratio, 4)
+            sup_hhi = round(s_ratio ** 2, 4)
+        else:
+            sup_hhi = self._safe_float(data.get("supplier_hhi"), default=0.20)
+            sup_cr1 = self._safe_float(data.get("supplier_cr1_share"), default=0.30)
         disrupted = int(self._safe_float(data.get("has_disrupted_supplier") or data.get("Disruption_Count_Last_12M"), default=0))
         delivery_delay = self._safe_float(
             data.get("Delivery_Delay_Days") or data.get("delivery_delay_days") or data.get("supplier_delay_days"),
@@ -1487,23 +1499,31 @@ class RiskAssessmentEngine:
             template = mitigation_library.get(code)
             if template:
                 seen_factors.add(code)
+                cost_val = template["estimated_cost"]
+                if "Unavailable / Non-monetary" in cost_val:
+                    cost_val = cost_val.replace("Unavailable / Non-monetary", "Cost estimate required")
+
                 rec = {
                     "factor_code": code,
                     "targeted_factor": code,
                     "category": template["category"],
                     "risk_factor": template["risk_factor"],
+                    "risk_driver": template["risk_factor"],
                     "supporting_evidence": str(d.get("description", "")),
+                    "evidence": str(d.get("description", "")),
                     "action": template["action"],
                     "priority": template["priority"],
                     "suggested_timeline": template["suggested_timeline"],
                     "time_horizon": template["suggested_timeline"],
                     "responsible_role": template["responsible_role"],
-                    "estimated_cost": template["estimated_cost"],
+                    "estimated_cost": cost_val,
                     "expected_outcome": template["expected_outcome"],
                     "rationale": template["rationale"],
                     "mechanism": template["mechanism"],
                     "measurable_indicator": template["measurable_indicator"],
                     "reassessment_triggers": template["reassessment_triggers"],
+                    "verification_info": f"Verify progress via {template['measurable_indicator']}; review upon {template['reassessment_triggers'].lower()}",
+                    "dependencies_constraints": f"Action depends on {template['responsible_role'].lower()} approval and working capital availability.",
                 }
                 recommendations.append(rec)
 
@@ -1513,18 +1533,22 @@ class RiskAssessmentEngine:
                 "targeted_factor": "NO_MAJOR_RISK_TRIGGER",
                 "category": "Growth Readiness",
                 "risk_factor": "Prudent Baseline Risk Profile",
+                "risk_driver": "Prudent Baseline Risk Profile",
                 "supporting_evidence": "All evaluated liquidity, debt, concentration, and operational metrics remain within prudent advisory thresholds.",
+                "evidence": "All evaluated liquidity, debt, concentration, and operational metrics remain within prudent advisory thresholds.",
                 "action": "Proceed with planned expansion under standard monitoring",
                 "priority": "LOW",
                 "suggested_timeline": "Ongoing quarterly review",
                 "time_horizon": "Ongoing quarterly review",
                 "responsible_role": "Managing Director / Operations Lead",
-                "estimated_cost": "Unavailable / Non-monetary (routine operational management)",
+                "estimated_cost": "Cost estimate required (routine operational management)",
                 "expected_outcome": "Controlled operational scaling aligned with demonstrated cash generation",
                 "rationale": "Key liquidity, debt, concentration, and capacity indicators are within prudent advisory thresholds.",
                 "mechanism": "Maintain disciplined monthly tracking of working capital ratios while executing growth milestones.",
                 "measurable_indicator": "Post-action cash runway >= 4.0 months; operating margin >= 15%",
                 "reassessment_triggers": "Monthly revenue falls by > 10% or key counterparty credit terms change",
+                "verification_info": "Quarterly management review of balance sheet and cash flow statements",
+                "dependencies_constraints": "Standard operational oversight without external dependency",
             }]
 
         return recommendations

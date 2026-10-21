@@ -55,9 +55,11 @@ class GrowthReadinessEvaluation:
     def __post_init__(self):
         if not self.decision_label:
             labels = {
-                "PROCEED": "Proceed",
-                "MODIFY": "Proceed with conditions",
-                "DELAY": "Defer expansion",
+                "PROCEED": "Proceed, subject to stated conditions",
+                "MODIFY": "Proceed after specified mitigation actions",
+                "PILOT": "Pilot/test on a limited scale",
+                "DELAY": "Defer pending additional evidence or improved readiness",
+                "NOT_RECOMMENDED": "Not recommended under current assumptions",
                 "INSUFFICIENT_EVIDENCE": "Insufficient information"
             }
             self.decision_label = labels.get(self.decision, self.decision)
@@ -125,7 +127,7 @@ class GrowthReadinessEvaluator:
         if not resolved.is_within_geographic_scope:
             return GrowthReadinessEvaluation(
                 decision="DELAY",
-                decision_label="Defer expansion",
+                decision_label="Defer pending additional evidence or improved readiness",
                 original_proposed_action=orig_action,
                 original_strategy=orig_strat,
                 risk_adjusted_recommendation="Suspend execution due to geographic scope violation.",
@@ -154,7 +156,7 @@ class GrowthReadinessEvaluator:
             missing_fields = plan.missing_fields or ["available_capital_lkr", "monthly_operating_budget"]
             return GrowthReadinessEvaluation(
                 decision="INSUFFICIENT_EVIDENCE",
-                decision_label="Insufficient information",
+                decision_label="Defer pending additional evidence or improved readiness",
                 original_proposed_action=orig_action,
                 original_strategy=orig_strat,
                 risk_adjusted_recommendation="Defer commitment until critical financial figures are verified.",
@@ -315,7 +317,7 @@ class GrowthReadinessEvaluator:
 
         elif is_critical_runway or (has_critical_red_flag and has_gnn_high):
             decision = "DELAY"
-            decision_label = "Defer expansion"
+            decision_label = "Defer pending additional evidence or improved readiness"
             recommendation = (
                 f"DELAY proposed action '{orig_action}'. Post-investment liquidity buffer ({post_runway:.1f} months) "
                 f"poses critical insolvency risk. Prioritize capital accumulation before committing."
@@ -329,7 +331,7 @@ class GrowthReadinessEvaluator:
 
         elif has_critical_red_flag or risk_result.overall_risk_category == "MEDIUM" or has_gnn_high or len(modifications) > 0 or post_runway < 2.5:
             decision = "MODIFY"
-            decision_label = "Proceed with conditions"
+            decision_label = "Proceed after specified mitigation actions"
             recommendation = (
                 f"PROCEED WITH CONDITIONS for '{orig_action}'. Adopt a phased deployment approach "
                 f"to mitigate identified operational and liquidity constraints while pursuing '{orig_strat}'."
@@ -347,7 +349,7 @@ class GrowthReadinessEvaluator:
 
         else:
             decision = "PROCEED"
-            decision_label = "Proceed"
+            decision_label = "Proceed, subject to stated conditions"
             recommendation = (
                 f"PROCEED with proposed '{orig_action}' under strategy '{orig_strat}'. "
                 f"Financial parameters and operational capacity satisfy advisory prudence thresholds."

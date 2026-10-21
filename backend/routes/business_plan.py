@@ -77,7 +77,9 @@ def download_plan_by_record_id(record_id: str, doc_format: str, db: Session = De
     if not db_record:
         raise HTTPException(status_code=404, detail="Analysis record not found")
 
-    profile = db_record.full_profile
+    profile = db_record.structured_profile
+    if not profile and db_record.input_profile:
+        profile = {"business_input": db_record.input_profile, "metadata": {"record_id": db_record.id}}
     if doc_format.lower() == "pdf":
         return generate_pdf_plan(profile)
     elif doc_format.lower() in ["docx", "word"]:

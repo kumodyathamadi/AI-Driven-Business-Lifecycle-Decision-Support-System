@@ -36,7 +36,8 @@ from backend.database import get_db
 from backend.models import (
     Component4BusinessProfile,
     Component4BusinessRelationship,
-    Component4AssessmentRun
+    Component4AssessmentRun,
+    AnalysisRecord
 )
 from component4.business_plan_ingestion import (
     BusinessPlanIngestionService,
@@ -141,6 +142,8 @@ class SubmitIntakeAndRunRequest(BaseModel):
     district: Optional[str] = Field(default=None, description="District (Colombo, Gampaha, Kalutara)")
     business_category: Optional[str] = Field(default=None, description="Business Sector/Category")
     registration_number: Optional[str] = Field(default=None, description="BRN or TIN identifier")
+    capital_includes_loan: Optional[bool] = Field(default=None, description="Whether available capital includes borrowed funds")
+    conflict_resolutions: Optional[Dict[str, Any]] = Field(default_factory=dict, description="User resolutions for conflicting values")
     completed_fields: Dict[str, Any] = Field(default_factory=dict, description="Completed missing-info fields")
     declared_relationships: List[Dict[str, Any]] = Field(default_factory=list, description="User declared counterparties")
 
@@ -226,6 +229,8 @@ async def upload_business_plan(
             or f"c4_biz_{uuid.uuid4().hex[:12]}"
         )
 
+        has_conflicts = len(extracted.conflicting_values) > 0
+
         return {
             "success": True,
             "file_path": target_path,
@@ -237,7 +242,9 @@ async def upload_business_plan(
             "sufficiency_status": sufficiency_status,
             "resolved_entity": resolved.to_dict(),
             "candidate_matches": resolved.candidate_matches,
-            "requires_user_confirmation": resolved.requires_user_confirmation,
+            "requires_user_confirmation": resolved.requires_user_confirmation or has_conflicts,
+            "conflicts": extracted.conflicting_values,
+            "financial_assumptions": extracted.financial_assumptions,
             "existing_business_id": existing_business_id,
             "suggested_business_id": suggested_id
         }
@@ -247,6 +254,142 @@ async def upload_business_plan(
     except Exception as e:
         clean_msg = sanitize_for_logging(str(e))
         raise HTTPException(status_code=500, detail=f"Failed to process business plan: {clean_msg}")
+
+
+@router.get("/component1-plans")
+def list_component1_plans(
+    limit: int = 20,
+    db: Session = Depends(get_db)
+):
+    """
+    Lists recent Component 1 generated business plans stored in AnalysisRecords.
+    Allows Component 4 to directly ingest plans without re-uploading or manual data re-entry.
+    """
+    records = db.query(AnalysisRecord).order_by(AnalysisRecord.created_at.desc()).limit(limit).all()
+    results = []
+    for rec in records:
+        inp = rec.input_profile if isinstance(rec.input_profile, dict) else {}
+        sp = rec.structured_profile if isinstance(rec.structured_profile, dict) else {}
+
+        b_name = (
+            inp.get("business_name")
+            or sp.get("business_input", {}).get("business_name")
+            or sp.get("personalized_business_plan", {}).get("business_name")
+            or f"Enterprise {rec.id[:8]}"
+        )
+        capital = (
+            inp.get("available_capital_lkr")
+            or sp.get("business_input", {}).get("available_capital_lkr")
+        )
+        budget = (
+            inp.get("monthly_budget_lkr")
+            or sp.get("business_input", {}).get("monthly_budget_lkr")
+        )
+
+        results.append({
+            "id": rec.id,
+            "business_name": b_name,
+            "business_category": rec.business_category,
+            "business_stage": rec.business_stage,
+            "district": rec.district,
+            "feasibility_label": rec.feasibility_label,
+            "confidence_score": rec.confidence_score,
+            "available_capital_lkr": capital,
+            "monthly_budget_lkr": budget,
+            "created_at": rec.created_at.isoformat() if rec.created_at else None
+        })
+    return results
+
+
+@router.post("/plan/load-component1/{record_id}")
+def load_component1_plan(
+    record_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Loads and parses an existing Component 1 generated business plan directly from the database.
+    Extracts all Phase 2 mandatory fields, checks for conflicts (e.g. concept vs sector),
+    evaluates capital vs loan relationship, and dynamically determines missing risk inputs.
+    """
+    rec = db.query(AnalysisRecord).filter(AnalysisRecord.id == record_id).first()
+    if not rec:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Component 1 Analysis Record with ID '{record_id}' not found."
+        )
+
+    # Prefer structured profile; fallback to input profile
+    plan_dict = rec.structured_profile if isinstance(rec.structured_profile, dict) and rec.structured_profile else rec.input_profile
+    if not isinstance(plan_dict, dict):
+        raise HTTPException(
+            status_code=500,
+            detail="Stored Component 1 record does not contain valid structured profile JSON."
+        )
+
+    # Ingest directly in memory
+    extracted = ingestion_service.ingest_dict(plan_dict, source_name=f"component1_{record_id[:8]}.json")
+
+    # Persist a temporary file representation so submit_intake_and_run can refer to it
+    safe_filename = f"c1_plan_{record_id[:8]}_{os.urandom(4).hex()}.json"
+    target_path = os.path.join(UPLOAD_TMP_DIR, safe_filename)
+    try:
+        with open(target_path, "w", encoding="utf-8") as f:
+            json.dump(plan_dict, f, indent=2)
+    except Exception as e:
+        print(f"Warning saving temporary plan file: {e}")
+
+    # Check for existing profile in DB
+    existing_profile = find_existing_business_profile(
+        db=db,
+        registration_number=extracted.business_identifier,
+        business_name=extracted.business_name,
+        district=extracted.district
+    )
+    existing_facts = existing_profile.latest_intake_data if existing_profile else {}
+    existing_business_id = existing_profile.id if existing_profile else None
+
+    # Analyze missing fields
+    available_facts, missing_form_schema, sufficiency_status = (
+        DynamicIntakeSchemaService.analyze_missing_fields(
+            extracted_facts=extracted.to_dict(),
+            existing_profile=existing_facts
+        )
+    )
+
+    # Resolve entity candidates
+    resolved = entity_resolver.resolve(extracted, confirmed_business_id=existing_business_id)
+    if existing_profile:
+        resolved.entity_id = existing_profile.id
+        resolved.data_origin = existing_profile.source_origin
+        resolved.provenance_notes.append(f"Linked to persistent database profile {existing_profile.id}.")
+
+    suggested_id = (
+        existing_business_id
+        or (resolved.entity_id if (resolved.entity_id.startswith("WP_SME_") or resolved.entity_id.startswith("C0")) else None)
+        or f"c4_biz_{uuid.uuid4().hex[:12]}"
+    )
+
+    has_conflicts = len(extracted.conflicting_values) > 0
+
+    return {
+        "success": True,
+        "source_type": "COMPONENT_1_DATABASE",
+        "record_id": record_id,
+        "file_path": target_path,
+        "filename": f"Component1_Plan_{record_id[:8]}.json",
+        "file_format": ".json",
+        "extraction": extracted.to_dict(),
+        "available_facts": {k: f.to_dict() for k, f in available_facts.items()},
+        "missing_form_schema": missing_form_schema,
+        "sufficiency_status": sufficiency_status,
+        "resolved_entity": resolved.to_dict(),
+        "candidate_matches": resolved.candidate_matches,
+        "requires_user_confirmation": resolved.requires_user_confirmation or has_conflicts,
+        "conflicts": extracted.conflicting_values,
+        "financial_assumptions": extracted.financial_assumptions,
+        "existing_business_id": existing_business_id,
+        "suggested_business_id": suggested_id
+    }
 
 
 @router.post("/intake/submit-and-run")
@@ -285,6 +428,19 @@ def submit_intake_and_run(
     if not is_valid:
         raise HTTPException(status_code=400, detail={"message": "Validation errors in intake submission", "errors": val_errors})
 
+    # Apply explicit user conflict resolutions if provided
+    if request.conflict_resolutions:
+        for c_field, c_choice in request.conflict_resolutions.items():
+            if c_field == "business_category":
+                validated_data["business_category"] = {"value": c_choice, "provenance": "USER_CONFIRMED"}
+            elif c_field == "capital_includes_loan":
+                validated_data["capital_includes_loan"] = {"value": bool(c_choice), "provenance": "USER_CONFIRMED"}
+            else:
+                validated_data[c_field] = {"value": c_choice, "provenance": "USER_CONFIRMED"}
+
+    if request.capital_includes_loan is not None:
+        validated_data["capital_includes_loan"] = {"value": bool(request.capital_includes_loan), "provenance": "USER_CONFIRMED"}
+
     # Ingest base plan
     plan = ingestion_service.ingest_file(file_path)
 
@@ -302,7 +458,8 @@ def submit_intake_and_run(
         or "Colombo"
     )
     b_cat = (
-        request.business_category
+        (request.conflict_resolutions.get("business_category") if request.conflict_resolutions else None)
+        or request.business_category
         or (validated_data.get("business_category", {}).get("value") if isinstance(validated_data.get("business_category"), dict) else validated_data.get("business_category"))
         or plan.business_category
         or "Grocery/Mini-Mart"
