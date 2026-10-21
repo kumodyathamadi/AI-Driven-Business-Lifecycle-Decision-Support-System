@@ -1,0 +1,543 @@
+{
+  "metadata": {
+    "execution_date": "2026-10-21",
+    "git_commit": "1c220be",
+    "git_branch": "Component_4_Tharindu",
+    "random_seed": 42,
+    "device": "cpu",
+    "validation_support": {
+      "Low": 118,
+      "Medium": 31,
+      "High": 1
+    },
+    "training_support": {
+      "Low": 519,
+      "Medium": 180,
+      "High": 1
+    },
+    "training_class_weights": {
+      "standard_inverse_frequency": [
+        0.4496,
+        1.2963,
+        233.3333
+      ],
+      "square_root_inverse_frequency": [
+        0.1177,
+        0.1999,
+        2.6823
+      ]
+    },
+    "selection_criterion": "Max(Validation Balanced Accuracy + Validation Macro-F1 3-class) with Medium Recall >= 40%"
+  },
+  "selected_configuration": {
+    "config_id": "config_C_focal_gamma_1_5",
+    "name": "Multi-Class Focal Loss (gamma=1.5)",
+    "checkpoint_path": "c:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\models\\component4\\experiments\\gnn_experiment_config_C_focal_gamma_1_5.pt",
+    "metrics": {
+      "val_accuracy": 0.74,
+      "val_balanced_accuracy": 0.3532,
+      "val_macro_f1_3class": 0.351,
+      "val_macro_f1_2class": 0.5244,
+      "val_balanced_accuracy_binary": 0.5273,
+      "confusion_matrix": [
+        [
+          106,
+          12,
+          0
+        ],
+        [
+          26,
+          5,
+          0
+        ],
+        [
+          1,
+          0,
+          0
+        ]
+      ],
+      "predicted_counts": {
+        "Low": 133,
+        "Medium": 17,
+        "High": 0
+      },
+      "per_class": {
+        "Low": {
+          "precision": 0.797,
+          "recall": 0.8983,
+          "f1_score": 0.8446,
+          "support": 118
+        },
+        "Medium": {
+          "precision": 0.2941,
+          "recall": 0.1613,
+          "f1_score": 0.2083,
+          "support": 31
+        },
+        "High": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1_score": 0.0,
+          "support": 1
+        }
+      }
+    }
+  },
+  "all_experiments": [
+    {
+      "config_id": "config_A_inv_freq_ce",
+      "name": "Standard Inverse-Frequency Cross-Entropy",
+      "loss_family": "CrossEntropyLoss",
+      "weight_scheme": "Standard Inverse-Frequency",
+      "weights": [
+        0.4496,
+        1.2963,
+        233.3333
+      ],
+      "gamma": null,
+      "best_epoch": 54,
+      "final_train_loss": 0.2626,
+      "has_nan": false,
+      "checkpoint_path": "c:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\models\\component4\\experiments\\gnn_experiment_config_A_inv_freq_ce.pt",
+      "metrics": {
+        "val_accuracy": 0.5333,
+        "val_balanced_accuracy": 0.337,
+        "val_macro_f1_3class": 0.3151,
+        "val_macro_f1_2class": 0.4799,
+        "val_balanced_accuracy_binary": 0.514,
+        "confusion_matrix": [
+          [
+            66,
+            51,
+            1
+          ],
+          [
+            17,
+            14,
+            0
+          ],
+          [
+            0,
+            1,
+            0
+          ]
+        ],
+        "predicted_counts": {
+          "Low": 83,
+          "Medium": 66,
+          "High": 1
+        },
+        "per_class": {
+          "Low": {
+            "precision": 0.7952,
+            "recall": 0.5593,
+            "f1_score": 0.6567,
+            "support": 118
+          },
+          "Medium": {
+            "precision": 0.2121,
+            "recall": 0.4516,
+            "f1_score": 0.2887,
+            "support": 31
+          },
+          "High": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1_score": 0.0,
+            "support": 1
+          }
+        }
+      }
+    },
+    {
+      "config_id": "config_B_sqrt_inv_freq_ce",
+      "name": "Square-Root Inverse-Frequency Cross-Entropy",
+      "loss_family": "CrossEntropyLoss",
+      "weight_scheme": "Square-Root Inverse-Frequency",
+      "weights": [
+        0.1177,
+        0.1999,
+        2.6823
+      ],
+      "gamma": null,
+      "best_epoch": 21,
+      "final_train_loss": 0.2412,
+      "has_nan": false,
+      "checkpoint_path": "c:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\models\\component4\\experiments\\gnn_experiment_config_B_sqrt_inv_freq_ce.pt",
+      "metrics": {
+        "val_accuracy": 0.6733,
+        "val_balanced_accuracy": 0.3487,
+        "val_macro_f1_3class": 0.3499,
+        "val_macro_f1_2class": 0.5188,
+        "val_balanced_accuracy_binary": 0.5191,
+        "confusion_matrix": [
+          [
+            93,
+            23,
+            2
+          ],
+          [
+            23,
+            8,
+            0
+          ],
+          [
+            1,
+            0,
+            0
+          ]
+        ],
+        "predicted_counts": {
+          "Low": 117,
+          "Medium": 31,
+          "High": 2
+        },
+        "per_class": {
+          "Low": {
+            "precision": 0.7949,
+            "recall": 0.7881,
+            "f1_score": 0.7915,
+            "support": 118
+          },
+          "Medium": {
+            "precision": 0.2581,
+            "recall": 0.2581,
+            "f1_score": 0.2581,
+            "support": 31
+          },
+          "High": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1_score": 0.0,
+            "support": 1
+          }
+        }
+      }
+    },
+    {
+      "config_id": "config_C_focal_gamma_1_0",
+      "name": "Multi-Class Focal Loss (gamma=1.0)",
+      "loss_family": "MultiClassFocalLoss",
+      "weight_scheme": "Square-Root Inverse-Frequency",
+      "weights": [
+        0.1177,
+        0.1999,
+        2.6823
+      ],
+      "gamma": 1.0,
+      "best_epoch": 24,
+      "final_train_loss": 0.0191,
+      "has_nan": false,
+      "checkpoint_path": "c:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\models\\component4\\experiments\\gnn_experiment_config_C_focal_gamma_1_0.pt",
+      "metrics": {
+        "val_accuracy": 0.6467,
+        "val_balanced_accuracy": 0.3533,
+        "val_macro_f1_3class": 0.3507,
+        "val_macro_f1_2class": 0.5202,
+        "val_balanced_accuracy_binary": 0.5249,
+        "confusion_matrix": [
+          [
+            87,
+            29,
+            2
+          ],
+          [
+            21,
+            10,
+            0
+          ],
+          [
+            1,
+            0,
+            0
+          ]
+        ],
+        "predicted_counts": {
+          "Low": 109,
+          "Medium": 39,
+          "High": 2
+        },
+        "per_class": {
+          "Low": {
+            "precision": 0.7982,
+            "recall": 0.7373,
+            "f1_score": 0.7665,
+            "support": 118
+          },
+          "Medium": {
+            "precision": 0.2564,
+            "recall": 0.3226,
+            "f1_score": 0.2857,
+            "support": 31
+          },
+          "High": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1_score": 0.0,
+            "support": 1
+          }
+        }
+      }
+    },
+    {
+      "config_id": "config_C_focal_gamma_1_5",
+      "name": "Multi-Class Focal Loss (gamma=1.5)",
+      "loss_family": "MultiClassFocalLoss",
+      "weight_scheme": "Square-Root Inverse-Frequency",
+      "weights": [
+        0.1177,
+        0.1999,
+        2.6823
+      ],
+      "gamma": 1.5,
+      "best_epoch": 3,
+      "final_train_loss": 0.0144,
+      "has_nan": false,
+      "checkpoint_path": "c:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\models\\component4\\experiments\\gnn_experiment_config_C_focal_gamma_1_5.pt",
+      "metrics": {
+        "val_accuracy": 0.74,
+        "val_balanced_accuracy": 0.3532,
+        "val_macro_f1_3class": 0.351,
+        "val_macro_f1_2class": 0.5244,
+        "val_balanced_accuracy_binary": 0.5273,
+        "confusion_matrix": [
+          [
+            106,
+            12,
+            0
+          ],
+          [
+            26,
+            5,
+            0
+          ],
+          [
+            1,
+            0,
+            0
+          ]
+        ],
+        "predicted_counts": {
+          "Low": 133,
+          "Medium": 17,
+          "High": 0
+        },
+        "per_class": {
+          "Low": {
+            "precision": 0.797,
+            "recall": 0.8983,
+            "f1_score": 0.8446,
+            "support": 118
+          },
+          "Medium": {
+            "precision": 0.2941,
+            "recall": 0.1613,
+            "f1_score": 0.2083,
+            "support": 31
+          },
+          "High": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1_score": 0.0,
+            "support": 1
+          }
+        }
+      }
+    },
+    {
+      "config_id": "config_C_focal_gamma_2_0",
+      "name": "Multi-Class Focal Loss (gamma=2.0)",
+      "loss_family": "MultiClassFocalLoss",
+      "weight_scheme": "Square-Root Inverse-Frequency",
+      "weights": [
+        0.1177,
+        0.1999,
+        2.6823
+      ],
+      "gamma": 2.0,
+      "best_epoch": 4,
+      "final_train_loss": 0.0117,
+      "has_nan": false,
+      "checkpoint_path": "c:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\models\\component4\\experiments\\gnn_experiment_config_C_focal_gamma_2_0.pt",
+      "metrics": {
+        "val_accuracy": 0.7,
+        "val_balanced_accuracy": 0.3521,
+        "val_macro_f1_3class": 0.3516,
+        "val_macro_f1_2class": 0.5253,
+        "val_balanced_accuracy_binary": 0.5246,
+        "confusion_matrix": [
+          [
+            98,
+            20,
+            0
+          ],
+          [
+            24,
+            7,
+            0
+          ],
+          [
+            1,
+            0,
+            0
+          ]
+        ],
+        "predicted_counts": {
+          "Low": 123,
+          "Medium": 27,
+          "High": 0
+        },
+        "per_class": {
+          "Low": {
+            "precision": 0.7967,
+            "recall": 0.8305,
+            "f1_score": 0.8133,
+            "support": 118
+          },
+          "Medium": {
+            "precision": 0.2593,
+            "recall": 0.2258,
+            "f1_score": 0.2414,
+            "support": 31
+          },
+          "High": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1_score": 0.0,
+            "support": 1
+          }
+        }
+      }
+    },
+    {
+      "config_id": "config_C_focal_gamma_3_0",
+      "name": "Multi-Class Focal Loss (gamma=3.0)",
+      "loss_family": "MultiClassFocalLoss",
+      "weight_scheme": "Square-Root Inverse-Frequency",
+      "weights": [
+        0.1177,
+        0.1999,
+        2.6823
+      ],
+      "gamma": 3.0,
+      "best_epoch": 32,
+      "final_train_loss": 0.007,
+      "has_nan": false,
+      "checkpoint_path": "c:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\models\\component4\\experiments\\gnn_experiment_config_C_focal_gamma_3_0.pt",
+      "metrics": {
+        "val_accuracy": 0.6467,
+        "val_balanced_accuracy": 0.3533,
+        "val_macro_f1_3class": 0.3481,
+        "val_macro_f1_2class": 0.5202,
+        "val_balanced_accuracy_binary": 0.5249,
+        "confusion_matrix": [
+          [
+            87,
+            31,
+            0
+          ],
+          [
+            21,
+            10,
+            0
+          ],
+          [
+            1,
+            0,
+            0
+          ]
+        ],
+        "predicted_counts": {
+          "Low": 109,
+          "Medium": 41,
+          "High": 0
+        },
+        "per_class": {
+          "Low": {
+            "precision": 0.7982,
+            "recall": 0.7373,
+            "f1_score": 0.7665,
+            "support": 118
+          },
+          "Medium": {
+            "precision": 0.2439,
+            "recall": 0.3226,
+            "f1_score": 0.2778,
+            "support": 31
+          },
+          "High": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1_score": 0.0,
+            "support": 1
+          }
+        }
+      }
+    },
+    {
+      "config_id": "config_C_focal_gamma_2_0_unweighted",
+      "name": "Multi-Class Focal Loss (gamma=2.0, Unweighted alpha)",
+      "loss_family": "MultiClassFocalLoss",
+      "weight_scheme": "Uniform (alpha=None)",
+      "weights": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "gamma": 2.0,
+      "best_epoch": 21,
+      "final_train_loss": 0.0728,
+      "has_nan": false,
+      "checkpoint_path": "c:\\Users\\Tharindu\\Desktop\\AI-Driven-Business-Lifecycle-Decision-Support-System\\models\\component4\\experiments\\gnn_experiment_config_C_focal_gamma_2_0_unweighted.pt",
+      "metrics": {
+        "val_accuracy": 0.7333,
+        "val_balanced_accuracy": 0.3424,
+        "val_macro_f1_3class": 0.3372,
+        "val_macro_f1_2class": 0.504,
+        "val_balanced_accuracy_binary": 0.5117,
+        "confusion_matrix": [
+          [
+            106,
+            12,
+            0
+          ],
+          [
+            27,
+            4,
+            0
+          ],
+          [
+            1,
+            0,
+            0
+          ]
+        ],
+        "predicted_counts": {
+          "Low": 134,
+          "Medium": 16,
+          "High": 0
+        },
+        "per_class": {
+          "Low": {
+            "precision": 0.791,
+            "recall": 0.8983,
+            "f1_score": 0.8413,
+            "support": 118
+          },
+          "Medium": {
+            "precision": 0.25,
+            "recall": 0.129,
+            "f1_score": 0.1702,
+            "support": 31
+          },
+          "High": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1_score": 0.0,
+            "support": 1
+          }
+        }
+      }
+    }
+  ]
+}
