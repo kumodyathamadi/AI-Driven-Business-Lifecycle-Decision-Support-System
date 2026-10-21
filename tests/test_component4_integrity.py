@@ -39,6 +39,7 @@ from component4.entity_resolution import BusinessEntityResolver, ResolvedBusines
 from component4.risk_assessment import RiskAssessmentEngine
 from component4.gnn_model import GNNInferenceEngine
 from component4.growth_readiness import GrowthReadinessEvaluator
+from component4.preprocessing import Component4RiskDataPipeline, C4_EXCLUDED_TARGETS
 from backend.main import app
 from fastapi.testclient import TestClient
 
@@ -662,6 +663,126 @@ class TestComponent4IntegritySuite(unittest.TestCase):
         self.assertIn("growth_readiness", data)
         self.assertEqual(data["business_plan"]["business_name"], "Contract Integrity Test SME")
 
+    # -------------------------------------------------------------------------
+    # Case 18: Metadata Exclusion and Feature Matrix Integrity
+    # -------------------------------------------------------------------------
+    def test_case_18_metadata_exclusion_and_feature_matrix_integrity(self):
+        """Case 18: Verifies that metadata and non-predictive columns are strictly excluded from features."""
+        # 1. Audit list contains all required metadata columns
+        audited_columns = [
+            "Relationship_Notes",
+            "Source_Type",
+            "Default_Provenance",
+            "Note",
+            "Target_Label_Provenance",
+            "Record_Notes",
+        ]
+        for col in audited_columns:
+            self.assertIn(col, C4_EXCLUDED_TARGETS, f"Audited column {col} must be in C4_EXCLUDED_TARGETS")
+
+        # 2. Extract features via pipeline preprocessor and verify none leak into feature columns
+        prep = Component4RiskDataPipeline()
+        tables = prep.load_raw_tables()
+        feature_df, targets, metadata = prep.extract_node_features(tables)
+
+        feature_cols = prep.node_feature_cols
+        for col in audited_columns:
+            self.assertNotIn(col, feature_cols, f"Metadata column {col} leaked into node feature columns!")
+
+        for target_col in C4_EXCLUDED_TARGETS:
+            self.assertNotIn(target_col, feature_cols, f"Excluded target/metadata {target_col} found in features!")
+
+        # 3. Direct model forward pass succeeds without metadata dependency
+        import torch
+        sample_bid = tables["profile"]["Business_ID"].iloc[0]
+        sample_features = feature_df.loc[sample_bid].to_numpy()
+        x = torch.tensor(sample_features, dtype=torch.float).unsqueeze(0)
+        edge_index = torch.zeros((2, 1), dtype=torch.long)
+        self.gnn_engine.model.eval()
+        with torch.no_grad():
+            logits = self.gnn_engine.model(x, edge_index)
+            probs = torch.softmax(logits, dim=-1).squeeze(0).tolist()
+        self.assertEqual(len(probs), 3)
+
+        # 4. Full pipeline run succeeds cleanly
+        payload = {
+            "business_name": "Metadata Test SME",
+            "district": "Colombo",
+            "monthly_revenue_lkr": 250000.0,
+            "current_cash_reserve_lkr": 300000.0,
+            "fixed_monthly_costs_lkr": 50000.0,
+        }
+        res = self.pipeline.run(plan_source=payload, intake_submission=payload, save_artifacts=False)
+        self.assertIsNotNone(res.stage6_risk_assessment)
+        self.assertIn("credit_risk", res.stage6_risk_assessment.sub_scores)
+
+    # -------------------------------------------------------------------------
+    # Case 19: Missing Liquidity Information & Category Sufficiency
+    # -------------------------------------------------------------------------
+    def test_case_19_missing_liquidity_information_and_sufficiency(self):
+        """Case 19: Verifies that missing liquidity information returns explicit INSUFFICIENT_EVIDENCE status without fabricating cash reserves."""
+        payload = {
+            "business_name": "No Reserve SME",
+            "district": "Galle",
+            "monthly_revenue_lkr": 180000.0,
+            # Explicitly omit current_cash_reserve_lkr, fixed_monthly_costs_lkr, variable_monthly_costs_lkr
+            "has_debt": False,
+        }
+        res = self.pipeline.run(plan_source=payload, intake_submission=payload, save_artifacts=False)
+        self.assertIsNotNone(res.stage6_risk_assessment)
+        assessment = res.stage6_risk_assessment
+        
+        # Verify category evidence sufficiency is populated
+        self.assertIn("liquidity", assessment.category_evidence_sufficiency)
+        self.assertEqual(assessment.category_evidence_sufficiency["liquidity"], "INSUFFICIENT_EVIDENCE")
+        
+        # Verify mitigation library includes unknown liquidity reserves notice
+        mitigation_targets = [m["targeted_factor"] for m in assessment.recommended_mitigations]
+        self.assertIn("UNKNOWN_LIQUIDITY_RESERVES", mitigation_targets)
+        
+        # Verify evidence provenance lists liquidity reserves as unknown
+        self.assertIn("liquid_cash_reserves", assessment.evidence_provenance_summary.get("unknown_or_unavailable_fields", []))
+
+    # -------------------------------------------------------------------------
+    # Case 20: Evidence Provenance and Estimation Distinction
+    # -------------------------------------------------------------------------
+    def test_case_20_evidence_provenance_and_estimation_distinction(self):
+        """Case 20: Confirms that confirmed facts, user estimates, derived values, and unknowns are cleanly distinguished."""
+        payload = {
+            "business_name": "Projected Startup Cafe",
+            "district": "Kandy",
+            "is_projected": True,
+            "monthly_revenue_lkr": 300000.0,
+            "current_cash_reserve_lkr": 150000.0,
+            "fixed_monthly_costs_lkr": 80000.0,
+            "variable_monthly_costs_lkr": 40000.0,
+            "outstanding_debt_lkr": 200000.0,
+            "monthly_debt_repayment_lkr": 25000.0,
+            "has_missed_payments": False,
+            "growth_action": "Open second outlet",
+            "growth_cost_lkr": 500000.0,
+        }
+        res = self.pipeline.run(plan_source=payload, intake_submission=payload, save_artifacts=False)
+        assessment = res.stage6_risk_assessment
+        provenance = assessment.evidence_provenance_summary
+        
+        self.assertIn("confirmed_user_facts", provenance)
+        self.assertIn("user_estimates_and_projections", provenance)
+        self.assertIn("derived_values_and_formulas", provenance)
+        self.assertIn("unknown_or_unavailable_fields", provenance)
+        
+        # User estimates should include proposed growth action
+        self.assertIn("proposed_growth_action", provenance["user_estimates_and_projections"])
+        
+        # Derived values must contain calculation strings
+        derived = provenance["derived_values_and_formulas"]
+        self.assertTrue(any("runway" in d.lower() or "burden" in d.lower() or "ratio" in d.lower() for d in derived.keys()))
+        for key, val in derived.items():
+            self.assertIn("calculation", val)
+            self.assertIn("value", val)
+
 
 if __name__ == "__main__":
     unittest.main()
+
+

@@ -447,14 +447,21 @@ class Component4Pipeline:
         req_staff = plan.required_staff_count if plan.required_staff_count is not None else 0
         cap_gap = max(0.0, float(req_staff - avail_staff) / max(1.0, float(req_staff))) if req_staff > 0 else 0.0
 
+        has_stated_capital = (
+            plan.current_cash_reserve_lkr is not None
+            or plan.available_capital_lkr is not None
+            or plan.available_starting_capital_lkr is not None
+        )
+
         return {
             "action_id": f"ACT_{resolved.entity_id}",
             "business_id": resolved.entity_id,
             "variant": "BASELINE",
-            "baseline_cash_runway_months": runway,
-            "post_action_cash_runway_months": post_runway,
+            "baseline_cash_runway_months": runway if has_stated_capital else None,
+            "post_action_cash_runway_months": post_runway if has_stated_capital else None,
             "operating_margin_ratio": op_margin,
-            "cash_reserves_latest_lkr": cap,
+            "cash_reserves_latest_lkr": cap if has_stated_capital else None,
+            "available_capital_lkr": cap if has_stated_capital else None,
             "debt_service_burden_ratio": debt_burden,
             "debt_service_coverage_ratio": dscr,
             "outstanding_debt_latest_lkr": loan,
@@ -462,10 +469,13 @@ class Component4Pipeline:
             "Repayment_Delay_Days": delay_days,
             "repayment_delay_days": delay_days,
             "repayment_overdue_status": plan.repayment_overdue_status or ("30+ Days Overdue" if delay_days >= 30 else "Current"),
-            "debt_to_capital_ratio": debt_to_cap,
-            "debt_service_to_capital_ratio": debt_service_to_cap,
+            "debt_to_capital_ratio": debt_to_cap if has_stated_capital else 0.0,
+            "debt_service_to_capital_ratio": debt_service_to_cap if has_stated_capital else 0.0,
             "has_unverified_revenue": has_unverified_revenue,
             "monthly_revenue_lkr": revenue,
+            "monthly_expenses_mean_lkr": budget,
+            "fixed_monthly_costs_lkr": fixed_cost,
+            "variable_monthly_costs_lkr": var_cost,
             "supplier_hhi": sup_hhi,
             "supplier_cr1_share": sup_cr1,
             "has_disrupted_supplier": 0,
@@ -481,7 +491,10 @@ class Component4Pipeline:
             "demand_evidence": plan.demand_evidence,
             "imported_materials_exposure": plan.imported_input_exposure,
             "supplier_delay_days": plan.supplier_delay_days or avg_delay,
-            "debt_guarantees": plan.debt_guarantees_or_obligations
+            "debt_guarantees": plan.debt_guarantees_or_obligations,
+            "proposed_growth_action": plan.proposed_growth_action,
+            "required_investment_lkr": inv,
+            "is_zero_debt": (loan == 0.0 and monthly_repay == 0.0 and delay_days == 0.0),
         }
 
     def _generate_markdown_report(

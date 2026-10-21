@@ -1,0 +1,136 @@
+{
+  "scenario_1_adequate_inputs": {
+    "scenario_name": "Existing Business with Adequate Inputs",
+    "business_name": "Royal Bakers Pvt Ltd",
+    "composite_risk_score": 0.2372,
+    "overall_risk_category": "LOW",
+    "growth_readiness": "MODIFY",
+    "can_proceed_immediately": false,
+    "sub_scores": {
+      "credit_risk": 0.1,
+      "market_risk": 0.22,
+      "inflation_risk": 0.095,
+      "liquidity_risk": 0.6875,
+      "operational_risk": 0.0,
+      "debt_burden_risk": 0.1,
+      "growth_action_stress": 0.0933,
+      "supplier_concentration_risk": 0.0,
+      "customer_concentration_risk": 0.22
+    },
+    "category_evidence_sufficiency": {
+      "liquidity": "CONFIRMED",
+      "credit": "CONFIRMED",
+      "market": "CONFIRMED",
+      "inflation": "PARTIAL",
+      "operational": "CONFIRMED",
+      "growth_readiness": "PARTIAL"
+    },
+    "top_mitigation": {
+      "targeted_factor": "LOW_CASH_RUNWAY",
+      "action": "Delay non-essential capital outlays and maintain minimum 2-month cash cushion",
+      "rationale": "Cash runway buffer is thin and requires liquidity stabilization before executing major commitments."
+    },
+    "gnn_predicted_risk": "Medium",
+    "status": "PASS"
+  },
+  "scenario_2_missing_liquidity": {
+    "scenario_name": "Existing Business with Missing Liquidity Information",
+    "business_name": "Lanka Corner Mart",
+    "composite_risk_score": 0.3308,
+    "overall_risk_category": "LOW",
+    "growth_readiness": "MODIFY",
+    "liquidity_sufficiency": "INSUFFICIENT_EVIDENCE",
+    "unknown_fields": [
+      "liquid_cash_reserves",
+      "operating_costs",
+      "estimated_growth_outlay"
+    ],
+    "mitigations": [
+      "Phase capital deployment over 6-9 months and secure supplier vendor-financing",
+      "Verify bank balance statements and establish confirmed liquid reserve visibility"
+    ],
+    "status": "PASS"
+  },
+  "scenario_3_projected_startup": {
+    "scenario_name": "New Business with Projected Data",
+    "business_name": "Artisan Ceylon Roasters",
+    "composite_risk_score": 0.2517,
+    "overall_risk_category": "LOW",
+    "growth_readiness": "MODIFY",
+    "provenance_summary": {
+      "confirmed_user_facts": [
+        "liquid_cash_reserves",
+        "operating_costs",
+        "monthly_revenue",
+        "debt_and_repayment_obligations",
+        "market_and_sales_indicators",
+        "supplier_and_delivery_terms"
+      ],
+      "user_estimates_and_projections": [
+        "proposed_growth_action"
+      ],
+      "externally_sourced_evidence": [
+        {
+          "metric": "National Inflation Benchmark",
+          "source": "Central Bank of Sri Lanka (CBSL)",
+          "date": "2024-Q4",
+          "value": "Headline Inflation ~ 4.5%"
+        }
+      ],
+      "unknown_or_unavailable_fields": [
+        "estimated_growth_outlay"
+      ],
+      "derived_values_and_formulas": {
+        "cash_runway_months": {
+          "value": 1.67,
+          "calculation": "post_action_liquid_cash / monthly_operational_burn"
+        },
+        "debt_service_burden": {
+          "value": 0.0,
+          "calculation": "monthly_debt_repayment / monthly_revenue"
+        },
+        "debt_to_capital": {
+          "value": 0.0,
+          "calculation": "total_outstanding_debt / available_liquid_capital"
+        }
+      }
+    },
+    "status": "PASS"
+  },
+  "scenario_4_isolated_node": {
+    "scenario_name": "Business with No Declared B2B Relationships (Isolated Node)",
+    "business_name": "Solo IT Consulting Services",
+    "composite_risk_score": 0.1475,
+    "gnn_status": "ISOLATED_NODE",
+    "gnn_prediction": null,
+    "gnn_network_metrics": {},
+    "status": "PASS"
+  },
+  "scenario_5_delayed_action": {
+    "scenario_name": "High-Risk Growth Action (Delayed / Conditional)",
+    "business_name": "Overextended Logistics Ltd",
+    "composite_risk_score": 0.65,
+    "overall_risk_category": "HIGH",
+    "growth_readiness": "DELAY",
+    "can_proceed_immediately": false,
+    "has_critical_red_flag": true,
+    "primary_risk_drivers": [
+      {
+        "factor_code": "CRITICAL_CASH_RUNWAY",
+        "severity_score": 0.85,
+        "metric_name": "post_action_cash_runway_months",
+        "observed_value": 0.15,
+        "threshold": 1.0,
+        "description": "Severe cash depletion: post-action cash runway is 0.1 months (immediate exhaustion threshold: < 1.0m; cash reserves: 60,000 LKR)."
+      }
+    ],
+    "mitigations": [
+      {
+        "targeted_factor": "CRITICAL_CASH_RUNWAY",
+        "action": "Phase capital investment and retain at least 3 months of operational cash buffer",
+        "rationale": "Immediate cash depletion leaves zero resilience against revenue shocks or unexpected overhead spikes."
+      }
+    ],
+    "status": "PASS"
+  }
+}

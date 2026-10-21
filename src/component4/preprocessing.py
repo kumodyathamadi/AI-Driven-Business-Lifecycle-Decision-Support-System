@@ -311,6 +311,8 @@ C4_EXCLUDED_TARGETS: List[str] = [
     "Province",
     "Legal_Form",
     "Loan_ID",
+    "Relationship_Notes",
+    "Default_Provenance",
 ]
 
 
@@ -592,6 +594,10 @@ class Component4RiskDataPipeline:
         sec_names = self.sector_encoder.get_feature_names_out([sector_col]).tolist()
         stg_names = self.stage_encoder.get_feature_names_out([stage_col]).tolist()
         self.node_feature_cols = num_cols + sec_names + stg_names
+        # Defensive metadata & target leakage barrier
+        leaked_metadata = [c for c in self.node_feature_cols if c in C4_EXCLUDED_TARGETS]
+        if leaked_metadata:
+            raise ValueError(f"Prohibited metadata/target columns found in feature matrix: {leaked_metadata}")
 
         feature_df = pd.DataFrame(feature_matrix, index=node_df.index, columns=self.node_feature_cols)
 
