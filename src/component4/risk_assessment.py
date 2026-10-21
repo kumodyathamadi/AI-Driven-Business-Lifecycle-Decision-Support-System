@@ -121,6 +121,8 @@ class RiskAssessmentResult:
     has_critical_red_flag: bool
     evidence_sufficiency: str
     scenarios: List[Dict[str, Any]] = field(default_factory=list)
+    capital_runway_months: Optional[float] = None
+    financial_ratios: Dict[str, Any] = field(default_factory=dict)
     methodology_disclosure: str = (
         "Risk scores are explainable, bounded composite indicators and conditional scenario estimates. "
         "They do NOT represent guaranteed future default probabilities or feasibility scores."
@@ -235,21 +237,7 @@ class RiskAssessmentEngine:
             )
         composite_score = round(float(max(0.0, min(1.0, composite_score))), 4)
 
-        # 4. Overall Risk Category
-        if composite_score < cfg.risk_low_ceiling:
-            risk_category = "LOW"
-        elif composite_score < cfg.risk_high_floor:
-            risk_category = "MEDIUM"
-        else:
-            risk_category = "HIGH"
-
-        # 5. Compile and Rank Risk Drivers
-        all_drivers = liq_drivers + credit_drivers + op_drivers + market_drivers + inflation_drivers + act_drivers
-        # Sort drivers by severity score descending
-        all_drivers.sort(key=lambda d: d["severity_score"], reverse=True)
-        primary_drivers = all_drivers[:4] if all_drivers else []
-
-        # 6. Check for Critical Insolvency / Red-Flag Triggers
+        # 4. Check for Critical Insolvency / Red-Flag Triggers
         post_runway = self._safe_float(data.get("post_action_cash_runway_months"), default=2.0)
         inv_to_cash = self._safe_float(data.get("investment_to_cash_ratio"), default=0.0)
         debt_burden = self._safe_float(data.get("debt_service_burden_ratio"), default=0.0)
@@ -257,9 +245,25 @@ class RiskAssessmentEngine:
 
         has_critical_flag = (
             post_runway < cfg.runway_critical_months
+            or (s_credit >= 0.85 and (post_runway < cfg.runway_warning_months or s_liq >= 0.70))
             or (inv_to_cash > cfg.investment_to_cash_critical and debt_burden > cfg.debt_burden_warning)
             or (net_cash_flow < -100000.0 and post_runway < cfg.runway_warning_months)
         )
+
+        # 5. Overall Risk Category
+        if has_critical_flag or composite_score >= cfg.risk_high_floor:
+            risk_category = "HIGH"
+            composite_score = max(composite_score, cfg.risk_high_floor)
+        elif composite_score < cfg.risk_low_ceiling:
+            risk_category = "LOW"
+        else:
+            risk_category = "MEDIUM"
+
+        # 6. Compile and Rank Risk Drivers
+        all_drivers = liq_drivers + credit_drivers + op_drivers + market_drivers + inflation_drivers + act_drivers
+        # Sort drivers by severity score descending
+        all_drivers.sort(key=lambda d: d["severity_score"], reverse=True)
+        primary_drivers = all_drivers[:4] if all_drivers else []
 
         # 7. Growth Readiness Recommendation (PROCEED, MODIFY, DELAY)
         if risk_category == "HIGH" or has_critical_flag:
@@ -278,6 +282,27 @@ class RiskAssessmentEngine:
         # 9. Evaluate Conditional Scenarios
         scenarios = self.evaluate_scenarios(data, composite_score)
 
+        runway_val = data.get("post_action_cash_runway_months")
+        if runway_val is None:
+            runway_val = data.get("baseline_cash_runway_months")
+        if runway_val is not None:
+            try:
+                runway_val = round(float(runway_val), 2)
+            except (ValueError, TypeError):
+                runway_val = None
+
+        fin_ratios = {
+            "baseline_cash_runway_months": data.get("baseline_cash_runway_months"),
+            "post_action_cash_runway_months": data.get("post_action_cash_runway_months"),
+            "operating_margin_ratio": data.get("operating_margin_ratio"),
+            "cash_reserves_latest_lkr": data.get("cash_reserves_latest_lkr"),
+            "debt_service_burden_ratio": data.get("debt_service_burden_ratio"),
+            "debt_service_coverage_ratio": data.get("debt_service_coverage_ratio"),
+            "monthly_revenue_lkr": data.get("monthly_revenue_lkr"),
+            "debt_to_capital_ratio": data.get("debt_to_capital_ratio"),
+            "debt_service_to_capital_ratio": data.get("debt_service_to_capital_ratio"),
+        }
+
         return RiskAssessmentResult(
             action_id=str(data.get("action_id", "UNKNOWN")),
             business_id=str(data.get("business_id", "UNKNOWN")),
@@ -292,6 +317,8 @@ class RiskAssessmentEngine:
             has_critical_red_flag=has_critical_flag,
             evidence_sufficiency=sufficiency_status,
             scenarios=scenarios,
+            capital_runway_months=runway_val,
+            financial_ratios=fin_ratios,
         )
 
     def assess_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -389,12 +416,36 @@ class RiskAssessmentEngine:
         """
         Evaluates Credit Risk:
         Features: Outstanding debt balance, monthly repayment, debt service burden, DSCR,
-        repayment delay days, arrears, default flag, credit score.
+        repayment delay days, overdue status, debt-to-capital ratio, arrears, default flag.
         """
         cfg = self.config
         drivers = []
 
-        # Support both legacy schema and new SME Risk Dataset columns
+        # Support both legacy schema and canonical Phase 2 columns
+        debt_latest = self._safe_float(
+            data.get("outstanding_debt_latest_lkr") or data.get("outstanding_loan_balance_lkr") or data.get("Outstanding_Balance_LKR") or data.get("loan_amount_lkr"),
+            default=0.0
+        )
+        repay_latest = self._safe_float(
+            data.get("monthly_debt_repayment_lkr") or data.get("monthly_loan_repayment_lkr") or data.get("Monthly_Repayment_LKR"),
+            default=0.0
+        )
+        arrears = self._safe_float(
+            data.get("Arrears_Amount_LKR") or data.get("arrears_amount_lkr"),
+            default=0.0
+        )
+        delay_days = self._safe_float(
+            data.get("Repayment_Delay_Days") or data.get("repayment_delay_days") or data.get("payment_delay_days"),
+            default=0.0
+        )
+        default_flag = int(self._safe_float(data.get("Default_Flag"), default=0))
+        overdue_status = str(data.get("repayment_overdue_status") or data.get("overdue_repayments") or "")
+        cap = self._safe_float(data.get("cash_reserves_latest_lkr") or data.get("available_capital_lkr"), default=0.0)
+
+        # Zero-debt enterprise check: zero obligations must yield low risk
+        if debt_latest <= 0.0 and repay_latest <= 0.0 and delay_days <= 0.0 and arrears <= 0.0 and default_flag <= 0 and "30" not in overdue_status:
+            return 0.10, drivers
+
         debt_burden = self._safe_float(
             data.get("debt_service_burden_ratio") or data.get("debt_burden_ratio"),
             default=0.10
@@ -403,23 +454,6 @@ class RiskAssessmentEngine:
             data.get("debt_service_coverage_ratio") or data.get("dscr"),
             default=2.0
         )
-        debt_latest = self._safe_float(
-            data.get("outstanding_debt_latest_lkr") or data.get("Outstanding_Balance_LKR") or data.get("loan_amount_lkr"),
-            default=0.0
-        )
-        repay_latest = self._safe_float(
-            data.get("monthly_debt_repayment_lkr") or data.get("Monthly_Repayment_LKR"),
-            default=0.0
-        )
-        arrears = self._safe_float(
-            data.get("Arrears_Amount_LKR") or data.get("arrears_amount_lkr"),
-            default=0.0
-        )
-        delay_days = self._safe_float(
-            data.get("Repayment_Delay_Days") or data.get("repayment_delay_days"),
-            default=0.0
-        )
-        default_flag = int(self._safe_float(data.get("Default_Flag"), default=0))
 
         # Debt burden component [0, 1]
         burden_score = max(0.0, min(1.0, debt_burden / cfg.debt_burden_critical))
@@ -427,18 +461,77 @@ class RiskAssessmentEngine:
         dscr_score = max(0.0, min(1.0, 1.0 - (dscr / (cfg.dscr_warning * 1.5))))
         s_credit = 0.60 * burden_score + 0.40 * dscr_score
 
-        # Arrears & default penalty
-        if default_flag > 0 or arrears > 50000.0:
-            s_credit = min(1.0, s_credit + 0.35)
+        # 1. Delinquency & Overdue check (30+ days overdue MUST trigger critical credit risk)
+        has_30_plus_delinquency = (
+            default_flag > 0
+            or arrears > 50000.0
+            or delay_days >= 30.0
+            or "30+" in overdue_status
+            or "60+" in overdue_status
+            or "90+" in overdue_status
+        )
+
+        if has_30_plus_delinquency:
+            effective_days = max(delay_days, 30.0 if "30" in overdue_status else 0.0)
+            s_credit = max(0.85, s_credit + 0.45)
             drivers.append({
-                "factor_code": "LOAN_DEFAULT_OR_ARREARS",
+                "factor_code": "REPAYMENT_DELINQUENCY_30_PLUS_DAYS",
                 "severity_score": 0.95,
-                "metric_name": "Arrears_Amount_LKR",
-                "observed_value": arrears,
+                "metric_name": "Repayment_Delay_Days",
+                "observed_value": effective_days,
+                "threshold": 30.0,
+                "description": f"Active loan delinquency detected: repayment is {effective_days:.0f} days past due on monthly installment of {repay_latest:,.0f} LKR. Active delinquency creates acute default and credit risk.",
+            })
+        elif delay_days > 0.0:
+            s_credit = max(0.55, s_credit + 0.25)
+            drivers.append({
+                "factor_code": "EARLY_PAYMENT_DELINQUENCY",
+                "severity_score": 0.65,
+                "metric_name": "Repayment_Delay_Days",
+                "observed_value": delay_days,
                 "threshold": 0.0,
-                "description": f"Past-due loan arrears detected: {arrears:,.0f} LKR outstanding with {delay_days:.0f} repayment delay days.",
+                "description": f"Early repayment friction detected: {delay_days:.0f} days past due on loan obligations.",
             })
 
+        # 2. Extreme debt-to-capital exposure (e.g. 1M debt vs 37.5k capital = 26.7x)
+        debt_to_cap = self._safe_float(data.get("debt_to_capital_ratio"))
+        if debt_to_cap is None or debt_to_cap <= 0.0:
+            debt_to_cap = (debt_latest / cap) if cap > 0 else (99.0 if debt_latest > 0 else 0.0)
+
+        if debt_to_cap > 5.0:
+            s_credit = max(s_credit, min(0.95, 0.70 + min(0.25, (debt_to_cap - 5.0) * 0.01)))
+            drivers.append({
+                "factor_code": "EXTREME_DEBT_TO_CAPITAL_EXPOSURE",
+                "severity_score": 0.90,
+                "metric_name": "debt_to_capital_ratio",
+                "observed_value": round(debt_to_cap, 1),
+                "threshold": 3.0,
+                "description": f"Severe debt-to-capital leverage: outstanding debt ({debt_latest:,.0f} LKR) is {debt_to_cap:.1f}x available liquid capital ({cap:,.0f} LKR). Enterprise lacks equity cushion to absorb liabilities.",
+            })
+        elif debt_to_cap > 2.5:
+            s_credit = max(s_credit, 0.60)
+            drivers.append({
+                "factor_code": "ELEVATED_DEBT_TO_CAPITAL",
+                "severity_score": 0.65,
+                "metric_name": "debt_to_capital_ratio",
+                "observed_value": round(debt_to_cap, 1),
+                "threshold": 2.5,
+                "description": f"Elevated debt leverage: debt-to-capital ratio of {debt_to_cap:.1f}x exceeds recommended 2.5x ceiling.",
+            })
+
+        # 3. Monthly debt service exceeds total available capital
+        if cap > 0 and repay_latest > cap:
+            s_credit = max(s_credit, 0.88)
+            drivers.append({
+                "factor_code": "MONTHLY_DEBT_EXCEEDS_LIQUID_CAPITAL",
+                "severity_score": 0.95,
+                "metric_name": "monthly_debt_repayment_lkr",
+                "observed_value": repay_latest,
+                "threshold": cap,
+                "description": f"Monthly debt repayment ({repay_latest:,.0f} LKR) exceeds total available capital ({cap:,.0f} LKR). Cash reserves cannot service a single full monthly installment without immediate cash inflow.",
+            })
+
+        # 4. Standard debt burden and DSCR triggers
         if debt_burden > cfg.debt_burden_critical:
             drivers.append({
                 "factor_code": "CRITICAL_DEBT_BURDEN",
@@ -456,6 +549,16 @@ class RiskAssessmentEngine:
                 "observed_value": round(dscr, 2),
                 "threshold": cfg.dscr_critical,
                 "description": f"Tight debt service coverage: DSCR is {dscr:.2f}x with monthly debt burden of {debt_burden:.1%} (coverage advisory: > {cfg.dscr_warning:.1f}x).",
+            })
+
+        if data.get("has_unverified_revenue") and repay_latest > 0:
+            drivers.append({
+                "factor_code": "UNVERIFIED_DEBT_SERVICE_CAPACITY",
+                "severity_score": 0.70,
+                "metric_name": "monthly_revenue_lkr",
+                "observed_value": 0,
+                "threshold": repay_latest * 2.0,
+                "description": f"Monthly revenue is unverified: operating cash flow ability to service monthly debt ({repay_latest:,.0f} LKR) cannot be confirmed.",
             })
 
         return min(1.0, s_credit), drivers
@@ -495,6 +598,21 @@ class RiskAssessmentEngine:
         # Baseline customer concentration & delay score
         delay_score = max(0.0, min(1.0, payment_delay / 60.0))
         s_market = 0.40 * cus_hhi + 0.30 * cus_cr1 + 0.30 * delay_score
+
+        # Demand verification evidence
+        demand_ev = str(data.get("demand_evidence") or data.get("customer_demand_evidence") or "").lower()
+        if demand_ev in ("estimate_only", "none", "unknown") or data.get("has_unverified_revenue"):
+            s_market = min(1.0, s_market + 0.10)
+            drivers.append({
+                "factor_code": "ESTIMATED_DEMAND_EVIDENCE",
+                "severity_score": 0.55,
+                "metric_name": "demand_evidence",
+                "observed_value": 0,
+                "threshold": 1,
+                "description": "Customer demand is based on estimates or unverified projections without signed purchase contracts or historical sales records.",
+            })
+        elif demand_ev in ("contracts_signed", "historical_sales", "pre_orders"):
+            s_market = max(0.12, s_market - 0.08)
 
         # Adjust for sales growth and demand index if present
         if sales_growth < 0.0:
@@ -556,9 +674,15 @@ class RiskAssessmentEngine:
         drivers = []
 
         import_reliance = self._safe_float(
-            data.get("Import_Reliance_Pct") or data.get("import_reliance_pct"),
+            data.get("Import_Reliance_Pct") or data.get("import_reliance_pct") or data.get("imported_input_dependency_pct"),
             default=15.0
         )
+        imported_exp = str(data.get("imported_materials_exposure") or data.get("imported_input_exposure") or "")
+        if imported_exp == "High":
+            import_reliance = max(import_reliance, 75.0)
+        elif imported_exp == "Moderate":
+            import_reliance = max(import_reliance, 40.0)
+
         margin_comp = self._safe_float(
             data.get("Margin_Compression_Pct") or data.get("margin_compression_pct"),
             default=2.0
@@ -571,6 +695,10 @@ class RiskAssessmentEngine:
             data.get("Fuel_Transport_Cost_Pct") or data.get("fuel_transport_cost_pct"),
             default=10.0
         )
+        price_hike = self._safe_float(
+            data.get("recent_supplier_price_increase_pct") or data.get("expected_cost_increase_pct"),
+            default=0.0
+        )
 
         score_import = max(0.0, min(1.0, import_reliance / 100.0))
         score_margin = max(0.0, min(1.0, margin_comp / 20.0))
@@ -578,7 +706,7 @@ class RiskAssessmentEngine:
 
         s_inf = 0.40 * score_import + 0.35 * score_margin + 0.25 * score_idx
 
-        if import_reliance > (cfg.import_reliance_warning * 100.0):
+        if import_reliance > (cfg.import_reliance_warning * 100.0) or imported_exp == "High":
             drivers.append({
                 "factor_code": "IMPORT_DEPENDENCY_RISK",
                 "severity_score": round(import_reliance / 100.0, 4),
@@ -586,6 +714,17 @@ class RiskAssessmentEngine:
                 "observed_value": round(import_reliance, 1),
                 "threshold": cfg.import_reliance_warning * 100.0,
                 "description": f"Elevated import reliance: {import_reliance:.1f}% of production inputs are imported, creating currency and tariff vulnerability.",
+            })
+
+        if price_hike > 10.0:
+            s_inf = min(1.0, s_inf + min(0.20, price_hike / 100.0))
+            drivers.append({
+                "factor_code": "SUPPLIER_PRICE_INFLATION",
+                "severity_score": 0.65,
+                "metric_name": "recent_supplier_price_increase_pct",
+                "observed_value": price_hike,
+                "threshold": 10.0,
+                "description": f"Acute input price escalation: recent supplier price increase of {price_hike:.1f}% erodes operating margins.",
             })
 
         if margin_comp > (cfg.margin_compression_warning * 100.0):
@@ -604,7 +743,7 @@ class RiskAssessmentEngine:
         """
         Evaluates Operational Risk:
         Features: Supplier concentration (HHI/CR1), delivery delay days, inventory coverage days,
-        inventory turnover ratio, capacity utilization, disruption count.
+        inventory turnover ratio, capacity utilization, disruption count, staffing availability.
         """
         cfg = self.config
         drivers = []
@@ -613,7 +752,7 @@ class RiskAssessmentEngine:
         sup_cr1 = self._safe_float(data.get("supplier_cr1_share"), default=0.30)
         disrupted = int(self._safe_float(data.get("has_disrupted_supplier") or data.get("Disruption_Count_Last_12M"), default=0))
         delivery_delay = self._safe_float(
-            data.get("Delivery_Delay_Days") or data.get("delivery_delay_days"),
+            data.get("Delivery_Delay_Days") or data.get("delivery_delay_days") or data.get("supplier_delay_days"),
             default=5.0
         )
         inv_coverage = self._safe_float(
@@ -624,6 +763,7 @@ class RiskAssessmentEngine:
             data.get("Capacity_Utilization_Pct") or data.get("capacity_utilization_pct"),
             default=75.0
         )
+        staffing = str(data.get("staffing_availability") or "")
 
         s_op = 0.50 * sup_hhi + 0.20 * sup_cr1 + (0.30 if disrupted else 0.0)
 
@@ -656,6 +796,17 @@ class RiskAssessmentEngine:
                 "observed_value": round(delivery_delay, 1),
                 "threshold": cfg.delivery_delay_warning_days,
                 "description": f"Supplier delivery delay friction: inbound shipment lead time averages {delivery_delay:.1f} days.",
+            })
+
+        if staffing in ("Shortage", "Constrained"):
+            s_op = min(1.0, s_op + 0.15)
+            drivers.append({
+                "factor_code": "STAFFING_CAPACITY_CONSTRAINED",
+                "severity_score": 0.65,
+                "metric_name": "staffing_availability",
+                "observed_value": 0,
+                "threshold": 1,
+                "description": f"Workforce capacity is {staffing.lower()}: headcount constraint limits production and customer service scaling.",
             })
 
         if inv_coverage < cfg.inventory_coverage_min_days and inv_coverage > 0:

@@ -329,8 +329,44 @@ class BusinessEntityResolver:
                     plan=plan,
                     candidates=[],
                     requires_confirmation=False,
-                    notes=notes
+                    notes=notes,
+                    is_verified=True
                 )
+
+        # 3. Check persistent SQLite database
+        if os.path.exists(self.db_path):
+            try:
+                conn = sqlite3.connect(self.db_path)
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT id, business_name, district, province, business_category, business_stage, is_verified, source_origin
+                    FROM component4_businesses
+                    WHERE id = ? OR UPPER(id) = UPPER(?)
+                """, (clean_id, clean_id))
+                row = cursor.fetchone()
+                conn.close()
+                if row:
+                    notes.append(f"Resolved via exact match to persistent database profile '{row[0]}'.")
+                    return self._build_resolved_entity(
+                        entity_id=str(row[0]),
+                        business_name=plan.business_name or str(row[1]),
+                        district=str(row[2] or "Colombo"),
+                        province=str(row[3] or "Western"),
+                        category=str(row[4] or "SME"),
+                        stage=str(row[5] or "Operating"),
+                        is_in_scope=is_in_scope,
+                        scope_status=scope_status,
+                        data_origin=str(row[7] or "REGISTERED"),
+                        match_type="EXACT_ID",
+                        confidence=1.0,
+                        plan=plan,
+                        candidates=[],
+                        requires_confirmation=False,
+                        notes=notes,
+                        is_verified=bool(row[6])
+                    )
+            except Exception:
+                pass
 
         return None
 
@@ -394,7 +430,8 @@ class BusinessEntityResolver:
         candidates: List[Dict[str, Any]],
         requires_confirmation: bool,
         notes: List[str],
-        resolution_method: Optional[str] = None
+        resolution_method: Optional[str] = None,
+        is_verified: bool = False
     ) -> ResolvedBusinessEntity:
         verified_rels = self._retrieve_relationships(entity_id, data_origin)
         
@@ -418,6 +455,8 @@ class BusinessEntityResolver:
             "primary_strategy": plan.primary_strategy
         }
 
+        is_entity_verified = is_verified or (match_type == "EXACT_ID" and data_origin in ("OBSERVED_SOURCE", "REGISTERED"))
+
         return ResolvedBusinessEntity(
             entity_id=entity_id,
             business_name=business_name,
@@ -440,6 +479,7 @@ class BusinessEntityResolver:
             lender_count=len(lenders),
             has_relationship_network=len(verified_rels) > 0,
             resolution_method=resolution_method or match_type,
+            is_verified=is_entity_verified,
             provenance_notes=notes
         )
 

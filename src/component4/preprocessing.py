@@ -651,6 +651,106 @@ class Component4RiskDataPipeline:
         instance.is_fitted = data["is_fitted"]
         return instance
 
+    def transform_single_record(self, record: Dict[str, Any]) -> np.ndarray:
+        """
+        Transforms a single business record dictionary into the canonical 41-dimensional
+        feature vector expected by Component4_B2BRiskGNN_v2.1.
+        """
+        if not self.is_fitted or self.scaler is None or self.sector_encoder is None or self.stage_encoder is None:
+            raise RuntimeError("Preprocessor transformers are not fitted.")
+
+        cap = float(record.get("available_starting_capital_lkr", record.get("available_capital_lkr", record.get("capital_lkr", 0.0))) or 0.0)
+        cash_res = float(record.get("current_cash_reserve_lkr", record.get("cash_reserve_after_startup", cap)) or 0.0)
+        rev = float(record.get("monthly_revenue_lkr", record.get("monthly_sales_revenue", record.get("revenue_lkr", 0.0))) or 0.0)
+        fixed = float(record.get("fixed_monthly_costs_lkr", record.get("monthly_fixed_costs", 50000.0)) or 50000.0)
+        var_costs = float(record.get("variable_monthly_costs_lkr", record.get("monthly_variable_costs", 0.0)) or 0.0)
+        op_exp = fixed + var_costs
+        op_profit = rev - op_exp
+        profit_margin = (op_profit / max(1.0, rev)) * 100.0 if rev > 0 else 0.0
+
+        loan_bal = float(record.get("outstanding_loan_balance_lkr", record.get("outstanding_loan_balance", record.get("loan_amount_lkr", 0.0))) or 0.0)
+        delay_days = float(record.get("repayment_delay_days", record.get("repayment_delinquency_days", 30.0 if "30+" in str(record.get("repayment_overdue_status", record.get("overdue_repayments", ""))) else 0.0)) or 0.0)
+        missed_flag = 1.0 if (delay_days > 0 or "30+" in str(record.get("repayment_overdue_status", ""))) else 0.0
+        debt_to_rev = (loan_bal / max(1.0, rev * 12.0)) if rev > 0 else (5.0 if loan_bal > 0 else 0.0)
+
+        runway = float(record.get("capital_runway_months", 1.0) or 1.0)
+        curr_assets = cash_res + float(record.get("accounts_receivable_lkr", record.get("accounts_receivable", 0.0)) or 0.0)
+        curr_liab = float(record.get("accounts_payable_lkr", record.get("accounts_payable", 0.0)) or 0.0) + float(record.get("monthly_loan_repayment_lkr", record.get("monthly_loan_repayment", 0.0)) or 0.0)
+        quick_ratio = curr_assets / max(1.0, curr_liab) if curr_liab > 0 else 2.0
+
+        sup_delay = float(record.get("supplier_delay_days", 4.0 if "3-5" in str(record.get("delivery_delay_days", "")) else 3.0) or 3.0)
+        disruption_flag = 1.0 if sup_delay > 7.0 else 0.0
+        sup_dep = float(record.get("supplier_dependency_percentage", 50.0 if "Moderate" in str(record.get("supplier_dependency_level", "")) else 35.0) or 35.0)
+        inf_pct = float(record.get("recent_supplier_price_increase_pct", 15.0) or 15.0)
+        imported_dep = float(record.get("imported_input_exposure", 50.0 if "Moderate" in str(record.get("imported_materials_exposure", "")) else 25.0) or 25.0)
+
+        num_dict = {
+            "Business_Age_Years": float(record.get("business_age_years", 1.0) or 1.0),
+            "Available_Capital_LKR": cap,
+            "Employee_Count": float(record.get("employee_count", record.get("available_staff_count", 2)) or 2.0),
+            "Monthly_Budget_LKR": float(record.get("monthly_budget_lkr", fixed) or fixed),
+            "Initial_Investment_LKR": float(record.get("initial_investment_lkr", record.get("initial_financing_amount_lkr", 0.0)) or 0.0),
+            "Loan_Required": 1.0 if (loan_bal > 0 or float(record.get("loan_required", 0)) > 0) else 0.0,
+            "Supplier_Count": float(record.get("supplier_count", 3) or 3.0),
+            "Customer_Concentration_Pct": float(record.get("customer_concentration_pct", 30.0) or 30.0),
+            "Imported_Input_Dependency_Pct": imported_dep,
+            "Avg_Revenue_LKR": rev,
+            "Avg_Operating_Expenses_LKR": op_exp,
+            "Avg_Operating_Profit_LKR": op_profit,
+            "Avg_Profit_Margin_Pct": profit_margin,
+            "Recent_Loan_Balance_LKR": loan_bal,
+            "Recent_Payment_Delay_Days": delay_days,
+            "Recent_Missed_Payment_Flag": missed_flag,
+            "Recent_Debt_to_Revenue_Ratio": debt_to_rev,
+            "Recent_Sales_Growth_Pct": float(record.get("sales_growth_pct", 0.0) or 0.0),
+            "Recent_Competitor_Pressure_Score_1_5": float(record.get("competitor_pressure_score", 3.0) or 3.0),
+            "Recent_Customer_Concentration_Pct": float(record.get("customer_concentration_pct", 30.0) or 30.0),
+            "Recent_Cash_and_Cash_Equivalents_LKR": cash_res,
+            "Recent_Quick_Ratio": quick_ratio,
+            "Recent_Cash_Runway_Months": runway,
+            "Recent_Supplier_Delay_Days": sup_delay,
+            "Recent_Operational_Disruption_Flag": disruption_flag,
+            "Recent_Single_Supplier_Dependency_Pct": sup_dep,
+            "Recent_Estimated_Input_Cost_Inflation_Pct": inf_pct,
+            "Recent_Imported_Input_Dependency_Pct": imported_dep,
+        }
+
+        num_df = pd.DataFrame([num_dict])[list(self.scaler.feature_names_in_)]
+        scaled_num = self.scaler.transform(num_df)
+
+        sec_val = str(record.get("business_sector", record.get("business_category", "Retail")))
+        stg_val = str(record.get("business_stage", "New"))
+
+        valid_sectors = [
+            "Construction", "Food and Beverage", "Information Technology",
+            "Manufacturing", "Professional Services", "Retail",
+            "Tourism and Hospitality", "Transport and Logistics", "Wholesale"
+        ]
+        valid_stages = ["Early-stage", "Established", "Growth-stage", "New"]
+
+        sec_matched = "Retail"
+        for vs in valid_sectors:
+            if vs.lower() in sec_val.lower() or sec_val.lower() in vs.lower():
+                sec_matched = vs
+                break
+
+        stg_matched = "New"
+        for vst in valid_stages:
+            if vst.lower() in stg_val.lower() or stg_val.lower() in vst.lower():
+                stg_matched = vst
+                break
+
+        sec_df = pd.DataFrame([{"Business_Sector": sec_matched}])
+        stg_df = pd.DataFrame([{"Business_Stage": stg_matched}])
+
+        sec_out = self.sector_encoder.transform(sec_df)
+        stg_out = self.stage_encoder.transform(stg_df)
+        encoded_sec = np.asarray(sec_out.toarray() if hasattr(sec_out, "toarray") else sec_out)
+        encoded_stg = np.asarray(stg_out.toarray() if hasattr(stg_out, "toarray") else stg_out)
+
+        feature_vector = np.hstack([scaled_num, encoded_sec, encoded_stg])
+        return feature_vector
+
 
 if __name__ == "__main__":
     pipeline = Component4RiskDataPipeline()

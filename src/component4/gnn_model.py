@@ -140,7 +140,7 @@ class GNNInferenceResult:
     edge_count: int = 0
     relational_embedding_preview: List[float] = field(default_factory=list)
     graph_topology_summary: Dict[str, Any] = field(default_factory=dict)
-    model_version: str = "Component4_B2BRiskGNN_v2.0"
+    model_version: str = "Component4_B2BRiskGNN_v2.1"
     methodology_disclosure: str = (
         "GNN predictions reflect simulated scenario dynamics and relational topology. "
         "They are decision-support indicators, NOT real-world corporate default probabilities."
@@ -798,19 +798,25 @@ class GNNInferenceEngine:
     def infer(
         self,
         resolved_entity: ResolvedBusinessEntity,
-        user_declared_relationships: Optional[List[Dict[str, Any]]] = None
+        user_declared_relationships: Optional[List[Dict[str, Any]]] = None,
+        business_facts: Optional[Dict[str, Any]] = None
     ) -> GNNInferenceResult:
         """
         Executes GNN inference on target business entity.
         Strictly guards against edge fabrication:
         If target business has no verified or declared relationships, gracefully returns ISOLATED_NODE status.
+        When relationships exist, target node (index 0) features are preprocessed via the 41-feature pipeline.
         """
         # 1. Geographic scope check
         if not resolved_entity.is_within_geographic_scope:
             return GNNInferenceResult(
                 gnn_applicable=False,
                 gnn_status="OUT_OF_SCOPE",
-                explanation=f"Business is outside Western Province ({resolved_entity.district}). GNN inference blocked."
+                explanation=f"Business is outside Western Province ({resolved_entity.district}). GNN inference blocked.",
+                inference_notes=[
+                    f"District '{resolved_entity.district}' is outside Western Province scope.",
+                    "GNN inference withheld due to geographic restriction."
+                ]
             )
 
         # 2. Check relationship network existence
@@ -820,14 +826,16 @@ class GNNInferenceEngine:
             active_rels.append({
                 "role": getattr(r, "role", "SUPPLIER"),
                 "partner_id": getattr(r, "counterparty_id", getattr(r, "partner_business_id", "PARTNER")),
-                "strength": float(getattr(r, "strength", 3.0)) / 5.0
+                "strength": float(getattr(r, "strength", 3.0)) / 5.0,
+                "verified": getattr(r, "verified_flag", 1) == 1
             })
         if user_declared_relationships:
             for ur in user_declared_relationships:
                 active_rels.append({
                     "role": ur.get("relationship_type", ur.get("role", "SUPPLIER")).upper(),
                     "partner_id": ur.get("counterparty_name", ur.get("partner_id", "DECLARED_PARTNER")),
-                    "strength": float(ur.get("relationship_strength_1_5", ur.get("strength", 3.0))) / 5.0
+                    "strength": float(ur.get("relationship_strength_1_5", ur.get("strength", 3.0))) / 5.0,
+                    "verified": False
                 })
 
         has_network = resolved_entity.has_relationship_network or len(active_rels) > 0
@@ -836,11 +844,20 @@ class GNNInferenceEngine:
             return GNNInferenceResult(
                 gnn_applicable=False,
                 gnn_status="ISOLATED_NODE",
+                predicted_risk_category=None,
+                graph_contextual_risk_score=None,
+                node_count=1,
+                edge_count=0,
                 explanation=(
-                    f"Target entity '{resolved_entity.entity_id}' has no verified B2B relationship edges in the database (Isolated Node). "
+                    f"Target entity '{resolved_entity.entity_id}' has no verified or user-declared B2B relationship edges (Isolated Node). "
                     "In adherence to scientific integrity protocols, zero artificial edges were fabricated. "
                     "GNN relational inference skipped; Stage 6 deterministic multi-factor assessment provides the primary risk analysis."
-                )
+                ),
+                inference_notes=[
+                    "Target entity has no verified or declared counterparty relationship edges (isolated node).",
+                    "Strict anti-fabrication protocol: zero artificial counterparty edges added.",
+                    "Deterministic multi-factor scoring used as primary risk assessment."
+                ]
             )
 
         # 3. Connected business inference
@@ -852,8 +869,28 @@ class GNNInferenceEngine:
             node_count = max(2, len(active_rels) + 1)
             edge_count = max(1, len(active_rels))
 
-            # Build ego-network sub-graph for local neighborhood
-            dummy_x = torch.zeros((node_count, in_ch), dtype=torch.float)
+            # Build feature matrix for local ego-network:
+            # Node 0: Target business (transformed via 41-feature preprocessor)
+            # Nodes 1..N: Counterparties (standardized mean zero vector)
+            try:
+                pipeline = Component4RiskDataPipeline.load_artifacts()
+                facts = dict(business_facts or {})
+                if not facts:
+                    facts = {
+                        "available_starting_capital_lkr": getattr(resolved_entity, "available_capital_lkr", 0.0),
+                        "outstanding_loan_balance_lkr": getattr(resolved_entity, "outstanding_debt_lkr", 0.0),
+                        "business_sector": getattr(resolved_entity, "business_category", "Retail"),
+                        "district": getattr(resolved_entity, "district", "Colombo"),
+                    }
+                node_0_vec = pipeline.transform_single_record(facts)
+            except Exception:
+                node_0_vec = np.zeros((1, in_ch), dtype=np.float32)
+
+            feature_mat = np.zeros((node_count, in_ch), dtype=np.float32)
+            feature_mat[0, :] = node_0_vec[0, :in_ch]
+            # Counterparty nodes remain centered at z-score 0.0 (empirical mean)
+
+            x_tensor = torch.tensor(feature_mat, dtype=torch.float)
             edges_src = []
             edges_dst = []
             weights = []
@@ -891,9 +928,9 @@ class GNNInferenceEngine:
 
             active_model.eval()
             with torch.no_grad():
-                logits = active_model(dummy_x.to(self.device), edge_index.to(self.device), edge_weight.to(self.device))
+                logits = active_model(x_tensor.to(self.device), edge_index.to(self.device), edge_weight.to(self.device))
                 probs = F.softmax(logits[0], dim=-1).cpu().numpy()
-                emb = active_model.extract_embedding(dummy_x.to(self.device), edge_index.to(self.device), edge_weight.to(self.device))[0].cpu().numpy()
+                emb = active_model.extract_embedding(x_tensor.to(self.device), edge_index.to(self.device), edge_weight.to(self.device))[0].cpu().numpy()
 
             pred_idx = int(np.argmax(probs))
             pred_label = IDX_TO_RISK_LABEL[pred_idx]
@@ -901,6 +938,9 @@ class GNNInferenceEngine:
             # Contextual risk score normalized [0.0, 1.0]
             # Low: 0.15, Medium: 0.50, High: 0.85 weighted by probabilities
             context_score = float(probs[0] * 0.15 + probs[1] * 0.50 + probs[2] * 0.85)
+
+            verified_count = sum(1 for r in active_rels if r.get("verified", False))
+            declared_count = sum(1 for r in active_rels if not r.get("verified", False))
 
             return GNNInferenceResult(
                 gnn_applicable=True,
@@ -917,14 +957,22 @@ class GNNInferenceEngine:
                 relational_embedding_preview=[round(float(v), 4) for v in emb[:6]],
                 graph_topology_summary={
                     "total_counterparties": len(active_rels),
+                    "verified_counterparties": verified_count,
+                    "declared_counterparties": declared_count,
                     "suppliers": sum(1 for r in active_rels if "SUPPLIER" in r.get("role", "")),
                     "customers": sum(1 for r in active_rels if "CUSTOMER" in r.get("role", "") or "BUYER" in r.get("role", "")),
                     "lenders": sum(1 for r in active_rels if "LENDER" in r.get("role", "") or "BANK" in r.get("role", "")),
                 },
                 explanation=(
-                    f"GNN evaluated contextual relationship network with {len(active_rels)} counterparty connection(s). "
+                    f"GNN evaluated contextual relationship network with {len(active_rels)} counterparty connection(s) "
+                    f"({verified_count} verified, {declared_count} user-declared). "
                     f"Contextual risk estimated as {pred_label} (score: {context_score:.2f})."
-                )
+                ),
+                inference_notes=[
+                    f"Network evaluated {node_count} nodes and {edge_count} edges.",
+                    f"Topology: {verified_count} verified in registry, {declared_count} user-declared.",
+                    "Inductive GNN inference applied without altering model parameters."
+                ]
             )
 
         except Exception as e:

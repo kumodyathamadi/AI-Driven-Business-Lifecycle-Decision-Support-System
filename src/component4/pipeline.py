@@ -14,6 +14,7 @@ import os
 import sys
 import json
 import uuid
+import tempfile
 from datetime import datetime
 from dataclasses import dataclass, field, asdict
 from typing import Dict, Any, List, Optional, Tuple, Union
@@ -66,11 +67,16 @@ class Component4AnalysisPipelineResult:
     markdown_report: str
     output_files: Dict[str, str] = field(default_factory=dict)
 
+    @property
+    def business_plan(self) -> ExtractedBusinessPlan:
+        return self.plan_extraction
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "analysis_id": self.analysis_id,
             "timestamp": self.timestamp,
             "business_plan_filename": self.business_plan_filename,
+            "business_plan": self.plan_extraction.to_dict(),
             "plan_extraction": self.plan_extraction.to_dict(),
             "resolved_entity": self.resolved_entity.to_dict(),
             "stage6_risk_assessment": self.stage6_risk_assessment.to_dict(),
@@ -100,30 +106,86 @@ class Component4Pipeline:
 
     def run(
         self,
-        business_plan_path: str,
+        business_plan_path: Optional[Union[str, Dict[str, Any], ExtractedBusinessPlan]] = None,
         confirmed_business_id: Optional[str] = None,
         user_intake_overrides: Optional[Dict[str, Any]] = None,
         user_declared_relationships: Optional[List[Dict[str, Any]]] = None,
-        save_artifacts: bool = True
+        save_artifacts: bool = True,
+        plan_source: Optional[Any] = None,
+        intake_submission: Optional[Dict[str, Any]] = None
     ) -> Component4AnalysisPipelineResult:
         """Runs the complete end-to-end Component 4 risk and readiness pipeline."""
+        target_source = plan_source if plan_source is not None else business_plan_path
+        target_overrides = user_intake_overrides if user_intake_overrides is not None else intake_submission
+
         run_uuid = str(uuid.uuid4())[:8]
         timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
         analysis_id = f"CMP4_{timestamp_str}_{run_uuid}"
 
         # 1. Ingestion & Structured Extraction
-        plan = self.ingestion_service.ingest_file(business_plan_path)
+        temp_file_to_clean = None
+        if isinstance(target_source, ExtractedBusinessPlan):
+            plan = target_source
+        elif isinstance(target_source, dict):
+            with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as tf:
+                json.dump(target_source, tf, indent=2)
+                temp_file_to_clean = tf.name
+            plan = self.ingestion_service.ingest_file(temp_file_to_clean)
+            plan.source_filename = str(target_source.get("business_name") or "submitted_plan.json")
+        elif isinstance(target_source, str):
+            plan = self.ingestion_service.ingest_file(target_source)
+        else:
+            plan = ExtractedBusinessPlan(
+                source_filename="unspecified",
+                file_format=".json",
+                evidence_sufficiency_status="INSUFFICIENT"
+            )
 
-        # 1b. Apply User Dynamic Intake Overrides (with USER_DECLARED provenance)
+        if temp_file_to_clean and os.path.exists(temp_file_to_clean):
+            try:
+                os.remove(temp_file_to_clean)
+            except Exception:
+                pass
+
+        user_intake_overrides = target_overrides
+
+        # 1b. Apply User Dynamic Intake Overrides (with USER_DECLARED / USER_CONFIRMED provenance)
         if user_intake_overrides:
             for key, val in user_intake_overrides.items():
                 extracted_val = val["value"] if isinstance(val, dict) and "value" in val else val
+                prov = val.get("provenance", "USER_CONFIRMED") if isinstance(val, dict) else "USER_CONFIRMED"
                 if extracted_val not in (None, "", "Unknown", "Not available"):
                     if hasattr(plan, key):
                         setattr(plan, key, extracted_val)
-                        plan.provenance_notes.append(f"Field '{key}' supplied via dynamic intake (USER_DECLARED).")
+                        plan.field_provenance[key] = prov
+                        plan.provenance_notes.append(f"Field '{key}' supplied via dynamic intake ({prov}).")
                         if key in plan.missing_fields:
                             plan.missing_fields.remove(key)
+                elif extracted_val is None or str(extracted_val).lower() in ("unknown", "not available"):
+                    plan.field_provenance[key] = "UNKNOWN"
+
+            # Post-process canonical attributes and aliases
+            if plan.available_starting_capital_lkr is not None:
+                plan.available_capital_lkr = plan.available_starting_capital_lkr
+            if plan.outstanding_loan_balance_lkr is not None:
+                plan.requested_loan_lkr = plan.outstanding_loan_balance_lkr
+            if plan.fixed_monthly_costs_lkr is not None:
+                plan.monthly_budget_lkr = plan.fixed_monthly_costs_lkr
+            if plan.monthly_revenue_lkr is not None:
+                plan.projected_revenue_lkr = plan.monthly_revenue_lkr
+
+            if plan.repayment_delay_days is None and plan.repayment_overdue_status:
+                s = str(plan.repayment_overdue_status).lower()
+                if "30+" in s or "30 plus" in s:
+                    plan.repayment_delay_days = 30.0
+                elif "60+" in s:
+                    plan.repayment_delay_days = 60.0
+                elif "90+" in s:
+                    plan.repayment_delay_days = 90.0
+                elif "1-30" in s:
+                    plan.repayment_delay_days = 15.0
+                elif s in ("no", "current", "none", "0"):
+                    plan.repayment_delay_days = 0.0
 
             # Re-evaluate evidence sufficiency status after intake completion
             req_missing = [k for k in plan.missing_fields if k in {"district", "available_capital_lkr", "monthly_budget_lkr"}]
@@ -178,7 +240,11 @@ class Component4Pipeline:
         risk_result = self.risk_engine.assess_record(risk_input)
 
         # 4. Stage 7 GNN Graph-Relational Inference
-        gnn_result = self.gnn_engine.infer(resolved)
+        gnn_result = self.gnn_engine.infer(
+            resolved,
+            user_declared_relationships=user_declared_relationships,
+            business_facts=risk_input
+        )
 
         # 5. Growth Readiness Assessment & Strategy Adaptation
         readiness_result = self.readiness_evaluator.evaluate(plan, resolved, risk_result, gnn_result)
@@ -215,6 +281,17 @@ class Component4Pipeline:
             overall_summary=overall_summary
         )
 
+        if isinstance(target_source, str):
+            bp_filename = os.path.basename(target_source)
+        elif isinstance(target_source, dict):
+            bp_filename = target_source.get("business_name", "submitted_business_plan.json")
+        elif isinstance(target_source, ExtractedBusinessPlan):
+            bp_filename = getattr(target_source, "source_filename", "extracted_plan.json")
+        elif business_plan_path and isinstance(business_plan_path, str):
+            bp_filename = os.path.basename(business_plan_path)
+        else:
+            bp_filename = getattr(plan, "source_filename", "unspecified_plan.json")
+
         output_files = {}
         if save_artifacts:
             run_dir = os.path.join(self.output_base_dir, analysis_id)
@@ -230,7 +307,7 @@ class Component4Pipeline:
             pipeline_result_dict = {
                 "analysis_id": analysis_id,
                 "timestamp": timestamp_str,
-                "business_plan_filename": os.path.basename(business_plan_path),
+                "business_plan_filename": bp_filename,
                 "plan_extraction": plan.to_dict(),
                 "resolved_entity": resolved.to_dict(),
                 "stage6_risk_assessment": risk_result.to_dict(),
@@ -246,7 +323,7 @@ class Component4Pipeline:
         return Component4AnalysisPipelineResult(
             analysis_id=analysis_id,
             timestamp=timestamp_str,
-            business_plan_filename=os.path.basename(business_plan_path),
+            business_plan_filename=bp_filename,
             plan_extraction=plan,
             resolved_entity=resolved,
             stage6_risk_assessment=risk_result,
@@ -263,25 +340,86 @@ class Component4Pipeline:
         resolved: ResolvedBusinessEntity
     ) -> Dict[str, Any]:
         """Maps extracted plan and resolved relationship evidence into Stage 6 input dictionary."""
-        cap = plan.available_capital_lkr or 500000.0
-        budget = plan.monthly_budget_lkr or 150000.0
-        loan = plan.requested_loan_lkr or 0.0
-        inv = plan.initial_inventory_cost_lkr or (cap * 0.3)
-        cust_cnt = plan.expected_customers_per_day or 20
-        price = plan.expected_price_lkr or 1500.0
-        projected_rev = cust_cnt * price * 26
+        # 1. Available liquid capital & cash reserves (distinguish starting capital from cash reserve)
+        cap = (
+            plan.current_cash_reserve_lkr
+            if plan.current_cash_reserve_lkr is not None
+            else (plan.available_capital_lkr if plan.available_capital_lkr is not None else plan.available_starting_capital_lkr)
+        )
+        if cap is None:
+            cap = 0.0
 
-        # Cash Runway
-        runway = plan.capital_runway_months or (cap / max(1.0, budget))
+        # 2. Debt & Repayment Obligations
+        loan = (
+            plan.outstanding_loan_balance_lkr
+            if plan.outstanding_loan_balance_lkr is not None
+            else (plan.requested_loan_lkr or plan.initial_financing_amount_lkr or 0.0)
+        )
+        monthly_repay = (
+            plan.monthly_loan_repayment_lkr
+            if plan.monthly_loan_repayment_lkr is not None
+            else ((loan / 24.0) if loan > 0 else 0.0)
+        )
+
+        # 3. Delinquency / Overdue status
+        delay_days = plan.repayment_delay_days
+        if delay_days is None and plan.repayment_overdue_status:
+            s = str(plan.repayment_overdue_status).lower()
+            if "30+" in s or "30 plus" in s:
+                delay_days = 30.0
+            elif "60+" in s:
+                delay_days = 60.0
+            elif "90+" in s:
+                delay_days = 90.0
+            elif "1-30" in s:
+                delay_days = 15.0
+            elif s in ("no", "current", "none", "0"):
+                delay_days = 0.0
+            else:
+                delay_days = 0.0
+        if delay_days is None:
+            delay_days = 0.0
+
+        # 4. Operating costs & budget
+        fixed_cost = plan.fixed_monthly_costs_lkr if plan.fixed_monthly_costs_lkr is not None else plan.monthly_budget_lkr
+        var_cost = plan.variable_monthly_costs_lkr or 0.0
+        has_stated_budget = (fixed_cost is not None or var_cost > 0)
+        budget = (fixed_cost or 0.0) + (var_cost or 0.0) if has_stated_budget else None
+
+        # 5. Revenue
+        revenue = plan.monthly_revenue_lkr or plan.projected_revenue_lkr
+        has_unverified_revenue = (revenue is None or revenue <= 0.0)
+
+        # 6. Cash Burn & Runway
+        monthly_burn = (monthly_repay or 0.0) + (budget or 0.0)
+        if monthly_burn > 0:
+            runway = cap / monthly_burn
+        elif cap > 0:
+            runway = 60.0
+        else:
+            runway = 0.0
+
+        inv = plan.initial_inventory_cost_lkr or plan.required_investment_lkr or plan.proposed_growth_budget_lkr or 0.0
         post_cash = max(0.0, cap - inv)
-        post_runway = post_cash / max(1.0, budget)
+        post_runway = (post_cash / monthly_burn) if monthly_burn > 0 else (60.0 if post_cash > 0 else 0.0)
 
-        # Debt burden
-        monthly_repay = (loan / 24.0) if loan > 0 else 0.0
-        debt_burden = monthly_repay / max(1.0, projected_rev)
-        dscr = (projected_rev - budget) / max(1.0, monthly_repay) if monthly_repay > 0 else 3.0
+        # Sync computed runway to plan for UI and reporting
+        plan.capital_runway_months = round(runway, 2)
 
-        # Supplier & Customer Concentration
+        # 7. Debt ratios
+        debt_to_cap = (loan / cap) if cap > 0 else (999.0 if loan > 0 else 0.0)
+        debt_service_to_cap = (monthly_repay / cap) if cap > 0 else (999.0 if monthly_repay > 0 else 0.0)
+
+        if not has_unverified_revenue and revenue is not None and revenue > 0:
+            debt_burden = monthly_repay / revenue
+            dscr = (revenue - (budget or 0.0)) / max(1.0, monthly_repay) if monthly_repay > 0 else 3.0
+            op_margin = (revenue - (budget or 0.0)) / revenue
+        else:
+            debt_burden = 1.0 if monthly_repay > 0 else 0.0
+            dscr = 0.1 if monthly_repay > 0 else 3.0
+            op_margin = 0.0
+
+        # 8. Supplier & Customer Concentration
         if resolved.has_relationship_network:
             suppliers = [r for r in resolved.verified_relationships if r.role == "SUPPLIER"]
             customers = [r for r in resolved.verified_relationships if r.role == "CUSTOMER"]
@@ -296,17 +434,15 @@ class Component4Pipeline:
             delays = [r.payment_delay_days for r in resolved.verified_relationships if r.payment_delay_days is not None]
             avg_delay = float(sum(delays) / max(1, len(delays))) if delays else 15.0
         else:
-            # Proxy scores based on extracted scores without fabricating edges
             sup_score = plan.supplier_availability_score or 3
             sup_hhi = max(0.1, 0.6 - (sup_score * 0.1))
             sup_cr1 = max(0.2, 0.7 - (sup_score * 0.1))
             cus_hhi = 0.25
             cus_cr1 = 0.35
-            avg_delay = 15.0
+            avg_delay = plan.supplier_delay_days if plan.supplier_delay_days is not None else 15.0
 
-        # Action stress
-        inv_to_cash = inv / max(1.0, cap)
-        cost_to_rev = (budget * 0.1) / max(1.0, projected_rev)
+        inv_to_cash = (inv / max(1.0, cap)) if cap > 0 else 1.0
+        cost_to_rev = ((budget or 0.0) * 0.1) / max(1.0, revenue or 1.0)
         avail_staff = plan.available_staff_count if plan.available_staff_count is not None else 1
         req_staff = plan.required_staff_count if plan.required_staff_count is not None else 0
         cap_gap = max(0.0, float(req_staff - avail_staff) / max(1.0, float(req_staff))) if req_staff > 0 else 0.0
@@ -317,12 +453,19 @@ class Component4Pipeline:
             "variant": "BASELINE",
             "baseline_cash_runway_months": runway,
             "post_action_cash_runway_months": post_runway,
-            "operating_margin_ratio": (projected_rev - budget) / max(1.0, projected_rev),
+            "operating_margin_ratio": op_margin,
             "cash_reserves_latest_lkr": cap,
             "debt_service_burden_ratio": debt_burden,
             "debt_service_coverage_ratio": dscr,
             "outstanding_debt_latest_lkr": loan,
             "monthly_debt_repayment_lkr": monthly_repay,
+            "Repayment_Delay_Days": delay_days,
+            "repayment_delay_days": delay_days,
+            "repayment_overdue_status": plan.repayment_overdue_status or ("30+ Days Overdue" if delay_days >= 30 else "Current"),
+            "debt_to_capital_ratio": debt_to_cap,
+            "debt_service_to_capital_ratio": debt_service_to_cap,
+            "has_unverified_revenue": has_unverified_revenue,
+            "monthly_revenue_lkr": revenue,
             "supplier_hhi": sup_hhi,
             "supplier_cr1_share": sup_cr1,
             "has_disrupted_supplier": 0,
@@ -334,7 +477,11 @@ class Component4Pipeline:
             "cost_to_revenue_ratio": cost_to_rev,
             "capacity_gap": cap_gap,
             "staffing_growth_ratio": (req_staff / max(1, avail_staff)) if avail_staff > 0 else 1.0,
-            "evidence_sufficiency": plan.evidence_sufficiency_status
+            "evidence_sufficiency": plan.evidence_sufficiency_status,
+            "demand_evidence": plan.demand_evidence,
+            "imported_materials_exposure": plan.imported_input_exposure,
+            "supplier_delay_days": plan.supplier_delay_days or avg_delay,
+            "debt_guarantees": plan.debt_guarantees_or_obligations
         }
 
     def _generate_markdown_report(

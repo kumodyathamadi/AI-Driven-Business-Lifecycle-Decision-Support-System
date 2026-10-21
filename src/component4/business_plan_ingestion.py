@@ -43,13 +43,27 @@ class ExtractedBusinessPlan:
     province: Optional[str] = None
     location_type: Optional[str] = None
     
-    # Financial fields
+    # Financial fields (Legacy & Canonical Phase 2)
     available_capital_lkr: Optional[float] = None
+    available_starting_capital_lkr: Optional[float] = None
     monthly_budget_lkr: Optional[float] = None
+    fixed_monthly_costs_lkr: Optional[float] = None
+    variable_monthly_costs_lkr: Optional[float] = None
     requested_loan_lkr: Optional[float] = None
+    initial_financing_amount_lkr: Optional[float] = None
+    outstanding_loan_balance_lkr: Optional[float] = None
+    monthly_loan_repayment_lkr: Optional[float] = None
+    repayment_overdue_status: Optional[str] = None
+    repayment_delay_days: Optional[float] = None
+    debt_guarantees_or_obligations: Optional[str] = None
+    current_cash_reserve_lkr: Optional[float] = None
+    accounts_receivable_lkr: Optional[float] = None
+    accounts_payable_lkr: Optional[float] = None
+    monthly_interest_cost_lkr: Optional[float] = None
     initial_inventory_cost_lkr: Optional[float] = None
     expected_price_lkr: Optional[float] = None
     projected_revenue_lkr: Optional[float] = None
+    monthly_revenue_lkr: Optional[float] = None
     capital_runway_months: Optional[float] = None
     
     # Operational & Market fields
@@ -59,13 +73,19 @@ class ExtractedBusinessPlan:
     available_equipment_score: Optional[int] = None
     required_equipment_score: Optional[int] = None
     supplier_availability_score: Optional[int] = None
+    supplier_dependency_percentage: Optional[float] = None
+    supplier_delay_days: Optional[float] = None
+    imported_input_exposure: Optional[str] = None
     competition_level: Optional[str] = None
     customer_demand_score: Optional[int] = None
+    demand_evidence: Optional[str] = None
     location_suitability_score: Optional[int] = None
     entrepreneur_experience_years: Optional[int] = None
     
     # Growth & Strategy
     proposed_growth_action: Optional[str] = None
+    proposed_growth_budget_lkr: Optional[float] = None
+    required_investment_lkr: Optional[float] = None
     primary_strategy: Optional[str] = None
     roadmap_items: List[str] = field(default_factory=list)
     key_enablers: List[str] = field(default_factory=list)
@@ -77,12 +97,53 @@ class ExtractedBusinessPlan:
     provenance_notes: List[str] = field(default_factory=list)
     validation_errors: List[str] = field(default_factory=list)
     evidence_sufficiency_status: str = "SUFFICIENT"  # SUFFICIENT, PARTIAL, INSUFFICIENT
+    field_provenance: Dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self):
         if not self.source_filename and self.plan_filename:
             self.source_filename = self.plan_filename
         elif not self.plan_filename and self.source_filename:
             self.plan_filename = self.source_filename
+
+        # Synchronize canonical and legacy aliases
+        if self.available_starting_capital_lkr is None and self.available_capital_lkr is not None:
+            self.available_starting_capital_lkr = self.available_capital_lkr
+        elif self.available_capital_lkr is None and self.available_starting_capital_lkr is not None:
+            self.available_capital_lkr = self.available_starting_capital_lkr
+
+        if self.initial_financing_amount_lkr is None and self.requested_loan_lkr is not None:
+            self.initial_financing_amount_lkr = self.requested_loan_lkr
+        elif self.requested_loan_lkr is None and self.initial_financing_amount_lkr is not None:
+            self.requested_loan_lkr = self.initial_financing_amount_lkr
+
+        if self.monthly_revenue_lkr is None and self.projected_revenue_lkr is not None:
+            self.monthly_revenue_lkr = self.projected_revenue_lkr
+        elif self.projected_revenue_lkr is None and self.monthly_revenue_lkr is not None:
+            self.projected_revenue_lkr = self.monthly_revenue_lkr
+
+        if self.fixed_monthly_costs_lkr is None and self.monthly_budget_lkr is not None:
+            self.fixed_monthly_costs_lkr = self.monthly_budget_lkr
+        elif self.monthly_budget_lkr is None and self.fixed_monthly_costs_lkr is not None:
+            self.monthly_budget_lkr = self.fixed_monthly_costs_lkr
+
+        if self.required_investment_lkr is None and self.proposed_growth_budget_lkr is not None:
+            self.required_investment_lkr = self.proposed_growth_budget_lkr
+        elif self.proposed_growth_budget_lkr is None and self.required_investment_lkr is not None:
+            self.proposed_growth_budget_lkr = self.required_investment_lkr
+
+        # Normalize repayment delay days from overdue status string if present
+        if self.repayment_delay_days is None and self.repayment_overdue_status:
+            status_str = str(self.repayment_overdue_status).lower()
+            if "30+" in status_str or "30 plus" in status_str:
+                self.repayment_delay_days = 30.0
+            elif "60+" in status_str:
+                self.repayment_delay_days = 60.0
+            elif "90+" in status_str:
+                self.repayment_delay_days = 90.0
+            elif "1-30" in status_str:
+                self.repayment_delay_days = 15.0
+            elif status_str in ("current", "no", "none", "0"):
+                self.repayment_delay_days = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

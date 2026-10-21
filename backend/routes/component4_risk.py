@@ -510,6 +510,38 @@ def run_analysis(request: RunAnalysisRequest):
         raise HTTPException(status_code=500, detail=f"Analysis pipeline error: {clean_msg}")
 
 
+@router.post("/assess")
+def assess_business(request: Dict[str, Any], db: Session = Depends(get_db)):
+    """Convenience and backwards-compatible direct assessment endpoint."""
+    plan_source = request.get("plan_source") or request.get("plan_json") or request
+    intake = request.get("intake_submission") or request.get("completed_fields") or request
+    declared_rels = request.get("user_declared_relationships") or request.get("declared_relationships") or []
+    confirmed_id = request.get("confirmed_business_id")
+    try:
+        res = pipeline.run(
+            plan_source=plan_source,
+            intake_submission=intake,
+            user_declared_relationships=declared_rels,
+            confirmed_business_id=confirmed_id,
+            save_artifacts=False
+        )
+        return {
+            "success": True,
+            "analysis_id": res.analysis_id,
+            "timestamp": res.timestamp,
+            "summary": res.overall_summary,
+            "business_plan": res.business_plan.to_dict(),
+            "plan_extraction": res.plan_extraction.to_dict(),
+            "resolved_entity": res.resolved_entity.to_dict(),
+            "stage6_risk_assessment": res.stage6_risk_assessment.to_dict(),
+            "stage7_gnn_inference": res.stage7_gnn_inference.to_dict(),
+            "growth_readiness": res.growth_readiness.to_dict()
+        }
+    except Exception as e:
+        clean_msg = sanitize_for_logging(str(e))
+        raise HTTPException(status_code=500, detail=f"Assessment error: {clean_msg}")
+
+
 @router.get("/business/{business_id}/history")
 def get_business_assessment_history(
     business_id: str,

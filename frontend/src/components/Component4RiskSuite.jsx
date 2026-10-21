@@ -1561,24 +1561,24 @@ export default function Component4RiskSuite({
                 <div className="c4-risk-card">
                   <div className="c4-risk-card-header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <DollarSign size={18} style={{ color: 'var(--primary-green)' }} />
+                      <DollarSign size={18} style={{ color: (stage6.sub_scores?.credit_risk ?? stage6.sub_scores?.debt_burden_risk ?? 0.35) >= 0.65 ? 'var(--risk-high)' : 'var(--primary-green)' }} />
                       <span className="c4-risk-card-title">1. Credit Risk</span>
                     </div>
-                    <span className="badge-risk-neutral">
-                      Score: {(stage6.sub_scores?.debt_burden_risk ?? 0.35).toFixed(2)}
+                    <span className={(stage6.sub_scores?.credit_risk ?? stage6.sub_scores?.debt_burden_risk ?? 0.35) >= 0.65 ? 'badge-risk-high' : (stage6.sub_scores?.credit_risk ?? stage6.sub_scores?.debt_burden_risk ?? 0.35) >= 0.35 ? 'badge-risk-medium' : 'badge-risk-low'}>
+                      Score: {(stage6.sub_scores?.credit_risk ?? stage6.sub_scores?.debt_burden_risk ?? 0.35).toFixed(2)}
                     </span>
                   </div>
 
                   <div style={{ background: 'var(--bg-subtle)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                    <strong>Supporting Evidence:</strong> Outstanding loan balance of {formatDisplayValue(formData.outstanding_loan_balance || plan.outstanding_debt_lkr || availableFacts.loan_amount_lkr?.value, 'loan')} evaluated against liquid debt coverage buffer.
+                    <strong>Supporting Evidence:</strong> Outstanding debt of {formatDisplayValue(formData.outstanding_loan_balance || plan.outstanding_loan_balance_lkr || plan.outstanding_debt_lkr, 'loan')}, monthly repayment {formatDisplayValue(formData.monthly_loan_repayment || plan.monthly_loan_repayment_lkr, 'loan')}, overdue status: {formData.overdue_repayments || plan.repayment_overdue_status || 'Current'}.
                   </div>
 
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                    Evaluates debt service capacity and monthly principal obligation stability under potential revenue volatility.
+                    Evaluates debt service capacity, repayment delinquency history, and debt-to-capital leverage buffer.
                   </div>
 
-                  <div style={{ fontSize: '0.75rem', color: 'var(--primary-green)', fontWeight: 600 }}>
-                    Recommended Next Action: Maintain monthly debt service obligations below 25% of gross operational collections.
+                  <div style={{ fontSize: '0.75rem', color: (stage6.sub_scores?.credit_risk ?? stage6.sub_scores?.debt_burden_risk ?? 0.35) >= 0.65 ? 'var(--risk-high)' : 'var(--primary-green)', fontWeight: 600 }}>
+                    Recommended Next Action: {(stage6.sub_scores?.credit_risk ?? 0.35) >= 0.65 ? 'Resolve overdue arrears immediately and freeze additional borrowing until debt ratio normalizes.' : 'Maintain monthly debt service obligations below 25% of gross operational collections.'}
                   </div>
                 </div>
 
@@ -1586,14 +1586,16 @@ export default function Component4RiskSuite({
                 <div className="c4-risk-card">
                   <div className="c4-risk-card-header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <TrendingUp size={18} style={{ color: 'var(--primary-green)' }} />
+                      <TrendingUp size={18} style={{ color: (stage6.sub_scores?.market_risk ?? 0.28) >= 0.65 ? 'var(--risk-high)' : 'var(--primary-green)' }} />
                       <span className="c4-risk-card-title">2. Market Risk</span>
                     </div>
-                    <span className="badge-risk-neutral">Score: 0.28</span>
+                    <span className={(stage6.sub_scores?.market_risk ?? 0.28) >= 0.65 ? 'badge-risk-high' : (stage6.sub_scores?.market_risk ?? 0.28) >= 0.35 ? 'badge-risk-medium' : 'badge-risk-low'}>
+                      Score: {(stage6.sub_scores?.market_risk ?? 0.28).toFixed(2)}
+                    </span>
                   </div>
 
                   <div style={{ background: 'var(--bg-subtle)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                    <strong>Supporting Evidence:</strong> Location in Western Province with demand verification: {formData.customer_demand_evidence?.replace(/_/g, ' ') || 'pre-orders'}.
+                    <strong>Supporting Evidence:</strong> Location in {plan.district || 'Western Province'} with demand verification: {formData.customer_demand_evidence?.replace(/_/g, ' ') || 'pre-orders'}.
                   </div>
 
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
@@ -1609,14 +1611,16 @@ export default function Component4RiskSuite({
                 <div className="c4-risk-card">
                   <div className="c4-risk-card-header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Flame size={18} style={{ color: 'var(--risk-medium)' }} />
+                      <Flame size={18} style={{ color: (stage6.sub_scores?.inflation_risk ?? 0.42) >= 0.65 ? 'var(--risk-high)' : 'var(--risk-medium)' }} />
                       <span className="c4-risk-card-title">3. Inflation Risk</span>
                     </div>
-                    <span className="badge-risk-medium">Score: 0.42</span>
+                    <span className={(stage6.sub_scores?.inflation_risk ?? 0.42) >= 0.65 ? 'badge-risk-high' : (stage6.sub_scores?.inflation_risk ?? 0.42) >= 0.35 ? 'badge-risk-medium' : 'badge-risk-low'}>
+                      Score: {(stage6.sub_scores?.inflation_risk ?? 0.42).toFixed(2)}
+                    </span>
                   </div>
 
                   <div style={{ background: 'var(--bg-subtle)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                    <strong>Supporting Evidence:</strong> Operating expenses exposed to Sri Lankan utility tariffs and raw consumable price shocks.
+                    <strong>Supporting Evidence:</strong> Operating expenses exposed to Sri Lankan utility tariffs, imported inputs ({formData.imported_materials_exposure || 'Moderate'}), and vendor price escalation.
                   </div>
 
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
@@ -1632,23 +1636,23 @@ export default function Component4RiskSuite({
                 <div className="c4-risk-card">
                   <div className="c4-risk-card-header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Clock size={18} style={{ color: 'var(--risk-high)' }} />
+                      <Clock size={18} style={{ color: (stage6.sub_scores?.liquidity_risk ?? 0.40) >= 0.65 ? 'var(--risk-high)' : 'var(--risk-medium)' }} />
                       <span className="c4-risk-card-title">4. Liquidity Risk</span>
                     </div>
-                    <span className="badge-risk-high">
-                      Score: {(stage6.sub_scores?.liquidity_risk ?? 0.55).toFixed(2)}
+                    <span className={(stage6.sub_scores?.liquidity_risk ?? 0.40) >= 0.65 ? 'badge-risk-high' : (stage6.sub_scores?.liquidity_risk ?? 0.40) >= 0.35 ? 'badge-risk-medium' : 'badge-risk-low'}>
+                      Score: {(stage6.sub_scores?.liquidity_risk ?? 0.40).toFixed(2)}
                     </span>
                   </div>
 
                   <div style={{ background: 'var(--bg-subtle)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                    <strong>Supporting Evidence:</strong> Capital runway estimated at {formatDisplayValue(plan.capital_runway_months, 'months')} based on liquid cash reserves.
+                    <strong>Supporting Evidence:</strong> Capital runway estimated at {plan.capital_runway_months != null ? `${plan.capital_runway_months} months` : 'Calculated from liquid reserves'} based on liquid cash reserves vs monthly burn.
                   </div>
 
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
                     Calculates how many months the enterprise can sustain operations if revenues arrive slower than forecasted.
                   </div>
 
-                  <div style={{ fontSize: '0.75rem', color: 'var(--risk-high)', fontWeight: 600 }}>
+                  <div style={{ fontSize: '0.75rem', color: (stage6.sub_scores?.liquidity_risk ?? 0.40) >= 0.65 ? 'var(--risk-high)' : 'var(--primary-green)', fontWeight: 600 }}>
                     Recommended Next Action: Establish an emergency 3-month liquid cash reserve buffer before committing to new capital outlays.
                   </div>
                 </div>
@@ -1657,14 +1661,16 @@ export default function Component4RiskSuite({
                 <div className="c4-risk-card">
                   <div className="c4-risk-card-header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Truck size={18} style={{ color: 'var(--primary-green)' }} />
+                      <Truck size={18} style={{ color: (stage6.sub_scores?.operational_risk ?? 0.22) >= 0.65 ? 'var(--risk-high)' : 'var(--primary-green)' }} />
                       <span className="c4-risk-card-title">5. Operational Risk</span>
                     </div>
-                    <span className="badge-risk-low">Score: 0.22</span>
+                    <span className={(stage6.sub_scores?.operational_risk ?? 0.22) >= 0.65 ? 'badge-risk-high' : (stage6.sub_scores?.operational_risk ?? 0.22) >= 0.35 ? 'badge-risk-medium' : 'badge-risk-low'}>
+                      Score: {(stage6.sub_scores?.operational_risk ?? 0.22).toFixed(2)}
+                    </span>
                   </div>
 
                   <div style={{ background: 'var(--bg-subtle)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                    <strong>Supporting Evidence:</strong> Staff operational plan and confirmed delivery timelines from primary trade counterparties.
+                    <strong>Supporting Evidence:</strong> Supplier dependency: {formData.supplier_dependency_level || 'Moderate'}, delivery lead-time: {formData.delivery_delay_days || '3-5 days'}, staffing: {formData.staffing_availability || 'Adequate'}.
                   </div>
 
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
@@ -2060,12 +2066,22 @@ export default function Component4RiskSuite({
             {/* AREA B: GROWTH READINESS */}
             {activePlanSubTab === 'growth' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ background: 'var(--bg-subtle)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+                <div style={{
+                  background: readiness.decision === 'DELAY' ? 'var(--risk-high-bg)' : readiness.decision === 'MODIFY' ? 'var(--risk-medium-bg)' : 'var(--bg-subtle)',
+                  padding: '1rem',
+                  borderRadius: 'var(--radius-sm)',
+                  border: `1px solid ${readiness.decision === 'DELAY' ? 'var(--risk-high-border)' : readiness.decision === 'MODIFY' ? 'var(--risk-medium-border)' : 'var(--border-color)'}`
+                }}>
                   <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 700 }}>
                     Stage-Aligned Growth Decision
                   </div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--primary-green)', marginTop: '0.25rem' }}>
-                    {readiness.decision || 'Conditionally Ready for Phased Expansion'}
+                  <div style={{
+                    fontSize: '1.15rem',
+                    fontWeight: 700,
+                    color: readiness.decision === 'DELAY' ? 'var(--risk-high)' : readiness.decision === 'MODIFY' ? 'var(--risk-medium)' : 'var(--primary-green)',
+                    marginTop: '0.25rem'
+                  }}>
+                    {readiness.decision_label || (readiness.decision === 'DELAY' ? 'Defer expansion' : readiness.decision === 'MODIFY' ? 'Proceed with conditions' : readiness.decision || 'Conditionally Ready for Phased Expansion')}
                   </div>
                   <p style={{ fontSize: '0.825rem', color: 'var(--text-primary)', marginTop: '0.35rem', lineHeight: 1.5, margin: 0 }}>
                     {readiness.risk_adjusted_recommendation || 'The enterprise possesses sufficient operational stability for organic growth, provided working capital buffers are funded before undertaking long-term liabilities.'}
@@ -2075,23 +2091,32 @@ export default function Component4RiskSuite({
                 <div className="grid-2">
                   <div style={{ background: 'var(--bg-surface)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
                     <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
-                      Prerequisites for Growth
+                      {readiness.decision === 'DELAY' ? 'Critical Constraints & Reasons' : 'Decision Rationales'}
                     </div>
                     <ul style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', paddingLeft: '1.25rem', lineHeight: 1.6, margin: 0 }}>
-                      <li>Maintain 3 consecutive months of positive operating cashflow</li>
-                      <li>Secure at least one verified backup supplier agreement</li>
-                      <li>Hold liquid reserves equal to 60 days of fixed expenses</li>
+                      {(readiness.reasons?.length ? readiness.reasons : readiness.decision_rationales?.length ? readiness.decision_rationales : [
+                        'Post-action cash runway evaluated against minimum operating buffer.',
+                        'Debt service obligations compared against available capital and gross margin.'
+                      ]).map((r, idx) => (
+                        <li key={idx}>{r}</li>
+                      ))}
                     </ul>
                   </div>
 
                   <div style={{ background: 'var(--bg-surface)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
                     <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
-                      Capital &amp; Resource Requirements
+                      {readiness.decision === 'DELAY' ? 'Conditions to Reconsider & Required Evidence' : 'Prerequisites & Modifications'}
                     </div>
                     <ul style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', paddingLeft: '1.25rem', lineHeight: 1.6, margin: 0 }}>
-                      <li>Recommended expansion budget: LKR 200,000 – 400,000</li>
-                      <li>Staffing requirement: Cross-train 1 senior operations lead</li>
-                      <li>Financing structure: Prefer retained earnings over high-rate debt</li>
+                      {(readiness.conditions_that_must_be_met?.length ? readiness.conditions_that_must_be_met : readiness.suggested_modifications?.length ? readiness.suggested_modifications : [
+                        'Maintain 3 consecutive months of positive operating cashflow',
+                        'Hold liquid reserves equal to 60 days of fixed expenses'
+                      ]).map((c, idx) => (
+                        <li key={idx}>{c}</li>
+                      ))}
+                      {readiness.evidence_needed_to_reconsider?.map((ev, idx) => (
+                        <li key={`ev-${idx}`} style={{ color: 'var(--text-muted)' }}>Evidence needed: {ev}</li>
+                      ))}
                     </ul>
                   </div>
                 </div>
