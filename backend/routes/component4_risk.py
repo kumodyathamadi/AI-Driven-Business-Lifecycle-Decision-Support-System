@@ -456,6 +456,7 @@ def submit_intake_and_run(
             "is_reused_profile": is_reused_profile,
             "timestamp": res.timestamp,
             "summary": res.overall_summary,
+            "business_plan": res.plan_extraction.to_dict(),
             "plan_extraction": res.plan_extraction.to_dict(),
             "resolved_entity": res.resolved_entity.to_dict(),
             "stage6_risk_assessment": res.stage6_risk_assessment.to_dict(),
@@ -498,6 +499,7 @@ def run_analysis(request: RunAnalysisRequest):
             "analysis_id": res.analysis_id,
             "timestamp": res.timestamp,
             "summary": res.overall_summary,
+            "business_plan": res.plan_extraction.to_dict(),
             "plan_extraction": res.plan_extraction.to_dict(),
             "resolved_entity": res.resolved_entity.to_dict(),
             "stage6_risk_assessment": res.stage6_risk_assessment.to_dict(),
@@ -665,6 +667,9 @@ def get_analysis_by_id(analysis_id: str, db: Session = Depends(get_db)):
         try:
             with open(json_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
+            if isinstance(data, dict):
+                if "business_plan" not in data and "plan_extraction" in data:
+                    data["business_plan"] = data["plan_extraction"]
             return {"success": True, "data": data}
         except Exception:
             pass
@@ -672,7 +677,10 @@ def get_analysis_by_id(analysis_id: str, db: Session = Depends(get_db)):
     # Database fallback
     run_rec = db.query(Component4AssessmentRun).filter_by(id=analysis_id).first()
     if run_rec and run_rec.full_results_json:
-        return {"success": True, "data": run_rec.full_results_json}
+        data = dict(run_rec.full_results_json)
+        if "business_plan" not in data and "plan_extraction" in data:
+            data["business_plan"] = data["plan_extraction"]
+        return {"success": True, "data": data}
 
     raise HTTPException(status_code=404, detail=f"Analysis ID '{analysis_id}' not found.")
 

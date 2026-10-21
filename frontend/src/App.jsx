@@ -38,20 +38,21 @@ export default function App() {
     try {
       const res = await getComponent4Analysis(analysisId);
       const data = res?.data || res;
-      setActiveAssessment(data);
-      setActiveTab('c4_risk_results');
+      if (data && (data.stage6_risk_assessment || data.composite_risk_score !== undefined)) {
+        setActiveAssessment(data);
+        setActiveTab('c4_risk_results');
+      } else {
+        console.warn('Analysis record found but risk calculation is incomplete:', data);
+        setActiveAssessment(data);
+        setActiveTab('new_assessment');
+      }
     } catch (err) {
-      console.warn('Could not fetch full analysis by ID, using stub/fallback:', err);
-      // Fallback object so workspace still opens
-      const fallback = {
-        analysis_id: analysisId,
-        business_id: businessId || 'SME-FALLBACK',
-        business_name: businessId || 'Registered Enterprise',
-        overall_risk_level: 'MEDIUM',
-        overall_risk_category: 'MEDIUM'
-      };
-      setActiveAssessment(fallback);
-      setActiveTab('c4_risk_results');
+      console.warn('Could not fetch full analysis by ID:', err);
+      // Do not navigate to Step 4 with fake data; open new assessment workflow for this business
+      if (businessId) {
+        setPreSelectedBusiness({ id: businessId, business_name: businessId });
+      }
+      setActiveTab('new_assessment');
     } finally {
       setLoadingAssessment(false);
     }

@@ -474,9 +474,26 @@ class Component4RiskDataPipeline:
             mcol = "Month" if "Month" in t.columns else "Assessment_Month"
             t.sort_values(["Business_ID", mcol], inplace=True)
 
-        # Compute 6-month moving average of key monthly indicators
+        # Scientific Leakage Prevention: Ensure feature windows strictly precede the target period.
+        # When predicting Month T (e.g., Month 24), feature aggregations use strictly preceding records (Months 18-23).
+        def _get_strictly_preceding(df_table: pd.DataFrame) -> pd.DataFrame:
+            if df_table.empty:
+                return df_table
+            counts = df_table.groupby("Business_ID")["Business_ID"].transform("count")
+            cum = df_table.groupby("Business_ID").cumcount(ascending=False)
+            is_prec = (cum > 0) | (counts == 1)
+            return df_table[is_prec]
+
+        mf_prec = _get_strictly_preceding(mf)
+        cr_prec = _get_strictly_preceding(cr)
+        mk_prec = _get_strictly_preceding(mk)
+        lq_prec = _get_strictly_preceding(lq)
+        op_prec = _get_strictly_preceding(op)
+        inf_prec = _get_strictly_preceding(inf)
+
+        # Compute 6-month moving average of key monthly indicators on strictly preceding records
         # Financial averages
-        mf_recent = mf.groupby("Business_ID").tail(6).groupby("Business_ID").agg({
+        mf_recent = mf_prec.groupby("Business_ID").tail(6).groupby("Business_ID").agg({
             "Revenue_LKR": "mean",
             "Operating_Expenses_LKR": "mean",
             "Operating_Profit_LKR": "mean",
@@ -484,7 +501,7 @@ class Component4RiskDataPipeline:
         }).rename(columns=lambda c: f"Avg_{c}")
 
         # Credit averages
-        cr_recent = cr.groupby("Business_ID").tail(6).groupby("Business_ID").agg({
+        cr_recent = cr_prec.groupby("Business_ID").tail(6).groupby("Business_ID").agg({
             "Loan_Balance_LKR": "last",
             "Payment_Delay_Days": "mean",
             "Missed_Payment_Flag": "max",
@@ -492,28 +509,28 @@ class Component4RiskDataPipeline:
         }).rename(columns=lambda c: f"Recent_{c}")
 
         # Market averages
-        mk_recent = mk.groupby("Business_ID").tail(6).groupby("Business_ID").agg({
+        mk_recent = mk_prec.groupby("Business_ID").tail(6).groupby("Business_ID").agg({
             "Sales_Growth_Pct": "mean",
             "Competitor_Pressure_Score_1_5": "mean",
             "Customer_Concentration_Pct": "last",
         }).rename(columns=lambda c: f"Recent_{c}")
 
         # Liquidity averages
-        lq_recent = lq.groupby("Business_ID").tail(6).groupby("Business_ID").agg({
+        lq_recent = lq_prec.groupby("Business_ID").tail(6).groupby("Business_ID").agg({
             "Cash_and_Cash_Equivalents_LKR": "last",
             "Quick_Ratio": "mean",
             "Cash_Runway_Months": "mean",
         }).rename(columns=lambda c: f"Recent_{c}")
 
         # Operational averages
-        op_recent = op.groupby("Business_ID").tail(6).groupby("Business_ID").agg({
+        op_recent = op_prec.groupby("Business_ID").tail(6).groupby("Business_ID").agg({
             "Supplier_Delay_Days": "mean",
             "Operational_Disruption_Flag": "max",
             "Single_Supplier_Dependency_Pct": "mean",
         }).rename(columns=lambda c: f"Recent_{c}")
 
         # Inflation exposure
-        inf_recent = inf.groupby("Business_ID").tail(6).groupby("Business_ID").agg({
+        inf_recent = inf_prec.groupby("Business_ID").tail(6).groupby("Business_ID").agg({
             "Estimated_Input_Cost_Inflation_Pct": "mean",
             "Imported_Input_Dependency_Pct": "last",
         }).rename(columns=lambda c: f"Recent_{c}")

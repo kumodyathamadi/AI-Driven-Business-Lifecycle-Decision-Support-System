@@ -605,11 +605,26 @@ export default function Component4RiskSuite({
   ];
 
   // Derived analysis variables safely extracted
-  const hasActiveResult = Boolean(analysisResult);
+  const hasActiveResult = Boolean(
+    analysisResult && 
+    (analysisResult.stage6_risk_assessment || analysisResult.composite_risk_score !== undefined)
+  );
   const stage6 = analysisResult?.stage6_risk_assessment || {};
   const stage7 = analysisResult?.stage7_gnn_inference || {};
   const readiness = analysisResult?.growth_readiness || {};
-  const plan = analysisResult?.business_plan || {};
+  const plan = analysisResult?.business_plan || analysisResult?.plan_extraction || {};
+
+  // Safely extract scores without hardcoded float fallbacks
+  const compositeScore = (stage6.composite_risk_score !== undefined && stage6.composite_risk_score !== null)
+    ? Number(stage6.composite_risk_score)
+    : (analysisResult?.composite_risk_score !== undefined ? Number(analysisResult.composite_risk_score) : null);
+  const creditScore = (stage6.sub_scores?.credit_risk !== undefined && stage6.sub_scores?.credit_risk !== null)
+    ? Number(stage6.sub_scores.credit_risk)
+    : (stage6.sub_scores?.debt_burden_risk !== undefined && stage6.sub_scores?.debt_burden_risk !== null ? Number(stage6.sub_scores.debt_burden_risk) : null);
+  const marketScore = (stage6.sub_scores?.market_risk !== undefined && stage6.sub_scores?.market_risk !== null) ? Number(stage6.sub_scores.market_risk) : null;
+  const inflationScore = (stage6.sub_scores?.inflation_risk !== undefined && stage6.sub_scores?.inflation_risk !== null) ? Number(stage6.sub_scores.inflation_risk) : null;
+  const liquidityScore = (stage6.sub_scores?.liquidity_risk !== undefined && stage6.sub_scores?.liquidity_risk !== null) ? Number(stage6.sub_scores.liquidity_risk) : null;
+  const operationalScore = (stage6.sub_scores?.operational_risk !== undefined && stage6.sub_scores?.operational_risk !== null) ? Number(stage6.sub_scores.operational_risk) : null;
 
   return (
     <div className="c4-container">
@@ -1534,7 +1549,11 @@ export default function Component4RiskSuite({
                 <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-subtle)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
                     <span style={{ color: 'var(--text-secondary)' }}>
-                      Composite Risk Score: <strong style={{ color: 'var(--text-primary)' }}>{(stage6.composite_risk_score || 0.45).toFixed(2)}</strong> / 1.00
+                      Composite Risk Score: {compositeScore !== null ? (
+                        <strong style={{ color: 'var(--text-primary)' }}>{compositeScore.toFixed(2)} / 1.00</strong>
+                      ) : (
+                        <strong style={{ color: 'var(--text-muted)' }}>Pending Calculation</strong>
+                      )}
                     </span>
                     <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
                       (Lower is safer &bull; Distinguishes model prediction from deterministic financial metrics)
@@ -1544,7 +1563,7 @@ export default function Component4RiskSuite({
                     <div
                       style={{
                         height: '100%',
-                        width: `${Math.min(100, (stage6.composite_risk_score || 0.45) * 100)}%`,
+                        width: `${compositeScore !== null ? Math.min(100, Math.max(0, compositeScore * 100)) : 0}%`,
                         background: (stage6.overall_risk_category || 'MEDIUM') === 'HIGH' ? 'var(--risk-high)' :
                                     (stage6.overall_risk_category || 'MEDIUM') === 'MEDIUM' ? 'var(--risk-medium)' : 'var(--risk-low)',
                         transition: 'width 0.4s ease'
@@ -1561,11 +1580,11 @@ export default function Component4RiskSuite({
                 <div className="c4-risk-card">
                   <div className="c4-risk-card-header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <DollarSign size={18} style={{ color: (stage6.sub_scores?.credit_risk ?? stage6.sub_scores?.debt_burden_risk ?? 0.35) >= 0.65 ? 'var(--risk-high)' : 'var(--primary-green)' }} />
+                      <DollarSign size={18} style={{ color: creditScore !== null ? (creditScore >= 0.65 ? 'var(--risk-high)' : 'var(--primary-green)') : 'var(--text-muted)' }} />
                       <span className="c4-risk-card-title">1. Credit Risk</span>
                     </div>
-                    <span className={(stage6.sub_scores?.credit_risk ?? stage6.sub_scores?.debt_burden_risk ?? 0.35) >= 0.65 ? 'badge-risk-high' : (stage6.sub_scores?.credit_risk ?? stage6.sub_scores?.debt_burden_risk ?? 0.35) >= 0.35 ? 'badge-risk-medium' : 'badge-risk-low'}>
-                      Score: {(stage6.sub_scores?.credit_risk ?? stage6.sub_scores?.debt_burden_risk ?? 0.35).toFixed(2)}
+                    <span className={creditScore !== null ? (creditScore >= 0.65 ? 'badge-risk-high' : creditScore >= 0.35 ? 'badge-risk-medium' : 'badge-risk-low') : 'badge-risk-neutral'}>
+                      {creditScore !== null ? `Score: ${creditScore.toFixed(2)}` : 'Score: Pending'}
                     </span>
                   </div>
 
@@ -1577,8 +1596,8 @@ export default function Component4RiskSuite({
                     Evaluates debt service capacity, repayment delinquency history, and debt-to-capital leverage buffer.
                   </div>
 
-                  <div style={{ fontSize: '0.75rem', color: (stage6.sub_scores?.credit_risk ?? stage6.sub_scores?.debt_burden_risk ?? 0.35) >= 0.65 ? 'var(--risk-high)' : 'var(--primary-green)', fontWeight: 600 }}>
-                    Recommended Next Action: {(stage6.sub_scores?.credit_risk ?? 0.35) >= 0.65 ? 'Resolve overdue arrears immediately and freeze additional borrowing until debt ratio normalizes.' : 'Maintain monthly debt service obligations below 25% of gross operational collections.'}
+                  <div style={{ fontSize: '0.75rem', color: creditScore !== null && creditScore >= 0.65 ? 'var(--risk-high)' : 'var(--primary-green)', fontWeight: 600 }}>
+                    Recommended Next Action: {creditScore !== null ? (creditScore >= 0.65 ? 'Resolve overdue arrears immediately and freeze additional borrowing until debt ratio normalizes.' : 'Maintain monthly debt service obligations below 25% of gross operational collections.') : 'Complete financial intake to calculate credit service capacity.'}
                   </div>
                 </div>
 
@@ -1586,11 +1605,11 @@ export default function Component4RiskSuite({
                 <div className="c4-risk-card">
                   <div className="c4-risk-card-header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <TrendingUp size={18} style={{ color: (stage6.sub_scores?.market_risk ?? 0.28) >= 0.65 ? 'var(--risk-high)' : 'var(--primary-green)' }} />
+                      <TrendingUp size={18} style={{ color: marketScore !== null ? (marketScore >= 0.65 ? 'var(--risk-high)' : 'var(--primary-green)') : 'var(--text-muted)' }} />
                       <span className="c4-risk-card-title">2. Market Risk</span>
                     </div>
-                    <span className={(stage6.sub_scores?.market_risk ?? 0.28) >= 0.65 ? 'badge-risk-high' : (stage6.sub_scores?.market_risk ?? 0.28) >= 0.35 ? 'badge-risk-medium' : 'badge-risk-low'}>
-                      Score: {(stage6.sub_scores?.market_risk ?? 0.28).toFixed(2)}
+                    <span className={marketScore !== null ? (marketScore >= 0.65 ? 'badge-risk-high' : marketScore >= 0.35 ? 'badge-risk-medium' : 'badge-risk-low') : 'badge-risk-neutral'}>
+                      {marketScore !== null ? `Score: ${marketScore.toFixed(2)}` : 'Score: Pending'}
                     </span>
                   </div>
 
@@ -1611,11 +1630,11 @@ export default function Component4RiskSuite({
                 <div className="c4-risk-card">
                   <div className="c4-risk-card-header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Flame size={18} style={{ color: (stage6.sub_scores?.inflation_risk ?? 0.42) >= 0.65 ? 'var(--risk-high)' : 'var(--risk-medium)' }} />
+                      <Flame size={18} style={{ color: inflationScore !== null ? (inflationScore >= 0.65 ? 'var(--risk-high)' : 'var(--risk-medium)') : 'var(--text-muted)' }} />
                       <span className="c4-risk-card-title">3. Inflation Risk</span>
                     </div>
-                    <span className={(stage6.sub_scores?.inflation_risk ?? 0.42) >= 0.65 ? 'badge-risk-high' : (stage6.sub_scores?.inflation_risk ?? 0.42) >= 0.35 ? 'badge-risk-medium' : 'badge-risk-low'}>
-                      Score: {(stage6.sub_scores?.inflation_risk ?? 0.42).toFixed(2)}
+                    <span className={inflationScore !== null ? (inflationScore >= 0.65 ? 'badge-risk-high' : inflationScore >= 0.35 ? 'badge-risk-medium' : 'badge-risk-low') : 'badge-risk-neutral'}>
+                      {inflationScore !== null ? `Score: ${inflationScore.toFixed(2)}` : 'Score: Pending'}
                     </span>
                   </div>
 
@@ -1636,11 +1655,11 @@ export default function Component4RiskSuite({
                 <div className="c4-risk-card">
                   <div className="c4-risk-card-header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Clock size={18} style={{ color: (stage6.sub_scores?.liquidity_risk ?? 0.40) >= 0.65 ? 'var(--risk-high)' : 'var(--risk-medium)' }} />
+                      <Clock size={18} style={{ color: liquidityScore !== null ? (liquidityScore >= 0.65 ? 'var(--risk-high)' : 'var(--risk-medium)') : 'var(--text-muted)' }} />
                       <span className="c4-risk-card-title">4. Liquidity Risk</span>
                     </div>
-                    <span className={(stage6.sub_scores?.liquidity_risk ?? 0.40) >= 0.65 ? 'badge-risk-high' : (stage6.sub_scores?.liquidity_risk ?? 0.40) >= 0.35 ? 'badge-risk-medium' : 'badge-risk-low'}>
-                      Score: {(stage6.sub_scores?.liquidity_risk ?? 0.40).toFixed(2)}
+                    <span className={liquidityScore !== null ? (liquidityScore >= 0.65 ? 'badge-risk-high' : liquidityScore >= 0.35 ? 'badge-risk-medium' : 'badge-risk-low') : 'badge-risk-neutral'}>
+                      {liquidityScore !== null ? `Score: ${liquidityScore.toFixed(2)}` : 'Score: Pending'}
                     </span>
                   </div>
 
@@ -1652,7 +1671,7 @@ export default function Component4RiskSuite({
                     Calculates how many months the enterprise can sustain operations if revenues arrive slower than forecasted.
                   </div>
 
-                  <div style={{ fontSize: '0.75rem', color: (stage6.sub_scores?.liquidity_risk ?? 0.40) >= 0.65 ? 'var(--risk-high)' : 'var(--primary-green)', fontWeight: 600 }}>
+                  <div style={{ fontSize: '0.75rem', color: liquidityScore !== null && liquidityScore >= 0.65 ? 'var(--risk-high)' : 'var(--primary-green)', fontWeight: 600 }}>
                     Recommended Next Action: Establish an emergency 3-month liquid cash reserve buffer before committing to new capital outlays.
                   </div>
                 </div>
@@ -1661,11 +1680,11 @@ export default function Component4RiskSuite({
                 <div className="c4-risk-card">
                   <div className="c4-risk-card-header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Truck size={18} style={{ color: (stage6.sub_scores?.operational_risk ?? 0.22) >= 0.65 ? 'var(--risk-high)' : 'var(--primary-green)' }} />
+                      <Truck size={18} style={{ color: operationalScore !== null ? (operationalScore >= 0.65 ? 'var(--risk-high)' : 'var(--primary-green)') : 'var(--text-muted)' }} />
                       <span className="c4-risk-card-title">5. Operational Risk</span>
                     </div>
-                    <span className={(stage6.sub_scores?.operational_risk ?? 0.22) >= 0.65 ? 'badge-risk-high' : (stage6.sub_scores?.operational_risk ?? 0.22) >= 0.35 ? 'badge-risk-medium' : 'badge-risk-low'}>
-                      Score: {(stage6.sub_scores?.operational_risk ?? 0.22).toFixed(2)}
+                    <span className={operationalScore !== null ? (operationalScore >= 0.65 ? 'badge-risk-high' : operationalScore >= 0.35 ? 'badge-risk-medium' : 'badge-risk-low') : 'badge-risk-neutral'}>
+                      {operationalScore !== null ? `Score: ${operationalScore.toFixed(2)}` : 'Score: Pending'}
                     </span>
                   </div>
 
@@ -1977,29 +1996,29 @@ export default function Component4RiskSuite({
                   Execute these prioritized preventative actions. Toggle the status button to track milestones:
                 </div>
 
-                {(stage6.recommended_mitigations || [
+                {((stage6.recommended_mitigations && stage6.recommended_mitigations.length > 0) ? stage6.recommended_mitigations : [
                   {
-                    action: 'Establish 3-Month Emergency Operating Reserve',
-                    mechanism: 'Hold liquid cash buffer in business money market account to insulate against delayed debtor collections.',
+                    action: 'Establish 3-Month Emergency Operating Reserve Buffer',
+                    mechanism: 'Hold liquid buffer equal to 3 months of operating expenses to insulate against cashflow fluctuations.',
                     time_horizon: 'Immediate (Month 1–2)',
                     risk_factor: 'liquidity_risk',
-                    estimated_cost: 'LKR 250,000 liquid allocation',
+                    estimated_cost: formData.monthly_fixed_costs ? `LKR ${(Number(formData.monthly_fixed_costs) * 3).toLocaleString()} (3x monthly fixed costs)` : '3x documented monthly fixed expenses',
                     priority: 'HIGH'
                   },
                   {
                     action: 'Qualify Secondary Supply Partner in Western Province',
-                    mechanism: 'Sign backup supply agreement with secondary wholesaler to protect against raw material price spikes.',
+                    mechanism: 'Sign backup supply agreement with secondary distributor to mitigate single-supplier dependency and delivery friction.',
                     time_horizon: '1–3 Months',
                     risk_factor: 'operational_risk',
-                    estimated_cost: 'Minimal / Negotiation time',
+                    estimated_cost: 'Internal management time',
                     priority: 'MEDIUM'
                   },
                   {
-                    action: 'Lock-in Advance Client Deposits & Loyalty Perks',
-                    mechanism: 'Require 20% advance booking deposit on major service orders to guarantee baseline sales volume.',
+                    action: 'Structure Phased Milestone Invoicing & Customer Commitments',
+                    mechanism: 'Evaluate advance booking deposits or milestone payments tailored to business category to stabilize operational cash inflows.',
                     time_horizon: 'Ongoing',
                     risk_factor: 'market_risk',
-                    estimated_cost: 'Zero outlay',
+                    estimated_cost: 'Policy adjustment',
                     priority: 'LOW'
                   }
                 ]).map((mit, i) => {

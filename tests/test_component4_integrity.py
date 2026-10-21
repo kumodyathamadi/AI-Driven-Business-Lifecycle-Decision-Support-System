@@ -472,6 +472,196 @@ class TestComponent4IntegritySuite(unittest.TestCase):
         self.assertEqual(overall_cat, "HIGH")
         self.assertTrue(stage6.get("has_critical_red_flag"))
 
+    # -------------------------------------------------------------------------
+    # Case 15: Distinct Incident Profiles (Helloo Glow vs Daily Bake House)
+    # -------------------------------------------------------------------------
+    def test_case_15_helloo_glow_vs_daily_bake_house_differentiation(self):
+        """Case 15: Proves Helloo Glow and Daily Bake House produce differentiated, truthful scores through intake/submit-and-run."""
+        helloo_payload = {
+            "business_name": "Helloo Glow Beauty Studio",
+            "district": "Kalutara",
+            "business_category": "Personal Care / Salon",
+            "completed_fields": {
+                "outstanding_loan_balance": 50000.0,
+                "monthly_loan_repayment": 10000.0,
+                "overdue_repayments": "No",
+                "customer_demand_evidence": "estimate_only",
+                "available_starting_capital_lkr": 150000.0,
+                "monthly_sales_revenue": 120000.0,
+                "monthly_fixed_costs": 40000.0,
+                "monthly_variable_costs": 20000.0,
+                "cash_available_operations": 150000.0,
+            },
+            "declared_relationships": []
+        }
+
+        daily_payload = {
+            "business_name": "Daily Bake House",
+            "district": "Colombo",
+            "business_category": "Bakery",
+            "completed_fields": {
+                "outstanding_loan_balance": 500000.0,
+                "monthly_loan_repayment": 75000.0,
+                "overdue_repayments": "30+ Days",
+                "customer_demand_evidence": "estimate_only",
+                "available_starting_capital_lkr": 50000.0,
+                "monthly_sales_revenue": 150000.0,
+                "monthly_fixed_costs": 95000.0,
+                "monthly_variable_costs": 50000.0,
+                "cash_available_operations": 30000.0,
+            },
+            "declared_relationships": []
+        }
+
+        r_helloo = self.client.post("/api/component4/intake/submit-and-run", json=helloo_payload)
+        self.assertEqual(r_helloo.status_code, 200)
+        d_helloo = r_helloo.json()
+
+        r_daily = self.client.post("/api/component4/intake/submit-and-run", json=daily_payload)
+        self.assertEqual(r_daily.status_code, 200)
+        d_daily = r_daily.json()
+
+        # Check response contract compatibility
+        self.assertIn("business_plan", d_helloo)
+        self.assertIn("plan_extraction", d_helloo)
+        self.assertIn("business_plan", d_daily)
+        self.assertIn("plan_extraction", d_daily)
+
+        # Check score differentiation
+        s6_helloo = d_helloo["stage6_risk_assessment"]
+        s6_daily = d_daily["stage6_risk_assessment"]
+
+        self.assertNotEqual(s6_helloo["composite_risk_score"], s6_daily["composite_risk_score"])
+        self.assertLess(s6_helloo["composite_risk_score"], 0.40)
+        self.assertGreaterEqual(s6_daily["composite_risk_score"], 0.60)
+
+        # Credit risk differentiation
+        credit_helloo = s6_helloo["sub_scores"]["credit_risk"]
+        credit_daily = s6_daily["sub_scores"]["credit_risk"]
+        self.assertLess(credit_helloo, 0.25, "Helloo Glow (low debt, current) must have low credit risk")
+        self.assertEqual(credit_daily, 1.0, "Daily Bake House (30+ days overdue) must have max credit risk 1.0")
+
+        # Growth decision differentiation
+        self.assertIn(d_helloo["growth_readiness"]["decision"], ["PROCEED", "MODIFY"])
+        self.assertEqual(d_daily["growth_readiness"]["decision"], "DELAY")
+
+    # -------------------------------------------------------------------------
+    # Case 16: Scientific Data Leakage Prevention (Preceding Temporal Window)
+    # -------------------------------------------------------------------------
+    def test_case_16_temporal_feature_target_separation(self):
+        """Case 16: Verifies feature aggregations strictly precede the target period without contemporaneous leakage."""
+        import pandas as pd
+        from component4.preprocessing import Component4RiskDataPipeline
+
+        # Construct synthetic multi-month series (24 months)
+        bids = ["SME_TEST_01", "SME_TEST_02"]
+        months = [f"2024-{m:02d}" for m in range(1, 13)] + [f"2025-{m:02d}" for m in range(1, 13)]
+
+        records = []
+        for bid in bids:
+            for i, m in enumerate(months, start=1):
+                records.append({
+                    "Business_ID": bid,
+                    "Month": m,
+                    "Revenue_LKR": 10000.0 * i,
+                    "Operating_Expenses_LKR": 5000.0 * i,
+                    "Operating_Profit_LKR": 5000.0 * i,
+                    "Profit_Margin_Pct": 50.0,
+                    "Loan_Balance_LKR": 1000.0 * i,
+                    "Payment_Delay_Days": float(i),
+                    "Missed_Payment_Flag": 0,
+                    "Debt_to_Revenue_Ratio": 0.1,
+                    "Sales_Growth_Pct": 5.0,
+                    "Competitor_Pressure_Score_1_5": 2.0,
+                    "Customer_Concentration_Pct": 25.0,
+                    "Cash_and_Cash_Equivalents_LKR": 5000.0 * i,
+                    "Quick_Ratio": 1.5,
+                    "Cash_Runway_Months": 3.0,
+                    "Supplier_Delay_Days": 2.0,
+                    "Operational_Disruption_Flag": 0,
+                    "Single_Supplier_Dependency_Pct": 30.0,
+                    "Estimated_Input_Cost_Inflation_Pct": 4.0,
+                    "Imported_Input_Dependency_Pct": 15.0,
+                    "Overall_Risk_Label": "Low" if i < 20 else "High"
+                })
+
+        df_monthly = pd.DataFrame(records)
+        df_bp = pd.DataFrame({
+            "Business_ID": bids,
+            "District": ["Colombo", "Kalutara"],
+            "Business_Sector": ["Bakery", "Retail"],
+            "Business_Stage": ["Growing", "Established"],
+            "Business_Age_Years": [3, 5],
+            "Available_Capital_LKR": [200000.0, 300000.0],
+            "Employee_Count": [4, 6],
+            "Monthly_Budget_LKR": [80000.0, 90000.0],
+            "Initial_Investment_LKR": [150000.0, 200000.0],
+            "Loan_Required": [0, 1],
+            "Supplier_Count": [3, 4],
+            "Customer_Concentration_Pct": [25.0, 30.0],
+            "Imported_Input_Dependency_Pct": [10.0, 15.0]
+        })
+
+        tables = {
+            "profile": df_bp,
+            "monthly_financials": df_monthly[["Business_ID", "Month", "Revenue_LKR", "Operating_Expenses_LKR", "Operating_Profit_LKR", "Profit_Margin_Pct"]],
+            "credit": df_monthly[["Business_ID", "Month", "Loan_Balance_LKR", "Payment_Delay_Days", "Missed_Payment_Flag", "Debt_to_Revenue_Ratio"]],
+            "market": df_monthly[["Business_ID", "Month", "Sales_Growth_Pct", "Competitor_Pressure_Score_1_5", "Customer_Concentration_Pct"]],
+            "liquidity": df_monthly[["Business_ID", "Month", "Cash_and_Cash_Equivalents_LKR", "Quick_Ratio", "Cash_Runway_Months"]],
+            "operational": df_monthly[["Business_ID", "Month", "Supplier_Delay_Days", "Operational_Disruption_Flag", "Single_Supplier_Dependency_Pct"]],
+            "inflation": df_monthly[["Business_ID", "Month", "Estimated_Input_Cost_Inflation_Pct", "Imported_Input_Dependency_Pct"]],
+            "risk_assessment": df_monthly[["Business_ID", "Month", "Overall_Risk_Label"]]
+        }
+
+        prep = Component4RiskDataPipeline()
+        node_df, target_series, _ = prep.extract_node_features(tables)
+
+        # In strictly preceding window (Months 18 to 23), the last month is Month 23!
+        # Month 23 Loan_Balance_LKR is 23,000. Month 24 was 24,000.
+        # If Month 24 leaked, the feature value / fitted scaler mean would be 24,000.
+        # With strict temporal separation, the unscaled value before standardization MUST be 23,000.0!
+        loan_idx = prep.scaler.feature_names_in_.tolist().index("Recent_Loan_Balance_LKR")
+        fitted_mean_loan = float(prep.scaler.mean_[loan_idx])
+        self.assertEqual(fitted_mean_loan, 23000.0, f"Expected 23,000.0 (Month 23), got {fitted_mean_loan}. Month 24 leaked!")
+
+        # Target label comes from Month 24
+        self.assertEqual(target_series.loc["SME_TEST_01"], "High")
+
+    # -------------------------------------------------------------------------
+    # Case 17: Retrieval and Persistence Contract Accuracy
+    # -------------------------------------------------------------------------
+    def test_case_17_analysis_retrieval_contract_integrity(self):
+        """Case 17: Verifies get_analysis_by_id endpoint returns consistent business_plan and plan_extraction."""
+        # Run a test assessment
+        payload = {
+            "business_name": "Contract Integrity Test SME",
+            "district": "Colombo",
+            "completed_fields": {
+                "outstanding_loan_balance": 150000.0,
+                "monthly_loan_repayment": 15000.0,
+                "overdue_repayments": "No",
+                "monthly_sales_revenue": 300000.0,
+                "monthly_fixed_costs": 75000.0,
+            }
+        }
+        r_run = self.client.post("/api/component4/intake/submit-and-run", json=payload)
+        self.assertEqual(r_run.status_code, 200)
+        run_data = r_run.json()
+        analysis_id = run_data["analysis_id"]
+
+        # Fetch via GET /api/component4/analysis/{analysis_id}
+        r_get = self.client.get(f"/api/component4/analysis/{analysis_id}")
+        self.assertEqual(r_get.status_code, 200)
+        retrieved = r_get.json()
+        self.assertTrue(retrieved.get("success"))
+        data = retrieved.get("data", {})
+
+        self.assertIn("business_plan", data)
+        self.assertIn("plan_extraction", data)
+        self.assertIn("stage6_risk_assessment", data)
+        self.assertIn("growth_readiness", data)
+        self.assertEqual(data["business_plan"]["business_name"], "Contract Integrity Test SME")
+
 
 if __name__ == "__main__":
     unittest.main()
