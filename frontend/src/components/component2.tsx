@@ -376,6 +376,124 @@ async function fetchSamplePlansListAPI(): Promise<SamplePlanItem[]> {
 }
 
 // ---------------------------------------------------------------------------
+// Bilingual Translation Dictionaries & Helpers for 5-Stage Roadmap
+// ---------------------------------------------------------------------------
+
+function stripSinhalaText(text?: string | null): string {
+  if (!text) return '';
+  return text.replace(/\s*\([\u0D80-\u0DFF\s\d\-./,]+\)/g, '').replace(/[\u0D80-\u0DFF]/g, '').trim();
+}
+
+function stripEnglishText(text?: string | null): string {
+  if (!text) return '';
+  return text.replace(/\s*\([a-zA-Z0-9\s\-./,]+\)/g, '').trim();
+}
+
+function getDistrictSinhala(dist?: string | null): string {
+  if (!dist) return 'කොළඹ';
+  const d = dist.toLowerCase();
+  if (d.includes('colombo')) return 'කොළඹ';
+  if (d.includes('gampaha')) return 'ගම්පහ';
+  if (d.includes('kalutara')) return 'කළුතර';
+  return 'බස්නාහිර පළාත';
+}
+
+interface StageTranslation {
+  title_en: string;
+  title_si: string;
+  action_en: string;
+  action_si: string;
+  duration_en: string;
+  duration_si: string;
+  fee_en: string;
+  fee_si: string;
+}
+
+const STAGE_TRANSLATIONS: Record<number, StageTranslation> = {
+  1: {
+    title_en: 'Business Name Availability & Scope Check',
+    title_si: 'ව්‍යාපාර නාමය තහවුරු කරගැනීම (නම පරීක්ෂාව)',
+    action_en: 'Verify that the proposed name does not conflict with existing registered businesses in the province and avoids restricted words.',
+    action_si: 'යෝජිත ව්‍යාපාර නාමය පළාත තුළ දැනට ලියාපදිංචි කර ඇති වෙනත් ව්‍යාපාර සමඟ නොගැටෙන බව සහ රජයේ හෝ තහනම් වචන අඩංගු නොවන බව තහවුරු කර ගැනීම.',
+    duration_en: '1 day',
+    duration_si: 'දින 1',
+    fee_en: 'Free / Stamp duty approx. LKR 100',
+    fee_si: 'නොමිලේ / මුද්දර ගාස්තු රු. 100 පමණ',
+  },
+  2: {
+    title_en: 'Grama Niladhari Verification & Proof of Premises',
+    title_si: 'ග්‍රාම නිලධාරී වාර්තාව සහ පරිශ්‍රය තහවුරු කිරීම',
+    action_en: 'Obtain Grama Niladhari residence & commercial operation report; compile title deed or valid lease agreement.',
+    action_si: 'ව්‍යාපාරික ස්ථානයට අදාළ ග්‍රාම නිලධාරී පදිංචිය සහ ව්‍යාපාර වාර්තාව ලබාගැනීම; පරිශ්‍රයේ ඔප්පුව, වලංගු බදු ගිවිසුම හෝ විරෝධතාවක් නොමැති ලිපිය සූදානම් කරගැනීම.',
+    duration_en: '1 - 2 days',
+    duration_si: 'දින 1 - 2',
+    fee_en: 'Nominal stamp duty',
+    fee_si: 'නාමික මුද්දර ගාස්තු පමණි',
+  },
+  3: {
+    title_en: 'Form 1 Application Lodgement',
+    title_si: '1 වන ආකෘති පත්‍රය (Form 1) ඉදිරිපත් කිරීම',
+    action_en: 'Submit completed Form 1 signed by owner/partners together with NIC copies and premises evidence.',
+    action_si: 'හිමිකරු අත්සන් කළ සම්පූර්ණ කරන ලද 1 වන ආකෘති පත්‍රය, ජාතික හැඳුනුම්පත් පිටපත් සහ පරිශ්‍රයට අදාළ ලියකියවිලි සමඟ ප්‍රාදේශීය ලේකම් කාර්යාලයට භාරදීම.',
+    duration_en: '1 day',
+    duration_si: 'දින 1',
+    fee_en: 'LKR 250 - 2,500 (depending on initial capital)',
+    fee_si: 'රු. 250 - රු. 2,500 (මූලික ප්‍රාග්ධනය අනුව)',
+  },
+  4: {
+    title_en: 'Issuance of Business Registration (BR) Certificate',
+    title_si: 'ව්‍යාපාර ලියාපදිංචි සහතිකය (BR) නිකුත් කිරීම',
+    action_en: 'Subject to officer verification, the official Business Registration Certificate under Statute No. 04 of 1990 is issued.',
+    action_si: 'ලේඛන නිලධාරියා විසින් පරීක්ෂා කර තහවුරු කිරීමෙන් පසු, 1990 අංක 04 දරන බස්නාහිර පළාත් ප්‍රඥප්තිය යටතේ නිල ව්‍යාපාර ලියාපදිංචි සහතිකය නිකුත් කරනු ලැබේ.',
+    duration_en: '1 - 3 business days',
+    duration_si: 'වැඩකරන දින 1 - 3',
+    fee_en: 'Included in initial payment',
+    fee_si: 'මූලික ගෙවීමට ඇතුළත් කර ඇත',
+  },
+  5: {
+    title_en: 'Post-Registration Mandatory Compliance',
+    title_si: 'ලියාපදිංචියෙන් පසු අනිවාර්ය නීතිමය පියවර',
+    action_en: 'Obtain business TIN from IRD, pay municipal trade tax / trade license, register employees with EPF/ETF within 14 days of hiring.',
+    action_si: 'දේශීය ආදායම් දෙපාර්තමේන්තුවෙන් (IRD) ව්‍යාපාරික TIN අංකය ලබාගැනීම, පළාත් පාලන ආයතනයට වෙළඳ බද්ද ගෙවීම සහ සේවකයින් සිටී නම් දින 14ක් ඇතුළත EPF/ETF ලියාපදිංචි කිරීම.',
+    duration_en: 'Within 14 - 30 days',
+    duration_si: 'දින 14 - 30ක් ඇතුළත',
+    fee_en: 'Varies by local authority trade tax schedule',
+    fee_si: 'පළාත් පාලන ආයතනයේ වෙළඳ බදු ගාස්තු අනුව',
+  },
+};
+
+const DOC_PURPOSE_SINHALA: Record<string, string> = {
+  doc_nic: 'ශ්‍රී ලාංකික පුරවැසිභාවය සහ වයස අවුරුදු 18 සම්පූර්ණ බව තහවුරු කිරීමට.',
+  doc_premises: 'බස්නාහිර පළාතේ දක්වා ඇති ලිපිනයේ නීත්‍යානුකූලව ව්‍යාපාරය පවත්වාගෙන යාමට ඇති අයිතිය තහවුරු කිරීමට.',
+  doc_gn: '1990 අංක 04 දරන බස්නාහිර පළාත් ප්‍රඥප්තිය යටතේ අනන්‍යතාවය සහ ප්‍රදේශයේ නීත්‍යානුකූලභාවය තහවුරු කිරීමට අවශ්‍ය වේ.',
+  doc_form1: 'ව්‍යාපාරය ලියාපදිංචි කිරීම සඳහා ඉදිරිපත් කරන ප්‍රධාන නිල ප්‍රකාශන අයදුම්පත.',
+  doc_partnership_deed: 'හවුල්කරුවන් අතර ලාභ බෙදීයාම, ප්‍රාග්ධනය සහ වගකීම් පාලනය කරන ගිවිසුම.',
+};
+
+const FORM_GUIDE_SINHALA: Record<number, { label: string; desc: string }> = {
+  0: {
+    label: '1. යෝජිත ව්‍යාපාර නාමය',
+    desc: 'නිවැරදි ව්‍යාපාර නාමය ඇතුළත් කරන්න. රැවටිලිසහගත හෝ රජයේ තහනම් වචන නොතිබිය යුතුය.',
+  },
+  1: {
+    label: '2. ව්‍යාපාරයේ සාමාන්‍ය ස්වභාවය',
+    desc: 'ප්‍රධාන වාණිජ කටයුතු පැහැදිලිව සඳහන් කරන්න (උදා. ආහාර හා බීම සිල්ලර වෙළඳාම, නිෂ්පාදනය, මෝටර් රථ සේවා).',
+  },
+  2: {
+    label: '3. ප්‍රධාන ව්‍යාපාරික ස්ථානයේ ලිපිනය',
+    desc: 'බස්නාහිර පළාත තුළ ව්‍යාපාරික මෙහෙයුම් සහ පොත්පත් තබන නිවැරදි භෞතික ලිපිනය.',
+  },
+  3: {
+    label: '4. ව්‍යාපාරය ආරම්භ කළ හෝ ආරම්භ කරන දිනය',
+    desc: '1990 අංක 04 දරන ප්‍රඥප්තියේ 7 වන වගන්තිය යටතේ ලියාපදිංචියට දින 14කට පෙර හෝ ලියාපදිංචි වන අවස්ථාව විය යුතුය.',
+  },
+  4: {
+    label: '5. යොදවන ලද ආරම්භක ප්‍රාග්ධනය',
+    desc: 'ශ්‍රී ලංකා රුපියල් වලින් මුළු ආරම්භක ප්‍රාග්ධනය (පළාත් මුද්දර ගාස්තු තීරණය වන්නේ මෙම අගය මතය).',
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Sub-components: Badges, Controls, Cards
 // ---------------------------------------------------------------------------
 
@@ -733,6 +851,8 @@ export const RegistrationComplianceDashboard: React.FC = () => {
   const [activeStep, setActiveStep] = useState<'profile' | 'results' | 'evidence'>('profile');
   const [selectedObligationId, setSelectedObligationId] = useState('');
   const [resultFilter, setResultFilter] = useState<'all' | ApplicabilityStatus>('all');
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [guidanceLanguage, setGuidanceLanguage] = useState<'en' | 'si'>('en');
 
   // PDF Business / Growth Plan Ingestion State
   const [pdfUploading, setPdfUploading] = useState(false);
@@ -911,6 +1031,7 @@ export const RegistrationComplianceDashboard: React.FC = () => {
       products_services: extractedProfileEdit.products_services || prev.products_services,
     }));
     setPdfExtractResult(null);
+    setShowManualForm(true);
   };
 
   const setField = (key: keyof BusinessProfileForm, value: unknown) => {
@@ -1546,51 +1667,78 @@ export const RegistrationComplianceDashboard: React.FC = () => {
               </div>
 
               {/* Form Container */}
-              <div className="compliance-form-card bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-5">
+              <div className="compliance-form-card bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
             <div>
               <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <i className="fa-solid fa-sliders text-blue-600" />
                 Business Intake Profile
               </h2>
-              <p className="text-xs text-slate-500">Every field defaults to Unknown (null) until specified.</p>
+              <p className="text-xs text-slate-500">
+                {profile.business_type
+                  ? `Active Profile: ${profile.business_type.toUpperCase()} · ${profile.district || profile.location || 'Western Province'} · ${profile.legal_form || 'Sole Proprietorship'}`
+                  : 'Upload a plan PDF above or choose a preset to evaluate regulatory compliance.'}
+              </p>
             </div>
 
             {/* Real Sample Profile Buttons */}
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-500">Load sample:</span>
+              <span className="text-xs font-semibold text-slate-500">Presets:</span>
               <button
                 type="button"
                 onClick={() => handleLoadSample('clear_case')}
-                className="px-2.5 py-1.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition-colors"
+                className="px-2.5 py-1.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition-colors cursor-pointer"
               >
                 Clear Case
               </button>
               <button
                 type="button"
                 onClick={() => handleLoadSample('conditional_case')}
-                className="px-2.5 py-1.5 bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition-colors"
+                className="px-2.5 py-1.5 bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition-colors cursor-pointer"
               >
                 Conditional Case
               </button>
               <button
                 type="button"
                 onClick={() => handleLoadSample('missing_info_case')}
-                className="px-2.5 py-1.5 bg-slate-100 hover:bg-purple-50 hover:text-purple-700 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition-colors"
+                className="px-2.5 py-1.5 bg-slate-100 hover:bg-purple-50 hover:text-purple-700 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition-colors cursor-pointer"
               >
                 Missing Info
               </button>
             </div>
           </div>
 
-          {/* Form Fields Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Business Type (Scope: 4 types) */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Business Type (Sector)
-              </label>
-              <select
+          {/* Quick Profile Summary & Optional Manual Toggle */}
+          <div className="flex items-center justify-between py-1">
+            <div className="text-xs text-slate-600 flex items-center gap-2">
+              <span className={`w-2.5 h-2.5 rounded-full ${profile.business_type ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+              <span>
+                Status:{' '}
+                <strong className="text-slate-800">
+                  {profile.business_type ? `${profile.business_type.replace('_', ' ')} (${knownProfileFacts} facts captured)` : 'No profile loaded (Defaults to Unknown)'}
+                </strong>
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowManualForm(!showManualForm)}
+              className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1.5 py-1 px-2.5 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer"
+            >
+              <i className={`fa-solid ${showManualForm ? 'fa-chevron-up' : 'fa-pen-to-square'}`} />
+              {showManualForm ? 'Hide manual form fields' : 'Edit fields manually (Optional)'}
+            </button>
+          </div>
+
+          {showManualForm && (
+            <div className="pt-3 border-t border-slate-100 space-y-4">
+              {/* Form Fields Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Business Type (Scope: 4 types) */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Business Type (Sector)
+                  </label>
+                  <select
                 value={profile.business_type || ''}
                 onChange={(e) => setField('business_type', e.target.value || null)}
                 className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1892,6 +2040,9 @@ export const RegistrationComplianceDashboard: React.FC = () => {
             </div>
           )}
 
+            </div>
+          )}
+
           {/* Action Button */}
           <button
             type="button"
@@ -2164,7 +2315,7 @@ export const RegistrationComplianceDashboard: React.FC = () => {
               {/* ----------------------------------------------------------------- */}
               {result.registration_guidance && (
                 <section className="rounded-2xl border border-blue-200/90 bg-gradient-to-br from-blue-50/50 via-white to-indigo-50/30 p-5 shadow-xs space-y-5">
-                  {/* Header */}
+                  {/* Header with Bilingual Selector */}
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-blue-200/70 pb-3.5">
                     <div className="flex items-center gap-2.5">
                       <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm text-sm">
@@ -2173,22 +2324,54 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                       <div>
                         <div className="flex items-center gap-2">
                           <h4 className="text-sm font-bold text-slate-900">
-                            AI-Assisted Business Registration Guidance &amp; Institutional Roadmap
+                            {guidanceLanguage === 'si'
+                              ? 'AI-මඟපෙන්වීම සහිත ව්‍යාපාර ලියාපදිංචි මාර්ග සිතියම සහ ආයතනික ක්‍රියාවලිය'
+                              : 'AI-Assisted Business Registration Guidance & Institutional Roadmap'}
                           </h4>
                           <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800">
-                            <i className="fa-solid fa-brain text-[9px]" /> Registration Engine
+                            <i className="fa-solid fa-brain text-[9px]" /> {guidanceLanguage === 'si' ? 'ලියාපදිංචි පද්ධතිය' : 'Registration Engine'}
                           </span>
                         </div>
                         <p className="text-[11px] text-slate-600">
-                          Western Province Legal Framework (Statute No. 04 of 1990 &amp; Companies Act No. 07 of 2007)
+                          {guidanceLanguage === 'si'
+                            ? 'බස්නාහිර පළාත් නීති රාමුව (1990 අංක 04 දරන ප්‍රඥප්තිය සහ 2007 අංක 07 දරන සමාගම් පනත)'
+                            : 'Western Province Legal Framework (Statute No. 04 of 1990 & Companies Act No. 07 of 2007)'}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="text-[11px] font-semibold text-blue-900 bg-blue-100 px-3 py-1 rounded-full border border-blue-200">
-                        📍 {result.registration_guidance.district} District Jurisdiction
+                        📍 {guidanceLanguage === 'si'
+                          ? `${getDistrictSinhala(result.registration_guidance.district)} දිස්ත්‍රික් බලප්‍රදේශය`
+                          : `${result.registration_guidance.district} District Jurisdiction`}
                       </span>
+
+                      {/* Language Switcher Toggle */}
+                      <div className="inline-flex items-center bg-white p-0.5 rounded-xl border border-blue-300 shadow-2xs">
+                        <button
+                          type="button"
+                          onClick={() => setGuidanceLanguage('en')}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            guidanceLanguage === 'en'
+                              ? 'bg-blue-600 text-white shadow-xs'
+                              : 'text-slate-600 hover:text-blue-700 hover:bg-blue-50'
+                          }`}
+                        >
+                          🇬🇧 English
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setGuidanceLanguage('si')}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            guidanceLanguage === 'si'
+                              ? 'bg-blue-600 text-white shadow-xs'
+                              : 'text-slate-600 hover:text-blue-700 hover:bg-blue-50'
+                          }`}
+                        >
+                          🇱🇰 සිංහල
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -2200,13 +2383,15 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                       </span>
                       <div>
                         <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                          Official Regulatory Documentation Packages
+                          {guidanceLanguage === 'si' ? 'නිල නීතිමය ලියකියවිලි කට්ටලය' : 'Official Regulatory Documentation Packages'}
                           <span className="text-[9px] uppercase font-extrabold bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200">
-                            Print-Ready
+                            {guidanceLanguage === 'si' ? 'මුද්‍රණයට සූදානම්' : 'Print-Ready'}
                           </span>
                         </span>
                         <p className="text-[11px] text-slate-500">
-                          Generate formal, submission-ready compliance documentation and official application forms.
+                          {guidanceLanguage === 'si'
+                            ? 'ලියාපදිංචිය සඳහා අවශ්‍ය නිල අනුකූලතා ලේඛන සහ නියමිත අයදුම්පත් සම්පූර්ණ කර බාගත කරන්න.'
+                            : 'Generate formal, submission-ready compliance documentation and official application forms.'}
                         </p>
                       </div>
                     </div>
@@ -2219,7 +2404,11 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                         className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs shadow-xs transition-all disabled:opacity-50 cursor-pointer"
                       >
                         <i className={`fa-solid ${isDownloadingDossier ? 'fa-spinner fa-spin' : 'fa-file-shield'}`} />
-                        <span>{isDownloadingDossier ? 'Generating Dossier...' : 'Download Compliance Dossier (PDF)'}</span>
+                        <span>
+                          {isDownloadingDossier
+                            ? (guidanceLanguage === 'si' ? 'සකස් කරමින් පවතී...' : 'Generating Dossier...')
+                            : (guidanceLanguage === 'si' ? 'අනුකූලතා ලියකියවිලි (PDF) බාගත කරන්න' : 'Download Compliance Dossier (PDF)')}
+                        </span>
                       </button>
 
                       <button
@@ -2229,7 +2418,11 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                         className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all disabled:opacity-50 cursor-pointer"
                       >
                         <i className={`fa-solid ${isDownloadingForm1 ? 'fa-spinner fa-spin' : 'fa-file-signature'}`} />
-                        <span>{isDownloadingForm1 ? 'Preparing Form 1...' : 'Download Official Form 1 (PDF)'}</span>
+                        <span>
+                          {isDownloadingForm1
+                            ? (guidanceLanguage === 'si' ? 'සකස් කරමින් පවතී...' : 'Preparing Form 1...')
+                            : (guidanceLanguage === 'si' ? 'නිල 1 වන ආකෘති පත්‍රය (PDF) බාගත කරන්න' : 'Download Official Form 1 (PDF)')}
+                        </span>
                       </button>
                     </div>
                   </div>
@@ -2240,16 +2433,32 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                     <div className="bg-white p-3.5 rounded-xl border border-blue-100 shadow-xs space-y-1.5">
                       <span className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">
                         <i className="fa-solid fa-scale-balanced text-blue-600 mr-1" />
-                        Recommended Legal Form
+                        {guidanceLanguage === 'si' ? 'නිර්දේශිත නීතිමය ස්වරූපය' : 'Recommended Legal Form'}
                       </span>
                       <p className="font-bold text-blue-950 text-xs">
-                        {result.registration_guidance.recommended_legal_form}
+                        {guidanceLanguage === 'si'
+                          ? (result.registration_guidance.pathway_key === 'partnership'
+                              ? 'හවුල් ව්‍යාපාරය (Partnership)'
+                              : result.registration_guidance.pathway_key === 'private_limited'
+                              ? 'පුද්ගලික සීමිත සමාගම (Pvt Ltd)'
+                              : 'තනි පුද්ගල ව්‍යාපාරය (Sole Proprietorship)')
+                          : stripSinhalaText(result.registration_guidance.recommended_legal_form)}
                       </p>
                       <p className="text-[10px] text-slate-500 font-medium">
-                        {result.registration_guidance.legal_basis}
+                        {guidanceLanguage === 'si'
+                          ? (result.registration_guidance.pathway_key === 'private_limited'
+                              ? '2007 අංක 07 දරන සමාගම් පනත (eROC ඔස්සේ)'
+                              : '1990 අංක 04 දරන බස්නාහිර පළාත් ව්‍යාපාර නාම ප්‍රඥප්තිය (3 වන වගන්තිය)')
+                          : result.registration_guidance.legal_basis}
                       </p>
                       <p className="text-[11px] text-slate-700 leading-relaxed bg-blue-50/50 p-2 rounded-lg border border-blue-100/60 mt-1">
-                        {result.registration_guidance.reasoning}
+                        {guidanceLanguage === 'si'
+                          ? (result.registration_guidance.pathway_key === 'partnership'
+                              ? 'කළමනාකරණය, ප්‍රාග්ධනය සහ ලාභ බෙදාගන්නා සම-ආරම්භකයින් 2 සිට 20 දක්වා හවුල් ව්‍යාපාරයක් සඳහා සුදුසු වේ.'
+                              : result.registration_guidance.pathway_key === 'private_limited'
+                              ? 'ව්‍යාපාර පරිමාණය හා සේවක සංඛ්‍යාව අනුව සීමිත වගකීම් සහ බදු කාර්යක්ෂමතාව ලබා දෙන ආයතනික ආකෘතියකි.'
+                              : 'අවම ආරම්භක ප්‍රාග්ධනයක් සහිත තනි ව්‍යවසායකයෙකුට සුදුසු වන අතර, අවම නීතිමය වාර්තාකරණ අවශ්‍යතා සහිතව කඩිනමින් ලියාපදිංචි කළ හැක.')
+                          : result.registration_guidance.reasoning}
                       </p>
                     </div>
 
@@ -2257,16 +2466,28 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                     <div className="bg-white p-3.5 rounded-xl border border-blue-100 shadow-xs space-y-1.5">
                       <span className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">
                         <i className="fa-solid fa-building-columns text-emerald-600 mr-1" />
-                        Target Authority &amp; Location
+                        {guidanceLanguage === 'si' ? 'අදාළ බලයලත් ආයතනය සහ ස්ථානය' : 'Target Authority & Location'}
                       </span>
                       <p className="font-bold text-slate-900 text-xs">
-                        {result.registration_guidance.governing_body}
+                        {guidanceLanguage === 'si'
+                          ? (result.registration_guidance.pathway_key === 'private_limited'
+                              ? 'සමාගම් රෙජිස්ට්‍රාර් දෙපාර්තමේන්තුව (සමාගම් මැදුර, කොළඹ 10 / eROC)'
+                              : 'බස්නාහිර පළාත් සභාවේ ව්‍යාපාර නාම දෙපාර්තමේන්තුව (ප්‍රාදේශීය ලේකම් කාර්යාලය හරහා)')
+                          : result.registration_guidance.governing_body}
                       </p>
                       <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 space-y-1 mt-1">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase block">Responsible Office:</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase block">
+                          {guidanceLanguage === 'si' ? 'වගකිවයුතු කාර්යාලය:' : 'Responsible Office:'}
+                        </span>
                         <p className="text-[11px] text-slate-800 font-medium flex items-start gap-1.5">
                           <i className="fa-solid fa-location-dot text-red-500 text-[10px] mt-0.5" />
-                          <span>{result.registration_guidance.target_office}</span>
+                          <span>
+                            {guidanceLanguage === 'si'
+                              ? (result.registration_guidance.pathway_key === 'private_limited'
+                                  ? 'සමාගම් රෙජිස්ට්‍රාර් දෙපාර්තමේන්තුව (සමාගම් මැදුර, 400 ඩී.ආර්. විජේවර්ධන මාවත, කොළඹ 10)'
+                                  : `${getDistrictSinhala(result.registration_guidance.district)} ප්‍රාදේශීය ලේකම් කාර්යාලය (උදා. තිඹිරිගස්යාය, කොළඹ, කඩුවෙල, මහරගම, දෙහිවල-ගල්කිස්ස)`)
+                              : result.registration_guidance.target_office}
+                          </span>
                         </p>
                       </div>
                     </div>
@@ -2275,22 +2496,40 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                     <div className="bg-white p-3.5 rounded-xl border border-blue-100 shadow-xs space-y-2">
                       <span className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">
                         <i className="fa-solid fa-receipt text-amber-600 mr-1" />
-                        Official Filing &amp; Cost Estimation
+                        {guidanceLanguage === 'si' ? 'නිල ලියාපදිංචි ගාස්තු සහ කාලය' : 'Official Filing & Cost Estimation'}
                       </span>
                       <div className="bg-amber-50/60 p-2.5 rounded-lg border border-amber-200/60 space-y-1">
-                        <span className="text-[10px] font-bold text-amber-900 block">Prescribed Application:</span>
+                        <span className="text-[10px] font-bold text-amber-900 block">
+                          {guidanceLanguage === 'si' ? 'නියමිත අයදුම්පත:' : 'Prescribed Application:'}
+                        </span>
                         <p className="text-[11px] font-semibold text-slate-900">
-                          {result.registration_guidance.official_form_name}
+                          {guidanceLanguage === 'si'
+                            ? (result.registration_guidance.pathway_key === 'private_limited'
+                                ? 'eROC 1 වන ආකෘති පත්‍රය (සමාගමක් ලියාපදිංචි කිරීමේ අයදුම්පත)'
+                                : 'බස්නාහිර පළාත් සභා ආකෘති පත්‍ර අංක 1 (ව්‍යාපාර නාම ලියාපදිංචි අයදුම්පත)')
+                            : stripSinhalaText(result.registration_guidance.official_form_name)}
                         </p>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-center pt-0.5">
                         <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
-                          <span className="text-[9px] text-slate-500 uppercase font-bold block">Est. Cost</span>
-                          <span className="text-[11px] font-bold text-emerald-700">{result.registration_guidance.estimated_fees}</span>
+                          <span className="text-[9px] text-slate-500 uppercase font-bold block">
+                            {guidanceLanguage === 'si' ? 'ඇස්තමේන්තුගත ගාස්තුව' : 'Est. Cost'}
+                          </span>
+                          <span className="text-[11px] font-bold text-emerald-700">
+                            {guidanceLanguage === 'si'
+                              ? result.registration_guidance.estimated_fees.replace('LKR', 'රු.').replace('Approx.', 'ආසන්න වශයෙන්').replace('taxes', 'බදු')
+                              : result.registration_guidance.estimated_fees}
+                          </span>
                         </div>
                         <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
-                          <span className="text-[9px] text-slate-500 uppercase font-bold block">Processing Time</span>
-                          <span className="text-[11px] font-bold text-blue-700">{result.registration_guidance.estimated_timeline}</span>
+                          <span className="text-[9px] text-slate-500 uppercase font-bold block">
+                            {guidanceLanguage === 'si' ? 'ගතවන කාලය' : 'Processing Time'}
+                          </span>
+                          <span className="text-[11px] font-bold text-blue-700">
+                            {guidanceLanguage === 'si'
+                              ? result.registration_guidance.estimated_timeline.replace('Business Days', 'වැඩකරන දින').replace('Days', 'දින').replace('Instant upon approval', 'අනුමැතිය ලද වහාම')
+                              : result.registration_guidance.estimated_timeline}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -2301,43 +2540,55 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <h5 className="text-xs font-bold text-slate-900 flex items-center gap-2">
                         <i className="fa-solid fa-list-ol text-blue-600" />
-                        5-Stage Official Registration Procedure (පියවරෙන් පියවර ක්‍රියාවලිය)
+                        {guidanceLanguage === 'si'
+                          ? 'පියවරෙන් පියවර නිල ලියාපදිංචි කිරීමේ ක්‍රියාවලිය'
+                          : '5-Stage Official Registration Procedure'}
                       </h5>
-                      <span className="text-[10px] font-medium text-slate-500">Chronological Flow</span>
+                      <span className="text-[10px] font-medium text-slate-500">
+                        {guidanceLanguage === 'si' ? 'කාලානුක්‍රමික පියවර 5' : 'Chronological Flow'}
+                      </span>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-2.5">
-                      {result.registration_guidance.stages.map((stg) => (
-                        <div
-                          key={stg.stage_number}
-                          className="bg-white rounded-xl border border-slate-200 p-3 shadow-2xs space-y-2 flex flex-col justify-between hover:border-blue-300 transition-all"
-                        >
-                          <div className="space-y-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-blue-800 font-extrabold text-[10px]">
-                                {stg.stage_number}
-                              </span>
-                              <span className="text-[9px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
-                                {stg.duration}
-                              </span>
+                      {result.registration_guidance.stages.map((stg) => {
+                        const tr = STAGE_TRANSLATIONS[stg.stage_number];
+                        const isSi = guidanceLanguage === 'si';
+                        const stageTitle = isSi ? (tr?.title_si || stg.title_si || stg.title) : (tr?.title_en || stripSinhalaText(stg.title));
+                        const stageAction = isSi ? (tr?.action_si || stg.action) : (tr?.action_en || stg.action);
+                        const stageDuration = isSi ? (tr?.duration_si || stg.duration) : (tr?.duration_en || stg.duration);
+                        const stageFee = isSi ? (tr?.fee_si || stg.statutory_fee) : (tr?.fee_en || stg.statutory_fee);
+
+                        return (
+                          <div
+                            key={stg.stage_number}
+                            className="bg-white rounded-xl border border-slate-200 p-3 shadow-2xs space-y-2 flex flex-col justify-between hover:border-blue-300 transition-all"
+                          >
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-blue-800 font-extrabold text-[10px]">
+                                  {stg.stage_number}
+                                </span>
+                                <span className="text-[9px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                                  {stageDuration}
+                                </span>
+                              </div>
+
+                              <h6 className="font-bold text-slate-900 text-[11px] leading-tight">
+                                {stageTitle}
+                              </h6>
+                              <p className="text-[10px] text-slate-600 leading-relaxed pt-1">
+                                {stageAction}
+                              </p>
                             </div>
 
-                            <h6 className="font-bold text-slate-900 text-[11px] leading-tight">
-                              {stg.title}
-                            </h6>
-                            <p className="text-[10px] text-blue-800 font-medium">
-                              {stg.title_si}
-                            </p>
-                            <p className="text-[10px] text-slate-600 leading-relaxed pt-1">
-                              {stg.action}
-                            </p>
+                            <div className="pt-2 border-t border-slate-100 text-[9px] text-slate-500">
+                              <span className="block font-semibold text-slate-700">
+                                {isSi ? `ගාස්තුව: ${stageFee}` : `Fee: ${stageFee}`}
+                              </span>
+                            </div>
                           </div>
-
-                          <div className="pt-2 border-t border-slate-100 text-[9px] text-slate-500">
-                            <span className="block font-semibold text-slate-700">Fee: {stg.statutory_fee}</span>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -2348,42 +2599,49 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                       <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                         <h5 className="font-bold text-slate-900 text-xs flex items-center gap-2">
                           <i className="fa-solid fa-folder-closed text-blue-600" />
-                          Pre-Filing Document Readiness Audit (අවශ්‍ය ලියකියවිලි)
+                          {guidanceLanguage === 'si' ? 'ලියාපදිංචියට පෙර ලියකියවිලි සූදානම පරීක්ෂාව' : 'Pre-Filing Document Readiness Audit'}
                         </h5>
                         <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                          Verified for {result.registration_guidance.district}
+                          {guidanceLanguage === 'si'
+                            ? `${getDistrictSinhala(result.registration_guidance.district)} දිස්ත්‍රික්කය සඳහා තහවුරු කරන ලදී`
+                            : `Verified for ${result.registration_guidance.district}`}
                         </span>
                       </div>
 
                       <div className="space-y-2">
-                        {result.registration_guidance.document_checklist.map((doc) => (
-                          <div
-                            key={doc.document_id}
-                            className="p-2.5 rounded-lg border border-slate-100 bg-slate-50/70 flex items-start justify-between gap-2.5 text-xs"
-                          >
-                            <div className="space-y-0.5">
-                              <span className="font-bold text-slate-900 text-[11px] block">
-                                {doc.name}
-                              </span>
-                              <span className="text-[10px] text-slate-500 block">
-                                {doc.name_si}
-                              </span>
-                              <p className="text-[10px] text-slate-600 pt-0.5">
-                                {doc.purpose}
-                              </p>
-                            </div>
+                        {result.registration_guidance.document_checklist.map((doc) => {
+                          const isSi = guidanceLanguage === 'si';
+                          const docName = isSi ? (doc.name_si || doc.name) : stripSinhalaText(doc.name);
+                          const docPurpose = isSi ? (DOC_PURPOSE_SINHALA[doc.document_id] || doc.purpose) : doc.purpose;
 
-                            <span
-                              className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded border ${
-                                doc.status === 'READY'
-                                  ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                                  : 'bg-amber-100 text-amber-800 border-amber-200'
-                              }`}
+                          return (
+                            <div
+                              key={doc.document_id}
+                              className="p-2.5 rounded-lg border border-slate-100 bg-slate-50/70 flex items-start justify-between gap-2.5 text-xs"
                             >
-                              {doc.status === 'READY' ? '✓ Ready' : '⚠ Required'}
-                            </span>
-                          </div>
-                        ))}
+                              <div className="space-y-0.5">
+                                <span className="font-bold text-slate-900 text-[11px] block">
+                                  {docName}
+                                </span>
+                                <p className="text-[10px] text-slate-600 pt-0.5">
+                                  {docPurpose}
+                                </p>
+                              </div>
+
+                              <span
+                                className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded border ${
+                                  doc.status === 'READY'
+                                    ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                    : 'bg-amber-100 text-amber-800 border-amber-200'
+                                }`}
+                              >
+                                {doc.status === 'READY'
+                                  ? (isSi ? '✓ සූදානම්' : '✓ Ready')
+                                  : (isSi ? '⚠ අවශ්‍යයි' : '⚠ Required')}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -2392,30 +2650,39 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                       <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                         <h5 className="font-bold text-slate-900 text-xs flex items-center gap-2">
                           <i className="fa-solid fa-pen-to-square text-teal-600" />
-                          Application Completion Assistant (ආකෘති පත්‍ර මාර්ගෝපදේශය)
+                          {guidanceLanguage === 'si' ? 'ආකෘති පත්‍රය සම්පූර්ණ කිරීමේ මඟපෙන්වීම' : 'Application Completion Assistant'}
                         </h5>
                         <span className="text-[10px] font-semibold text-slate-500">
-                          {result.registration_guidance.official_form_name.split('(')[0]}
+                          {guidanceLanguage === 'si'
+                            ? 'බස්නාහිර පළාත් සභා ආකෘති පත්‍රය'
+                            : stripSinhalaText(result.registration_guidance.official_form_name.split('(')[0])}
                         </span>
                       </div>
 
                       <div className="space-y-2 text-xs">
-                        {result.registration_guidance.form_fields_guide.map((field, fIdx) => (
-                          <div key={fIdx} className="bg-slate-50/80 p-2.5 rounded-lg border border-slate-100 space-y-0.5">
-                            <span className="font-bold text-slate-800 text-[11px] block">
-                              {field.field_label}
-                            </span>
-                            <p className="text-[10px] text-slate-500">
-                              {field.description}
-                            </p>
-                            <div className="mt-1 flex items-center gap-1.5 bg-white px-2 py-1 rounded border border-slate-200 text-[11px] text-slate-700 font-medium">
-                              <span className="text-[9px] uppercase font-bold text-teal-700 bg-teal-50 px-1 py-0.5 rounded border border-teal-200">
-                                Suggested Value
+                        {result.registration_guidance.form_fields_guide.map((field, fIdx) => {
+                          const isSi = guidanceLanguage === 'si';
+                          const guideSi = FORM_GUIDE_SINHALA[fIdx];
+                          const fieldLabel = isSi ? (guideSi?.label || field.field_label) : stripSinhalaText(field.field_label);
+                          const fieldDesc = isSi ? (guideSi?.desc || field.description) : field.description;
+
+                          return (
+                            <div key={fIdx} className="bg-slate-50/80 p-2.5 rounded-lg border border-slate-100 space-y-0.5">
+                              <span className="font-bold text-slate-800 text-[11px] block">
+                                {fieldLabel}
                               </span>
-                              <span className="truncate">{field.suggested_value}</span>
+                              <p className="text-[10px] text-slate-500">
+                                {fieldDesc}
+                              </p>
+                              <div className="mt-1 flex items-center gap-1.5 bg-white px-2 py-1 rounded border border-slate-200 text-[11px] text-slate-700 font-medium">
+                                <span className="text-[9px] uppercase font-bold text-teal-700 bg-teal-50 px-1 py-0.5 rounded border border-teal-200">
+                                  {isSi ? 'යෝජිත අගය' : 'Suggested Value'}
+                                </span>
+                                <span className="truncate">{field.suggested_value}</span>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
