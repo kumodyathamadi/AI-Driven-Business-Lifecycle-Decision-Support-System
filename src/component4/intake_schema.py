@@ -41,7 +41,10 @@ CANONICAL_FIELD_ALIASES: Dict[str, str] = {
     "outstanding_loan_balance": "outstanding_loan_balance_lkr",
     "outstanding_debt_lkr": "outstanding_loan_balance_lkr",
     "outstanding_loan_balance_lkr": "outstanding_loan_balance_lkr",
+    "total_outstanding_loan_balance_lkr": "outstanding_loan_balance_lkr",
+    "total_outstanding_loan_balance": "outstanding_loan_balance_lkr",
     "monthly_loan_repayment": "monthly_loan_repayment_lkr",
+    "monthly_loan_repayments_lkr": "monthly_loan_repayment_lkr",
     "monthly_debt_repayment_lkr": "monthly_loan_repayment_lkr",
     "monthly_loan_repayment_lkr": "monthly_loan_repayment_lkr",
     "overdue_repayments": "repayment_overdue_status",
@@ -49,13 +52,28 @@ CANONICAL_FIELD_ALIASES: Dict[str, str] = {
     "payment_delay_days": "repayment_delay_days",
     "repayment_delay_days": "repayment_delay_days",
     "repayment_overdue_status": "repayment_overdue_status",
+    "overdue_payment_count_12m": "overdue_payment_count_12m",
+    "overdue_payment_count": "overdue_payment_count_12m",
+    "total_overdue_amount_lkr": "total_overdue_amount_lkr",
+    "total_overdue_amount": "total_overdue_amount_lkr",
+    "arrears_amount_lkr": "total_overdue_amount_lkr",
+    "longest_overdue_period_days": "longest_overdue_period_days",
+    "longest_overdue_days": "longest_overdue_period_days",
+    "other_monthly_debt_obligations_lkr": "other_monthly_debt_obligations_lkr",
+    "other_monthly_debt_obligations": "other_monthly_debt_obligations_lkr",
+    "outstanding_guarantees_lkr": "outstanding_guarantees_lkr",
+    "outstanding_guarantees": "outstanding_guarantees_lkr",
     "debt_guarantees": "debt_guarantees_or_obligations",
     "debt_guarantees_or_obligations": "debt_guarantees_or_obligations",
+    "debt_service_available_revenue_lkr": "debt_service_available_revenue_lkr",
+    "loan_interest_rate_pct": "loan_interest_rate_pct",
+    "annual_interest_rate_pct": "loan_interest_rate_pct",
     "monthly_interest_cost_lkr": "monthly_interest_cost_lkr",
-    "annual_interest_rate_pct": "annual_interest_rate_pct",
     "initial_financing_amount_lkr": "initial_financing_amount_lkr",
     "requested_loan_lkr": "initial_financing_amount_lkr",
     "loan_amount_lkr": "initial_financing_amount_lkr",
+    "upcoming_large_repayment_notes": "upcoming_large_repayment_notes",
+    "repayment_history_status": "repayment_history_status",
 
     # Capital & Liquid funds
     "available_starting_capital_lkr": "available_starting_capital_lkr",
@@ -63,40 +81,100 @@ CANONICAL_FIELD_ALIASES: Dict[str, str] = {
     "starting_capital": "available_starting_capital_lkr",
     "cash_available_operations": "current_cash_reserve_lkr",
     "current_cash_reserve_lkr": "current_cash_reserve_lkr",
-    "cash_reserve_after_startup": "current_cash_reserve_lkr",
+    "cash_reserve_after_startup": "remaining_cash_reserves_after_setup_lkr",
+    "remaining_cash_reserves_after_setup_lkr": "remaining_cash_reserves_after_setup_lkr",
+    "initial_setup_expenditure_lkr": "initial_setup_expenditure_lkr",
+    "initial_setup_expenditure": "initial_setup_expenditure_lkr",
+    "capital_includes_loan": "capital_includes_loan",
+    "other_mandatory_monthly_obligations_lkr": "other_mandatory_monthly_obligations_lkr",
+    "other_mandatory_obligations": "other_mandatory_monthly_obligations_lkr",
 
-    # Revenue
+    # Revenue & Market
     "monthly_sales_revenue": "monthly_revenue_lkr",
     "monthly_revenue_lkr": "monthly_revenue_lkr",
     "projected_revenue_lkr": "monthly_revenue_lkr",
+    "expected_or_actual_monthly_sales_lkr": "monthly_revenue_lkr",
     "monthly_customer_count": "monthly_customer_count",
+    "average_transaction_value_lkr": "average_transaction_value_lkr",
+    "average_transaction_value": "average_transaction_value_lkr",
+    "sales_trend_3_6m": "sales_trend_3_6m",
+    "demand_evidence_type": "demand_evidence",
     "customer_demand_evidence": "demand_evidence",
     "demand_evidence": "demand_evidence",
+    "direct_competitors_count": "direct_competitors_count",
+    "competitor_count": "direct_competitors_count",
+    "competitor_pricing_vs_business": "competitor_pricing_vs_business",
+    "largest_customer_sales_share_pct": "largest_customer_sales_share_pct",
+    "customer_concentration_pct": "largest_customer_sales_share_pct",
+    "seasonal_demand_variation_pct": "seasonal_demand_variation_pct",
+    "customer_retention_rate_pct": "customer_retention_rate_pct",
+    "price_adjustment_flexibility": "price_adjustment_flexibility",
+    "monthly_marketing_budget_lkr": "monthly_marketing_budget_lkr",
+    "marketing_budget_lkr": "monthly_marketing_budget_lkr",
 
-    # Costs
+    # Costs & Inflation
     "monthly_fixed_costs": "fixed_monthly_costs_lkr",
     "fixed_monthly_costs_lkr": "fixed_monthly_costs_lkr",
     "monthly_budget_lkr": "fixed_monthly_costs_lkr",
     "monthly_variable_costs": "variable_monthly_costs_lkr",
     "variable_monthly_costs_lkr": "variable_monthly_costs_lkr",
+    "main_materials_monthly_cost_lkr": "main_materials_monthly_cost_lkr",
+    "supplier_price_change_past_3_6m_pct": "supplier_price_change_past_3_6m_pct",
+    "recent_supplier_price_increase_pct": "supplier_price_change_past_3_6m_pct",
+    "expected_supplier_price_increase_3_6m_pct": "expected_supplier_price_increase_3_6m_pct",
+    "expected_cost_increase_pct": "expected_supplier_price_increase_3_6m_pct",
+    "imported_inputs_pct": "imported_inputs_pct",
+    "imported_input_dependency_pct": "imported_inputs_pct",
+    "imported_materials_exposure": "imported_materials_exposure",
+    "imported_input_exposure": "imported_materials_exposure",
+    "foreign_currency_exposure": "foreign_currency_exposure",
+    "monthly_fuel_transport_cost_lkr": "monthly_fuel_transport_cost_lkr",
+    "monthly_electricity_energy_cost_lkr": "monthly_electricity_energy_cost_lkr",
+    "ability_to_increase_prices": "ability_to_increase_prices",
+    "price_adjustment_ability": "ability_to_increase_prices",
+    "cost_increase_pass_through_pct": "cost_increase_pass_through_pct",
+    "alternative_suppliers_available": "alternative_suppliers_available",
+    "largest_supplier_purchase_share_pct": "largest_supplier_purchase_share_pct",
+    "external_inflation_source_notes": "external_inflation_source_notes",
 
-    # Working Capital
+    # Working Capital & Liquidity terms
     "accounts_receivable": "accounts_receivable_lkr",
     "accounts_receivable_lkr": "accounts_receivable_lkr",
+    "customer_payment_delay_days": "customer_payment_delay_days",
     "accounts_payable": "accounts_payable_lkr",
     "accounts_payable_lkr": "accounts_payable_lkr",
+    "supplier_payment_period_days": "supplier_payment_period_days",
+    "working_capital_requirement_lkr": "working_capital_requirement_lkr",
+    "expected_large_one_off_payments_3_6m_lkr": "expected_large_one_off_payments_3_6m_lkr",
 
     # Operations & Supply Chain
-    "supplier_dependency_level": "supplier_dependency_percentage",
-    "supplier_dependency_percentage": "supplier_dependency_percentage",
-    "single_supplier_dependency_pct": "supplier_dependency_percentage",
-    "delivery_delay_days": "supplier_delay_days",
+    "critical_suppliers_count": "critical_suppliers_count",
+    "supplier_count": "critical_suppliers_count",
+    "supplier_dependency_level": "supplier_dependency_level",
+    "supplier_dependency_percentage": "largest_supplier_dependency_pct",
+    "single_supplier_dependency_pct": "largest_supplier_dependency_pct",
+    "largest_supplier_dependency_pct": "largest_supplier_dependency_pct",
+    "alternative_suppliers_status": "alternative_suppliers_status",
+    "supplier_lead_time_days": "supplier_lead_time_days",
+    "delivery_delay_days": "delivery_delay_days",
     "supplier_delay_days": "supplier_delay_days",
-    "imported_materials_exposure": "imported_input_exposure",
-    "imported_input_exposure": "imported_input_exposure",
-    "imported_input_dependency_pct": "imported_input_exposure",
+    "supplier_delays_stockouts_3_6m": "supplier_delays_stockouts_3_6m",
+    "startup_stockout_risk": "startup_stockout_risk",
+    "inventory_coverage_days": "inventory_coverage_days",
+    "inventory_days": "inventory_coverage_days",
+    "total_employees_count": "total_employees_count",
+    "available_staff_count": "total_employees_count",
+    "critical_vacant_roles_count": "critical_vacant_roles_count",
+    "backup_staff_available": "backup_staff_available",
     "staffing_availability": "staffing_availability",
-    "available_staff_count": "available_staff_count",
+    "essential_equipment_dependence": "essential_equipment_dependence",
+    "backup_utilities_available": "backup_utilities_available",
+    "expected_downtime_hours": "expected_downtime_hours",
+    "business_continuity_plan_exists": "business_continuity_plan_exists",
+    "logistics_delivery_dependence": "logistics_delivery_dependence",
+    "capacity_utilization_pct": "capacity_utilization_pct",
+    "growth_operational_constraints": "growth_operational_constraints",
+    "operational_constraints": "operational_constraints",
 
     # Growth Action
     "growth_objective": "proposed_growth_action",
@@ -346,6 +424,100 @@ MASTER_INTAKE_SCHEMA: Dict[str, IntakeFieldMeta] = {
         min_value=0.0,
         max_value=60.0
     ),
+    "loan_interest_rate_pct": IntakeFieldMeta(
+        field_key="loan_interest_rate_pct",
+        label="Loan Interest Rate (%)",
+        category="credit_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Annual nominal borrowing interest rate percentage.",
+        unit="%",
+        min_value=0.0,
+        max_value=60.0,
+        risk_implication_if_missing="Interest sensitivity cannot be reliably evaluated without borrowing rate."
+    ),
+    "total_overdue_amount_lkr": IntakeFieldMeta(
+        field_key="total_overdue_amount_lkr",
+        label="Total Overdue Amount (Arrears)",
+        category="credit_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Total overdue loan principal and interest currently in arrears (LKR).",
+        unit="LKR",
+        min_value=0.0,
+        risk_implication_if_missing="Overdue arrears exposure cannot be calculated; conditional baseline assumed."
+    ),
+    "longest_overdue_period_days": IntakeFieldMeta(
+        field_key="longest_overdue_period_days",
+        label="Longest Overdue Period (Days)",
+        category="credit_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Maximum continuous days past due across all debt facilities.",
+        unit="Days",
+        min_value=0.0,
+        max_value=730.0,
+        risk_implication_if_missing="Delinquency severity cannot be confirmed."
+    ),
+    "overdue_payment_count_12m": IntakeFieldMeta(
+        field_key="overdue_payment_count_12m",
+        label="Overdue Payments in Past 12 Months",
+        category="credit_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Count of missed or delayed monthly loan payments during the past 12 months.",
+        unit="Incidents",
+        min_value=0.0,
+        max_value=12.0
+    ),
+    "other_monthly_debt_obligations_lkr": IntakeFieldMeta(
+        field_key="other_monthly_debt_obligations_lkr",
+        label="Other Monthly Debt Obligations",
+        category="credit_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Monthly servicing for non-bank loans, equipment leases, or informal credit (LKR).",
+        unit="LKR",
+        min_value=0.0
+    ),
+    "outstanding_guarantees_lkr": IntakeFieldMeta(
+        field_key="outstanding_guarantees_lkr",
+        label="Outstanding Debt Guarantees / Contingent Liabilities",
+        category="credit_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Monetary exposure of personal or cross-corporate loan guarantees (LKR).",
+        unit="LKR",
+        min_value=0.0
+    ),
+    "debt_service_available_revenue_lkr": IntakeFieldMeta(
+        field_key="debt_service_available_revenue_lkr",
+        label="Monthly Revenue Available for Debt Servicing",
+        category="credit_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Verified operating cash surplus dedicated specifically to debt service (LKR).",
+        unit="LKR",
+        min_value=0.0
+    ),
+    "upcoming_large_repayment_notes": IntakeFieldMeta(
+        field_key="upcoming_large_repayment_notes",
+        label="Upcoming Large Repayment or Loan Maturity",
+        category="credit_risk",
+        data_type="text",
+        required_for_full_readiness=False,
+        description="Impending balloon installments, bullet principal repayments, or credit renewals."
+    ),
+    "repayment_history_status": IntakeFieldMeta(
+        field_key="repayment_history_status",
+        label="Repayment History Status",
+        category="credit_risk",
+        data_type="select",
+        required_for_full_readiness=False,
+        description="Historical debt repayment timeliness track record.",
+        options=["On time", "Occasional delays", "Frequent delays", "Not applicable — new startup", "No history available", "Unknown"],
+        risk_implication_if_missing="Missing credit track record leaves default history unconfirmed."
+    ),
 
     # -----------------------------------------------------------------------
     # 3. Market Risk Dimension
@@ -418,7 +590,97 @@ MASTER_INTAKE_SCHEMA: Dict[str, IntakeFieldMeta] = {
         data_type="select",
         required_for_full_readiness=False,
         description="Frontend alias for demand_evidence.",
-        options=["contracts_signed", "pre_orders", "historical_sales", "market_survey", "estimate_only", "none", "Unknown"]
+        options=["Verified sales", "Customer survey", "Pre-orders", "Market research", "Owner estimate", "No evidence", "contracts_signed", "historical_sales", "Unknown"]
+    ),
+    "average_transaction_value_lkr": IntakeFieldMeta(
+        field_key="average_transaction_value_lkr",
+        label="Average Transaction Value",
+        category="market_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Average revenue spend per customer transaction or order (LKR).",
+        unit="LKR",
+        min_value=0.0
+    ),
+    "sales_trend_3_6m": IntakeFieldMeta(
+        field_key="sales_trend_3_6m",
+        label="Sales Trend over Last 3–6 Months",
+        category="market_risk",
+        data_type="select",
+        required_for_full_readiness=False,
+        description="Recent historical sales direction for operating business.",
+        options=["Increasing", "Stable", "Declining", "Not applicable — startup", "Unknown"]
+    ),
+    "direct_competitors_count": IntakeFieldMeta(
+        field_key="direct_competitors_count",
+        label="Number of Direct Competitors in Target Area",
+        category="market_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Active direct commercial competitors within local market area.",
+        unit="Competitors",
+        min_value=0.0
+    ),
+    "competitor_pricing_vs_business": IntakeFieldMeta(
+        field_key="competitor_pricing_vs_business",
+        label="Competitor Pricing Comparison",
+        category="market_risk",
+        data_type="select",
+        required_for_full_readiness=False,
+        description="Relative price point of local competitor alternatives.",
+        options=["Lower", "Similar", "Higher", "Unknown"]
+    ),
+    "largest_customer_sales_share_pct": IntakeFieldMeta(
+        field_key="largest_customer_sales_share_pct",
+        label="Sales Dependent on Largest Customer (%)",
+        category="market_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Share of total revenue derived from the single highest-volume customer.",
+        unit="%",
+        min_value=0.0,
+        max_value=100.0
+    ),
+    "seasonal_demand_variation_pct": IntakeFieldMeta(
+        field_key="seasonal_demand_variation_pct",
+        label="Expected Seasonal Demand Variation (%)",
+        category="market_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Peak vs trough seasonal percentage swing in product demand.",
+        unit="%",
+        min_value=0.0,
+        max_value=200.0
+    ),
+    "customer_retention_rate_pct": IntakeFieldMeta(
+        field_key="customer_retention_rate_pct",
+        label="Customer Retention / Repeat Purchase Rate (%)",
+        category="market_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Proportion of clientele making regular repeat purchases.",
+        unit="%",
+        min_value=0.0,
+        max_value=100.0
+    ),
+    "price_adjustment_flexibility": IntakeFieldMeta(
+        field_key="price_adjustment_flexibility",
+        label="Selling-Price Adjustment Flexibility",
+        category="market_risk",
+        data_type="select",
+        required_for_full_readiness=False,
+        description="Commercial flexibility to adjust selling prices without forfeiting customer volume.",
+        options=["High", "Moderate", "Low", "None", "Unknown"]
+    ),
+    "monthly_marketing_budget_lkr": IntakeFieldMeta(
+        field_key="monthly_marketing_budget_lkr",
+        label="Expected Customer Acquisition / Marketing Budget",
+        category="market_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Planned monthly expenditure on advertising, digital marketing, and promotions (LKR).",
+        unit="LKR",
+        min_value=0.0
     ),
     "demand_competition_notes": IntakeFieldMeta(
         field_key="demand_competition_notes",
@@ -507,6 +769,127 @@ MASTER_INTAKE_SCHEMA: Dict[str, IntakeFieldMeta] = {
         required_for_full_readiness=False,
         description="Pricing power to adjust end-user prices when costs rise.",
         options=["Full Cost Passthrough", "Partial Passthrough (Moderate)", "Inelastic / Fixed Prices (Low)", "Unknown"]
+    ),
+    "main_materials_monthly_cost_lkr": IntakeFieldMeta(
+        field_key="main_materials_monthly_cost_lkr",
+        label="Main Materials / Products Monthly Purchase Cost",
+        category="inflation_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Estimated monthly procurement cost of essential raw materials or trading stock (LKR).",
+        unit="LKR",
+        min_value=0.0
+    ),
+    "supplier_price_change_past_3_6m_pct": IntakeFieldMeta(
+        field_key="supplier_price_change_past_3_6m_pct",
+        label="Supplier Price Changes over Past 3–6 Months (%)",
+        category="inflation_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Observed historical vendor price increase percentage over the preceding quarter.",
+        unit="%",
+        min_value=-50.0,
+        max_value=200.0,
+        risk_implication_if_missing="Historical price trend missing; inflation indicators limited to current cost structure."
+    ),
+    "expected_supplier_price_increase_3_6m_pct": IntakeFieldMeta(
+        field_key="expected_supplier_price_increase_3_6m_pct",
+        label="Expected Supplier Price Increase over Next 3–6 Months (%)",
+        category="inflation_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Anticipated supplier price increase percentage over the coming 3–6 months.",
+        unit="%",
+        min_value=-50.0,
+        max_value=200.0
+    ),
+    "imported_inputs_pct": IntakeFieldMeta(
+        field_key="imported_inputs_pct",
+        label="Percentage of Major Inputs Purchased from Overseas (%)",
+        category="inflation_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Proportion of essential raw materials or inventory imported from foreign suppliers.",
+        unit="%",
+        min_value=0.0,
+        max_value=100.0
+    ),
+    "foreign_currency_exposure": IntakeFieldMeta(
+        field_key="foreign_currency_exposure",
+        label="Exposure to Foreign-Currency Purchases",
+        category="inflation_risk",
+        data_type="select",
+        required_for_full_readiness=False,
+        description="Sensitivity of procurement costs to foreign exchange (USD/LKR) fluctuations.",
+        options=["None", "Low", "Moderate", "High", "Unknown"]
+    ),
+    "monthly_fuel_transport_cost_lkr": IntakeFieldMeta(
+        field_key="monthly_fuel_transport_cost_lkr",
+        label="Monthly Transport & Fuel Cost",
+        category="inflation_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Monthly expenditure on logistics, commercial delivery, freight, and vehicular fuel (LKR).",
+        unit="LKR",
+        min_value=0.0
+    ),
+    "monthly_electricity_energy_cost_lkr": IntakeFieldMeta(
+        field_key="monthly_electricity_energy_cost_lkr",
+        label="Monthly Electricity & Energy Cost",
+        category="inflation_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Monthly commercial electricity, LP gas, diesel generator, and energy utility expenditure (LKR).",
+        unit="LKR",
+        min_value=0.0
+    ),
+    "ability_to_increase_prices": IntakeFieldMeta(
+        field_key="ability_to_increase_prices",
+        label="Ability to Increase Selling Prices",
+        category="inflation_risk",
+        data_type="select",
+        required_for_full_readiness=False,
+        description="Flexibility to raise customer prices in response to wholesale cost increases.",
+        options=["Easily", "Partially", "Difficult", "Unknown"]
+    ),
+    "cost_increase_pass_through_pct": IntakeFieldMeta(
+        field_key="cost_increase_pass_through_pct",
+        label="Estimated Input-Cost Pass-Through to Customers (%)",
+        category="inflation_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Estimated percentage share of input-cost inflation that can be passed on to end buyers.",
+        unit="%",
+        min_value=0.0,
+        max_value=100.0
+    ),
+    "alternative_suppliers_available": IntakeFieldMeta(
+        field_key="alternative_suppliers_available",
+        label="Availability of Alternative Suppliers",
+        category="inflation_risk",
+        data_type="select",
+        required_for_full_readiness=False,
+        description="Market availability of substitute vendors to counter price increases.",
+        options=["Good", "Limited", "None", "Unknown"]
+    ),
+    "largest_supplier_purchase_share_pct": IntakeFieldMeta(
+        field_key="largest_supplier_purchase_share_pct",
+        label="Essential Purchases Dependent on Largest Supplier (%)",
+        category="inflation_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Share of total critical input spending absorbed by the single largest supplier.",
+        unit="%",
+        min_value=0.0,
+        max_value=100.0
+    ),
+    "external_inflation_source_notes": IntakeFieldMeta(
+        field_key="external_inflation_source_notes",
+        label="Source and Date of External Inflation / Price-Index Evidence",
+        category="inflation_risk",
+        data_type="text",
+        required_for_full_readiness=False,
+        description="Documentation reference and date of any external inflation index (e.g. CBSL CCPI, sector bulletin) used."
     ),
 
     # -----------------------------------------------------------------------
@@ -663,6 +1046,89 @@ MASTER_INTAKE_SCHEMA: Dict[str, IntakeFieldMeta] = {
         min_value=0.0,
         max_value=120.0
     ),
+    "capital_includes_loan": IntakeFieldMeta(
+        field_key="capital_includes_loan",
+        label="Whether Available Capital Includes Loan Financing",
+        category="liquidity_risk",
+        data_type="select",
+        required_for_full_readiness=False,
+        description="Confirmation of whether stated available capital already embeds loan borrowings.",
+        options=["Yes", "No", "Unknown"],
+        risk_implication_if_missing="Unclear funding composition creates risk of double-counting borrowed money."
+    ),
+    "initial_setup_expenditure_lkr": IntakeFieldMeta(
+        field_key="initial_setup_expenditure_lkr",
+        label="Initial Setup Expenditure",
+        category="liquidity_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Non-recurring capital expenditure spent on site fit-out, machinery, or licensing (LKR).",
+        unit="LKR",
+        min_value=0.0
+    ),
+    "remaining_cash_reserves_after_setup_lkr": IntakeFieldMeta(
+        field_key="remaining_cash_reserves_after_setup_lkr",
+        label="Remaining Cash Reserves After Setup",
+        category="liquidity_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Actual unencumbered cash cushion remaining after initial startup expenditures (LKR).",
+        unit="LKR",
+        min_value=0.0,
+        risk_implication_if_missing="Cash runway cannot be reliably calculated without actual remaining cash cushion."
+    ),
+    "other_mandatory_monthly_obligations_lkr": IntakeFieldMeta(
+        field_key="other_mandatory_monthly_obligations_lkr",
+        label="Other Mandatory Monthly Financial Obligations",
+        category="liquidity_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Statutory EPF/ETF, taxes, commercial vehicle leasing, or mandatory insurance outlays (LKR).",
+        unit="LKR",
+        min_value=0.0
+    ),
+    "customer_payment_delay_days": IntakeFieldMeta(
+        field_key="customer_payment_delay_days",
+        label="Customer Payment Delay / Receivable Period (Days)",
+        category="liquidity_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Average credit duration extended to buyers before payment receipt.",
+        unit="Days",
+        min_value=0.0,
+        max_value=365.0
+    ),
+    "supplier_payment_period_days": IntakeFieldMeta(
+        field_key="supplier_payment_period_days",
+        label="Supplier Payment Period / Trade Credit Terms (Days)",
+        category="liquidity_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Trade credit grace window granted by suppliers before invoice settlement.",
+        unit="Days",
+        min_value=0.0,
+        max_value=365.0
+    ),
+    "working_capital_requirement_lkr": IntakeFieldMeta(
+        field_key="working_capital_requirement_lkr",
+        label="Inventory or Working-Capital Requirement Buffer",
+        category="liquidity_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Estimated operating liquidity required to bridge receivable and inventory holding cycles (LKR).",
+        unit="LKR",
+        min_value=0.0
+    ),
+    "expected_large_one_off_payments_3_6m_lkr": IntakeFieldMeta(
+        field_key="expected_large_one_off_payments_3_6m_lkr",
+        label="Expected Large One-Off Payments in Next 3–6 Months",
+        category="liquidity_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Anticipated lumpy disbursements such as annual tax settlements or license renewals (LKR).",
+        unit="LKR",
+        min_value=0.0
+    ),
 
     # -----------------------------------------------------------------------
     # 6. Operational Risk Dimension
@@ -767,6 +1233,172 @@ MASTER_INTAKE_SCHEMA: Dict[str, IntakeFieldMeta] = {
         unit="Days",
         min_value=0.0,
         max_value=180.0
+    ),
+    "critical_suppliers_count": IntakeFieldMeta(
+        field_key="critical_suppliers_count",
+        label="Number of Critical Suppliers",
+        category="operational_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Count of essential vendors whose failure would immediately halt operations.",
+        unit="Suppliers",
+        min_value=0.0
+    ),
+    "largest_supplier_dependency_pct": IntakeFieldMeta(
+        field_key="largest_supplier_dependency_pct",
+        label="Essential Inventory Dependent on Largest Supplier (%)",
+        category="operational_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Percentage share of core inventory or inputs sourced from single largest supplier.",
+        unit="%",
+        min_value=0.0,
+        max_value=100.0,
+        risk_implication_if_missing="Single-supplier bottleneck exposure cannot be evaluated."
+    ),
+    "alternative_suppliers_status": IntakeFieldMeta(
+        field_key="alternative_suppliers_status",
+        label="Availability of Alternative Suppliers",
+        category="operational_risk",
+        data_type="select",
+        required_for_full_readiness=False,
+        description="Ease and speed of onboarding replacement suppliers if existing vendor fails.",
+        options=["Good", "Limited", "None", "Unknown"]
+    ),
+    "supplier_lead_time_days": IntakeFieldMeta(
+        field_key="supplier_lead_time_days",
+        label="Typical Supplier Delivery Lead Time (Days)",
+        category="operational_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Average days elapsed from purchase order placement to receipt at facility.",
+        unit="Days",
+        min_value=0.0,
+        max_value=180.0
+    ),
+    "supplier_delays_stockouts_3_6m": IntakeFieldMeta(
+        field_key="supplier_delays_stockouts_3_6m",
+        label="Supplier Delays or Stock-Out Incidents in Past 3–6 Months",
+        category="operational_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Number of stock-out or delayed replenishment incidents experienced during last quarter.",
+        unit="Incidents",
+        min_value=0.0
+    ),
+    "startup_stockout_risk": IntakeFieldMeta(
+        field_key="startup_stockout_risk",
+        label="Expected Stock-Out Frequency / Risk for Startup",
+        category="operational_risk",
+        data_type="select",
+        required_for_full_readiness=False,
+        description="Anticipated inventory stock-out risk based on planned supplier SLAs.",
+        options=["Low", "Medium", "High", "Unknown"]
+    ),
+    "inventory_coverage_days": IntakeFieldMeta(
+        field_key="inventory_coverage_days",
+        label="Inventory Coverage Buffer (Days)",
+        category="operational_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Days of average customer sales supported by current inventory buffer.",
+        unit="Days",
+        min_value=0.0,
+        max_value=180.0
+    ),
+    "total_employees_count": IntakeFieldMeta(
+        field_key="total_employees_count",
+        label="Total Active Employees Headcount",
+        category="operational_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Current full-time and part-time employee headcount.",
+        unit="Personnel",
+        min_value=0.0
+    ),
+    "critical_vacant_roles_count": IntakeFieldMeta(
+        field_key="critical_vacant_roles_count",
+        label="Critical Vacant Roles Count",
+        category="operational_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Unfilled critical positions essential for normal daily operations.",
+        unit="Roles",
+        min_value=0.0
+    ),
+    "backup_staff_available": IntakeFieldMeta(
+        field_key="backup_staff_available",
+        label="Availability of Backup Staff for Critical Tasks",
+        category="operational_risk",
+        data_type="select",
+        required_for_full_readiness=False,
+        description="Availability of cross-trained backup staff able to cover essential roles during absences.",
+        options=["Yes", "Partial", "No", "Unknown"]
+    ),
+    "essential_equipment_dependence": IntakeFieldMeta(
+        field_key="essential_equipment_dependence",
+        label="Dependence on Essential Equipment or Technology",
+        category="operational_risk",
+        data_type="select",
+        required_for_full_readiness=False,
+        description="Operational dependency on specialized machinery, POS systems, or cloud services.",
+        options=["Critical", "Moderate", "Low", "None"]
+    ),
+    "backup_utilities_available": IntakeFieldMeta(
+        field_key="backup_utilities_available",
+        label="Availability of Backup Equipment, Power & Connectivity",
+        category="operational_risk",
+        data_type="select",
+        required_for_full_readiness=False,
+        description="Availability of backup generators, secondary internet, or reserve equipment.",
+        options=["Yes", "Partial", "No", "Unknown"]
+    ),
+    "expected_downtime_hours": IntakeFieldMeta(
+        field_key="expected_downtime_hours",
+        label="Expected Downtime / Interruption Duration (Hours)",
+        category="operational_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Estimated operational downtime in hours to restore service after an outage.",
+        unit="Hours",
+        min_value=0.0
+    ),
+    "business_continuity_plan_exists": IntakeFieldMeta(
+        field_key="business_continuity_plan_exists",
+        label="Existence of Documented Contingency / Business Continuity Plan",
+        category="operational_risk",
+        data_type="select",
+        required_for_full_readiness=False,
+        description="Whether a written business continuity, emergency response, and backup vendor plan exists.",
+        options=["Yes", "No", "Unknown"]
+    ),
+    "logistics_delivery_dependence": IntakeFieldMeta(
+        field_key="logistics_delivery_dependence",
+        label="Dependence on External Delivery & Logistics Providers",
+        category="operational_risk",
+        data_type="select",
+        required_for_full_readiness=False,
+        description="Reliance on third-party couriers or transport services to deliver orders.",
+        options=["High", "Moderate", "Low", "None"]
+    ),
+    "capacity_utilization_pct": IntakeFieldMeta(
+        field_key="capacity_utilization_pct",
+        label="Expected Operating Capacity Utilization (%)",
+        category="operational_risk",
+        data_type="number",
+        required_for_full_readiness=False,
+        description="Ratio of current output to maximum sustainable operational capacity.",
+        unit="%",
+        min_value=0.0,
+        max_value=100.0
+    ),
+    "growth_operational_constraints": IntakeFieldMeta(
+        field_key="growth_operational_constraints",
+        label="Operational Constraints from Proposed Growth Action",
+        category="operational_risk",
+        data_type="text",
+        required_for_full_readiness=False,
+        description="Key capacity bottlenecks, staffing constraints, or logistics barriers introduced by expansion."
     ),
     "operational_constraints": IntakeFieldMeta(
         field_key="operational_constraints",
@@ -946,7 +1578,10 @@ class DynamicIntakeSchemaService:
             meta = MASTER_INTAKE_SCHEMA.get(key) or MASTER_INTAKE_SCHEMA[raw_key]
 
             # Detect unknown / missing values without converting to false zero or low risk
-            if raw_val in ["Unknown", "Not available", "N/A", "Not Sure", "not sure", "", None]:
+            raw_val_str = str(raw_val).strip() if raw_val is not None else ""
+            if raw_val is None or raw_val_str.lower() in [
+                "unknown", "not available", "n/a", "not sure", "none", "null", "undefined", ""
+            ]:
                 entry = {
                     "value": None,
                     "provenance": PROVENANCE_USER_DECLARED,
@@ -958,7 +1593,7 @@ class DynamicIntakeSchemaService:
                 continue
 
             # Special parsing for string-based overdue repayments / delinquency
-            if key in ("repayment_overdue_status", "repayment_delay_days", "payment_delay_days"):
+            if key in ("repayment_overdue_status", "repayment_delay_days", "payment_delay_days") or raw_key in ("repayment_overdue_status", "repayment_delay_days", "payment_delay_days"):
                 s = str(raw_val).strip()
                 s_lower = s.lower()
                 delay_days = 0.0
@@ -1005,7 +1640,7 @@ class DynamicIntakeSchemaService:
                 continue
 
             # Special parsing for supplier delivery delay options
-            if key in ("supplier_delay_days", "delivery_delay_days"):
+            if key in ("supplier_delay_days", "delivery_delay_days") or raw_key in ("supplier_delay_days", "delivery_delay_days"):
                 s = str(raw_val).strip()
                 days = 5.0
                 if "1-3" in s:
@@ -1037,7 +1672,7 @@ class DynamicIntakeSchemaService:
                 continue
 
             # Special parsing for supplier dependency options
-            if key in ("supplier_dependency_percentage", "supplier_dependency_level"):
+            if key in ("supplier_dependency_percentage", "supplier_dependency_level") or raw_key in ("supplier_dependency_percentage", "supplier_dependency_level"):
                 s = str(raw_val).strip()
                 pct = 50.0
                 if s == "Low":
@@ -1064,10 +1699,12 @@ class DynamicIntakeSchemaService:
                     "status": "USER_PROVIDED",
                     "recorded_at": now_iso
                 }
+                if "largest_supplier_dependency_pct" not in cleaned_data:
+                    cleaned_data["largest_supplier_dependency_pct"] = pct_entry
                 continue
 
             # Special parsing for imported input exposure options
-            if key in ("imported_input_exposure", "imported_materials_exposure", "imported_input_dependency_pct"):
+            if key in ("imported_input_exposure", "imported_materials_exposure") or raw_key in ("imported_input_exposure", "imported_materials_exposure"):
                 s = str(raw_val).strip()
                 pct = 40.0
                 if s == "Low":
@@ -1081,12 +1718,13 @@ class DynamicIntakeSchemaService:
                         pct = float(s)
                     except (ValueError, TypeError):
                         pct = 40.0
-                cleaned_data["imported_input_dependency_pct"] = {
+                pct_entry = {
                     "value": pct,
                     "provenance": PROVENANCE_USER_CONFIRMED,
                     "status": "USER_PROVIDED",
                     "recorded_at": now_iso
                 }
+                cleaned_data["imported_input_dependency_pct"] = pct_entry
                 cleaned_data["imported_input_exposure"] = {
                     "value": s,
                     "provenance": PROVENANCE_USER_CONFIRMED,
@@ -1099,6 +1737,8 @@ class DynamicIntakeSchemaService:
                     "status": "USER_PROVIDED",
                     "recorded_at": now_iso
                 }
+                if "imported_inputs_pct" not in cleaned_data:
+                    cleaned_data["imported_inputs_pct"] = pct_entry
                 continue
 
             # Standard numeric fields

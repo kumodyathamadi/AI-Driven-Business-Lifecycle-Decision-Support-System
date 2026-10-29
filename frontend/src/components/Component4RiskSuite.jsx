@@ -162,32 +162,236 @@ export default function Component4RiskSuite({
   // Step 3 Progressive Disclosure State (5 Risk Dimensions)
   const [activeDimensionTab, setActiveDimensionTab] = useState('credit');
   const [formData, setFormData] = useState({
+    // Credit Risk Inputs
     outstanding_loan_balance: '',
     monthly_loan_repayment: '',
+    repayment_overdue_status: 'No',
     overdue_repayments: 'No',
-    repayment_status: 'Current',
-    debt_guarantees: 'None',
+    repayment_delay_days: '',
+    total_overdue_amount_lkr: '',
+    longest_overdue_period_days: '',
+    overdue_payment_count_12m: '',
+    other_monthly_debt_obligations_lkr: '',
+    outstanding_guarantees_lkr: '',
+    debt_guarantees: '',
+    loan_interest_rate_pct: '',
+    monthly_interest_cost_lkr: '',
+    debt_service_available_revenue_lkr: '',
+    repayment_history_status: 'On time',
+    upcoming_large_repayment_notes: '',
+
+    // Market Risk Inputs
     monthly_sales_revenue: '',
     monthly_customer_count: '',
+    average_transaction_value_lkr: '',
     customer_demand_evidence: 'estimate_only',
+    sales_trend_3_6m: 'Stable',
+    direct_competitors_count: '',
+    competitor_pricing_vs_business: 'Similar',
+    largest_customer_sales_share_pct: '',
+    seasonal_demand_variation_pct: '',
+    customer_retention_rate_pct: '',
+    price_adjustment_flexibility: 'Moderate',
+    monthly_marketing_budget_lkr: '',
     demand_competition_notes: '',
-    inflation_affected_categories: 'Utilities, Raw materials',
+
+    // Inflation Risk Inputs
+    main_materials_monthly_cost_lkr: '',
     recent_supplier_price_increase_pct: '',
+    supplier_price_change_past_3_6m_pct: '',
+    expected_supplier_price_increase_3_6m_pct: '',
+    imported_inputs_pct: '',
     imported_materials_exposure: 'Moderate',
+    monthly_fuel_transport_cost_lkr: '',
+    monthly_electricity_energy_cost_lkr: '',
+    ability_to_increase_prices: 'Partially',
+    cost_increase_pass_through_pct: '',
+    alternative_suppliers_available: 'Good',
+    largest_supplier_purchase_share_pct: '',
+    inflation_affected_categories: '',
+    external_inflation_source_notes: '',
+
+    // Liquidity Risk Inputs
+    available_starting_capital_lkr: '',
+    capital_includes_loan: 'No',
+    initial_setup_expenditure_lkr: '',
     cash_available_operations: '',
+    remaining_cash_reserves_after_setup_lkr: '',
+    cash_reserve_after_startup: '',
     monthly_fixed_costs: '',
     monthly_variable_costs: '',
+    other_mandatory_monthly_obligations_lkr: '',
     accounts_receivable: '',
+    customer_payment_delay_days: '',
     accounts_payable: '',
-    cash_reserve_after_startup: '',
-    main_suppliers_list: '',
+    supplier_payment_period_days: '',
+    working_capital_requirement_lkr: '',
+    expected_large_one_off_payments_3_6m_lkr: '',
+
+    // Operational Risk Inputs
+    critical_suppliers_count: '',
+    largest_supplier_dependency_pct: '',
     supplier_dependency_level: 'Moderate',
+    alternative_suppliers_status: 'Good',
+    supplier_lead_time_days: '',
     delivery_delay_days: '3-5 days',
-    staffing_availability: 'Adequate',
+    supplier_delay_days: '',
+    supplier_delays_stockouts_3_6m: '',
+    inventory_coverage_days: '',
+    total_employees_count: '',
+    available_staff_count: '',
+    critical_vacant_roles_count: '',
+    backup_staff_available: 'Partial',
+    essential_equipment_dependence: 'Moderate',
+    backup_utilities_available: 'Partial',
+    expected_downtime_hours: '',
+    business_continuity_plan_exists: 'Yes',
+    logistics_delivery_dependence: 'Moderate',
+    capacity_utilization_pct: '',
+    operational_constraints: 'None',
+    growth_operational_constraints: '',
+    main_suppliers_list: '',
     growth_objective: 'organic_expansion'
   });
   const [unknownToggles, setUnknownToggles] = useState({});
+  const [fieldProvenances, setFieldProvenances] = useState({});
   const [declaredRelationships, setDeclaredRelationships] = useState([]);
+
+  // Automatically prefill risk fields from plan extraction or profile facts
+  const prefillFormDataFromExtraction = (ext, facts = {}) => {
+    if (!ext && !facts) return;
+    const patch = {};
+    const provPatch = {};
+
+    const resolveValueAndProv = (candidateKeys) => {
+      // 1. Check availableFacts first
+      if (facts && typeof facts === 'object') {
+        for (const k of candidateKeys) {
+          if (facts[k] && facts[k].value !== undefined && facts[k].value !== null && facts[k].value !== '') {
+            return { val: facts[k].value, prov: facts[k].provenance || 'plan_stated' };
+          }
+        }
+      }
+      // 2. Check ext object
+      if (ext && typeof ext === 'object') {
+        for (const k of candidateKeys) {
+          if (ext[k] !== undefined && ext[k] !== null && ext[k] !== '') {
+            const p = ext.field_provenance?.[k] || 'plan_stated';
+            return { val: ext[k], prov: p };
+          }
+        }
+        if (ext.financial_projections && typeof ext.financial_projections === 'object') {
+          for (const k of candidateKeys) {
+            if (ext.financial_projections[k] !== undefined && ext.financial_projections[k] !== null && ext.financial_projections[k] !== '') {
+              return { val: ext.financial_projections[k], prov: 'plan_stated' };
+            }
+          }
+        }
+      }
+      return null;
+    };
+
+    const mapping = {
+      // Credit
+      outstanding_loan_balance: ['outstanding_loan_balance_lkr', 'requested_loan_lkr', 'loan_amount_lkr', 'outstanding_debt_lkr', 'outstanding_loan_balance'],
+      monthly_loan_repayment: ['monthly_loan_repayment_lkr', 'monthly_debt_repayment_lkr', 'monthly_loan_repayment'],
+      repayment_overdue_status: ['repayment_overdue_status', 'overdue_repayments'],
+      repayment_delay_days: ['repayment_delay_days', 'payment_delay_days'],
+      total_overdue_amount_lkr: ['total_overdue_amount_lkr', 'arrears_amount_lkr'],
+      longest_overdue_period_days: ['longest_overdue_period_days'],
+      overdue_payment_count_12m: ['overdue_payment_count_12m'],
+      other_monthly_debt_obligations_lkr: ['other_monthly_debt_obligations_lkr'],
+      outstanding_guarantees_lkr: ['outstanding_guarantees_lkr'],
+      debt_guarantees: ['debt_guarantees_or_obligations', 'debt_guarantees'],
+      loan_interest_rate_pct: ['loan_interest_rate_pct', 'annual_interest_rate_pct'],
+      monthly_interest_cost_lkr: ['monthly_interest_cost_lkr'],
+      debt_service_available_revenue_lkr: ['debt_service_available_revenue_lkr'],
+      repayment_history_status: ['repayment_history_status'],
+      upcoming_large_repayment_notes: ['upcoming_large_repayment_notes'],
+
+      // Market
+      monthly_sales_revenue: ['monthly_revenue_lkr', 'projected_revenue_lkr', 'monthly_sales_revenue'],
+      monthly_customer_count: ['monthly_customer_count'],
+      average_transaction_value_lkr: ['average_transaction_value_lkr', 'average_transaction_value'],
+      customer_demand_evidence: ['demand_evidence_type', 'demand_evidence', 'customer_demand_evidence'],
+      sales_trend_3_6m: ['sales_trend_3_6m'],
+      direct_competitors_count: ['direct_competitors_count', 'competitor_count'],
+      competitor_pricing_vs_business: ['competitor_pricing_vs_business'],
+      largest_customer_sales_share_pct: ['largest_customer_sales_share_pct', 'customer_concentration_pct'],
+      seasonal_demand_variation_pct: ['seasonal_demand_variation_pct'],
+      customer_retention_rate_pct: ['customer_retention_rate_pct'],
+      price_adjustment_flexibility: ['price_adjustment_flexibility'],
+      monthly_marketing_budget_lkr: ['monthly_marketing_budget_lkr', 'marketing_budget_lkr'],
+      demand_competition_notes: ['demand_competition_notes'],
+
+      // Inflation
+      main_materials_monthly_cost_lkr: ['main_materials_monthly_cost_lkr'],
+      recent_supplier_price_increase_pct: ['supplier_price_change_past_3_6m_pct', 'recent_supplier_price_increase_pct'],
+      supplier_price_change_past_3_6m_pct: ['supplier_price_change_past_3_6m_pct'],
+      expected_supplier_price_increase_3_6m_pct: ['expected_supplier_price_increase_3_6m_pct', 'expected_cost_increase_pct'],
+      imported_inputs_pct: ['imported_inputs_pct', 'imported_input_dependency_pct'],
+      imported_materials_exposure: ['foreign_currency_exposure', 'imported_input_exposure', 'imported_materials_exposure'],
+      monthly_fuel_transport_cost_lkr: ['monthly_fuel_transport_cost_lkr'],
+      monthly_electricity_energy_cost_lkr: ['monthly_electricity_energy_cost_lkr'],
+      ability_to_increase_prices: ['ability_to_increase_prices', 'price_adjustment_ability'],
+      cost_increase_pass_through_pct: ['cost_increase_pass_through_pct'],
+      alternative_suppliers_available: ['alternative_suppliers_available'],
+      largest_supplier_purchase_share_pct: ['largest_supplier_purchase_share_pct'],
+      inflation_affected_categories: ['inflation_affected_categories'],
+      external_inflation_source_notes: ['external_inflation_source_notes'],
+
+      // Liquidity
+      available_starting_capital_lkr: ['available_starting_capital_lkr', 'available_capital_lkr'],
+      capital_includes_loan: ['capital_includes_loan'],
+      initial_setup_expenditure_lkr: ['initial_setup_expenditure_lkr', 'initial_setup_expenditure'],
+      cash_available_operations: ['current_cash_reserve_lkr', 'cash_available_operations'],
+      remaining_cash_reserves_after_setup_lkr: ['remaining_cash_reserves_after_setup_lkr', 'cash_reserve_after_startup'],
+      cash_reserve_after_startup: ['remaining_cash_reserves_after_setup_lkr', 'cash_reserve_after_startup'],
+      monthly_fixed_costs: ['fixed_monthly_costs_lkr', 'monthly_budget_lkr', 'monthly_fixed_costs'],
+      monthly_variable_costs: ['variable_monthly_costs_lkr', 'monthly_variable_costs'],
+      other_mandatory_monthly_obligations_lkr: ['other_mandatory_monthly_obligations_lkr'],
+      accounts_receivable: ['accounts_receivable_lkr', 'accounts_receivable'],
+      customer_payment_delay_days: ['customer_payment_delay_days'],
+      accounts_payable: ['accounts_payable_lkr', 'accounts_payable'],
+      supplier_payment_period_days: ['supplier_payment_period_days'],
+      working_capital_requirement_lkr: ['working_capital_requirement_lkr'],
+      expected_large_one_off_payments_3_6m_lkr: ['expected_large_one_off_payments_3_6m_lkr'],
+
+      // Operational
+      critical_suppliers_count: ['critical_suppliers_count', 'supplier_count'],
+      largest_supplier_dependency_pct: ['largest_supplier_dependency_pct', 'supplier_dependency_percentage', 'single_supplier_dependency_pct'],
+      supplier_dependency_level: ['supplier_dependency_level'],
+      alternative_suppliers_status: ['alternative_suppliers_status'],
+      supplier_lead_time_days: ['supplier_lead_time_days'],
+      delivery_delay_days: ['supplier_delay_days', 'delivery_delay_days'],
+      supplier_delay_days: ['supplier_delay_days'],
+      supplier_delays_stockouts_3_6m: ['supplier_delays_stockouts_3_6m'],
+      inventory_coverage_days: ['inventory_coverage_days', 'inventory_days'],
+      total_employees_count: ['total_employees_count', 'available_staff_count'],
+      available_staff_count: ['total_employees_count', 'available_staff_count'],
+      critical_vacant_roles_count: ['critical_vacant_roles_count'],
+      backup_staff_available: ['backup_staff_available', 'staffing_availability'],
+      essential_equipment_dependence: ['essential_equipment_dependence'],
+      backup_utilities_available: ['backup_utilities_available'],
+      expected_downtime_hours: ['expected_downtime_hours'],
+      business_continuity_plan_exists: ['business_continuity_plan_exists'],
+      logistics_delivery_dependence: ['logistics_delivery_dependence'],
+      capacity_utilization_pct: ['capacity_utilization_pct'],
+      operational_constraints: ['operational_constraints', 'growth_operational_constraints'],
+      main_suppliers_list: ['main_suppliers_list']
+    };
+
+    Object.entries(mapping).forEach(([formKey, candidateKeys]) => {
+      const match = resolveValueAndProv(candidateKeys);
+      if (match && match.val !== undefined && match.val !== null) {
+        patch[formKey] = String(match.val);
+        provPatch[formKey] = match.prov;
+      }
+    });
+
+    setFormData(prev => ({ ...prev, ...patch }));
+    setFieldProvenances(prev => ({ ...prev, ...provPatch }));
+  };
 
   // Active Assessment Output (Steps 4, 5, 6)
   const [analysisResult, setAnalysisResult] = useState(initialPlanData);
@@ -297,6 +501,7 @@ export default function Component4RiskSuite({
       }
       setConflictingFields(conflicts);
       setIsDemoProfile(false);
+      prefillFormDataFromExtraction(res.extraction, res.available_facts || {});
 
       setSuccessMsg(`Successfully imported Component 1 business plan for '${res.extraction?.business_name || 'Enterprise'}'. Review profile facts and confirm any flagged discrepancies.`);
       setCurrentStep(2);
@@ -377,6 +582,7 @@ export default function Component4RiskSuite({
       }
       setConflictingFields(conflicts);
       setIsDemoProfile(false);
+      prefillFormDataFromExtraction(res.extraction, res.available_facts || {});
 
       setSuccessMsg(`Extracted details from '${res.filename}'. Please review your confirmed business facts.`);
       setCurrentStep(2); // Advance to Step 2
@@ -401,6 +607,9 @@ export default function Component4RiskSuite({
       business_stage: { value: biz.business_stage, provenance: 'user_confirmed', source_reference: 'Enterprise Profile' }
     };
     setAvailableFacts(facts);
+    if (biz.latest_intake_data) {
+      prefillFormDataFromExtraction(biz.latest_intake_data, facts);
+    }
     setCurrentStep(2);
   };
 
@@ -437,21 +646,103 @@ export default function Component4RiskSuite({
     };
     setConflictingFields(demoConflicts);
 
-    // Initial follow-up fields for Step 3
+    // Initial follow-up fields for Step 3 across all 5 risk dimensions
     setFormData(prev => ({
       ...prev,
-      monthly_sales_revenue: '320000',
-      monthly_customer_count: '110',
-      customer_demand_evidence: 'pre_orders',
+      // Credit
       outstanding_loan_balance: '450000',
       monthly_loan_repayment: '32000',
+      repayment_overdue_status: 'No',
+      overdue_repayments: 'No',
+      repayment_delay_days: '0',
+      total_overdue_amount_lkr: '0',
+      longest_overdue_period_days: '0',
+      overdue_payment_count_12m: '0',
+      other_monthly_debt_obligations_lkr: '0',
+      outstanding_guarantees_lkr: '0',
+      debt_guarantees: 'None',
+      loan_interest_rate_pct: '18',
+      monthly_interest_cost_lkr: '6750',
+      debt_service_available_revenue_lkr: '65000',
+      repayment_history_status: 'On time',
+      upcoming_large_repayment_notes: 'None',
+
+      // Market
+      monthly_sales_revenue: '320000',
+      monthly_customer_count: '110',
+      average_transaction_value_lkr: '2900',
+      customer_demand_evidence: 'pre_orders',
+      sales_trend_3_6m: 'Increasing',
+      direct_competitors_count: '3',
+      competitor_pricing_vs_business: 'Similar',
+      largest_customer_sales_share_pct: '25',
+      seasonal_demand_variation_pct: '20',
+      customer_retention_rate_pct: '65',
+      price_adjustment_flexibility: 'Moderate',
+      monthly_marketing_budget_lkr: '25000',
+      demand_competition_notes: '3 competing cosmetic retail outlets within 2km; strong repeat clientele for organic serums',
+
+      // Inflation
+      main_materials_monthly_cost_lkr: '110000',
+      recent_supplier_price_increase_pct: '12',
+      supplier_price_change_past_3_6m_pct: '12',
+      expected_supplier_price_increase_3_6m_pct: '10',
+      imported_inputs_pct: '40',
+      imported_materials_exposure: 'Moderate',
+      monthly_fuel_transport_cost_lkr: '18000',
+      monthly_electricity_energy_cost_lkr: '22000',
+      ability_to_increase_prices: 'Partially',
+      cost_increase_pass_through_pct: '60',
+      alternative_suppliers_available: 'Good',
+      largest_supplier_purchase_share_pct: '45',
+      inflation_affected_categories: 'Organic essential oils, imported glass packaging, delivery tariffs',
+      external_inflation_source_notes: 'CBSL CCPI Bulletin Q3 2024',
+
+      // Liquidity
+      available_starting_capital_lkr: '850000',
+      capital_includes_loan: 'Yes',
+      initial_setup_expenditure_lkr: '350000',
       cash_available_operations: '250000',
+      remaining_cash_reserves_after_setup_lkr: '180000',
+      cash_reserve_after_startup: '180000',
       monthly_fixed_costs: '95000',
       monthly_variable_costs: '50000',
-      cash_reserve_after_startup: '180000',
-      main_suppliers_list: 'Lanka Herbal Extracts Ltd, Colombo Packaging Co',
-      supplier_dependency_level: 'High'
+      other_mandatory_monthly_obligations_lkr: '15000',
+      accounts_receivable: '45000',
+      customer_payment_delay_days: '14',
+      accounts_payable: '60000',
+      supplier_payment_period_days: '30',
+      working_capital_requirement_lkr: '120000',
+      expected_large_one_off_payments_3_6m_lkr: '35000',
+
+      // Operational
+      critical_suppliers_count: '2',
+      largest_supplier_dependency_pct: '65',
+      supplier_dependency_level: 'High',
+      alternative_suppliers_status: 'Good',
+      supplier_lead_time_days: '5',
+      delivery_delay_days: '3-5 days',
+      supplier_delay_days: '4',
+      supplier_delays_stockouts_3_6m: '1',
+      inventory_coverage_days: '21',
+      total_employees_count: '4',
+      available_staff_count: '4',
+      critical_vacant_roles_count: '0',
+      backup_staff_available: 'Partial',
+      essential_equipment_dependence: 'Moderate',
+      backup_utilities_available: 'Partial',
+      expected_downtime_hours: '4',
+      business_continuity_plan_exists: 'Yes',
+      logistics_delivery_dependence: 'Moderate',
+      capacity_utilization_pct: '70',
+      operational_constraints: 'None',
+      growth_operational_constraints: 'None',
+      main_suppliers_list: 'Lanka Herbal Extracts Ltd, Colombo Packaging Co'
     }));
+
+    const demoProv = {};
+    Object.keys(demoFacts).forEach(k => { demoProv[k] = 'plan_stated'; });
+    setFieldProvenances(prev => ({ ...prev, ...demoProv }));
 
     setDeclaredRelationships([
       {
@@ -528,16 +819,20 @@ export default function Component4RiskSuite({
   // STEP 3: Form Field Change Handlers
   const handleFormFieldChange = (fieldKey, value) => {
     setFormData(prev => ({ ...prev, [fieldKey]: value }));
+    setFieldProvenances(prev => ({ ...prev, [fieldKey]: 'user_confirmed' }));
     if (unknownToggles[fieldKey]) {
       setUnknownToggles(prev => ({ ...prev, [fieldKey]: false }));
     }
   };
 
   const handleToggleUnknown = (fieldKey) => {
-    setUnknownToggles(prev => ({
-      ...prev,
-      [fieldKey]: !prev[fieldKey]
-    }));
+    setUnknownToggles(prev => {
+      const next = !prev[fieldKey];
+      if (next) {
+        setFieldProvenances(p => ({ ...p, [fieldKey]: 'unknown' }));
+      }
+      return { ...prev, [fieldKey]: next };
+    });
   };
 
   const handleAddRelationship = () => {
@@ -581,8 +876,8 @@ export default function Component4RiskSuite({
 
     try {
       const completedFields = { ...formData };
-      Object.keys(completedFields).forEach(k => {
-        if (unknownToggles[k]) {
+      Object.entries(unknownToggles).forEach(([k, isUnk]) => {
+        if (isUnk) {
           completedFields[k] = 'Unknown';
         }
       });
@@ -713,7 +1008,7 @@ export default function Component4RiskSuite({
   const steps = [
     { num: 1, label: 'Business Plan' },
     { num: 2, label: 'Confirm Details' },
-    { num: 3, label: 'Additional Information' },
+    { num: 3, label: 'Risk Assessment Details' },
     { num: 4, label: 'Risk Assessment' },
     { num: 5, label: 'GNN Insights' },
     { num: 6, label: 'Mitigation & Growth' },
@@ -1266,7 +1561,7 @@ export default function Component4RiskSuite({
               onClick={() => setCurrentStep(3)}
               className="btn btn-primary"
             >
-              <span>Continue to Additional Information</span>
+              <span>Continue to Risk Assessment Details</span>
               <ArrowRight size={15} />
             </button>
           </div>
@@ -1274,443 +1569,1235 @@ export default function Component4RiskSuite({
       )}
 
       {/* ========================================================================= */}
-      {/* STEP 3: ADDITIONAL INFORMATION (5 Risk Dimensions Progressive Disclosure)  */}
+      {/* STEP 3: DEDICATED RISK ASSESSMENT DETAILS (Five Risk Dimensions Form)       */}
       {/* ========================================================================= */}
-      {currentStep === 3 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          
-          <div className="c4-section-card">
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 0.35rem 0' }}>
-              Additional Information for Five Risk Dimensions
-            </h2>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem 0' }}>
-              Provide supplemental operating facts. Fields without exact records can be marked &ldquo;Unknown&rdquo; or &ldquo;Not sure&rdquo; without blocking the evaluation.
-            </p>
+      {currentStep === 3 && (() => {
+        // Helper to render consistent, schema-driven risk input fields with provenance badges & unknown toggles
+        const renderRiskInputField = ({
+          label,
+          fieldKey,
+          type = 'text',
+          unit = '',
+          required = false,
+          description = '',
+          options = [],
+          placeholder = '',
+          extraActions = null
+        }) => {
+          const isUnknown = Boolean(unknownToggles[fieldKey]);
+          const prov = fieldProvenances[fieldKey];
 
-            {/* Dimension Switcher Pills */}
-            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
-              {[
-                { id: 'credit', label: 'A. Credit Risk', icon: DollarSign },
-                { id: 'market', label: 'B. Market Risk', icon: TrendingUp },
-                { id: 'inflation', label: 'C. Inflation Risk', icon: Flame },
-                { id: 'liquidity', label: 'D. Liquidity Risk', icon: Clock },
-                { id: 'operational', label: 'E. Operational Risk', icon: Truck },
-              ].map(dim => {
-                const Icon = dim.icon;
-                const isSelected = activeDimensionTab === dim.id;
-                return (
-                  <button
-                    key={dim.id}
-                    type="button"
-                    onClick={() => setActiveDimensionTab(dim.id)}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      padding: '0.45rem 0.85rem',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: '0.8rem',
-                      fontWeight: isSelected ? 700 : 500,
-                      background: isSelected ? 'var(--primary-green-subtle)' : 'var(--bg-subtle)',
-                      color: isSelected ? 'var(--primary-green)' : 'var(--text-secondary)',
-                      border: isSelected ? '1px solid var(--primary-green-border)' : '1px solid var(--border-color)',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <Icon size={14} />
-                    <span>{dim.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* DIMENSION A: CREDIT RISK */}
-            {activeDimensionTab === 'credit' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div className="grid-2">
-                  <div>
-                    <label className="form-label">Outstanding Loan Balance (LKR)</label>
-                    <input
-                      type="number"
-                      disabled={unknownToggles['outstanding_loan_balance']}
-                      value={unknownToggles['outstanding_loan_balance'] ? '' : formData.outstanding_loan_balance}
-                      onChange={(e) => handleFormFieldChange('outstanding_loan_balance', e.target.value)}
-                      placeholder={unknownToggles['outstanding_loan_balance'] ? 'Marked Unknown' : 'e.g. 450000'}
-                      className="form-control"
-                    />
-                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.35rem' }}>
-                      <button type="button" onClick={() => handleToggleUnknown('outstanding_loan_balance')} className="btn btn-subtle" style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}>
-                        {unknownToggles['outstanding_loan_balance'] ? 'Clear Unknown' : 'Mark Unknown'}
-                      </button>
-                      <button type="button" onClick={() => handleFormFieldChange('outstanding_loan_balance', '0')} className="btn btn-subtle" style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}>
-                        No Loan (LKR 0)
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="form-label">Monthly Loan Repayment (LKR)</label>
-                    <input
-                      type="number"
-                      disabled={unknownToggles['monthly_loan_repayment']}
-                      value={unknownToggles['monthly_loan_repayment'] ? '' : formData.monthly_loan_repayment}
-                      onChange={(e) => handleFormFieldChange('monthly_loan_repayment', e.target.value)}
-                      placeholder="e.g. 32000"
-                      className="form-control"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid-2">
-                  <div>
-                    <label className="form-label">Overdue Repayments</label>
-                    <select
-                      value={formData.overdue_repayments}
-                      onChange={(e) => handleFormFieldChange('overdue_repayments', e.target.value)}
-                      className="form-select"
-                    >
-                      <option value="No">No Overdue Installments</option>
-                      <option value="1-30 Days">1–30 Days Overdue</option>
-                      <option value="30+ Days">30+ Days Overdue</option>
-                      <option value="Unknown">Not Sure</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="form-label">Existing Debt Guarantees / Obligations</label>
-                    <input
-                      type="text"
-                      value={formData.debt_guarantees}
-                      onChange={(e) => handleFormFieldChange('debt_guarantees', e.target.value)}
-                      placeholder="e.g. Personal director guarantee, equipment lien"
-                      className="form-control"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* DIMENSION B: MARKET RISK */}
-            {activeDimensionTab === 'market' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div className="grid-2">
-                  <div>
-                    <label className="form-label">Monthly Sales or Revenue (LKR)</label>
-                    <input
-                      type="number"
-                      value={formData.monthly_sales_revenue}
-                      onChange={(e) => handleFormFieldChange('monthly_sales_revenue', e.target.value)}
-                      placeholder="e.g. 350000"
-                      className="form-control"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="form-label">Average Monthly Customer Count</label>
-                    <input
-                      type="number"
-                      value={formData.monthly_customer_count}
-                      onChange={(e) => handleFormFieldChange('monthly_customer_count', e.target.value)}
-                      placeholder="e.g. 120"
-                      className="form-control"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid-2">
-                  <div>
-                    <label className="form-label">Demand Verification Evidence</label>
-                    <select
-                      value={formData.customer_demand_evidence}
-                      onChange={(e) => handleFormFieldChange('customer_demand_evidence', e.target.value)}
-                      className="form-select"
-                    >
-                      <option value="actual_records">Actual Accounting Sales Records</option>
-                      <option value="pre_orders">Signed Pre-orders or Deposits</option>
-                      <option value="survey">Market Survey / Customer Interviews</option>
-                      <option value="foot_traffic">Direct Footfall Observation</option>
-                      <option value="estimate_only">Founder Estimate Only</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="form-label">Local Competition Notes</label>
-                    <input
-                      type="text"
-                      value={formData.demand_competition_notes}
-                      onChange={(e) => handleFormFieldChange('demand_competition_notes', e.target.value)}
-                      placeholder="e.g. 2 nearby competitors within 1km"
-                      className="form-control"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* DIMENSION C: INFLATION RISK */}
-            {activeDimensionTab === 'inflation' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div className="grid-2">
-                  <div>
-                    <label className="form-label">Main Cost Categories Affected by Inflation</label>
-                    <input
-                      type="text"
-                      value={formData.inflation_affected_categories}
-                      onChange={(e) => handleFormFieldChange('inflation_affected_categories', e.target.value)}
-                      placeholder="e.g. Raw materials, electricity, delivery tariffs"
-                      className="form-control"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="form-label">Recent Supplier Price Increases (% if known)</label>
-                    <input
-                      type="number"
-                      value={formData.recent_supplier_price_increase_pct}
-                      onChange={(e) => handleFormFieldChange('recent_supplier_price_increase_pct', e.target.value)}
-                      placeholder="e.g. 15"
-                      className="form-control"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="form-label">Imported Materials &amp; Currency Exposure</label>
-                  <select
-                    value={formData.imported_materials_exposure}
-                    onChange={(e) => handleFormFieldChange('imported_materials_exposure', e.target.value)}
-                    className="form-select"
-                  >
-                    <option value="Low">Low (Primarily locally sourced in Sri Lanka)</option>
-                    <option value="Moderate">Moderate (Some packaging or auxiliary inputs imported)</option>
-                    <option value="High">High (Direct foreign currency or imported raw material reliance)</option>
-                  </select>
-                </div>
-              </div>
-            )}
-
-            {/* DIMENSION D: LIQUIDITY RISK */}
-            {activeDimensionTab === 'liquidity' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div className="grid-2">
-                  <div>
-                    <label className="form-label">Cash Currently Available for Operations (LKR)</label>
-                    <input
-                      type="number"
-                      value={formData.cash_available_operations}
-                      onChange={(e) => handleFormFieldChange('cash_available_operations', e.target.value)}
-                      placeholder="e.g. 200000"
-                      className="form-control"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="form-label">Monthly Fixed Costs (LKR)</label>
-                    <input
-                      type="number"
-                      value={formData.monthly_fixed_costs}
-                      onChange={(e) => handleFormFieldChange('monthly_fixed_costs', e.target.value)}
-                      placeholder="e.g. 85000"
-                      className="form-control"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid-2">
-                  <div>
-                    <label className="form-label">Monthly Variable Costs (LKR)</label>
-                    <input
-                      type="number"
-                      value={formData.monthly_variable_costs}
-                      onChange={(e) => handleFormFieldChange('monthly_variable_costs', e.target.value)}
-                      placeholder="e.g. 60000"
-                      className="form-control"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="form-label">Emergency Cash Reserve Buffer (LKR)</label>
-                    <input
-                      type="number"
-                      value={formData.cash_reserve_after_startup}
-                      onChange={(e) => handleFormFieldChange('cash_reserve_after_startup', e.target.value)}
-                      placeholder="e.g. 150000"
-                      className="form-control"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* DIMENSION E: OPERATIONAL RISK & RELATIONSHIPS */}
-            {activeDimensionTab === 'operational' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <div className="grid-2">
-                  <div>
-                    <label className="form-label">Supplier Dependency Level</label>
-                    <select
-                      value={formData.supplier_dependency_level}
-                      onChange={(e) => handleFormFieldChange('supplier_dependency_level', e.target.value)}
-                      className="form-select"
-                    >
-                      <option value="Low">Low (Multiple suppliers available nearby)</option>
-                      <option value="Moderate">Moderate (2–3 primary vendors)</option>
-                      <option value="High">High (Single critical supplier bottleneck)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="form-label">Typical Delivery Lead Time</label>
-                    <select
-                      value={formData.delivery_delay_days}
-                      onChange={(e) => handleFormFieldChange('delivery_delay_days', e.target.value)}
-                      className="form-select"
-                    >
-                      <option value="1-3 days">1–3 Days</option>
-                      <option value="3-5 days">3–5 Days</option>
-                      <option value="7-14 days">7–14 Days</option>
-                      <option value="14+ days">Over 14 Days</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Counterparties Adder for GNN Network */}
-                <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                    <div>
-                      <h4 style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0 }}>
-                        Declared Trade Counterparties (Suppliers / Customers / Lenders)
-                      </h4>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>
-                        Used by the GNN model to evaluate supply chain concentration and credit contagion.
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleAddRelationship}
-                      className="btn btn-secondary"
-                      style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
-                    >
-                      <Plus size={13} />
-                      <span>Add Counterparty</span>
-                    </button>
-                  </div>
-
-                  {declaredRelationships.length === 0 ? (
-                    <div style={{ padding: '1rem', background: 'var(--bg-subtle)', borderRadius: 'var(--radius-sm)', textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                      No counterparties declared yet. Adding suppliers or major buyers enables relational GNN insights.
-                    </div>
+          return (
+            <div className="risk-input-field-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.3rem' }}>
+                <label className="form-label" style={{ margin: 0, display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, fontSize: '0.82rem' }}>
+                  <span>{label}</span>
+                  {unit && (
+                    <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.35rem', background: 'var(--bg-subtle)', borderRadius: '3px', color: 'var(--text-secondary)', border: '1px solid var(--border-color)' }}>
+                      {unit}
+                    </span>
+                  )}
+                  {required ? (
+                    <span style={{ fontSize: '0.68rem', color: 'var(--risk-high)', fontWeight: 700 }}>*Required</span>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      {declaredRelationships.map((rel, idx) => (
-                        <div
-                          key={idx}
-                          style={{
-                            padding: '0.85rem',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: 'var(--radius-sm)',
-                            background: 'var(--bg-surface)',
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr)) auto',
-                            gap: '0.75rem',
-                            alignItems: 'center'
-                          }}
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Optional</span>
+                  )}
+                </label>
+                {prov && renderProvenanceTag(prov)}
+              </div>
+
+              {description && (
+                <p style={{ margin: '0 0 0.15rem 0', fontSize: '0.74rem', color: 'var(--text-secondary)', lineHeight: 1.35 }}>
+                  {description}
+                </p>
+              )}
+
+              {type === 'select' ? (
+                <select
+                  value={isUnknown ? 'Unknown' : (formData[fieldKey] ?? '')}
+                  disabled={isUnknown}
+                  onChange={(e) => handleFormFieldChange(fieldKey, e.target.value)}
+                  className="form-select"
+                  style={{
+                    fontSize: '0.82rem',
+                    padding: '0.45rem 0.65rem',
+                    background: isUnknown ? 'var(--bg-subtle)' : 'var(--bg-surface)',
+                    color: isUnknown ? 'var(--text-muted)' : 'var(--text-primary)',
+                    borderColor: isUnknown ? 'var(--border-subtle)' : undefined
+                  }}
+                >
+                  {options.map((opt) => {
+                    const val = typeof opt === 'object' ? opt.value : opt;
+                    const lbl = typeof opt === 'object' ? opt.label : opt;
+                    return <option key={val} value={val}>{lbl}</option>;
+                  })}
+                </select>
+              ) : (
+                <input
+                  type={type}
+                  disabled={isUnknown}
+                  value={isUnknown ? '' : (formData[fieldKey] ?? '')}
+                  onChange={(e) => handleFormFieldChange(fieldKey, e.target.value)}
+                  placeholder={isUnknown ? 'Marked Unknown (non-zero; unverified)' : placeholder}
+                  className="form-control"
+                  style={{
+                    fontSize: '0.82rem',
+                    padding: '0.45rem 0.65rem',
+                    background: isUnknown ? 'var(--bg-subtle)' : 'var(--bg-surface)',
+                    color: isUnknown ? 'var(--text-muted)' : 'var(--text-primary)',
+                    borderColor: isUnknown ? 'var(--border-subtle)' : undefined
+                  }}
+                />
+              )}
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginTop: '0.15rem' }}>
+                <button
+                  type="button"
+                  onClick={() => handleToggleUnknown(fieldKey)}
+                  className="btn btn-subtle"
+                  style={{
+                    fontSize: '0.7rem',
+                    padding: '0.15rem 0.45rem',
+                    color: isUnknown ? 'var(--risk-high)' : 'var(--text-secondary)',
+                    fontWeight: isUnknown ? 700 : 500,
+                    background: isUnknown ? 'rgba(239, 68, 68, 0.08)' : 'transparent',
+                    border: isUnknown ? '1px solid rgba(239, 68, 68, 0.25)' : '1px solid transparent'
+                  }}
+                >
+                  {isUnknown ? '✕ Clear Unknown' : '? Mark Unknown / Not available'}
+                </button>
+
+                {extraActions}
+              </div>
+            </div>
+          );
+        };
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div className="c4-section-card">
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 0.35rem 0' }}>
+                Dedicated Risk Assessment Details (Five Risk Dimensions)
+              </h2>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem 0' }}>
+                Review prefilled facts extracted from your business plan and supply risk-specific operating metrics.
+                Unrecorded parameters can be marked &ldquo;Unknown&rdquo; without treating them as zero or low risk.
+              </p>
+
+              {/* Dimension Switcher Pills */}
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+                {[
+                  { id: 'credit', label: '1. Credit Risk Inputs', icon: DollarSign },
+                  { id: 'market', label: '2. Market Risk Inputs', icon: TrendingUp },
+                  { id: 'inflation', label: '3. Inflation Risk Inputs', icon: Flame },
+                  { id: 'liquidity', label: '4. Liquidity Risk Inputs', icon: Clock },
+                  { id: 'operational', label: '5. Operational Risk Inputs', icon: Truck },
+                ].map(dim => {
+                  const Icon = dim.icon;
+                  const isSelected = activeDimensionTab === dim.id;
+                  return (
+                    <button
+                      key={dim.id}
+                      type="button"
+                      onClick={() => setActiveDimensionTab(dim.id)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        padding: '0.45rem 0.85rem',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: '0.8rem',
+                        fontWeight: isSelected ? 700 : 500,
+                        background: isSelected ? 'var(--primary-green-subtle)' : 'var(--bg-subtle)',
+                        color: isSelected ? 'var(--primary-green)' : 'var(--text-secondary)',
+                        border: isSelected ? '1px solid var(--primary-green-border)' : '1px solid var(--border-color)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Icon size={14} />
+                      <span>{dim.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* ========================================================= */}
+              {/* DIMENSION 1: CREDIT RISK INPUTS                           */}
+              {/* ========================================================= */}
+              {activeDimensionTab === 'credit' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                    {renderRiskInputField({
+                      label: 'Outstanding Loan Balance',
+                      fieldKey: 'outstanding_loan_balance',
+                      type: 'number',
+                      unit: 'LKR',
+                      description: 'Current principal balance of commercial loans, microfinance, or institutional debt.',
+                      placeholder: 'e.g. 450000',
+                      extraActions: (
+                        <button
+                          type="button"
+                          onClick={() => handleFormFieldChange('outstanding_loan_balance', '0')}
+                          className="btn btn-subtle"
+                          style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}
                         >
-                          <div>
-                            <label className="form-label" style={{ fontSize: '0.7rem' }}>Counterparty Name</label>
-                            <input
-                              type="text"
-                              value={rel.partner_name}
-                              onChange={(e) => handleRelationshipChange(idx, 'partner_name', e.target.value)}
-                              placeholder="e.g. Lanka Wholesale Ltd"
-                              className="form-control"
-                              style={{ fontSize: '0.8rem', padding: '0.4rem 0.5rem' }}
-                            />
-                          </div>
+                          No Loan (LKR 0)
+                        </button>
+                      )
+                    })}
 
-                          <div>
-                            <label className="form-label" style={{ fontSize: '0.7rem' }}>Partner Type</label>
-                            <select
-                              value={rel.partner_type}
-                              onChange={(e) => handleRelationshipChange(idx, 'partner_type', e.target.value)}
-                              className="form-select"
-                              style={{ fontSize: '0.8rem', padding: '0.4rem 0.5rem' }}
-                            >
-                              <option value="SUPPLIER">Supplier</option>
-                              <option value="CUSTOMER">Major Customer</option>
-                              <option value="LENDER">Lender / Bank</option>
-                            </select>
-                          </div>
+                    {renderRiskInputField({
+                      label: 'Monthly Loan Repayment Installment',
+                      fieldKey: 'monthly_loan_repayment',
+                      type: 'number',
+                      unit: 'LKR',
+                      description: 'Monthly principal and interest obligation due to institutional lenders.',
+                      placeholder: 'e.g. 32000'
+                    })}
 
-                          <div>
-                            <label className="form-label" style={{ fontSize: '0.7rem' }}>Monthly Value (LKR)</label>
-                            <input
-                              type="number"
-                              value={rel.transaction_value_lkr}
-                              onChange={(e) => handleRelationshipChange(idx, 'transaction_value_lkr', e.target.value)}
-                              placeholder="e.g. 50000"
-                              className="form-control"
-                              style={{ fontSize: '0.8rem', padding: '0.4rem 0.5rem' }}
-                            />
-                          </div>
+                    {renderRiskInputField({
+                      label: 'Repayment Delinquency / Overdue Status',
+                      fieldKey: 'repayment_overdue_status',
+                      type: 'select',
+                      description: 'Current delinquency status on loan repayments or installments.',
+                      options: [
+                        { value: 'Current', label: 'Current (No arrears)' },
+                        { value: 'No', label: 'No Overdue Installments' },
+                        { value: '1-30 Days', label: '1–30 Days Past Due' },
+                        { value: '30+ Days', label: '30+ Days Past Due (Delinquent)' },
+                        { value: '60+ Days', label: '60+ Days Past Due' },
+                        { value: '90+ Days', label: '90+ Days Past Due (Default risk)' },
+                        { value: 'Unknown', label: 'Unknown / Not sure' }
+                      ]
+                    })}
 
-                          <div>
-                            <label className="form-label" style={{ fontSize: '0.7rem' }}>Concentration %</label>
-                            <input
-                              type="number"
-                              value={rel.dependency_percentage}
-                              onChange={(e) => handleRelationshipChange(idx, 'dependency_percentage', e.target.value)}
-                              placeholder="e.g. 50"
-                              className="form-control"
-                              style={{ fontSize: '0.8rem', padding: '0.4rem 0.5rem' }}
-                            />
-                          </div>
+                    {renderRiskInputField({
+                      label: 'Repayment Delay (Days Past Due)',
+                      fieldKey: 'repayment_delay_days',
+                      type: 'number',
+                      unit: 'Days',
+                      description: 'Exact continuous days past due across all borrowing facilities.',
+                      placeholder: 'e.g. 0'
+                    })}
 
-                          <div style={{ paddingTop: '1.25rem' }}>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveRelationship(idx)}
-                              className="btn btn-subtle"
-                              style={{ padding: '0.35rem', color: 'var(--risk-high)' }}
-                              title="Remove counterparty"
-                            >
-                              <Trash2 size={15} />
-                            </button>
+                    {renderRiskInputField({
+                      label: 'Total Overdue Amount (Arrears)',
+                      fieldKey: 'total_overdue_amount_lkr',
+                      type: 'number',
+                      unit: 'LKR',
+                      description: 'Total overdue principal and interest currently in arrears.',
+                      placeholder: 'e.g. 0'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Longest Overdue Period (Days)',
+                      fieldKey: 'longest_overdue_period_days',
+                      type: 'number',
+                      unit: 'Days',
+                      description: 'Maximum continuous days in default across all debt facilities.',
+                      placeholder: 'e.g. 0'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Missed Payments in Past 12 Months',
+                      fieldKey: 'overdue_payment_count_12m',
+                      type: 'number',
+                      unit: 'Count',
+                      description: 'Count of missed or delayed monthly loan payments during the past 12 months.',
+                      placeholder: 'e.g. 0'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Other Monthly Debt Obligations',
+                      fieldKey: 'other_monthly_debt_obligations_lkr',
+                      type: 'number',
+                      unit: 'LKR',
+                      description: 'Monthly servicing for equipment leases, private borrowing, or informal credit.',
+                      placeholder: 'e.g. 0'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Outstanding Debt Guarantees / Contingent Liabilities',
+                      fieldKey: 'outstanding_guarantees_lkr',
+                      type: 'number',
+                      unit: 'LKR',
+                      description: 'Monetary exposure of personal director guarantees or third-party endorsements.',
+                      placeholder: 'e.g. 0'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Annual Borrowing Interest Rate (%)',
+                      fieldKey: 'loan_interest_rate_pct',
+                      type: 'number',
+                      unit: '%',
+                      description: 'Annual nominal borrowing interest rate percentage across credit lines.',
+                      placeholder: 'e.g. 18'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Monthly Interest Cost',
+                      fieldKey: 'monthly_interest_cost_lkr',
+                      type: 'number',
+                      unit: 'LKR',
+                      description: 'Interest component of monthly debt service payments.',
+                      placeholder: 'e.g. 6750'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Monthly Revenue Dedicated to Debt Servicing',
+                      fieldKey: 'debt_service_available_revenue_lkr',
+                      type: 'number',
+                      unit: 'LKR',
+                      description: 'Operating cash surplus earmarked exclusively for loan and debt settlement.',
+                      placeholder: 'e.g. 50000'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Historical Debt Repayment Track Record',
+                      fieldKey: 'repayment_history_status',
+                      type: 'select',
+                      description: 'Historical debt repayment timeliness track record.',
+                      options: [
+                        { value: 'On time', label: 'Consistently On Time' },
+                        { value: 'Occasional delays', label: 'Occasional Delays (1-2 times)' },
+                        { value: 'Frequent delays', label: 'Frequent Delays (>3 times)' },
+                        { value: 'Not applicable — new startup', label: 'Not applicable — new startup' },
+                        { value: 'No history available', label: 'No credit history available' },
+                        { value: 'Unknown', label: 'Unknown / Not sure' }
+                      ]
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Debt Guarantees / Collateral Details',
+                      fieldKey: 'debt_guarantees',
+                      type: 'text',
+                      description: 'Personal guarantees, property mortgage, equipment hypothecation, or pledge.',
+                      placeholder: 'e.g. Personal director guarantee, equipment lien'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Upcoming Large Repayment / Loan Maturity',
+                      fieldKey: 'upcoming_large_repayment_notes',
+                      type: 'text',
+                      description: 'Impending balloon installments, bullet principal repayments, or credit renewals.',
+                      placeholder: 'e.g. LKR 100,000 balloon payment due in Q4'
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ========================================================= */}
+              {/* DIMENSION 2: MARKET RISK INPUTS                           */}
+              {/* ========================================================= */}
+              {activeDimensionTab === 'market' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                    {renderRiskInputField({
+                      label: 'Expected or Actual Monthly Sales Revenue',
+                      fieldKey: 'monthly_sales_revenue',
+                      type: 'number',
+                      unit: 'LKR',
+                      required: true,
+                      description: 'Current verified or projected monthly gross revenue from commercial sales.',
+                      placeholder: 'e.g. 350000'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Average Monthly Customer Count',
+                      fieldKey: 'monthly_customer_count',
+                      type: 'number',
+                      unit: 'Customers',
+                      description: 'Average number of active paying customers served per month.',
+                      placeholder: 'e.g. 120'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Average Transaction Value / Ticket Size',
+                      fieldKey: 'average_transaction_value_lkr',
+                      type: 'number',
+                      unit: 'LKR',
+                      description: 'Average revenue spend per customer transaction or order.',
+                      placeholder: 'e.g. 2900'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Customer Demand Verification Evidence',
+                      fieldKey: 'customer_demand_evidence',
+                      type: 'select',
+                      description: 'Basis and documentation for revenue and demand assumptions.',
+                      options: [
+                        { value: 'contracts_signed', label: 'Signed Commercial Supply Contracts' },
+                        { value: 'pre_orders', label: 'Signed Pre-orders or Cash Deposits' },
+                        { value: 'historical_sales', label: 'Historical Accounting Sales Records' },
+                        { value: 'market_survey', label: 'Market Survey / Customer Interviews' },
+                        { value: 'estimate_only', label: 'Founder / Owner Estimate Only' },
+                        { value: 'none', label: 'No Formal Demand Evidence' },
+                        { value: 'Unknown', label: 'Unknown / Not sure' }
+                      ]
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Sales Trend over Last 3–6 Months',
+                      fieldKey: 'sales_trend_3_6m',
+                      type: 'select',
+                      description: 'Recent historical revenue trajectory for operating business.',
+                      options: [
+                        { value: 'Increasing', label: 'Increasing (+10% or higher)' },
+                        { value: 'Stable', label: 'Stable / Consistent' },
+                        { value: 'Declining', label: 'Declining (Sales dropping)' },
+                        { value: 'Not applicable — startup', label: 'Not applicable — new startup' },
+                        { value: 'Unknown', label: 'Unknown / Not sure' }
+                      ]
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Direct Competitors in Target Market Area',
+                      fieldKey: 'direct_competitors_count',
+                      type: 'number',
+                      unit: 'Competitors',
+                      description: 'Active direct commercial competitors within local market radius.',
+                      placeholder: 'e.g. 3'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Competitor Pricing Comparison',
+                      fieldKey: 'competitor_pricing_vs_business',
+                      type: 'select',
+                      description: 'Relative price point of local competitor alternatives.',
+                      options: [
+                        { value: 'Lower', label: 'Competitors are Cheaper (Price pressure)' },
+                        { value: 'Similar', label: 'Similar Price Points' },
+                        { value: 'Higher', label: 'Competitors are More Expensive (Premium)' },
+                        { value: 'Unknown', label: 'Unknown / Not sure' }
+                      ]
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Sales Dependent on Largest Customer (%)',
+                      fieldKey: 'largest_customer_sales_share_pct',
+                      type: 'number',
+                      unit: '%',
+                      description: 'Share of total revenue derived from the single highest-volume customer.',
+                      placeholder: 'e.g. 25'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Expected Seasonal Demand Variation (%)',
+                      fieldKey: 'seasonal_demand_variation_pct',
+                      type: 'number',
+                      unit: '%',
+                      description: 'Peak vs trough seasonal percentage swing in product demand.',
+                      placeholder: 'e.g. 20'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Customer Retention / Repeat Purchase Rate (%)',
+                      fieldKey: 'customer_retention_rate_pct',
+                      type: 'number',
+                      unit: '%',
+                      description: 'Proportion of clientele making regular repeat purchases.',
+                      placeholder: 'e.g. 60'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Selling-Price Adjustment Flexibility',
+                      fieldKey: 'price_adjustment_flexibility',
+                      type: 'select',
+                      description: 'Commercial flexibility to adjust selling prices without forfeiting customer volume.',
+                      options: [
+                        { value: 'High', label: 'High (Strong brand loyalty; prices can increase)' },
+                        { value: 'Moderate', label: 'Moderate (Can partially adjust with notice)' },
+                        { value: 'Low', label: 'Low (Price sensitive; customers will defect)' },
+                        { value: 'None', label: 'None (Fixed contract or regulated tariffs)' },
+                        { value: 'Unknown', label: 'Unknown / Not sure' }
+                      ]
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Monthly Customer Acquisition / Marketing Budget',
+                      fieldKey: 'monthly_marketing_budget_lkr',
+                      type: 'number',
+                      unit: 'LKR',
+                      description: 'Planned monthly expenditure on advertising, digital marketing, and promotions.',
+                      placeholder: 'e.g. 20000'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Competition & Market Dynamics Notes',
+                      fieldKey: 'demand_competition_notes',
+                      type: 'text',
+                      description: 'Specific notes on competitor proximity, market barriers, or buyer loyalty.',
+                      placeholder: 'e.g. 2 nearby retail competitors within 1km'
+                    })}
+                  </div>
+
+                  {/* Live Derivation Card: Market Consistency (Volume × Ticket vs Stated Sales) */}
+                  {(() => {
+                    const custCount = Number(formData.monthly_customer_count);
+                    const avgTicket = Number(formData.average_transaction_value_lkr);
+                    const statedSales = Number(formData.monthly_sales_revenue);
+                    const hasDerived = !isNaN(custCount) && custCount > 0 && !isNaN(avgTicket) && avgTicket > 0;
+                    const derivedSales = hasDerived ? custCount * avgTicket : null;
+                    const hasStated = !isNaN(statedSales) && statedSales > 0;
+
+                    if (!hasDerived && !hasStated) return null;
+
+                    let discrepancyPct = null;
+                    let isDiscrepancy = false;
+                    if (hasDerived && hasStated) {
+                      discrepancyPct = Math.round((Math.abs(derivedSales - statedSales) / Math.max(derivedSales, statedSales)) * 100);
+                      isDiscrepancy = discrepancyPct > 30;
+                    }
+
+                    return (
+                      <div style={{
+                        marginTop: '0.75rem',
+                        padding: '0.85rem 1rem',
+                        borderRadius: 'var(--radius-sm)',
+                        background: isDiscrepancy ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)',
+                        border: isDiscrepancy ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.5rem'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: isDiscrepancy ? 'var(--risk-high)' : 'var(--risk-low)' }}>
+                            {isDiscrepancy ? '⚠️ Sales Consistency Discrepancy Flagged' : '✓ Live Market Consistency Verification'}
+                          </span>
+                          {discrepancyPct !== null && (
+                            <span style={{
+                              fontSize: '0.72rem',
+                              padding: '0.15rem 0.45rem',
+                              borderRadius: '4px',
+                              fontWeight: 600,
+                              background: isDiscrepancy ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                              color: isDiscrepancy ? 'var(--risk-high)' : 'var(--risk-low)'
+                            }}>
+                              {discrepancyPct}% Variance
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', fontSize: '0.78rem' }}>
+                          <div>
+                            <span style={{ color: 'var(--text-secondary)' }}>Stated Monthly Revenue: </span>
+                            <strong>{hasStated ? `LKR ${statedSales.toLocaleString()}` : 'Not provided'}</strong>
+                          </div>
+                          <div>
+                            <span style={{ color: 'var(--text-secondary)' }}>Derived from Volume × Ticket: </span>
+                            <strong>{hasDerived ? `LKR ${derivedSales.toLocaleString()} (${custCount} × LKR ${avgTicket.toLocaleString()})` : 'Awaiting volume & ticket size'}</strong>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                        {isDiscrepancy && (
+                          <p style={{ margin: 0, fontSize: '0.74rem', color: 'var(--risk-high)' }}>
+                            Notice: Derived sales differs from stated revenue by more than 30%. The risk engine will evaluate this consistency gap and adjust market uncertainty scores.
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
-              </div>
-            )}
-          </div>
+              )}
 
-          {/* Stepper Navigation Buttons */}
-          <div className="c4-bottom-nav">
-            <button
-              type="button"
-              onClick={() => setCurrentStep(2)}
-              className="btn btn-secondary"
-            >
-              <ArrowLeft size={15} />
-              <span>Back to Details</span>
-            </button>
+              {/* ========================================================= */}
+              {/* DIMENSION 3: INFLATION RISK INPUTS                        */}
+              {/* ========================================================= */}
+              {activeDimensionTab === 'inflation' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                    {renderRiskInputField({
+                      label: 'Main Materials / Inventory Monthly Cost',
+                      fieldKey: 'main_materials_monthly_cost_lkr',
+                      type: 'number',
+                      unit: 'LKR',
+                      description: 'Estimated monthly procurement expenditure on essential raw materials or trading stock.',
+                      placeholder: 'e.g. 110000'
+                    })}
 
-            <button
-              type="button"
-              onClick={handleSubmitAndRun}
-              disabled={loading}
-              className="btn btn-primary"
-              style={{ fontWeight: 700 }}
-            >
-              {loading ? <RefreshCw size={15} className="animate-spin" /> : <ShieldAlert size={15} />}
-              <span>{loading ? 'Evaluating Risk & Running GNN...' : 'Execute Risk Assessment'}</span>
-            </button>
+                    {renderRiskInputField({
+                      label: 'Supplier Price Changes over Past 3–6 Months (%)',
+                      fieldKey: 'recent_supplier_price_increase_pct',
+                      type: 'number',
+                      unit: '%',
+                      description: 'Observed price hike percentage from primary suppliers over recent quarters.',
+                      placeholder: 'e.g. 12'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Expected Supplier Price Increase over Next 3–6 Months (%)',
+                      fieldKey: 'expected_supplier_price_increase_3_6m_pct',
+                      type: 'number',
+                      unit: '%',
+                      description: 'Anticipated price increase percentage expected from primary vendors over coming months.',
+                      placeholder: 'e.g. 10'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Percentage of Major Inputs Purchased Overseas (%)',
+                      fieldKey: 'imported_inputs_pct',
+                      type: 'number',
+                      unit: '%',
+                      description: 'Proportion of essential raw materials or inventory imported from foreign suppliers.',
+                      placeholder: 'e.g. 40'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Exposure to Foreign-Currency Purchases',
+                      fieldKey: 'imported_materials_exposure',
+                      type: 'select',
+                      description: 'Sensitivity of procurement costs to foreign exchange (USD/LKR) fluctuations.',
+                      options: [
+                        { value: 'None', label: 'None (100% locally sourced in Sri Lanka)' },
+                        { value: 'Low', label: 'Low (Minor auxiliary inputs imported)' },
+                        { value: 'Moderate', label: 'Moderate (Some packaging or ingredients imported)' },
+                        { value: 'High', label: 'High (Direct foreign currency or imported raw material reliance)' },
+                        { value: 'Unknown', label: 'Unknown / Not sure' }
+                      ]
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Monthly Transport & Logistics Fuel Cost',
+                      fieldKey: 'monthly_fuel_transport_cost_lkr',
+                      type: 'number',
+                      unit: 'LKR',
+                      description: 'Monthly expenditure on commercial freight, dispatch couriers, and fuel tariffs.',
+                      placeholder: 'e.g. 18000'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Monthly Electricity & Energy Utility Cost',
+                      fieldKey: 'monthly_electricity_energy_cost_lkr',
+                      type: 'number',
+                      unit: 'LKR',
+                      description: 'Monthly commercial electricity, LP gas, diesel generator, and utility expenditure.',
+                      placeholder: 'e.g. 22000'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Ability to Pass Cost Increases to Customers',
+                      fieldKey: 'ability_to_increase_prices',
+                      type: 'select',
+                      description: 'Pricing power to raise end-user selling prices when wholesale costs escalate.',
+                      options: [
+                        { value: 'Easily', label: 'Easily (Full Cost Passthrough)' },
+                        { value: 'Partially', label: 'Partially (Moderate Passthrough)' },
+                        { value: 'Difficult', label: 'Difficult / Fixed Prices (Low Passthrough)' },
+                        { value: 'Unknown', label: 'Unknown / Not sure' }
+                      ]
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Estimated Cost Inflation Pass-Through (%)',
+                      fieldKey: 'cost_increase_pass_through_pct',
+                      type: 'number',
+                      unit: '%',
+                      description: 'Estimated percentage share of cost increases that can be passed on to buyers.',
+                      placeholder: 'e.g. 60'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Availability of Alternative Suppliers',
+                      fieldKey: 'alternative_suppliers_available',
+                      type: 'select',
+                      description: 'Market availability of substitute vendors to counter supplier price increases.',
+                      options: [
+                        { value: 'Good', label: 'Good (Multiple competitive local vendors available)' },
+                        { value: 'Limited', label: 'Limited (Only 1–2 replacement options)' },
+                        { value: 'None', label: 'None (Sole proprietary supplier)' },
+                        { value: 'Unknown', label: 'Unknown / Not sure' }
+                      ]
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Essential Purchases Dependent on Largest Supplier (%)',
+                      fieldKey: 'largest_supplier_purchase_share_pct',
+                      type: 'number',
+                      unit: '%',
+                      description: 'Share of total critical input spending absorbed by single largest supplier.',
+                      placeholder: 'e.g. 45'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Key Cost Categories Impacted by Inflation',
+                      fieldKey: 'inflation_affected_categories',
+                      type: 'text',
+                      description: 'Specific expenditure items most vulnerable to price increases.',
+                      placeholder: 'e.g. Organic oils, packaging bottles, diesel tariffs'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Source and Date of External Inflation Evidence',
+                      fieldKey: 'external_inflation_source_notes',
+                      type: 'text',
+                      description: 'Documentation reference and date of any external inflation index (e.g. CBSL CCPI).',
+                      placeholder: 'e.g. CBSL CCPI Q3 2024 Bulletin'
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ========================================================= */}
+              {/* DIMENSION 4: LIQUIDITY RISK INPUTS                        */}
+              {/* ========================================================= */}
+              {activeDimensionTab === 'liquidity' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                    {renderRiskInputField({
+                      label: 'Available Starting Capital',
+                      fieldKey: 'available_starting_capital_lkr',
+                      type: 'number',
+                      unit: 'LKR',
+                      required: true,
+                      description: 'Original equity capital and accessible liquid funds contributed to venture establishment.',
+                      placeholder: 'e.g. 850000'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Whether Available Capital Includes Loan Financing',
+                      fieldKey: 'capital_includes_loan',
+                      type: 'select',
+                      description: 'Confirmation of whether stated available capital already embeds loan borrowings.',
+                      options: [
+                        { value: 'No', label: 'No — Capital is equity/savings only (Excludes loan)' },
+                        { value: 'Yes', label: 'Yes — Stated capital already includes loan borrowings' },
+                        { value: 'Unknown', label: 'Unknown / Not sure' }
+                      ]
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Initial Setup / Capital Expenditure (CAPEX)',
+                      fieldKey: 'initial_setup_expenditure_lkr',
+                      type: 'number',
+                      unit: 'LKR',
+                      description: 'Non-recurring capital expenditure spent on site fit-out, machinery, or licensing.',
+                      placeholder: 'e.g. 350000'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Cash Currently Available for Operations',
+                      fieldKey: 'cash_available_operations',
+                      type: 'number',
+                      unit: 'LKR',
+                      description: 'Immediately accessible liquid cash in bank accounts or cash-in-hand.',
+                      placeholder: 'e.g. 250000'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Post-Startup Emergency Cash Buffer',
+                      fieldKey: 'remaining_cash_reserves_after_setup_lkr',
+                      type: 'number',
+                      unit: 'LKR',
+                      description: 'Actual unencumbered cash cushion preserved after initial setup expenditures.',
+                      placeholder: 'e.g. 180000'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Monthly Fixed Operating Costs',
+                      fieldKey: 'monthly_fixed_costs',
+                      type: 'number',
+                      unit: 'LKR',
+                      description: 'Inflexible recurring expenses: rent, core salaries, insurance, utilities.',
+                      placeholder: 'e.g. 95000'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Monthly Variable Operating Costs',
+                      fieldKey: 'monthly_variable_costs',
+                      type: 'number',
+                      unit: 'LKR',
+                      description: 'Costs varying with production volume: inventory replenishment, packaging, commissions.',
+                      placeholder: 'e.g. 50000'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Other Mandatory Monthly Financial Obligations',
+                      fieldKey: 'other_mandatory_monthly_obligations_lkr',
+                      type: 'number',
+                      unit: 'LKR',
+                      description: 'Statutory EPF/ETF, taxes, commercial vehicle leasing, or mandatory insurance outlays.',
+                      placeholder: 'e.g. 15000'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Outstanding Accounts Receivable',
+                      fieldKey: 'accounts_receivable',
+                      type: 'number',
+                      unit: 'LKR',
+                      description: 'Total uncollected customer invoices currently due.',
+                      placeholder: 'e.g. 45000'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Customer Payment Delay / Credit Window (Days)',
+                      fieldKey: 'customer_payment_delay_days',
+                      type: 'number',
+                      unit: 'Days',
+                      description: 'Average credit duration extended to buyers before payment receipt.',
+                      placeholder: 'e.g. 14'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Outstanding Accounts Payable',
+                      fieldKey: 'accounts_payable',
+                      type: 'number',
+                      unit: 'LKR',
+                      description: 'Total pending payments due to suppliers or trade vendors.',
+                      placeholder: 'e.g. 60000'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Supplier Payment Period / Trade Credit Terms (Days)',
+                      fieldKey: 'supplier_payment_period_days',
+                      type: 'number',
+                      unit: 'Days',
+                      description: 'Trade credit grace window granted by suppliers before invoice settlement.',
+                      placeholder: 'e.g. 30'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Inventory or Working-Capital Requirement Buffer',
+                      fieldKey: 'working_capital_requirement_lkr',
+                      type: 'number',
+                      unit: 'LKR',
+                      description: 'Operating liquidity required to bridge receivable and inventory holding cycles.',
+                      placeholder: 'e.g. 120000'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Expected Large One-Off Payments in Next 3–6 Months',
+                      fieldKey: 'expected_large_one_off_payments_3_6m_lkr',
+                      type: 'number',
+                      unit: 'LKR',
+                      description: 'Anticipated lumpy disbursements such as annual tax settlements or license renewals.',
+                      placeholder: 'e.g. 35000'
+                    })}
+                  </div>
+
+                  {/* Live Calculation Card: Net Monthly Cash Flow & Runway */}
+                  {(() => {
+                    const sales = Number(formData.monthly_sales_revenue) || 0;
+                    const fixed = Number(formData.monthly_fixed_costs) || 0;
+                    const variable = Number(formData.monthly_variable_costs) || 0;
+                    const debt = Number(formData.monthly_loan_repayment) || 0;
+                    const mandatory = Number(formData.other_mandatory_monthly_obligations_lkr) || 0;
+                    const totalOutflows = fixed + variable + debt + mandatory;
+                    const netCashFlow = sales - totalOutflows;
+
+                    const cushion = Number(formData.remaining_cash_reserves_after_setup_lkr) ||
+                                    Number(formData.cash_reserve_after_startup) ||
+                                    Number(formData.cash_available_operations) || 0;
+
+                    const hasData = sales > 0 || totalOutflows > 0 || cushion > 0;
+                    if (!hasData) return null;
+
+                    const isDeficit = netCashFlow < 0;
+                    let runwayMonths = null;
+                    if (isDeficit && cushion > 0) {
+                      runwayMonths = (cushion / Math.abs(netCashFlow)).toFixed(1);
+                    }
+
+                    return (
+                      <div style={{
+                        marginTop: '0.75rem',
+                        padding: '0.85rem 1rem',
+                        borderRadius: 'var(--radius-sm)',
+                        background: isDeficit ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)',
+                        border: isDeficit ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.5rem'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: isDeficit ? 'var(--risk-high)' : 'var(--risk-low)' }}>
+                            {isDeficit ? '⚠️ Projected Operating Cash Flow Deficit' : '✓ Projected Cash Flow Positive / Self-Sustaining'}
+                          </span>
+                          <span style={{
+                            fontSize: '0.72rem',
+                            padding: '0.15rem 0.45rem',
+                            borderRadius: '4px',
+                            fontWeight: 600,
+                            background: isDeficit ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                            color: isDeficit ? 'var(--risk-high)' : 'var(--risk-low)'
+                          }}>
+                            {isDeficit ? `-LKR ${Math.abs(netCashFlow).toLocaleString()}/mo` : `+LKR ${netCashFlow.toLocaleString()}/mo`}
+                          </span>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem', fontSize: '0.78rem' }}>
+                          <div>
+                            <span style={{ color: 'var(--text-secondary)' }}>Monthly Sales Inflow: </span>
+                            <strong>LKR {sales.toLocaleString()}</strong>
+                          </div>
+                          <div>
+                            <span style={{ color: 'var(--text-secondary)' }}>Monthly Outflows: </span>
+                            <strong>LKR {totalOutflows.toLocaleString()}</strong>
+                          </div>
+                          <div>
+                            <span style={{ color: 'var(--text-secondary)' }}>Liquid Cash Cushion: </span>
+                            <strong>LKR {cushion.toLocaleString()}</strong>
+                          </div>
+                          <div>
+                            <span style={{ color: 'var(--text-secondary)' }}>Estimated Runway: </span>
+                            <strong>{isDeficit ? (runwayMonths ? `${runwayMonths} Months` : 'Immediate Shortfall') : 'Self-Sustaining Operations'}</strong>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* ========================================================= */}
+              {/* DIMENSION 5: OPERATIONAL RISK & RELATIONSHIPS             */}
+              {/* ========================================================= */}
+              {activeDimensionTab === 'operational' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                    {renderRiskInputField({
+                      label: 'Number of Critical Commercial Suppliers',
+                      fieldKey: 'critical_suppliers_count',
+                      type: 'number',
+                      unit: 'Suppliers',
+                      description: 'Count of essential vendors whose failure would immediately halt operations.',
+                      placeholder: 'e.g. 2'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Essential Inventory Dependent on Largest Supplier (%)',
+                      fieldKey: 'largest_supplier_dependency_pct',
+                      type: 'number',
+                      unit: '%',
+                      description: 'Percentage share of core inventory or inputs sourced from single largest supplier.',
+                      placeholder: 'e.g. 65'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Supplier Dependency Level',
+                      fieldKey: 'supplier_dependency_level',
+                      type: 'select',
+                      description: 'Qualitative single-vendor concentration bottleneck assessment.',
+                      options: [
+                        { value: 'Low', label: 'Low (Multiple suppliers available nearby)' },
+                        { value: 'Moderate', label: 'Moderate (2–3 primary vendors)' },
+                        { value: 'High', label: 'High (Single critical supplier bottleneck)' },
+                        { value: 'Unknown', label: 'Unknown / Not sure' }
+                      ]
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Availability of Alternative Suppliers',
+                      fieldKey: 'alternative_suppliers_status',
+                      type: 'select',
+                      description: 'Ease and speed of onboarding replacement suppliers if existing vendor fails.',
+                      options: [
+                        { value: 'Good', label: 'Good (Multiple options immediately available)' },
+                        { value: 'Limited', label: 'Limited (Requires 2–4 weeks onboarding)' },
+                        { value: 'None', label: 'None (Specialized proprietary single supplier)' },
+                        { value: 'Unknown', label: 'Unknown / Not sure' }
+                      ]
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Typical Supplier Delivery Lead Time (Days)',
+                      fieldKey: 'supplier_lead_time_days',
+                      type: 'number',
+                      unit: 'Days',
+                      description: 'Average days elapsed from purchase order placement to receipt at facility.',
+                      placeholder: 'e.g. 5'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Typical Delivery Delay Lag Category',
+                      fieldKey: 'delivery_delay_days',
+                      type: 'select',
+                      description: 'Delivery delay lag category encountered on critical purchase orders.',
+                      options: [
+                        { value: '1-3 days', label: '1–3 Days' },
+                        { value: '3-5 days', label: '3–5 Days' },
+                        { value: '7-14 days', label: '7–14 Days' },
+                        { value: '14+ days', label: 'Over 14 Days' },
+                        { value: 'Unknown', label: 'Unknown / Not sure' }
+                      ]
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Supplier Delays / Stockouts in Past 3–6 Months',
+                      fieldKey: 'supplier_delays_stockouts_3_6m',
+                      type: 'number',
+                      unit: 'Incidents',
+                      description: 'Number of stock-out or delayed replenishment incidents during last quarter.',
+                      placeholder: 'e.g. 1'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Inventory Holding Buffer (Days)',
+                      fieldKey: 'inventory_coverage_days',
+                      type: 'number',
+                      unit: 'Days',
+                      description: 'Days of customer sales supported by current inventory buffer without replenishment.',
+                      placeholder: 'e.g. 21'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Total Active Employees Headcount',
+                      fieldKey: 'total_employees_count',
+                      type: 'number',
+                      unit: 'Personnel',
+                      description: 'Current full-time and part-time employee headcount.',
+                      placeholder: 'e.g. 4'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Critical Vacant Roles Count',
+                      fieldKey: 'critical_vacant_roles_count',
+                      type: 'number',
+                      unit: 'Roles',
+                      description: 'Unfilled critical positions essential for normal daily operations.',
+                      placeholder: 'e.g. 0'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Availability of Backup Staff for Critical Tasks',
+                      fieldKey: 'backup_staff_available',
+                      type: 'select',
+                      description: 'Availability of cross-trained backup staff able to cover essential roles during absences.',
+                      options: [
+                        { value: 'Yes', label: 'Yes (Cross-trained team covers seamlessly)' },
+                        { value: 'Partial', label: 'Partial (Partial coverage for core duties)' },
+                        { value: 'No', label: 'No (Operations stall if founder/key staff is absent)' },
+                        { value: 'Unknown', label: 'Unknown / Not sure' }
+                      ]
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Dependence on Essential Equipment / Technology',
+                      fieldKey: 'essential_equipment_dependence',
+                      type: 'select',
+                      description: 'Operational dependency on specialized machinery, POS systems, or refrigeration.',
+                      options: [
+                        { value: 'Critical', label: 'Critical (Total stoppage if equipment fails)' },
+                        { value: 'Moderate', label: 'Moderate (Can run manually for short periods)' },
+                        { value: 'Low', label: 'Low (Easily replaceable standard tools)' },
+                        { value: 'None', label: 'None' }
+                      ]
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Backup Equipment, Power & Connectivity',
+                      fieldKey: 'backup_utilities_available',
+                      type: 'select',
+                      description: 'Availability of backup generators, secondary internet, or reserve equipment.',
+                      options: [
+                        { value: 'Yes', label: 'Yes (Full backup generator & secondary connection)' },
+                        { value: 'Partial', label: 'Partial (UPS / mobile hotspot only)' },
+                        { value: 'No', label: 'No backup facilities' },
+                        { value: 'Unknown', label: 'Unknown / Not sure' }
+                      ]
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Expected Downtime Duration (Hours)',
+                      fieldKey: 'expected_downtime_hours',
+                      type: 'number',
+                      unit: 'Hours',
+                      description: 'Estimated operational downtime in hours to restore service after an outage.',
+                      placeholder: 'e.g. 4'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Documented Business Continuity Plan',
+                      fieldKey: 'business_continuity_plan_exists',
+                      type: 'select',
+                      description: 'Whether a written emergency response, disaster recovery, or contingency plan exists.',
+                      options: [
+                        { value: 'Yes', label: 'Yes (Documented continuity protocol)' },
+                        { value: 'No', label: 'No documented continuity plan' },
+                        { value: 'Unknown', label: 'Unknown / Not sure' }
+                      ]
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Dependence on External Delivery Providers',
+                      fieldKey: 'logistics_delivery_dependence',
+                      type: 'select',
+                      description: 'Reliance on third-party couriers or transport services to fulfill orders.',
+                      options: [
+                        { value: 'High', label: 'High (Over 80% orders require couriers)' },
+                        { value: 'Moderate', label: 'Moderate (30-80% delivery reliance)' },
+                        { value: 'Low', label: 'Low (In-house or walk-in retail)' },
+                        { value: 'None', label: 'None' }
+                      ]
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Operating Capacity Utilization (%)',
+                      fieldKey: 'capacity_utilization_pct',
+                      type: 'number',
+                      unit: '%',
+                      description: 'Ratio of current output to maximum sustainable operational capacity.',
+                      placeholder: 'e.g. 70'
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Primary Operational Bottleneck',
+                      fieldKey: 'operational_constraints',
+                      type: 'select',
+                      description: 'Key capacity or operational constraint limiting current output.',
+                      options: [
+                        { value: 'None', label: 'None / Normal capacity' },
+                        { value: 'Specialized Equipment Bottleneck', label: 'Specialized Equipment Bottleneck' },
+                        { value: 'Storage / Warehouse Space', label: 'Storage / Warehouse Space Constraint' },
+                        { value: 'Staff Skill Shortage', label: 'Staff Skill Shortage / Hiring Constraint' },
+                        { value: 'Transport & Delivery Delay', label: 'Transport & Delivery Delay' },
+                        { value: 'Unknown', label: 'Unknown / Not sure' }
+                      ]
+                    })}
+
+                    {renderRiskInputField({
+                      label: 'Primary Commercial Suppliers Names',
+                      fieldKey: 'main_suppliers_list',
+                      type: 'text',
+                      description: 'Names of key external vendors and suppliers.',
+                      placeholder: 'e.g. Lanka Wholesale Ltd, Colombo Packaging Co'
+                    })}
+                  </div>
+
+                  {/* Counterparties Manager for GNN Network */}
+                  <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem', marginTop: '0.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                      <div>
+                        <h4 style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0 }}>
+                          Declared Trade Counterparties (Suppliers / Customers / Lenders)
+                        </h4>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>
+                          Used by the GNN model to evaluate supply chain concentration and credit contagion.
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleAddRelationship}
+                        className="btn btn-secondary"
+                        style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
+                      >
+                        <Plus size={13} />
+                        <span>Add Counterparty</span>
+                      </button>
+                    </div>
+
+                    {declaredRelationships.length === 0 ? (
+                      <div style={{ padding: '1rem', background: 'var(--bg-subtle)', borderRadius: 'var(--radius-sm)', textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                        No counterparties declared yet. Adding suppliers or major buyers enables relational GNN insights.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {declaredRelationships.map((rel, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              padding: '0.85rem',
+                              border: '1px solid var(--border-color)',
+                              borderRadius: 'var(--radius-sm)',
+                              background: 'var(--bg-surface)',
+                              display: 'grid',
+                              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr)) auto',
+                              gap: '0.75rem',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <div>
+                              <label className="form-label" style={{ fontSize: '0.7rem' }}>Counterparty Name</label>
+                              <input
+                                type="text"
+                                value={rel.partner_name}
+                                onChange={(e) => handleRelationshipChange(idx, 'partner_name', e.target.value)}
+                                placeholder="e.g. Lanka Wholesale Ltd"
+                                className="form-control"
+                                style={{ fontSize: '0.8rem', padding: '0.4rem 0.5rem' }}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="form-label" style={{ fontSize: '0.7rem' }}>Partner Type</label>
+                              <select
+                                value={rel.partner_type}
+                                onChange={(e) => handleRelationshipChange(idx, 'partner_type', e.target.value)}
+                                className="form-select"
+                                style={{ fontSize: '0.8rem', padding: '0.4rem 0.5rem' }}
+                              >
+                                <option value="SUPPLIER">Supplier</option>
+                                <option value="CUSTOMER">Major Customer</option>
+                                <option value="LENDER">Lender / Bank</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="form-label" style={{ fontSize: '0.7rem' }}>Monthly Value (LKR)</label>
+                              <input
+                                type="number"
+                                value={rel.transaction_value_lkr}
+                                onChange={(e) => handleRelationshipChange(idx, 'transaction_value_lkr', e.target.value)}
+                                placeholder="e.g. 50000"
+                                className="form-control"
+                                style={{ fontSize: '0.8rem', padding: '0.4rem 0.5rem' }}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="form-label" style={{ fontSize: '0.7rem' }}>Concentration %</label>
+                              <input
+                                type="number"
+                                value={rel.dependency_percentage}
+                                onChange={(e) => handleRelationshipChange(idx, 'dependency_percentage', e.target.value)}
+                                placeholder="e.g. 50"
+                                className="form-control"
+                                style={{ fontSize: '0.8rem', padding: '0.4rem 0.5rem' }}
+                              />
+                            </div>
+
+                            <div style={{ paddingTop: '1.25rem' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveRelationship(idx)}
+                                className="btn btn-subtle"
+                                style={{ padding: '0.35rem', color: 'var(--risk-high)' }}
+                                title="Remove counterparty"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Stepper Navigation Buttons */}
+            <div className="c4-bottom-nav">
+              <button
+                type="button"
+                onClick={() => setCurrentStep(2)}
+                className="btn btn-secondary"
+              >
+                <ArrowLeft size={15} />
+                <span>Back to Details</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSubmitAndRun}
+                disabled={loading}
+                className="btn btn-primary"
+                style={{ fontWeight: 700 }}
+              >
+                {loading ? <RefreshCw size={15} className="animate-spin" /> : <ShieldAlert size={15} />}
+                <span>{loading ? 'Evaluating Risk & Running GNN...' : 'Execute Risk Assessment'}</span>
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ========================================================================= */}
       {/* STEP 4: RISK ASSESSMENT RESULTS (5 Risk Dimensions)                        */}

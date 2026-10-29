@@ -78,6 +78,7 @@ class TestComponent4IntegritySuite(unittest.TestCase):
 
         self.assertLess(sub_scores["credit_risk"], 0.35, "Low debt should have low credit risk")
         self.assertLess(sub_scores["liquidity_risk"], 0.40, "Adequate reserves should have low liquidity risk")
+        assert res.stage6_risk_assessment.capital_runway_months is not None
         self.assertGreater(res.stage6_risk_assessment.capital_runway_months, 3.0)
         self.assertEqual(res.growth_readiness.decision, "PROCEED")
         self.assertFalse(res.stage6_risk_assessment.has_critical_red_flag)
@@ -160,6 +161,7 @@ class TestComponent4IntegritySuite(unittest.TestCase):
         # Revenue is not fabricated to 780,000 LKR
         self.assertIsNone(facts.get("monthly_revenue_lkr"))
         # Liquidity runway is accurately computed from starting capital / burn without dividing by zero
+        assert res.stage6_risk_assessment.capital_runway_months is not None
         self.assertLessEqual(res.stage6_risk_assessment.capital_runway_months, 1.5)
 
     # -------------------------------------------------------------------------
@@ -621,6 +623,9 @@ class TestComponent4IntegritySuite(unittest.TestCase):
         # Month 23 Loan_Balance_LKR is 23,000. Month 24 was 24,000.
         # If Month 24 leaked, the feature value / fitted scaler mean would be 24,000.
         # With strict temporal separation, the unscaled value before standardization MUST be 23,000.0!
+        assert prep.scaler is not None
+        assert prep.scaler.feature_names_in_ is not None
+        assert prep.scaler.mean_ is not None
         loan_idx = prep.scaler.feature_names_in_.tolist().index("Recent_Loan_Balance_LKR")
         fitted_mean_loan = float(prep.scaler.mean_[loan_idx])
         self.assertEqual(fitted_mean_loan, 23000.0, f"Expected 23,000.0 (Month 23), got {fitted_mean_loan}. Month 24 leaked!")
@@ -698,6 +703,7 @@ class TestComponent4IntegritySuite(unittest.TestCase):
         sample_features = feature_df.loc[sample_bid].to_numpy()
         x = torch.tensor(sample_features, dtype=torch.float).unsqueeze(0)
         edge_index = torch.zeros((2, 1), dtype=torch.long)
+        assert self.gnn_engine.model is not None
         self.gnn_engine.model.eval()
         with torch.no_grad():
             logits = self.gnn_engine.model(x, edge_index)
@@ -780,6 +786,42 @@ class TestComponent4IntegritySuite(unittest.TestCase):
         for key, val in derived.items():
             self.assertIn("calculation", val)
             self.assertIn("value", val)
+
+    def test_case_21_intake_submit_and_run_with_unknown_supplier_and_companion_selects(self):
+        """Case 21: Proves dynamic intake form submission succeeds when supplier dependency and delivery delay are marked Unknown alongside companion select fields."""
+        payload = {
+            "business_name": "Rathnayake Stores",
+            "district": "Colombo",
+            "business_category": "Retail",
+            "completed_fields": {
+                "critical_suppliers_count": 3,
+                "largest_supplier_dependency_pct": "Unknown",
+                "supplier_dependency_level": "Moderate",
+                "supplier_lead_time_days": "Unknown",
+                "delivery_delay_days": "3-5 Days",
+                "supplier_delays_stockouts_3_6m": 3,
+                "inventory_coverage_days": 20,
+                "alternative_suppliers_status": "Good",
+                "available_starting_capital_lkr": 250000.0,
+                "cash_available_operations": 200000.0,
+                "monthly_sales_revenue": 300000.0,
+                "monthly_fixed_costs": 50000.0,
+                "monthly_variable_costs": 25000.0,
+                "outstanding_loan_balance": 0.0,
+                "monthly_loan_repayment": 0.0,
+                "overdue_repayments": "No",
+            },
+            "declared_relationships": []
+        }
+        response = self.client.post("/api/component4/intake/submit-and-run", json=payload)
+        self.assertEqual(response.status_code, 200, f"Submit and run must return 200 OK. Got {response.status_code}: {response.text}")
+        data = response.json()
+        self.assertTrue(data.get("success", True))
+        stage6 = data.get("stage6_risk_assessment") or data.get("data", {}).get("stage6_risk_assessment", {})
+        self.assertIsNotNone(stage6.get("composite_risk_score"))
+        sub_scores = stage6.get("sub_scores", {})
+        self.assertIn("operational_risk", sub_scores)
+        self.assertIsNotNone(sub_scores["operational_risk"])
 
 
 if __name__ == "__main__":

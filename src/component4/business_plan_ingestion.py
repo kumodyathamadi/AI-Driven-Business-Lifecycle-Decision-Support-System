@@ -68,6 +68,76 @@ class ExtractedBusinessPlan:
     capital_runway_months: Optional[float] = None
     capital_includes_loan: Optional[bool] = None
     capital_loan_explanation: Optional[str] = None
+
+    # Credit Risk Specific Fields
+    total_overdue_amount_lkr: Optional[float] = None
+    longest_overdue_period_days: Optional[float] = None
+    overdue_payment_count_12m: Optional[int] = None
+    other_monthly_debt_obligations_lkr: Optional[float] = None
+    outstanding_guarantees_lkr: Optional[float] = None
+    debt_service_available_revenue_lkr: Optional[float] = None
+    loan_interest_rate_pct: Optional[float] = None
+    upcoming_large_repayment_notes: Optional[str] = None
+    repayment_history_status: Optional[str] = None
+
+    # Market Risk Specific Fields
+    monthly_customer_count: Optional[int] = None
+    average_transaction_value_lkr: Optional[float] = None
+    sales_trend_3_6m: Optional[str] = None
+    demand_evidence_type: Optional[str] = None
+    direct_competitors_count: Optional[int] = None
+    competitor_pricing_vs_business: Optional[str] = None
+    largest_customer_sales_share_pct: Optional[float] = None
+    seasonal_demand_variation_pct: Optional[float] = None
+    customer_retention_rate_pct: Optional[float] = None
+    price_adjustment_flexibility: Optional[str] = None
+    monthly_marketing_budget_lkr: Optional[float] = None
+
+    # Inflation Risk Specific Fields
+    main_materials_monthly_cost_lkr: Optional[float] = None
+    supplier_price_change_past_3_6m_pct: Optional[float] = None
+    expected_supplier_price_increase_3_6m_pct: Optional[float] = None
+    imported_inputs_pct: Optional[float] = None
+    foreign_currency_exposure: Optional[str] = None
+    monthly_fuel_transport_cost_lkr: Optional[float] = None
+    monthly_electricity_energy_cost_lkr: Optional[float] = None
+    ability_to_increase_prices: Optional[str] = None
+    cost_increase_pass_through_pct: Optional[float] = None
+    alternative_suppliers_available: Optional[str] = None
+    largest_supplier_purchase_share_pct: Optional[float] = None
+    external_inflation_source_notes: Optional[str] = None
+
+    # Liquidity Risk Specific Fields
+    initial_setup_expenditure_lkr: Optional[float] = None
+    remaining_cash_reserves_after_setup_lkr: Optional[float] = None
+    other_mandatory_monthly_obligations_lkr: Optional[float] = None
+    customer_payment_delay_days: Optional[float] = None
+    supplier_payment_period_days: Optional[float] = None
+    working_capital_requirement_lkr: Optional[float] = None
+    expected_large_one_off_payments_3_6m_lkr: Optional[float] = None
+
+    # Operational Risk Specific Fields
+    critical_suppliers_count: Optional[int] = None
+    largest_supplier_dependency_pct: Optional[float] = None
+    supplier_dependency_level: Optional[str] = None
+    alternative_suppliers_status: Optional[str] = None
+    supplier_lead_time_days: Optional[float] = None
+    delivery_delay_days: Optional[str] = None
+    supplier_delays_stockouts_3_6m: Optional[int] = None
+    startup_stockout_risk: Optional[str] = None
+    inventory_coverage_days: Optional[float] = None
+    total_employees_count: Optional[int] = None
+    critical_vacant_roles_count: Optional[int] = None
+    backup_staff_available: Optional[str] = None
+    essential_equipment_dependence: Optional[str] = None
+    backup_utilities_available: Optional[str] = None
+    expected_downtime_hours: Optional[float] = None
+    business_continuity_plan_exists: Optional[str] = None
+    logistics_delivery_dependence: Optional[str] = None
+    capacity_utilization_pct: Optional[float] = None
+    growth_operational_constraints: Optional[str] = None
+    staffing_availability: Optional[str] = None
+    operational_constraints: Optional[str] = None
     
     # Operational & Market fields
     business_description: Optional[str] = None
@@ -160,6 +230,36 @@ class ExtractedBusinessPlan:
                 self.repayment_delay_days = 15.0
             elif status_str in ("current", "no", "none", "0"):
                 self.repayment_delay_days = 0.0
+
+        if self.average_transaction_value_lkr is None and self.expected_price_lkr is not None:
+            self.average_transaction_value_lkr = self.expected_price_lkr
+        elif self.expected_price_lkr is None and self.average_transaction_value_lkr is not None:
+            self.expected_price_lkr = self.average_transaction_value_lkr
+
+        if self.total_employees_count is None and self.available_staff_count is not None:
+            self.total_employees_count = self.available_staff_count
+        elif self.available_staff_count is None and self.total_employees_count is not None:
+            self.available_staff_count = self.total_employees_count
+
+        if self.remaining_cash_reserves_after_setup_lkr is None and self.current_cash_reserve_lkr is not None:
+            self.remaining_cash_reserves_after_setup_lkr = self.current_cash_reserve_lkr
+        elif self.current_cash_reserve_lkr is None and self.remaining_cash_reserves_after_setup_lkr is not None:
+            self.current_cash_reserve_lkr = self.remaining_cash_reserves_after_setup_lkr
+
+        if self.demand_evidence_type is None and self.demand_evidence is not None:
+            self.demand_evidence_type = self.demand_evidence
+        elif self.demand_evidence is None and self.demand_evidence_type is not None:
+            self.demand_evidence = self.demand_evidence_type
+
+        if self.largest_supplier_dependency_pct is None and self.supplier_dependency_percentage is not None:
+            self.largest_supplier_dependency_pct = self.supplier_dependency_percentage
+        elif self.supplier_dependency_percentage is None and self.largest_supplier_dependency_pct is not None:
+            self.supplier_dependency_percentage = self.largest_supplier_dependency_pct
+
+        if self.supplier_lead_time_days is None and self.supplier_delay_days is not None:
+            self.supplier_lead_time_days = self.supplier_delay_days
+        elif self.supplier_delay_days is None and self.supplier_lead_time_days is not None:
+            self.supplier_delay_days = self.supplier_lead_time_days
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -588,8 +688,161 @@ class BusinessPlanIngestionService:
         extracted.entrepreneur_experience_years = self._to_int(data.get("entrepreneur_experience_years"))
         extracted.proposed_growth_action = data.get("proposed_action") or data.get("growth_action")
         extracted.primary_strategy = data.get("primary_strategy") or data.get("strategy")
+        self._populate_new_risk_fields(data, extracted)
         self._detect_and_flag_conflicts(extracted)
         extracted.provenance_notes.append("Extracted from flat business attribute dictionary.")
+
+    def _populate_new_risk_fields(self, data: Dict[str, Any], extracted: ExtractedBusinessPlan):
+        """Populates new risk-specific fields across all 5 categories from structured input data."""
+        # Credit Risk
+        if "total_overdue_amount_lkr" in data and data["total_overdue_amount_lkr"] is not None:
+            extracted.total_overdue_amount_lkr = self._to_float(data["total_overdue_amount_lkr"])
+        elif "arrears_amount_lkr" in data and data["arrears_amount_lkr"] is not None:
+            extracted.total_overdue_amount_lkr = self._to_float(data["arrears_amount_lkr"])
+
+        if "longest_overdue_period_days" in data and data["longest_overdue_period_days"] is not None:
+            extracted.longest_overdue_period_days = self._to_float(data["longest_overdue_period_days"])
+        if "overdue_payment_count_12m" in data and data["overdue_payment_count_12m"] is not None:
+            extracted.overdue_payment_count_12m = self._to_int(data["overdue_payment_count_12m"])
+        if "other_monthly_debt_obligations_lkr" in data and data["other_monthly_debt_obligations_lkr"] is not None:
+            extracted.other_monthly_debt_obligations_lkr = self._to_float(data["other_monthly_debt_obligations_lkr"])
+        if "outstanding_guarantees_lkr" in data and data["outstanding_guarantees_lkr"] is not None:
+            extracted.outstanding_guarantees_lkr = self._to_float(data["outstanding_guarantees_lkr"])
+        if "debt_service_available_revenue_lkr" in data and data["debt_service_available_revenue_lkr"] is not None:
+            extracted.debt_service_available_revenue_lkr = self._to_float(data["debt_service_available_revenue_lkr"])
+        if "loan_interest_rate_pct" in data and data["loan_interest_rate_pct"] is not None:
+            extracted.loan_interest_rate_pct = self._to_float(data["loan_interest_rate_pct"])
+        if "upcoming_large_repayment_notes" in data and data["upcoming_large_repayment_notes"] is not None:
+            extracted.upcoming_large_repayment_notes = str(data["upcoming_large_repayment_notes"])
+        if "repayment_history_status" in data and data["repayment_history_status"] is not None:
+            extracted.repayment_history_status = str(data["repayment_history_status"])
+
+        # Market Risk
+        if "monthly_customer_count" in data and data["monthly_customer_count"] is not None:
+            extracted.monthly_customer_count = self._to_int(data["monthly_customer_count"])
+        elif extracted.expected_customers_per_day:
+            extracted.monthly_customer_count = extracted.expected_customers_per_day * 26
+
+        if "average_transaction_value_lkr" in data and data["average_transaction_value_lkr"] is not None:
+            extracted.average_transaction_value_lkr = self._to_float(data["average_transaction_value_lkr"])
+        elif extracted.expected_price_lkr:
+            extracted.average_transaction_value_lkr = extracted.expected_price_lkr
+
+        if "sales_trend_3_6m" in data and data["sales_trend_3_6m"] is not None:
+            extracted.sales_trend_3_6m = str(data["sales_trend_3_6m"])
+        if "demand_evidence_type" in data and data["demand_evidence_type"] is not None:
+            extracted.demand_evidence_type = str(data["demand_evidence_type"])
+        elif extracted.demand_evidence:
+            extracted.demand_evidence_type = extracted.demand_evidence
+
+        if "direct_competitors_count" in data and data["direct_competitors_count"] is not None:
+            extracted.direct_competitors_count = self._to_int(data["direct_competitors_count"])
+        if "competitor_pricing_vs_business" in data and data["competitor_pricing_vs_business"] is not None:
+            extracted.competitor_pricing_vs_business = str(data["competitor_pricing_vs_business"])
+        if "largest_customer_sales_share_pct" in data and data["largest_customer_sales_share_pct"] is not None:
+            extracted.largest_customer_sales_share_pct = self._to_float(data["largest_customer_sales_share_pct"])
+        if "seasonal_demand_variation_pct" in data and data["seasonal_demand_variation_pct"] is not None:
+            extracted.seasonal_demand_variation_pct = self._to_float(data["seasonal_demand_variation_pct"])
+        if "customer_retention_rate_pct" in data and data["customer_retention_rate_pct"] is not None:
+            extracted.customer_retention_rate_pct = self._to_float(data["customer_retention_rate_pct"])
+        if "price_adjustment_flexibility" in data and data["price_adjustment_flexibility"] is not None:
+            extracted.price_adjustment_flexibility = str(data["price_adjustment_flexibility"])
+        if "monthly_marketing_budget_lkr" in data and data["monthly_marketing_budget_lkr"] is not None:
+            extracted.monthly_marketing_budget_lkr = self._to_float(data["monthly_marketing_budget_lkr"])
+
+        # Inflation Risk
+        if "main_materials_monthly_cost_lkr" in data and data["main_materials_monthly_cost_lkr"] is not None:
+            extracted.main_materials_monthly_cost_lkr = self._to_float(data["main_materials_monthly_cost_lkr"])
+        if "supplier_price_change_past_3_6m_pct" in data and data["supplier_price_change_past_3_6m_pct"] is not None:
+            extracted.supplier_price_change_past_3_6m_pct = self._to_float(data["supplier_price_change_past_3_6m_pct"])
+        if "expected_supplier_price_increase_3_6m_pct" in data and data["expected_supplier_price_increase_3_6m_pct"] is not None:
+            extracted.expected_supplier_price_increase_3_6m_pct = self._to_float(data["expected_supplier_price_increase_3_6m_pct"])
+        if "imported_inputs_pct" in data and data["imported_inputs_pct"] is not None:
+            extracted.imported_inputs_pct = self._to_float(data["imported_inputs_pct"])
+        if "foreign_currency_exposure" in data and data["foreign_currency_exposure"] is not None:
+            extracted.foreign_currency_exposure = str(data["foreign_currency_exposure"])
+        if "monthly_fuel_transport_cost_lkr" in data and data["monthly_fuel_transport_cost_lkr"] is not None:
+            extracted.monthly_fuel_transport_cost_lkr = self._to_float(data["monthly_fuel_transport_cost_lkr"])
+        if "monthly_electricity_energy_cost_lkr" in data and data["monthly_electricity_energy_cost_lkr"] is not None:
+            extracted.monthly_electricity_energy_cost_lkr = self._to_float(data["monthly_electricity_energy_cost_lkr"])
+        if "ability_to_increase_prices" in data and data["ability_to_increase_prices"] is not None:
+            extracted.ability_to_increase_prices = str(data["ability_to_increase_prices"])
+        if "cost_increase_pass_through_pct" in data and data["cost_increase_pass_through_pct"] is not None:
+            extracted.cost_increase_pass_through_pct = self._to_float(data["cost_increase_pass_through_pct"])
+        if "alternative_suppliers_available" in data and data["alternative_suppliers_available"] is not None:
+            extracted.alternative_suppliers_available = str(data["alternative_suppliers_available"])
+        if "largest_supplier_purchase_share_pct" in data and data["largest_supplier_purchase_share_pct"] is not None:
+            extracted.largest_supplier_purchase_share_pct = self._to_float(data["largest_supplier_purchase_share_pct"])
+        if "external_inflation_source_notes" in data and data["external_inflation_source_notes"] is not None:
+            extracted.external_inflation_source_notes = str(data["external_inflation_source_notes"])
+
+        # Liquidity Risk
+        if "initial_setup_expenditure_lkr" in data and data["initial_setup_expenditure_lkr"] is not None:
+            extracted.initial_setup_expenditure_lkr = self._to_float(data["initial_setup_expenditure_lkr"])
+        if "remaining_cash_reserves_after_setup_lkr" in data and data["remaining_cash_reserves_after_setup_lkr"] is not None:
+            extracted.remaining_cash_reserves_after_setup_lkr = self._to_float(data["remaining_cash_reserves_after_setup_lkr"])
+        elif extracted.current_cash_reserve_lkr:
+            extracted.remaining_cash_reserves_after_setup_lkr = extracted.current_cash_reserve_lkr
+
+        if "other_mandatory_monthly_obligations_lkr" in data and data["other_mandatory_monthly_obligations_lkr"] is not None:
+            extracted.other_mandatory_monthly_obligations_lkr = self._to_float(data["other_mandatory_monthly_obligations_lkr"])
+        if "customer_payment_delay_days" in data and data["customer_payment_delay_days"] is not None:
+            extracted.customer_payment_delay_days = self._to_float(data["customer_payment_delay_days"])
+        if "supplier_payment_period_days" in data and data["supplier_payment_period_days"] is not None:
+            extracted.supplier_payment_period_days = self._to_float(data["supplier_payment_period_days"])
+        if "working_capital_requirement_lkr" in data and data["working_capital_requirement_lkr"] is not None:
+            extracted.working_capital_requirement_lkr = self._to_float(data["working_capital_requirement_lkr"])
+        if "expected_large_one_off_payments_3_6m_lkr" in data and data["expected_large_one_off_payments_3_6m_lkr"] is not None:
+            extracted.expected_large_one_off_payments_3_6m_lkr = self._to_float(data["expected_large_one_off_payments_3_6m_lkr"])
+
+        # Operational Risk
+        if "critical_suppliers_count" in data and data["critical_suppliers_count"] is not None:
+            extracted.critical_suppliers_count = self._to_int(data["critical_suppliers_count"])
+        if "largest_supplier_dependency_pct" in data and data["largest_supplier_dependency_pct"] is not None:
+            extracted.largest_supplier_dependency_pct = self._to_float(data["largest_supplier_dependency_pct"])
+        elif extracted.supplier_dependency_percentage:
+            extracted.largest_supplier_dependency_pct = extracted.supplier_dependency_percentage
+
+        if "alternative_suppliers_status" in data and data["alternative_suppliers_status"] is not None:
+            extracted.alternative_suppliers_status = str(data["alternative_suppliers_status"])
+        if "supplier_lead_time_days" in data and data["supplier_lead_time_days"] is not None:
+            extracted.supplier_lead_time_days = self._to_float(data["supplier_lead_time_days"])
+        elif extracted.supplier_delay_days:
+            extracted.supplier_lead_time_days = extracted.supplier_delay_days
+
+        if "supplier_delays_stockouts_3_6m" in data and data["supplier_delays_stockouts_3_6m"] is not None:
+            extracted.supplier_delays_stockouts_3_6m = self._to_int(data["supplier_delays_stockouts_3_6m"])
+        if "startup_stockout_risk" in data and data["startup_stockout_risk"] is not None:
+            extracted.startup_stockout_risk = str(data["startup_stockout_risk"])
+        if "inventory_coverage_days" in data and data["inventory_coverage_days"] is not None:
+            extracted.inventory_coverage_days = self._to_float(data["inventory_coverage_days"])
+        if "total_employees_count" in data and data["total_employees_count"] is not None:
+            extracted.total_employees_count = self._to_int(data["total_employees_count"])
+        elif extracted.available_staff_count:
+            extracted.total_employees_count = extracted.available_staff_count
+
+        if "critical_vacant_roles_count" in data and data["critical_vacant_roles_count"] is not None:
+            extracted.critical_vacant_roles_count = self._to_int(data["critical_vacant_roles_count"])
+        if "backup_staff_available" in data and data["backup_staff_available"] is not None:
+            extracted.backup_staff_available = str(data["backup_staff_available"])
+        if "essential_equipment_dependence" in data and data["essential_equipment_dependence"] is not None:
+            extracted.essential_equipment_dependence = str(data["essential_equipment_dependence"])
+        if "backup_utilities_available" in data and data["backup_utilities_available"] is not None:
+            extracted.backup_utilities_available = str(data["backup_utilities_available"])
+        if "expected_downtime_hours" in data and data["expected_downtime_hours"] is not None:
+            extracted.expected_downtime_hours = self._to_float(data["expected_downtime_hours"])
+        if "business_continuity_plan_exists" in data and data["business_continuity_plan_exists"] is not None:
+            extracted.business_continuity_plan_exists = str(data["business_continuity_plan_exists"])
+        if "logistics_delivery_dependence" in data and data["logistics_delivery_dependence"] is not None:
+            extracted.logistics_delivery_dependence = str(data["logistics_delivery_dependence"])
+        if "capacity_utilization_pct" in data and data["capacity_utilization_pct"] is not None:
+            extracted.capacity_utilization_pct = self._to_float(data["capacity_utilization_pct"])
+        if "growth_operational_constraints" in data and data["growth_operational_constraints"] is not None:
+            extracted.growth_operational_constraints = str(data["growth_operational_constraints"])
+        if "staffing_availability" in data and data["staffing_availability"] is not None:
+            extracted.staffing_availability = str(data["staffing_availability"])
+        if "operational_constraints" in data and data["operational_constraints"] is not None:
+            extracted.operational_constraints = str(data["operational_constraints"])
 
     def _parse_pdf(self, file_path: str, file_size: int) -> ExtractedBusinessPlan:
         """Extracts text from PDF and parses structured business plan facts."""

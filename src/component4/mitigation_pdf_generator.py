@@ -69,7 +69,7 @@ class NumberedCanvas(canvas.Canvas):
 
     def showPage(self):
         self._saved_page_states.append(dict(self.__dict__))
-        self._startPage()
+        getattr(self, "_startPage")()
 
     def save(self):
         num_pages = len(self._saved_page_states)
@@ -85,7 +85,7 @@ class NumberedCanvas(canvas.Canvas):
         self.setFillColor(colors.HexColor("#475569"))
 
         # Running Header (pages 2+)
-        if self._pageNumber > 1:
+        if getattr(self, "_pageNumber", 1) > 1:
             self.setLineWidth(0.5)
             self.setStrokeColor(colors.HexColor("#cbd5e1"))
             self.line(36, 756, 576, 756)
@@ -101,7 +101,7 @@ class NumberedCanvas(canvas.Canvas):
         self.setStrokeColor(colors.HexColor("#cbd5e1"))
         self.line(36, 42, 576, 42)
         self.drawString(36, 30, "Confidential Decision Support Prototype — Western Province SME Research")
-        page_str = f"Page {self._pageNumber} of {page_count}"
+        page_str = f"Page {getattr(self, '_pageNumber', 1)} of {page_count}"
         self.drawRightString(576, 30, page_str)
 
         self.restoreState()
@@ -518,6 +518,7 @@ class Component4MitigationPDFGenerator:
         # ===================================================================
         sub_scores = stage6.get("sub_scores", {})
         cat_suff = stage6.get("category_evidence_sufficiency", {})
+        supported_ind = stage6.get("supported_indicators", {})
 
         def get_cat_level(sc: float) -> str:
             return "HIGH" if sc >= 0.65 else ("MEDIUM" if sc >= 0.35 else "LOW")
@@ -541,8 +542,14 @@ class Component4MitigationPDFGenerator:
         ))
         story.append(HRFlowable(width="100%", thickness=1, color=c_primary, spaceBefore=2, spaceAfter=6))
 
-        repay_stat = plan.get("repayment_overdue_status") or "Current (No Arrears Reported)"
-        debt_dscr = "Adequate" if (plan.get("monthly_revenue_lkr", 0) or 0) > (loan_amount * 0.1) else "Constrained"
+        credit_ind = supported_ind.get("credit", {})
+        repay_stat = credit_ind.get("repayment_history_status") or plan.get("repayment_history_status") or plan.get("repayment_overdue_status") or "Current (No Arrears Reported)"
+        overdue_amt = plan.get("total_overdue_amount_lkr")
+        overdue_days = plan.get("longest_overdue_period_days")
+        if overdue_amt and overdue_amt > 0:
+            repay_obs = f"Overdue: LKR {overdue_amt:,.0f} ({overdue_days or 0:.0f}d past due)"
+        else:
+            repay_obs = esc(repay_stat)
 
         credit_table_data = [
             [
@@ -565,7 +572,7 @@ class Component4MitigationPDFGenerator:
             ],
             [
                 Paragraph("Payment Arrears / Overdue Status", cell_style),
-                Paragraph(esc(repay_stat), cell_style),
+                Paragraph(repay_obs, cell_style),
                 Paragraph("0 Days Past Due (Current)", cell_style),
                 Paragraph("Default risk tripwire", cell_style),
             ],
@@ -596,6 +603,25 @@ class Component4MitigationPDFGenerator:
         ))
         story.append(HRFlowable(width="100%", thickness=1, color=c_primary, spaceBefore=2, spaceAfter=6))
 
+        market_ind = supported_ind.get("market", {})
+        cus_count = market_ind.get("estimated_monthly_customer_count") or plan.get("monthly_customer_count")
+        avg_order = market_ind.get("average_transaction_value_lkr") or plan.get("average_transaction_value_lkr")
+        if cus_count and avg_order:
+            order_metric = f"{cus_count:,.0f} clients @ LKR {avg_order:,.0f}"
+            if market_ind.get("sales_discrepancy_detected"):
+                order_metric += " <font color='#b91c1c'><b>[Discrepancy]</b></font>"
+        else:
+            order_metric = esc(pricing)
+
+        comp_cnt = plan.get("direct_competitors_count")
+        comp_price = plan.get("competitor_pricing_vs_business")
+        if comp_cnt is not None:
+            comp_metric = f"{comp_cnt:.0f} rivals ({comp_price or 'Similar'} prices)"
+        else:
+            comp_metric = esc(comp)
+
+        top_cus = market_ind.get("largest_customer_share_pct") or plan.get("largest_customer_sales_share_pct") or plan.get("customer_concentration_percentage")
+
         market_table_data = [
             [
                 Paragraph("<b>Market &amp; Demand Indicator</b>", cell_bold),
@@ -605,19 +631,25 @@ class Component4MitigationPDFGenerator:
             ],
             [
                 Paragraph("Customer Demand Evidence", cell_style),
-                Paragraph(esc(demand_ev), cell_style),
+                Paragraph(esc(market_ind.get("demand_evidence_type") or demand_ev), cell_style),
                 Paragraph("&gt; 60/100 Validated Demand Index", cell_style),
                 Paragraph("Revenue realization confidence", cell_style),
             ],
             [
+                Paragraph("Volume &amp; Ticket Pricing", cell_style),
+                Paragraph(order_metric, cell_style),
+                Paragraph("Sustainable volume at positive margin", cell_style),
+                Paragraph("Customer acquisition viability", cell_style),
+            ],
+            [
                 Paragraph("Market Competition Intensity", cell_style),
-                Paragraph(esc(comp), cell_style),
+                Paragraph(comp_metric, cell_style),
                 Paragraph("Moderate or Low in Catchment", cell_style),
                 Paragraph("Pricing power &amp; margin stability", cell_style),
             ],
             [
                 Paragraph("Customer Concentration", cell_style),
-                Paragraph(f"{plan.get('customer_concentration_percentage', 25):.0f}% top customer" if plan.get('customer_concentration_percentage') else "Distributed retail base", cell_style),
+                Paragraph(f"{top_cus:.0f}% top customer" if top_cus else "Distributed retail base", cell_style),
                 Paragraph("&lt; 30% Single Client Share", cell_style),
                 Paragraph("Counterparty cash vulnerability", cell_style),
             ],
@@ -648,7 +680,13 @@ class Component4MitigationPDFGenerator:
         ))
         story.append(HRFlowable(width="100%", thickness=1, color=c_primary, spaceBefore=2, spaceAfter=6))
 
-        imp_exp = plan.get("imported_input_exposure") or "Moderate (Sector Standard)"
+        inf_ind = supported_ind.get("inflation", {})
+        energy_cost = inf_ind.get("monthly_energy_and_fuel_cost_lkr") or ((plan.get("monthly_fuel_transport_cost_lkr") or 0) + (plan.get("monthly_electricity_energy_cost_lkr") or 0))
+        hike_val = inf_ind.get("expected_supplier_price_increase_pct") or plan.get("supplier_price_change_past_3_6m_pct")
+        hike_str = f"+{hike_val:.1f}% expected price hike" if hike_val else "Semi-annual supplier price increases"
+        pt_ability = inf_ind.get("cost_pass_through_ability") or plan.get("ability_to_increase_prices") or "Variable markup on stock rotation"
+        imp_exp = plan.get("imported_input_exposure") or plan.get("foreign_currency_exposure") or "Moderate (Sector Standard)"
+
         inf_table_data = [
             [
                 Paragraph("<b>Inflation Exposure Indicator</b>", cell_bold),
@@ -658,19 +696,25 @@ class Component4MitigationPDFGenerator:
             ],
             [
                 Paragraph("Imported-Input Exposure", cell_style),
-                Paragraph(esc(imp_exp), cell_style),
+                Paragraph(f"{inf_ind.get('imported_inputs_pct', plan.get('imported_inputs_pct', 15)):.0f}% ({inf_ind.get('foreign_currency_exposure') or imp_exp})", cell_style),
                 Paragraph("&lt; 30% Foreign Currency Linked", cell_style),
                 Paragraph("Exchange rate pass-through", cell_style),
             ],
             [
                 Paragraph("Supplier Price Volatility", cell_style),
-                Paragraph("Semi-annual supplier price increases", cell_style),
+                Paragraph(hike_str, cell_style),
                 Paragraph("&lt; 10% Annual Cost Increase", cell_style),
                 Paragraph("Gross margin compression", cell_style),
             ],
             [
+                Paragraph("Energy &amp; Utility Burden", cell_style),
+                Paragraph(fmt_lkr(energy_cost) if energy_cost else "Standard retail tariff", cell_style),
+                Paragraph("&lt; 20% of Operating Expenses", cell_style),
+                Paragraph("Overhead inflation vulnerability", cell_style),
+            ],
+            [
                 Paragraph("Retail Price Flexibility", cell_style),
-                Paragraph("Variable markup on stock rotation", cell_style),
+                Paragraph(esc(pt_ability), cell_style),
                 Paragraph("Ability to pass price shocks", cell_style),
                 Paragraph("Working capital depletion", cell_style),
             ],
@@ -701,6 +745,12 @@ class Component4MitigationPDFGenerator:
         ))
         story.append(HRFlowable(width="100%", thickness=1, color=c_primary, spaceBefore=2, spaceAfter=6))
 
+        liq_ind = supported_ind.get("liquidity", {})
+        rem_reserves = liq_ind.get("remaining_cash_reserves_after_setup_lkr") or plan.get("remaining_cash_reserves_after_setup_lkr") or avail_cap
+        net_cf = liq_ind.get("net_monthly_operating_cash_flow_lkr")
+        cf_str = (f"+LKR {net_cf:,.0f}/mo (Surplus)" if net_cf >= 0 else f"-LKR {abs(net_cf):,.0f}/mo (Burn)") if net_cf is not None else fmt_lkr(monthly_budget)
+        coverage_ratio = liq_ind.get("essential_payment_coverage_ratio")
+
         liq_table_data = [
             [
                 Paragraph("<b>Liquidity &amp; Cash Buffer Indicator</b>", cell_bold),
@@ -709,22 +759,28 @@ class Component4MitigationPDFGenerator:
                 Paragraph("<b>Cash Flow Impact</b>", cell_bold),
             ],
             [
-                Paragraph("Liquid Reserves (Available Capital)", cell_style),
-                Paragraph(fmt_lkr(avail_cap), cell_style),
+                Paragraph("Remaining Liquid Reserves", cell_style),
+                Paragraph(fmt_lkr(rem_reserves), cell_style),
                 Paragraph("&gt; 3.0 Months Operating Buffer", cell_style),
                 Paragraph("Emergency buffer capacity", cell_style),
             ],
             [
-                Paragraph("Monthly Fixed Outflows", cell_style),
-                Paragraph(fmt_lkr(monthly_budget), cell_style),
-                Paragraph("&lt; Monthly Verified Revenue", cell_style),
-                Paragraph("Operational cash burn", cell_style),
+                Paragraph("Net Operating Cash Flow", cell_style),
+                Paragraph(cf_str, cell_style),
+                Paragraph("&gt; 0 LKR (Cash positive)", cell_style),
+                Paragraph("Operational burn / replenishment", cell_style),
             ],
             [
                 Paragraph("Computed Cash Runway", cell_style),
-                Paragraph(f"{runway_mo:.1f} Months" if runway_mo is not None else "Pending reserves", cell_style),
+                Paragraph(f"{liq_ind.get('calculated_cash_runway_months', runway_mo):.1f} Months" if (liq_ind.get('calculated_cash_runway_months') or runway_mo) is not None else "Pending reserves", cell_style),
                 Paragraph("&gt; 3.0 Months Safe Floor", cell_style),
                 Paragraph("Insolvency survival horizon", cell_style),
+            ],
+            [
+                Paragraph("Essential Payment Coverage", cell_style),
+                Paragraph(f"{coverage_ratio:.2f}x Revenue/Mandatory" if coverage_ratio is not None else "Baseline coverage", cell_style),
+                Paragraph("&gt; 1.25x Essential Coverage", cell_style),
+                Paragraph("Mandatory liability servicing", cell_style),
             ],
         ]
         liq_table = Table(liq_table_data, colWidths=[150, 130, 130, 130])
@@ -753,6 +809,13 @@ class Component4MitigationPDFGenerator:
         ))
         story.append(HRFlowable(width="100%", thickness=1, color=c_primary, spaceBefore=2, spaceAfter=6))
 
+        op_ind = supported_ind.get("operational", {})
+        sup_dep = op_ind.get("largest_supplier_dependency_pct") or plan.get("largest_supplier_dependency_pct") or plan.get("supplier_dependency_percentage")
+        alt_status = op_ind.get("alternative_suppliers_status") or plan.get("alternative_suppliers_available") or "Distributed"
+        lead_days = op_ind.get("typical_lead_time_days") or plan.get("typical_supplier_lead_time_days") or plan.get("supplier_delay_days")
+        inv_days = op_ind.get("inventory_coverage_days") or plan.get("inventory_coverage_days")
+        bcp_val = op_ind.get("business_continuity_plan_exists") or plan.get("business_continuity_plan_exists") or "None"
+
         op_table_data = [
             [
                 Paragraph("<b>Operational &amp; Supply Chain Indicator</b>", cell_bold),
@@ -762,21 +825,27 @@ class Component4MitigationPDFGenerator:
             ],
             [
                 Paragraph("Key Supplier Dependency", cell_style),
-                Paragraph(f"{plan.get('supplier_dependency_percentage', 35):.0f}% primary supplier" if plan.get('supplier_dependency_percentage') else "Distributed wholesale suppliers", cell_style),
+                Paragraph(f"{sup_dep:.0f}% primary ({alt_status} alternatives)" if sup_dep else "Distributed wholesale suppliers", cell_style),
                 Paragraph("&lt; 40% Concentration", cell_style),
                 Paragraph("Single point of failure", cell_style),
             ],
             [
-                Paragraph("Shipment Delivery Reliability", cell_style),
-                Paragraph(f"{plan.get('supplier_delay_days', 2):.0f} days average delay" if plan.get('supplier_delay_days') else "Standard 1–3 day lead time", cell_style),
+                Paragraph("Inbound Delivery Turnaround", cell_style),
+                Paragraph(f"{lead_days:.0f} days turnaround" if lead_days else "Standard 1–3 day lead time", cell_style),
                 Paragraph("&lt; 7 Days Delay Tolerance", cell_style),
                 Paragraph("Stockout risk &amp; customer loss", cell_style),
             ],
             [
-                Paragraph("Staffing &amp; Equipment Capacity", cell_style),
-                Paragraph(f"Staff: {staff} | Equipment Score: {plan.get('available_equipment_score', 75)}/100", cell_style),
-                Paragraph("Meets planned activity level", cell_style),
-                Paragraph("Operational bottleneck", cell_style),
+                Paragraph("Inventory Coverage Buffer", cell_style),
+                Paragraph(f"{inv_days:.0f} days sales buffer" if inv_days else "30 days target buffer", cell_style),
+                Paragraph("&gt; 21 Days Coverage Floor", cell_style),
+                Paragraph("Disruption buffer stock", cell_style),
+            ],
+            [
+                Paragraph("Continuity Plan &amp; Staff Redundancy", cell_style),
+                Paragraph(f"BCP: {bcp_val} | Staff: {staff}", cell_style),
+                Paragraph("Documented SOPs &amp; Backup Staff", cell_style),
+                Paragraph("Operational bottleneck &amp; resilience", cell_style),
             ],
         ]
         op_table = Table(op_table_data, colWidths=[150, 130, 130, 130])
@@ -802,6 +871,9 @@ class Component4MitigationPDFGenerator:
         ext_sources = prov.get("externally_sourced_evidence", [])
         unknowns = prov.get("unknown_or_unavailable_fields", [])
         derived = prov.get("derived_values_and_formulas", {})
+        limitations = stage6.get("assessment_limitations", [])
+        engine_missing = stage6.get("missing_inputs", [])
+        all_unknowns = list(dict.fromkeys(unknowns + engine_missing))
 
         prov_rows = [
             [Paragraph("<b>Provenance Class</b>", cell_bold), Paragraph("<b>Identified Parameters &amp; Verification Evidence</b>", cell_bold)],
@@ -830,8 +902,15 @@ class Component4MitigationPDFGenerator:
             [
                 Paragraph("<b>Unknown / Missing Fields</b><br/><font color='#b91c1c'>Explicit limitations</font>", cell_style),
                 Paragraph(
-                    ", ".join(unknowns) if unknowns else "All required risk screening fields provided; zero values were not fabricated",
-                    ParagraphStyle('Unk', parent=cell_style, textColor=c_high_text if unknowns else c_low_text)
+                    ", ".join(all_unknowns) if all_unknowns else "All required risk screening fields provided; zero values were not fabricated",
+                    ParagraphStyle('Unk', parent=cell_style, textColor=c_high_text if all_unknowns else c_low_text)
+                )
+            ],
+            [
+                Paragraph("<b>Assessment Limitations</b><br/><font color='#b45309'>Scope &amp; constraints</font>", cell_style),
+                Paragraph(
+                    "<br/>• ".join(limitations) if limitations else "Zero assessment constraints; complete input-driven parameter model evaluated.",
+                    cell_style
                 )
             ],
         ]
@@ -1048,8 +1127,10 @@ class Component4MitigationPDFGenerator:
         story.append(Paragraph("15. Methodological Assumptions, Model Disclosures &amp; Reassessment Triggers", h1_style))
         story.append(HRFlowable(width="100%", thickness=1, color=c_primary, spaceBefore=2, spaceAfter=6))
 
+        calc_ver = stage6.get("calculation_version", "2.4.0")
         assumptions_text = (
             "<b>Scientific Methodology &amp; Engineering Disclosures:</b><br/>"
+            f"• <b>Calculation Engine Version:</b> <code>v{esc(calc_ver)}</code> — Input-driven multi-category risk screening calibrated to Sri Lankan macroeconomic indicators.<br/>"
             "• <b>Transparent Rule-Based Screening Indicators:</b> The 5 risk category sub-scores are explainable, transparent "
             "screening indices calibrated to Sri Lankan macroeconomic conditions. They do <i>not</i> represent uncalibrated failure probabilities.<br/>"
             "• <b>GNN Graph Context Distinction:</b> The Graph Neural Network (B2BRiskGNN) provides relational trade network context "

@@ -125,6 +125,11 @@ class RiskAssessmentResult:
     scenarios: List[Dict[str, Any]] = field(default_factory=list)
     capital_runway_months: Optional[float] = None
     financial_ratios: Dict[str, Any] = field(default_factory=dict)
+    calculation_version: str = "2.4.0"
+    supported_indicators: Dict[str, Any] = field(default_factory=dict)
+    assessment_limitations: List[str] = field(default_factory=list)
+    missing_inputs: List[str] = field(default_factory=list)
+    input_snapshot: Dict[str, Any] = field(default_factory=dict)
     methodology_disclosure: str = (
         "Risk scores are explainable, bounded composite indicators and conditional scenario estimates. "
         "They do NOT represent guaranteed future default probabilities or feasibility scores."
@@ -196,12 +201,18 @@ class RiskAssessmentEngine:
         if not is_sufficient:
             return self._build_insufficient_evidence_result(data, sufficiency_status)
 
+        context = {
+            "indicators": {},
+            "limitations": [],
+            "missing": []
+        }
+
         # 2. Compute Individual Dimension Sub-Scores [0.0, 1.0] across 5 Risk Dimensions
-        s_credit, credit_drivers = self._evaluate_credit_risk(data)
-        s_market, market_drivers = self._evaluate_market_risk(data)
-        s_inflation, inflation_drivers = self._evaluate_inflation_risk(data)
-        s_liq, liq_drivers = self._evaluate_liquidity_risk(data)
-        s_op, op_drivers = self._evaluate_operational_risk(data)
+        s_credit, credit_drivers = self._evaluate_credit_risk(data, context=context)
+        s_market, market_drivers = self._evaluate_market_risk(data, context=context)
+        s_inflation, inflation_drivers = self._evaluate_inflation_risk(data, context=context)
+        s_liq, liq_drivers = self._evaluate_liquidity_risk(data, context=context)
+        s_op, op_drivers = self._evaluate_operational_risk(data, context=context)
         s_act, act_drivers = self._evaluate_growth_action_stress(data)
 
         sub_scores = {
@@ -324,6 +335,11 @@ class RiskAssessmentEngine:
             scenarios=scenarios,
             capital_runway_months=runway_val,
             financial_ratios=fin_ratios,
+            calculation_version="2.4.0",
+            supported_indicators=context.get("indicators", {}),
+            assessment_limitations=context.get("limitations", []),
+            missing_inputs=context.get("missing", []),
+            input_snapshot={k: v for k, v in data.items() if not str(k).startswith("_") and not isinstance(v, (pd.DataFrame, pd.Series))},
         )
 
     def assess_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -366,12 +382,52 @@ class RiskAssessmentEngine:
     # Sub-Score Evaluation Helpers
     # -----------------------------------------------------------------------
 
-    def _evaluate_liquidity_risk(self, data: Dict[str, Any]) -> Tuple[float, List[Dict[str, Any]]]:
-        """Evaluates cash runway and operational burn pressure."""
+    def _evaluate_liquidity_risk(self, data: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> Tuple[float, List[Dict[str, Any]]]:
+        """Evaluates cash runway, cash flow shortfall/surplus, and operational burn pressure."""
         cfg = self.config
         drivers = []
 
-        if not data.get("has_stated_capital") and (data.get("cash_reserves_latest_lkr") is None or data.get("cash_reserves_latest_lkr") == 0.0):
+        avail_cap = self._safe_float(data.get("available_starting_capital_lkr") or data.get("available_capital_lkr") or data.get("Cash_Reserves_LKR"))
+        setup_raw = data.get("initial_setup_expenditure_lkr")
+        
+        remaining_raw = data.get("remaining_cash_reserves_after_setup_lkr")
+        if remaining_raw is not None and not pd.isnull(remaining_raw):
+            cash_latest = self._safe_float(remaining_raw)
+        elif avail_cap > 0 and setup_raw is not None:
+            cash_latest = max(0.0, avail_cap - self._safe_float(setup_raw))
+        else:
+            cash_latest = self._safe_float(data.get("cash_reserves_latest_lkr") or data.get("current_cash_reserve_lkr") or data.get("cash_reserve_after_startup") or avail_cap, default=100000.0)
+
+        # Revenue & Outflow items
+        rev = self._safe_float(
+            data.get("actual_or_projected_monthly_revenue_lkr") or data.get("monthly_sales_revenue") or data.get("monthly_sales_lkr") or data.get("monthly_revenue_lkr") or data.get("monthly_revenue_mean_lkr"),
+            default=0.0
+        )
+        fixed_costs = self._safe_float(data.get("fixed_monthly_costs_lkr") or data.get("monthly_fixed_costs") or data.get("monthly_expenses_mean_lkr"), default=0.0)
+        var_costs = self._safe_float(data.get("variable_monthly_costs_lkr") or data.get("monthly_variable_costs"), default=0.0)
+        repay = self._safe_float(data.get("monthly_loan_repayment_lkr") or data.get("monthly_debt_repayment_lkr"), default=0.0)
+        other_mand = self._safe_float(data.get("other_mandatory_monthly_obligations_lkr"), default=0.0)
+        
+        total_outflow = fixed_costs + var_costs + repay + other_mand
+        essential_commitments = fixed_costs + repay + other_mand
+
+        has_explicit_cashflow = (fixed_costs > 0 or total_outflow > 0)
+        net_cash_flow = (rev - total_outflow) if has_explicit_cashflow else self._safe_float(data.get("post_action_net_cash_flow_lkr"), default=0.0)
+
+        # Runway calculation:
+        calc_runway = None
+        if total_outflow > 0 and cash_latest >= 0:
+            if net_cash_flow < 0:
+                calc_runway = cash_latest / max(1.0, abs(net_cash_flow))
+            else:
+                calc_runway = cash_latest / max(1.0, total_outflow)
+
+        base_runway = self._safe_float(data.get("baseline_cash_runway_months"), default=(calc_runway if calc_runway is not None else 2.0))
+        post_runway = self._safe_float(data.get("post_action_cash_runway_months"), default=(calc_runway if calc_runway is not None else base_runway))
+        op_margin = self._safe_float(data.get("operating_margin_ratio"), default=((rev - total_outflow) / rev if rev > 0 else 0.10))
+
+        # Check undeclared reserves
+        if not data.get("has_stated_capital") and (data.get("cash_reserves_latest_lkr") is None or data.get("cash_reserves_latest_lkr") == 0.0) and avail_cap == 0.0 and remaining_raw is None:
             drivers.append({
                 "factor_code": "UNKNOWN_LIQUIDITY_RESERVES",
                 "severity_score": 0.50,
@@ -381,26 +437,21 @@ class RiskAssessmentEngine:
                 "description": "Liquid cash reserves are undeclared: cash runway and liquidity buffers cannot be reliably calculated.",
             })
 
-        base_runway = self._safe_float(data.get("baseline_cash_runway_months"), default=2.0)
-        post_runway = self._safe_float(data.get("post_action_cash_runway_months"), default=base_runway)
-        op_margin = self._safe_float(data.get("operating_margin_ratio"), default=0.10)
-        cash_latest = self._safe_float(data.get("cash_reserves_latest_lkr"), default=100000.0)
-
         # Runway scoring: linear decay from healthy (4.0m) to critical (0.0m)
         base_score = max(0.0, min(1.0, 1.0 - (base_runway / cfg.runway_healthy_months)))
         post_score = max(0.0, min(1.0, 1.0 - (post_runway / cfg.runway_healthy_months)))
         s_liq = 0.35 * base_score + 0.65 * post_score
 
         # Operating margin deficit penalty
-        if op_margin < 0.0:
+        if op_margin < 0.0 or net_cash_flow < 0.0:
             s_liq = min(1.0, s_liq + 0.15)
             drivers.append({
                 "factor_code": "OPERATING_LOSS",
-                "severity_score": round(abs(op_margin), 4),
+                "severity_score": round(abs(op_margin) if op_margin != 0 else min(1.0, abs(net_cash_flow) / 200000.0), 4),
                 "metric_name": "operating_margin_ratio",
                 "observed_value": round(op_margin, 4),
                 "threshold": 0.0,
-                "description": f"Operating loss: baseline operating margin is {op_margin:.1%} (deficit before financing).",
+                "description": f"Operating loss / cash shortfall: monthly net cash flow is LKR {net_cash_flow:,.0f} (operating margin: {op_margin:.1%}).",
             })
 
         # Critical or warning runway driver
@@ -412,7 +463,7 @@ class RiskAssessmentEngine:
                 "metric_name": "post_action_cash_runway_months",
                 "observed_value": round(post_runway, 2),
                 "threshold": cfg.runway_critical_months,
-                "description": f"Severe cash depletion: post-action cash runway is {post_runway:.1f} months (immediate exhaustion threshold: < {cfg.runway_critical_months:.1f}m; cash reserves: {cash_latest:,.0f} LKR).",
+                "description": f"Severe cash depletion: cash runway is {post_runway:.1f} months (immediate exhaustion threshold: < {cfg.runway_critical_months:.1f}m; remaining liquid reserves: LKR {cash_latest:,.0f}).",
             })
         elif post_runway < cfg.runway_warning_months:
             severity = round((cfg.runway_warning_months - post_runway) / cfg.runway_warning_months, 4)
@@ -422,49 +473,104 @@ class RiskAssessmentEngine:
                 "metric_name": "post_action_cash_runway_months",
                 "observed_value": round(post_runway, 2),
                 "threshold": cfg.runway_warning_months,
-                "description": f"Constrained cash runway: post-action runway of {post_runway:.1f} months is below advisory safety buffer of {cfg.runway_warning_months:.1f} months.",
+                "description": f"Constrained cash runway: cash runway of {post_runway:.1f} months is below advisory safety buffer of {cfg.runway_warning_months:.1f} months.",
             })
+
+        # Working capital lag: customer collection delay vs supplier payment period
+        cus_delay = self._safe_float(data.get("customer_payment_delay_days") or data.get("counterparty_payment_delay_mean_days") or data.get("Average_Collection_Period_Days"), default=0.0)
+        sup_period = self._safe_float(data.get("supplier_payment_period_days"), default=0.0)
+        if cus_delay > 0 and sup_period > 0 and (cus_delay - sup_period) > 15.0:
+            trade_lag = cus_delay - sup_period
+            s_liq = min(1.0, s_liq + min(0.15, trade_lag / 100.0))
+            drivers.append({
+                "factor_code": "WORKING_CAPITAL_LAG",
+                "severity_score": round(min(1.0, trade_lag / 60.0), 4),
+                "metric_name": "customer_payment_delay_days",
+                "observed_value": round(cus_delay, 1),
+                "threshold": round(sup_period, 1),
+                "description": f"Working capital cash lag: customer collection delay ({cus_delay:.0f} days) exceeds supplier credit terms ({sup_period:.0f} days) by {trade_lag:.0f} days, draining operational liquidity.",
+            })
+
+        # Expected large one-off payments
+        large_payment = self._safe_float(data.get("expected_large_one_off_payments_lkr"), default=0.0)
+        if large_payment > 0 and cash_latest > 0 and (large_payment / cash_latest) > 0.60:
+            s_liq = min(1.0, s_liq + 0.20)
+            drivers.append({
+                "factor_code": "IMPENDING_LARGE_LIQUIDITY_DRAIN",
+                "severity_score": round(min(1.0, large_payment / cash_latest), 4),
+                "metric_name": "expected_large_one_off_payments_lkr",
+                "observed_value": round(large_payment, 0),
+                "threshold": round(cash_latest * 0.60, 0),
+                "description": f"Impending capital drain: expected one-off payment of LKR {large_payment:,.0f} absorbs {large_payment / cash_latest:.1%} of remaining cash reserves (LKR {cash_latest:,.0f}).",
+            })
+
+        essential_coverage = (rev / essential_commitments) if essential_commitments > 0 else (99.0 if rev > 0 else 0.0)
+
+        # Context recording
+        if context is not None:
+            context.setdefault("indicators", {})["liquidity"] = {
+                "remaining_cash_reserves_after_setup_lkr": round(cash_latest, 2),
+                "net_monthly_operating_cash_flow_lkr": round(net_cash_flow, 2),
+                "monthly_cash_shortfall_or_surplus_lkr": round(net_cash_flow, 2),
+                "calculated_cash_runway_months": round(post_runway, 2),
+                "essential_payment_coverage_ratio": round(essential_coverage, 2) if essential_commitments > 0 else None,
+                "total_mandatory_monthly_outflow_lkr": round(total_outflow, 2),
+            }
+            if rev == 0.0 and fixed_costs == 0.0:
+                context.setdefault("limitations", []).append("Revenue and fixed cost figures unavailable: liquidity assessment based on default screening.")
+                context.setdefault("missing", []).extend(["monthly_revenue", "fixed_monthly_costs"])
 
         return min(1.0, s_liq), drivers
 
-    def _evaluate_credit_risk(self, data: Dict[str, Any]) -> Tuple[float, List[Dict[str, Any]]]:
+    def _evaluate_credit_risk(self, data: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> Tuple[float, List[Dict[str, Any]]]:
         """
         Evaluates Credit Risk:
-        Features: Outstanding debt balance, monthly repayment, debt service burden, DSCR,
-        repayment delay days, overdue status, debt-to-capital ratio, arrears, default flag.
+        Features: Outstanding debt balance, monthly repayment, other debt obligations,
+        arrears amount, overdue payment count, longest overdue period, debt service burden,
+        DSCR, debt-to-capital ratio, repayment history status, loan interest rate, guarantees.
         """
         cfg = self.config
         drivers = []
 
-        # Support both legacy schema and canonical Phase 2 columns
         debt_latest = self._safe_float(
-            data.get("outstanding_debt_latest_lkr") or data.get("outstanding_loan_balance_lkr") or data.get("Outstanding_Balance_LKR") or data.get("loan_amount_lkr"),
+            data.get("outstanding_loan_balance_lkr") or data.get("outstanding_debt_latest_lkr") or data.get("Outstanding_Balance_LKR") or data.get("loan_amount_lkr"),
             default=0.0
         )
         repay_latest = self._safe_float(
-            data.get("monthly_debt_repayment_lkr") or data.get("monthly_loan_repayment_lkr") or data.get("Monthly_Repayment_LKR"),
+            data.get("monthly_loan_repayment_lkr") or data.get("monthly_debt_repayment_lkr") or data.get("Monthly_Repayment_LKR"),
             default=0.0
         )
+        other_debt = self._safe_float(data.get("other_monthly_debt_obligations_lkr"), default=0.0)
+        total_monthly_debt = repay_latest + other_debt
+
         arrears = self._safe_float(
-            data.get("Arrears_Amount_LKR") or data.get("arrears_amount_lkr"),
+            data.get("total_overdue_amount_lkr") or data.get("Arrears_Amount_LKR") or data.get("arrears_amount_lkr"),
             default=0.0
         )
         delay_days = self._safe_float(
-            data.get("Repayment_Delay_Days") or data.get("repayment_delay_days") or data.get("payment_delay_days"),
+            data.get("longest_overdue_period_days") or data.get("Repayment_Delay_Days") or data.get("repayment_delay_days") or data.get("payment_delay_days"),
             default=0.0
         )
         default_flag = int(self._safe_float(data.get("Default_Flag"), default=0))
         overdue_status = str(data.get("repayment_overdue_status") or data.get("overdue_repayments") or "")
-        cap = self._safe_float(data.get("cash_reserves_latest_lkr") or data.get("available_capital_lkr"), default=0.0)
+        repay_history = str(data.get("repayment_history_status") or "").strip()
+        overdue_count = self._safe_int(data.get("overdue_payment_count_12m") or data.get("overdue_payments_count_12m"), default=None)
+        interest_rate = self._safe_float(data.get("loan_interest_rate_pct"), default=None)
+        guarantees = self._safe_float(data.get("outstanding_guarantees_lkr"), default=0.0)
+        debt_rev = self._safe_float(data.get("debt_service_available_revenue_lkr") or data.get("monthly_revenue_available_for_debt_servicing_lkr"), default=None)
+
+        cap = self._safe_float(data.get("cash_reserves_latest_lkr") or data.get("available_capital_lkr") or data.get("remaining_cash_reserves_after_setup_lkr"), default=0.0)
 
         # Distinguish confirmed zero debt from unconfirmed/missing debt status
         has_explicit_debt_data = any(
             data.get(k) is not None for k in [
-                "outstanding_debt_latest_lkr", "outstanding_loan_balance_lkr",
+                "outstanding_loan_balance_lkr", "outstanding_debt_latest_lkr",
                 "Outstanding_Balance_LKR", "loan_amount_lkr",
-                "monthly_debt_repayment_lkr", "monthly_loan_repayment_lkr",
+                "monthly_loan_repayment_lkr", "monthly_debt_repayment_lkr",
                 "Monthly_Repayment_LKR", "repayment_overdue_status", "overdue_repayments",
-                "Repayment_Delay_Days", "repayment_delay_days", "Arrears_Amount_LKR", "arrears_amount_lkr"
+                "Repayment_Delay_Days", "repayment_delay_days", "longest_overdue_period_days",
+                "Arrears_Amount_LKR", "arrears_amount_lkr", "total_overdue_amount_lkr",
+                "repayment_history_status", "overdue_payment_count_12m", "overdue_payments_count_12m"
             ]
         ) or bool(data.get("is_zero_debt"))
 
@@ -477,17 +583,31 @@ class RiskAssessmentEngine:
                 "threshold": 0,
                 "description": "Debt obligations, monthly loan installments, and repayment history are undeclared. Credit risk is evaluated on conditional baseline assumptions.",
             })
+            if context is not None:
+                context.setdefault("limitations", []).append("Debt facilities unconfirmed: credit risk calculated on conservative baseline assumptions.")
+                context.setdefault("missing", []).append("outstanding_loan_balance_lkr")
             return 0.35, drivers
 
         # Confirmed zero-debt enterprise check: zero obligations must yield low risk
-        if debt_latest <= 0.0 and repay_latest <= 0.0 and delay_days <= 0.0 and arrears <= 0.0 and default_flag <= 0 and "30" not in overdue_status:
+        if debt_latest <= 0.0 and total_monthly_debt <= 0.0 and delay_days <= 0.0 and arrears <= 0.0 and default_flag <= 0 and "30" not in overdue_status and (overdue_count is None or overdue_count <= 0):
+            if context is not None:
+                context.setdefault("indicators", {})["credit"] = {
+                    "outstanding_debt_balance_lkr": 0.0,
+                    "total_monthly_debt_service_lkr": 0.0,
+                    "debt_servicing_burden_ratio": 0.0,
+                    "overdue_exposure_ratio": 0.0,
+                    "repayment_history_status": repay_history or "Clean / Zero Debt",
+                }
             return 0.10, drivers
 
-        debt_burden = self._safe_float(
+        # Revenue available for servicing debt
+        rev_for_debt = debt_rev if (debt_rev is not None and debt_rev > 0) else self._safe_float(data.get("monthly_revenue_lkr") or data.get("monthly_revenue_mean_lkr"), default=0.0)
+
+        debt_burden = (total_monthly_debt / rev_for_debt) if rev_for_debt > 0 else self._safe_float(
             data.get("debt_service_burden_ratio") or data.get("debt_burden_ratio"),
             default=0.10
         )
-        dscr = self._safe_float(
+        dscr = (rev_for_debt / total_monthly_debt) if (rev_for_debt > 0 and total_monthly_debt > 0) else self._safe_float(
             data.get("debt_service_coverage_ratio") or data.get("dscr"),
             default=2.0
         )
@@ -506,10 +626,12 @@ class RiskAssessmentEngine:
             or "30+" in overdue_status
             or "60+" in overdue_status
             or "90+" in overdue_status
+            or repay_history == "Frequent delays"
+            or (overdue_count is not None and overdue_count >= 3)
         )
 
         if has_30_plus_delinquency:
-            effective_days = max(delay_days, 30.0 if "30" in overdue_status else 0.0)
+            effective_days = max(delay_days, 30.0 if "30" in overdue_status else (45.0 if repay_history == "Frequent delays" else 0.0))
             s_credit = max(0.85, s_credit + 0.45)
             drivers.append({
                 "factor_code": "REPAYMENT_DELINQUENCY_30_PLUS_DAYS",
@@ -517,20 +639,23 @@ class RiskAssessmentEngine:
                 "metric_name": "Repayment_Delay_Days",
                 "observed_value": effective_days,
                 "threshold": 30.0,
-                "description": f"Active loan delinquency detected: repayment is {effective_days:.0f} days past due on monthly installment of {repay_latest:,.0f} LKR. Active delinquency creates acute default and credit risk.",
+                "description": f"Active loan delinquency detected: repayment is {effective_days:.0f} days past due on monthly installment of {total_monthly_debt:,.0f} LKR (overdue amount: LKR {arrears:,.0f}). Active delinquency creates acute default and credit risk.",
             })
-        elif delay_days > 0.0:
+        elif delay_days > 0.0 or repay_history == "Occasional delays" or (overdue_count is not None and overdue_count > 0):
             s_credit = max(0.55, s_credit + 0.25)
             drivers.append({
                 "factor_code": "EARLY_PAYMENT_DELINQUENCY",
                 "severity_score": 0.65,
                 "metric_name": "Repayment_Delay_Days",
-                "observed_value": delay_days,
+                "observed_value": max(delay_days, 10.0),
                 "threshold": 0.0,
-                "description": f"Early repayment friction detected: {delay_days:.0f} days past due on loan obligations.",
+                "description": f"Early repayment friction detected: {max(delay_days, 10.0):.0f} days past due on loan obligations ({overdue_count or 1} overdue incident(s) in past 12 months).",
             })
+        elif repay_history in ("Not applicable — new startup", "No history available"):
+            if context is not None:
+                context.setdefault("limitations", []).append("New startup enterprise: credit assessment based on proposed facility structure without historical repayment tracking.")
 
-        # 2. Extreme debt-to-capital exposure (e.g. 1M debt vs 37.5k capital = 26.7x)
+        # 2. Extreme debt-to-capital exposure
         debt_to_cap = self._safe_float(data.get("debt_to_capital_ratio"))
         if debt_to_cap is None or debt_to_cap <= 0.0:
             debt_to_cap = (debt_latest / cap) if cap > 0 else (99.0 if debt_latest > 0 else 0.0)
@@ -557,15 +682,15 @@ class RiskAssessmentEngine:
             })
 
         # 3. Monthly debt service exceeds total available capital
-        if cap > 0 and repay_latest > cap:
+        if cap > 0 and total_monthly_debt > cap:
             s_credit = max(s_credit, 0.88)
             drivers.append({
                 "factor_code": "MONTHLY_DEBT_EXCEEDS_LIQUID_CAPITAL",
                 "severity_score": 0.95,
                 "metric_name": "monthly_debt_repayment_lkr",
-                "observed_value": repay_latest,
+                "observed_value": total_monthly_debt,
                 "threshold": cap,
-                "description": f"Monthly debt repayment ({repay_latest:,.0f} LKR) exceeds total available capital ({cap:,.0f} LKR). Cash reserves cannot service a single full monthly installment without immediate cash inflow.",
+                "description": f"Monthly debt repayment ({total_monthly_debt:,.0f} LKR) exceeds total available capital ({cap:,.0f} LKR). Cash reserves cannot service a single full monthly installment without immediate cash inflow.",
             })
 
         # 4. Standard debt burden and DSCR triggers
@@ -576,7 +701,7 @@ class RiskAssessmentEngine:
                 "metric_name": "debt_service_burden_ratio",
                 "observed_value": round(debt_burden, 4),
                 "threshold": cfg.debt_burden_critical,
-                "description": f"Excessive debt service: monthly debt installment ({repay_latest:,.0f} LKR) consumes {debt_burden:.1%} of monthly revenue (critical threshold: > {cfg.debt_burden_critical:.1%}).",
+                "description": f"Excessive debt service: monthly debt installment ({total_monthly_debt:,.0f} LKR) consumes {debt_burden:.1%} of monthly revenue (critical threshold: > {cfg.debt_burden_critical:.1%}).",
             })
         elif debt_burden > cfg.debt_burden_warning or dscr < cfg.dscr_critical:
             drivers.append({
@@ -588,41 +713,106 @@ class RiskAssessmentEngine:
                 "description": f"Tight debt service coverage: DSCR is {dscr:.2f}x with monthly debt burden of {debt_burden:.1%} (coverage advisory: > {cfg.dscr_warning:.1f}x).",
             })
 
-        if data.get("has_unverified_revenue") and repay_latest > 0:
+        # 5. Loan interest rate shock trigger
+        if interest_rate is not None and interest_rate > 18.0:
+            s_credit = min(1.0, s_credit + 0.08)
+            drivers.append({
+                "factor_code": "HIGH_BORROWING_COST",
+                "severity_score": round(min(1.0, interest_rate / 30.0), 4),
+                "metric_name": "loan_interest_rate_pct",
+                "observed_value": round(interest_rate, 2),
+                "threshold": 18.0,
+                "description": f"High borrowing rate: loan interest rate of {interest_rate:.1f}% creates elevated interest-servicing friction.",
+            })
+
+        # 6. Outstanding guarantees
+        if guarantees > 0 and cap > 0 and (guarantees / cap) > 0.50:
+            s_credit = min(1.0, s_credit + 0.08)
+            drivers.append({
+                "factor_code": "CONTINGENT_LIABILITY_EXPOSURE",
+                "severity_score": round(min(1.0, guarantees / cap), 4),
+                "metric_name": "outstanding_guarantees_lkr",
+                "observed_value": round(guarantees, 0),
+                "threshold": round(cap * 0.50, 0),
+                "description": f"Contingent liability exposure: outstanding debt guarantees of LKR {guarantees:,.0f} represent {guarantees / cap:.1%} of available capital reserves.",
+            })
+
+        # 7. Recurring payment delinquency incidents
+        if overdue_count is not None and overdue_count >= 2:
+            s_credit = min(1.0, s_credit + 0.15)
+            drivers.append({
+                "factor_code": "FREQUENT_PAYMENT_DELAYS",
+                "severity_score": 0.85,
+                "metric_name": "overdue_payment_count_12m",
+                "observed_value": overdue_count,
+                "threshold": 1,
+                "description": f"Chronic installment delinquency: {overdue_count} overdue payment incidents documented over past 12 months.",
+            })
+
+        if data.get("has_unverified_revenue") and total_monthly_debt > 0:
             drivers.append({
                 "factor_code": "UNVERIFIED_DEBT_SERVICE_CAPACITY",
                 "severity_score": 0.70,
                 "metric_name": "monthly_revenue_lkr",
                 "observed_value": 0,
-                "threshold": repay_latest * 2.0,
-                "description": f"Monthly revenue is unverified: operating cash flow ability to service monthly debt ({repay_latest:,.0f} LKR) cannot be confirmed.",
+                "threshold": total_monthly_debt * 2.0,
+                "description": f"Monthly revenue is unverified: operating cash flow ability to service monthly debt ({total_monthly_debt:,.0f} LKR) cannot be confirmed.",
             })
+
+        if context is not None:
+            context.setdefault("indicators", {})["credit"] = {
+                "outstanding_debt_balance_lkr": round(debt_latest, 2),
+                "total_monthly_debt_service_lkr": round(total_monthly_debt, 2),
+                "debt_servicing_burden_ratio": round(debt_burden, 4),
+                "debt_service_coverage_ratio": round(dscr, 2) if dscr is not None else None,
+                "overdue_exposure_ratio": round(arrears / max(1.0, debt_latest), 4) if debt_latest > 0 else 0.0,
+                "longest_overdue_period_days": round(delay_days, 1),
+                "repayment_delay_days": round(delay_days, 1),
+                "total_overdue_amount_lkr": round(arrears, 2),
+                "overdue_payment_count_12m": overdue_count,
+            }
 
         return min(1.0, s_credit), drivers
 
-    def _evaluate_debt_risk(self, data: Dict[str, Any]) -> Tuple[float, List[Dict[str, Any]]]:
+    def _evaluate_debt_risk(self, data: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> Tuple[float, List[Dict[str, Any]]]:
         """Backward-compatible wrapper for credit/debt evaluation."""
-        return self._evaluate_credit_risk(data)
+        return self._evaluate_credit_risk(data, context=context)
 
-    def _evaluate_market_risk(self, data: Dict[str, Any]) -> Tuple[float, List[Dict[str, Any]]]:
+    def _evaluate_market_risk(self, data: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> Tuple[float, List[Dict[str, Any]]]:
         """
         Evaluates Market Risk:
-        Features: Sales growth rate, demand index, customer concentration (HHI/CR1),
-        competitor count, market share, counterparty payment delay days.
+        Features: Customer count, average transaction value, monthly sales revenue,
+        sales trend over 3-6 months, demand evidence type, competitor count,
+        competitor pricing, customer concentration, seasonal demand variation,
+        customer retention rate, price flexibility, marketing budget.
         """
         cfg = self.config
         drivers = []
 
-        cus_dep = data.get("customer_concentration_percentage") or data.get("customer_dependency_percentage")
-        if cus_dep is not None:
-            c_ratio = self._safe_float(cus_dep) / 100.0 if self._safe_float(cus_dep) > 1.0 else self._safe_float(cus_dep)
+        cus_count = self._safe_float(data.get("monthly_customer_count"), default=None)
+        avg_tx = self._safe_float(data.get("average_transaction_value_lkr") or data.get("expected_price_lkr"), default=None)
+        stated_sales = self._safe_float(data.get("monthly_sales_lkr") or data.get("expected_revenue_lkr") or data.get("monthly_revenue_lkr") or data.get("monthly_revenue_mean_lkr"), default=0.0)
+        sales_trend = str(data.get("sales_trend_3_6m") or "").strip()
+        demand_ev = str(data.get("demand_evidence_type") or data.get("demand_evidence") or data.get("customer_demand_evidence") or "").strip()
+        competitors = self._safe_float(data.get("direct_competitors_count") or data.get("Competitor_Count") or data.get("competitor_count"), default=5.0)
+        comp_pricing = str(data.get("competitor_pricing_vs_business") or "").strip()
+        seasonality = self._safe_float(data.get("seasonal_demand_variation_pct"), default=None)
+        retention = self._safe_float(data.get("customer_retention_rate_pct"), default=None)
+        price_flex = str(data.get("price_adjustment_flexibility") or "").strip()
+
+        # Customer concentration: respect customer_hhi and customer_cr1_share if directly passed
+        raw_cus_dep = data.get("largest_customer_sales_share_pct") or data.get("customer_concentration_percentage") or data.get("customer_dependency_percentage")
+        if raw_cus_dep is not None:
+            c_val = self._safe_float(raw_cus_dep, default=25.0)
+            c_ratio = c_val / 100.0 if c_val > 1.0 else c_val
             cus_cr1 = round(c_ratio, 4)
-            cus_hhi = round(c_ratio ** 2, 4)
+            cus_hhi = self._safe_float(data.get("customer_hhi"), default=round(c_ratio ** 2, 4))
         else:
             cus_hhi = self._safe_float(data.get("customer_hhi"), default=0.20)
             cus_cr1 = self._safe_float(data.get("customer_cr1_share"), default=0.30)
+
         payment_delay = self._safe_float(
-            data.get("counterparty_payment_delay_mean_days") or data.get("Average_Collection_Period_Days"),
+            data.get("counterparty_payment_delay_mean_days") or data.get("Average_Collection_Period_Days") or data.get("customer_payment_delay_days"),
             default=15.0
         )
         sales_growth = self._safe_float(
@@ -633,31 +823,112 @@ class RiskAssessmentEngine:
             data.get("Demand_Index") or data.get("demand_index") or data.get("customer_demand_score"),
             default=100.0
         )
-        competitors = self._safe_float(
-            data.get("Competitor_Count") or data.get("competitor_count"),
-            default=5.0
-        )
 
         # Baseline customer concentration & delay score
         delay_score = max(0.0, min(1.0, payment_delay / 60.0))
         s_market = 0.40 * cus_hhi + 0.30 * cus_cr1 + 0.30 * delay_score
 
-        # Demand verification evidence
-        demand_ev = str(data.get("demand_evidence") or data.get("customer_demand_evidence") or "").lower()
-        if demand_ev in ("estimate_only", "none", "unknown") or data.get("has_unverified_revenue"):
-            s_market = min(1.0, s_market + 0.10)
+        # Check derived sales discrepancy
+        derived_sales = None
+        disc_ratio = 0.0
+        if cus_count is not None and cus_count > 0 and avg_tx is not None and avg_tx > 0:
+            derived_sales = cus_count * avg_tx
+            if stated_sales > 0:
+                disc_ratio = abs(derived_sales - stated_sales) / max(derived_sales, stated_sales)
+                if disc_ratio > 0.30:
+                    s_market = min(1.0, s_market + 0.10)
+                    drivers.append({
+                        "factor_code": "SALES_PROJECTION_DISCREPANCY",
+                        "severity_score": round(min(0.85, disc_ratio), 4),
+                        "metric_name": "monthly_sales_revenue",
+                        "observed_value": round(stated_sales, 0),
+                        "threshold": round(derived_sales, 0),
+                        "description": f"Sales projection discrepancy flagged: derived monthly sales (LKR {derived_sales:,.0f} from {cus_count:.0f} customers @ LKR {avg_tx:,.0f}/order) diverges by {disc_ratio:.1%} from stated monthly sales (LKR {stated_sales:,.0f}).",
+                    })
+
+        # Demand verification evidence scoring
+        demand_ev_lower = demand_ev.lower()
+        if any(w in demand_ev_lower for w in ["verified", "actual_records", "contracts_signed", "historical_sales"]):
+            s_market = max(0.10, s_market - 0.08)
+        elif any(w in demand_ev_lower for w in ["pre-order", "pre_orders"]):
+            s_market = max(0.12, s_market - 0.05)
+        elif any(w in demand_ev_lower for w in ["survey", "foot_traffic"]):
+            pass
+        elif any(w in demand_ev_lower for w in ["market research"]):
+            s_market = min(1.0, s_market + 0.04)
+        elif any(w in demand_ev_lower for w in ["estimate", "owner estimate", "estimate_only"]) or data.get("has_unverified_revenue"):
+            s_market = min(1.0, s_market + 0.15)
             drivers.append({
                 "factor_code": "ESTIMATED_DEMAND_EVIDENCE",
                 "severity_score": 0.55,
                 "metric_name": "demand_evidence",
                 "observed_value": 0,
                 "threshold": 1,
-                "description": "Customer demand is based on estimates or unverified projections without signed purchase contracts or historical sales records.",
+                "description": "Customer demand is based on founder estimates or unverified projections without signed purchase contracts or historical sales records.",
             })
-        elif demand_ev in ("contracts_signed", "historical_sales", "pre_orders"):
-            s_market = max(0.12, s_market - 0.08)
+        elif any(w in demand_ev_lower for w in ["no evidence", "none", "unknown"]):
+            s_market = min(1.0, s_market + 0.22)
+            drivers.append({
+                "factor_code": "NO_DEMAND_EVIDENCE",
+                "severity_score": 0.70,
+                "metric_name": "demand_evidence",
+                "observed_value": 0,
+                "threshold": 1,
+                "description": "Zero customer demand evidence provided: expansion assumes unvalidated market interest.",
+            })
 
-        # Adjust for sales growth and demand index if present
+        # Competitor pricing
+        if comp_pricing.lower() == "lower":
+            s_market = min(1.0, s_market + 0.12)
+            drivers.append({
+                "factor_code": "COMPETITOR_PRICE_UNDERCUT",
+                "severity_score": 0.65,
+                "metric_name": "competitor_pricing_vs_business",
+                "observed_value": 1,
+                "threshold": 0,
+                "description": "Competitor pricing pressure: direct competitors in target area offer lower prices, creating price resistance and margin pressure.",
+            })
+        elif comp_pricing.lower() == "higher":
+            s_market = max(0.10, s_market - 0.05)
+
+        # Competitor count
+        if competitors > 10.0:
+            s_market = min(1.0, s_market + 0.08)
+            drivers.append({
+                "factor_code": "HIGH_LOCAL_COMPETITION",
+                "severity_score": round(min(1.0, competitors / 20.0), 4),
+                "metric_name": "direct_competitors_count",
+                "observed_value": round(competitors, 0),
+                "threshold": 10.0,
+                "description": f"Dense local competition: {competitors:.0f} direct competitors in target area saturate customer demand.",
+            })
+
+        # Sales trend (for existing businesses)
+        if sales_trend.lower() == "declining":
+            s_market = min(1.0, s_market + 0.20)
+            drivers.append({
+                "factor_code": "DECLINING_SALES_TREND",
+                "severity_score": 0.75,
+                "metric_name": "sales_trend_3_6m",
+                "observed_value": -1,
+                "threshold": 0,
+                "description": "Declining sales trend over past 3–6 months signals weakening customer demand in core offerings.",
+            })
+        elif sales_trend.lower() == "volatile":
+            s_market = min(1.0, s_market + 0.10)
+            drivers.append({
+                "factor_code": "VOLATILE_SALES_PATTERN",
+                "severity_score": 0.55,
+                "metric_name": "sales_trend_3_6m",
+                "observed_value": 0,
+                "threshold": 1,
+                "description": "Volatile month-to-month sales patterns introduce demand unpredictability and cash flow uncertainty.",
+            })
+        elif sales_trend.lower() in ("not applicable — new startup", "startup", "new"):
+            if context is not None:
+                context.setdefault("limitations", []).append("New startup enterprise: market assessment evaluated on projected unit sales rather than historical track record.")
+
+        # Legacy sales growth & demand index triggers
         if sales_growth < 0.0:
             growth_penalty = min(0.35, abs(sales_growth) / 30.0)
             s_market = min(1.0, s_market + growth_penalty)
@@ -681,7 +952,7 @@ class RiskAssessmentEngine:
                 "description": f"Subdued consumer demand: demand index is {demand_idx:.1f} (benchmark: >= {cfg.demand_index_warning:.0f}).",
             })
 
-        if cus_hhi > cfg.customer_hhi_warning or cus_cr1 > cfg.customer_cr1_warning:
+        if cus_hhi > cfg.customer_hhi_warning or cus_cr1 > cfg.customer_cr1_warning or cus_cr1 > 0.40:
             drivers.append({
                 "factor_code": "CUSTOMER_CONCENTRATION",
                 "severity_score": round(max(cus_hhi, cus_cr1), 4),
@@ -690,6 +961,31 @@ class RiskAssessmentEngine:
                 "threshold": cfg.customer_hhi_warning,
                 "description": f"Customer concentration risk: top customer represents {cus_cr1:.1%} of revenue with customer HHI of {cus_hhi:.2f} (advisory limit: < {cfg.customer_hhi_warning:.2f}).",
             })
+
+        if seasonality is not None and seasonality > 30.0:
+            s_market = min(1.0, s_market + 0.08)
+            drivers.append({
+                "factor_code": "HIGH_SEASONAL_VARIABILITY",
+                "severity_score": round(min(1.0, seasonality / 100.0), 4),
+                "metric_name": "seasonal_demand_variation_pct",
+                "observed_value": round(seasonality, 1),
+                "threshold": 30.0,
+                "description": f"High seasonal demand variation of {seasonality:.1f}% creates substantial off-peak revenue contraction.",
+            })
+
+        if retention is not None and retention < 30.0:
+            s_market = min(1.0, s_market + 0.08)
+            drivers.append({
+                "factor_code": "LOW_CUSTOMER_RETENTION",
+                "severity_score": round(max(0.0, 1.0 - retention / 50.0), 4),
+                "metric_name": "customer_retention_rate_pct",
+                "observed_value": round(retention, 1),
+                "threshold": 30.0,
+                "description": f"Low customer retention rate ({retention:.1f}%): high customer churn increases acquisition costs and revenue volatility.",
+            })
+
+        if price_flex.lower() in ("none", "low"):
+            s_market = min(1.0, s_market + 0.05)
 
         if payment_delay > cfg.payment_delay_warning_days:
             drivers.append({
@@ -701,62 +997,112 @@ class RiskAssessmentEngine:
                 "description": f"Payment settlement friction: average customer settlement delay is {payment_delay:.1f} days (advisory ceiling: {cfg.payment_delay_warning_days:.0f} days).",
             })
 
+        if context is not None:
+            context.setdefault("indicators", {})["market"] = {
+                "estimated_monthly_customer_count": cus_count,
+                "average_transaction_value_lkr": round(avg_tx, 2) if avg_tx is not None else None,
+                "derived_monthly_sales_lkr": round(derived_sales, 2) if derived_sales is not None else None,
+                "sales_discrepancy_detected": bool(disc_ratio > 0.30) if derived_sales is not None else False,
+                "demand_evidence_type": demand_ev or "Unstated",
+                "direct_competitors_count": competitors,
+                "largest_customer_share_pct": round(cus_cr1 * 100.0, 1),
+            }
+            if retention is None:
+                context.setdefault("limitations", []).append("Customer retention rate unstated: market churn risk calculated on baseline sector averages.")
+                context.setdefault("missing", []).append("customer_retention_rate_pct")
+
         return min(1.0, s_market), drivers
 
-    def _evaluate_customer_risk(self, data: Dict[str, Any]) -> Tuple[float, List[Dict[str, Any]]]:
+    def _evaluate_customer_risk(self, data: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> Tuple[float, List[Dict[str, Any]]]:
         """Backward-compatible customer concentration wrapper."""
-        return self._evaluate_market_risk(data)
+        return self._evaluate_market_risk(data, context=context)
 
-    def _evaluate_inflation_risk(self, data: Dict[str, Any]) -> Tuple[float, List[Dict[str, Any]]]:
+    def _evaluate_inflation_risk(self, data: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> Tuple[float, List[Dict[str, Any]]]:
         """
         Evaluates Inflation Risk:
-        Features: Input cost index, monthly cost increase, import reliance pct,
-        fuel/transport cost pct, selling price adjusted pct, margin compression pct.
+        Features: Supplier price changes, expected cost increases, import reliance,
+        foreign currency exposure, fuel/transport costs, electricity/energy costs,
+        price adjustment power, cost pass-through percentage, alternative suppliers.
         """
         cfg = self.config
         drivers = []
 
-        import_reliance = self._safe_float(
-            data.get("Import_Reliance_Pct") or data.get("import_reliance_pct") or data.get("imported_input_dependency_pct"),
-            default=15.0
-        )
-        imported_exp = str(data.get("imported_materials_exposure") or data.get("imported_input_exposure") or "")
-        if imported_exp == "High":
-            import_reliance = max(import_reliance, 75.0)
-        elif imported_exp == "Moderate":
-            import_reliance = max(import_reliance, 40.0)
+        supplier_past = self._safe_float(data.get("supplier_price_change_past_3_6m_pct"), default=None)
+        supplier_expected = self._safe_float(data.get("expected_supplier_price_increase_3_6m_pct") or data.get("recent_supplier_price_increase_pct") or data.get("expected_cost_increase_pct"), default=None)
+        imported_pct = self._safe_float(data.get("imported_inputs_pct") or data.get("Import_Reliance_Pct") or data.get("imported_input_dependency_pct"), default=15.0)
+        foreign_curr = str(data.get("foreign_currency_exposure") or data.get("imported_materials_exposure") or "").strip()
+        fuel_cost = self._safe_float(data.get("monthly_fuel_transport_cost_lkr"), default=None)
+        elec_cost = self._safe_float(data.get("monthly_electricity_energy_cost_lkr"), default=None)
+        ability_price = str(data.get("ability_to_increase_prices") or "").strip()
+        pass_through = self._safe_float(data.get("cost_increase_pass_through_pct"), default=None)
+        alt_suppliers = str(data.get("alternative_suppliers_available") or data.get("alternative_suppliers_status") or "").strip()
 
-        margin_comp = self._safe_float(
-            data.get("Margin_Compression_Pct") or data.get("margin_compression_pct"),
-            default=2.0
-        )
-        cost_idx = self._safe_float(
-            data.get("Input_Cost_Index") or data.get("input_cost_index"),
-            default=100.0
-        )
-        fuel_pct = self._safe_float(
-            data.get("Fuel_Transport_Cost_Pct") or data.get("fuel_transport_cost_pct"),
-            default=10.0
-        )
-        price_hike = self._safe_float(
-            data.get("recent_supplier_price_increase_pct") or data.get("expected_cost_increase_pct"),
-            default=0.0
-        )
+        # Energy & Fuel cost burden
+        energy_fuel_total = (fuel_cost or 0.0) + (elec_cost or 0.0)
+        total_expenses = self._safe_float(data.get("fixed_monthly_costs_lkr") or data.get("monthly_expenses_mean_lkr"), default=100000.0)
+        energy_ratio = (energy_fuel_total / total_expenses) if (total_expenses > 0 and (fuel_cost is not None or elec_cost is not None)) else 0.0
 
-        score_import = max(0.0, min(1.0, import_reliance / 100.0))
+        # Import & Foreign Currency exposure
+        if foreign_curr.lower() == "high" or imported_pct > 60.0:
+            score_import = 0.85
+        elif foreign_curr.lower() == "moderate" or imported_pct > 30.0:
+            score_import = 0.50
+        else:
+            score_import = max(0.0, min(1.0, imported_pct / 100.0))
+
+        # Pricing power & pass-through
+        if ability_price.lower() == "difficult" or (pass_through is not None and pass_through < 30.0):
+            score_pricing = 0.85
+        elif ability_price.lower() == "partially" or (pass_through is not None and pass_through < 70.0):
+            score_pricing = 0.50
+        elif ability_price.lower() == "easily" or (pass_through is not None and pass_through >= 70.0):
+            score_pricing = 0.15
+        else:
+            score_pricing = 0.35
+
+        # Supplier price inflation hike
+        price_hike = supplier_expected if supplier_expected is not None else (supplier_past if supplier_past is not None else 0.0)
+        score_hike = max(0.0, min(1.0, price_hike / 25.0))
+
+        margin_comp = self._safe_float(data.get("Margin_Compression_Pct") or data.get("margin_compression_pct"), default=2.0)
+        cost_idx = self._safe_float(data.get("Input_Cost_Index") or data.get("input_cost_index"), default=100.0)
         score_margin = max(0.0, min(1.0, margin_comp / 20.0))
         score_idx = max(0.0, min(1.0, (cost_idx - 100.0) / 40.0)) if cost_idx > 100 else 0.0
 
-        s_inf = 0.40 * score_import + 0.35 * score_margin + 0.25 * score_idx
+        s_inf = 0.35 * score_import + 0.35 * score_pricing + 0.30 * max(score_hike, (0.60 * score_margin + 0.40 * score_idx))
 
-        if import_reliance > (cfg.import_reliance_warning * 100.0) or imported_exp == "High":
+        # Drivers
+        if energy_fuel_total > 0 and energy_ratio > 0.25:
+            s_inf = min(1.0, s_inf + 0.12)
+            drivers.append({
+                "factor_code": "HIGH_ENERGY_FUEL_BURDEN",
+                "severity_score": round(min(1.0, energy_ratio / 0.50), 4),
+                "metric_name": "monthly_fuel_transport_cost_lkr",
+                "observed_value": round(energy_fuel_total, 0),
+                "threshold": round(total_expenses * 0.25, 0),
+                "description": f"Energy and fuel cost burden: monthly utility and transport costs (LKR {energy_fuel_total:,.0f}) consume {energy_ratio:.1%} of monthly operating expenses.",
+            })
+
+        if (ability_price and ability_price.lower() == "difficult") or (pass_through is not None and pass_through < 30.0):
+            s_inf = min(1.0, s_inf + 0.12)
+            pt_val = pass_through if pass_through is not None else 0.0
+            drivers.append({
+                "factor_code": "WEAK_PRICING_POWER",
+                "severity_score": 0.70,
+                "metric_name": "ability_to_increase_prices",
+                "observed_value": pt_val,
+                "threshold": 50.0,
+                "description": f"Constrained pricing power: enterprise cannot easily pass wholesale price increases to customers ({pt_val:.0f}% estimated pass-through capacity), resulting in gross margin compression.",
+            })
+
+        if imported_pct > (cfg.import_reliance_warning * 100.0) or foreign_curr.lower() == "high":
             drivers.append({
                 "factor_code": "IMPORT_DEPENDENCY_RISK",
-                "severity_score": round(import_reliance / 100.0, 4),
+                "severity_score": round(imported_pct / 100.0, 4),
                 "metric_name": "Import_Reliance_Pct",
-                "observed_value": round(import_reliance, 1),
+                "observed_value": round(imported_pct, 1),
                 "threshold": cfg.import_reliance_warning * 100.0,
-                "description": f"Elevated import reliance: {import_reliance:.1f}% of production inputs are imported, creating currency and tariff vulnerability.",
+                "description": f"Elevated import reliance: {imported_pct:.1f}% of production inputs are imported, creating currency and tariff vulnerability.",
             })
 
         if price_hike > 10.0:
@@ -770,6 +1116,17 @@ class RiskAssessmentEngine:
                 "description": f"Acute input price escalation: recent supplier price increase of {price_hike:.1f}% erodes operating margins.",
             })
 
+        if alt_suppliers and alt_suppliers.lower() == "none":
+            s_inf = min(1.0, s_inf + 0.08)
+            drivers.append({
+                "factor_code": "NO_ALTERNATIVE_SUPPLIERS",
+                "severity_score": 0.65,
+                "metric_name": "alternative_suppliers_available",
+                "observed_value": 0,
+                "threshold": 1,
+                "description": "Zero alternative suppliers available: business has no switching capability to counter wholesale price shocks.",
+            })
+
         if margin_comp > (cfg.margin_compression_warning * 100.0):
             drivers.append({
                 "factor_code": "MARGIN_COMPRESSION",
@@ -780,41 +1137,70 @@ class RiskAssessmentEngine:
                 "description": f"Operating margin compression: gross margins contracted by {margin_comp:.1f}% due to unabsorbed cost inflation.",
             })
 
+        if context is not None:
+            context.setdefault("indicators", {})["inflation"] = {
+                "imported_inputs_pct": round(imported_pct, 1),
+                "foreign_currency_exposure": foreign_curr or "None",
+                "monthly_energy_and_fuel_cost_lkr": round(energy_fuel_total, 2),
+                "energy_cost_to_operating_expenses_pct": round(energy_ratio * 100.0, 1),
+                "expected_supplier_price_increase_pct": round(price_hike, 1) if price_hike > 0 else None,
+                "cost_pass_through_ability": ability_price or (f"{pass_through:.0f}%" if pass_through is not None else "Unknown"),
+            }
+            if supplier_past is None and supplier_expected is None:
+                context.setdefault("limitations", []).append("Historical supplier price change data missing; inflation assessment based on structural input and energy exposures.")
+                context.setdefault("missing", []).append("supplier_price_change_past_3_6m_pct")
+
         return min(1.0, s_inf), drivers
 
-    def _evaluate_operational_risk(self, data: Dict[str, Any]) -> Tuple[float, List[Dict[str, Any]]]:
+    def _evaluate_operational_risk(self, data: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> Tuple[float, List[Dict[str, Any]]]:
         """
         Evaluates Operational Risk:
-        Features: Supplier concentration (HHI/CR1), delivery delay days, inventory coverage days,
-        inventory turnover ratio, capacity utilization, disruption count, staffing availability.
+        Features: Critical supplier count, largest supplier dependency percentage,
+        alternative supplier availability, delivery lead time, past delays/stockouts,
+        startup stockout risk, inventory coverage days, staffing and vacant roles,
+        backup staff, equipment dependence, backup utilities, business continuity plan.
         """
         cfg = self.config
         drivers = []
 
-        sup_dep = data.get("supplier_dependency_percentage") or data.get("supplier_concentration_percentage")
-        if sup_dep is not None:
-            s_ratio = self._safe_float(sup_dep) / 100.0 if self._safe_float(sup_dep) > 1.0 else self._safe_float(sup_dep)
-            sup_cr1 = round(s_ratio, 4)
-            sup_hhi = round(s_ratio ** 2, 4)
+        raw_sup_dep = data.get("largest_supplier_dependency_pct") or data.get("supplier_dependency_percentage") or data.get("supplier_concentration_percentage")
+        if raw_sup_dep is not None:
+            largest_sup_share = self._safe_float(raw_sup_dep, default=30.0)
+            sup_cr1 = largest_sup_share / 100.0 if largest_sup_share > 1.0 else largest_sup_share
+            sup_hhi = self._safe_float(data.get("supplier_hhi"), default=sup_cr1 ** 2)
         else:
-            sup_hhi = self._safe_float(data.get("supplier_hhi"), default=0.20)
             sup_cr1 = self._safe_float(data.get("supplier_cr1_share"), default=0.30)
-        disrupted = int(self._safe_float(data.get("has_disrupted_supplier") or data.get("Disruption_Count_Last_12M"), default=0))
-        delivery_delay = self._safe_float(
-            data.get("Delivery_Delay_Days") or data.get("delivery_delay_days") or data.get("supplier_delay_days"),
+            sup_hhi = self._safe_float(data.get("supplier_hhi"), default=0.20)
+
+        alt_sup = str(data.get("alternative_suppliers_status") or data.get("alternative_suppliers_available") or data.get("supplier_dependency_level") or "").strip()
+        lead_time = self._safe_float(
+            data.get("typical_supplier_lead_time_days") or data.get("supplier_lead_time_days") or data.get("Delivery_Delay_Days") or data.get("delivery_delay_days") or data.get("supplier_delay_days"),
             default=5.0
         )
+        delays_3_6m = self._safe_int(data.get("supplier_delays_stockouts_3_6m"), default=None)
+        startup_stockout = str(data.get("startup_stockout_risk") or "").strip()
         inv_coverage = self._safe_float(
-            data.get("Inventory_Coverage_Days") or data.get("inventory_coverage_days"),
+            data.get("inventory_coverage_days") or data.get("Inventory_Coverage_Days"),
             default=30.0
         )
-        cap_util = self._safe_float(
-            data.get("Capacity_Utilization_Pct") or data.get("capacity_utilization_pct"),
-            default=75.0
-        )
+        employees = self._safe_int(data.get("total_employees_count") or data.get("available_staff_count"), default=None)
+        vacant_roles = self._safe_int(data.get("critical_vacant_roles_count"), default=None)
+        backup_staff = str(data.get("backup_staff_available") or "").strip()
+        equipment_dep = str(data.get("essential_equipment_dependence") or "").strip()
+        backup_util = str(data.get("backup_utilities_available") or "").strip()
+        bcp_exists = str(data.get("business_continuity_plan_exists") or "").strip()
+        disrupted = int(self._safe_float(data.get("has_disrupted_supplier") or data.get("Disruption_Count_Last_12M"), default=0))
         staffing = str(data.get("staffing_availability") or "")
 
         s_op = 0.50 * sup_hhi + 0.20 * sup_cr1 + (0.30 if disrupted else 0.0)
+
+        # Alternative suppliers adjustment
+        if alt_sup.lower() in ("none", "high", "critical"):
+            s_op = min(1.0, s_op + 0.12)
+        elif alt_sup.lower() in ("limited", "moderate"):
+            s_op = min(1.0, s_op + 0.06)
+        elif alt_sup.lower() in ("good", "low"):
+            s_op = max(0.10, s_op - 0.05)
 
         if disrupted > 0:
             drivers.append({
@@ -836,15 +1222,27 @@ class RiskAssessmentEngine:
                 "description": f"High supplier dependency: supplier HHI is {sup_hhi:.2f} with top supplier providing {sup_cr1:.1%} of inputs (benchmark: HHI < {cfg.supplier_hhi_warning:.2f}).",
             })
 
-        if delivery_delay > cfg.delivery_delay_warning_days:
+        if lead_time > cfg.delivery_delay_warning_days:
             s_op = min(1.0, s_op + 0.15)
             drivers.append({
                 "factor_code": "DELIVERY_DELAY_FRICTION",
-                "severity_score": round(min(1.0, delivery_delay / 45.0), 4),
+                "severity_score": round(min(1.0, lead_time / 45.0), 4),
                 "metric_name": "Delivery_Delay_Days",
-                "observed_value": round(delivery_delay, 1),
+                "observed_value": round(lead_time, 1),
                 "threshold": cfg.delivery_delay_warning_days,
-                "description": f"Supplier delivery delay friction: inbound shipment lead time averages {delivery_delay:.1f} days.",
+                "description": f"Supplier delivery delay friction: inbound shipment lead time averages {lead_time:.1f} days (advisory ceiling: {cfg.delivery_delay_warning_days:.0f} days).",
+            })
+
+        if (delays_3_6m is not None and delays_3_6m >= 3) or (startup_stockout and startup_stockout.lower() == "high"):
+            s_op = min(1.0, s_op + 0.16)
+            d_val = delays_3_6m if delays_3_6m is not None else 3
+            drivers.append({
+                "factor_code": "FREQUENT_SUPPLY_DISRUPTIONS",
+                "severity_score": 0.75,
+                "metric_name": "supplier_delays_stockouts_3_6m",
+                "observed_value": d_val,
+                "threshold": 1,
+                "description": f"Frequent supply interruptions: {d_val} supplier delivery delay/stockout incidents experienced, threatening order fulfillment.",
             })
 
         if staffing in ("Shortage", "Constrained"):
@@ -855,11 +1253,32 @@ class RiskAssessmentEngine:
                 "metric_name": "staffing_availability",
                 "observed_value": 0,
                 "threshold": 1,
-                "description": f"Workforce capacity is {staffing.lower()}: headcount constraint limits production and customer service scaling.",
+                "description": "Headcount shortages: production and service delivery constrained by available operational personnel.",
+            })
+        elif (vacant_roles is not None and vacant_roles >= 2) or (backup_staff and backup_staff.lower() in ("no", "none")):
+            s_op = min(1.0, s_op + 0.14)
+            drivers.append({
+                "factor_code": "NO_BACKUP_STAFF_VULNERABILITY",
+                "severity_score": 0.65,
+                "metric_name": "backup_staff_available",
+                "observed_value": 0,
+                "threshold": 1,
+                "description": "Lack of workforce redundancy: zero cross-trained backup staff for critical roles creates operational key-person bottleneck.",
+            })
+
+        if equipment_dep.lower() == "high" and backup_util.lower() in ("none", "no"):
+            s_op = min(1.0, s_op + 0.10)
+            drivers.append({
+                "factor_code": "UNPROTECTED_EQUIPMENT_DEPENDENCY",
+                "severity_score": 0.65,
+                "metric_name": "essential_equipment_dependence",
+                "observed_value": 1,
+                "threshold": 0,
+                "description": "Unprotected equipment dependency: heavy reliance on specialized equipment without backup generator or secondary utility arrangement.",
             })
 
         if inv_coverage < cfg.inventory_coverage_min_days and inv_coverage > 0:
-            s_op = min(1.0, s_op + 0.15)
+            s_op = min(1.0, s_op + 0.12)
             drivers.append({
                 "factor_code": "LOW_INVENTORY_COVERAGE",
                 "severity_score": round(max(0.0, 1.0 - inv_coverage / cfg.inventory_coverage_min_days), 4),
@@ -869,7 +1288,39 @@ class RiskAssessmentEngine:
                 "description": f"Thin inventory buffer: stock covers only {inv_coverage:.1f} days of sales, raising stockout vulnerability.",
             })
 
+        # Business Continuity Plan impact
+        if bcp_exists.lower() == "yes":
+            s_op = max(0.10, s_op - 0.10) # Documented BCP provides resilience deduction
+        elif bcp_exists.lower() in ("no", "none"):
+            s_op = min(1.0, s_op + 0.08)
+            drivers.append({
+                "factor_code": "LACK_OF_CONTINUITY_PLAN",
+                "severity_score": 0.55,
+                "metric_name": "business_continuity_plan_exists",
+                "observed_value": 0,
+                "threshold": 1,
+                "description": "Absence of contingency plan: enterprise operates without a documented business continuity or disaster recovery plan.",
+            })
+
+        if context is not None:
+            context.setdefault("indicators", {})["operational"] = {
+                "largest_supplier_dependency_pct": round(sup_cr1 * 100.0, 1),
+                "alternative_suppliers_status": alt_sup or "Unknown",
+                "typical_lead_time_days": round(lead_time, 1),
+                "inventory_coverage_days": round(inv_coverage, 1),
+                "critical_vacant_roles_count": vacant_roles,
+                "business_continuity_plan_exists": bcp_exists or "Unknown",
+            }
+            if raw_sup_dep is None:
+                context.setdefault("limitations", []).append("Supplier dependency breakdown unstated: operational concentration calculated from sector baseline.")
+                context.setdefault("missing", []).append("largest_supplier_dependency_pct")
+
         return min(1.0, s_op), drivers
+
+    def _evaluate_supplier_risk(self, data: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> Tuple[float, List[Dict[str, Any]]]:
+        """Backward-compatible supplier concentration wrapper."""
+        return self._evaluate_operational_risk(data, context=context)
+
 
     def _evaluate_supplier_risk(self, data: Dict[str, Any]) -> Tuple[float, List[Dict[str, Any]]]:
         """Backward-compatible supplier concentration wrapper."""
@@ -1487,6 +1938,314 @@ class RiskAssessmentEngine:
                 "measurable_indicator": "Complete documentation of all credit facilities and repayment terms",
                 "reassessment_triggers": "Submission of verified debt facility statements",
             },
+            "FREQUENT_PAYMENT_DELAYS": {
+                "category": "Credit Risk",
+                "risk_factor": "Credit Risk: Chronic Installment Delinquency",
+                "priority": "CRITICAL",
+                "suggested_timeline": "Immediate (Days 1–14)",
+                "responsible_role": "Managing Director / Financial Lead",
+                "action": "Establish formal loan restructuring plan with lending institution, cure past-due installments, and freeze additional borrowing",
+                "estimated_cost": "Cost estimate required (bank loan rescheduling negotiation)",
+                "expected_outcome": "Cures loan arrears, halts legal recovery actions, and restores commercial credit eligibility",
+                "rationale": "Chronic installment delinquency triggers adverse credit classifications and restricts access to commercial credit.",
+                "mechanism": "Present bank credit committee with structured cashflow projections to negotiate tenure extension or temporary grace period.",
+                "measurable_indicator": "Zero overdue loan installments; executed bank restructuring agreement in place",
+                "reassessment_triggers": "Lender issues formal statutory demand notice or past-due period exceeds 45 days",
+            },
+            "HIGH_BORROWING_COST": {
+                "category": "Credit Risk",
+                "risk_factor": "Credit Risk: Elevated Borrowing Interest Rate",
+                "priority": "HIGH",
+                "suggested_timeline": "Month 1–2",
+                "responsible_role": "Managing Director / Financial Lead",
+                "action": "Refinance high-interest commercial facilities through subsidized SME development credit lines or concessionary bank refinancing",
+                "estimated_cost": "Cost estimate required (debt refinancing negotiation)",
+                "expected_outcome": "Reduces annual interest servicing burden by 400–600 bps and improves debt coverage buffer",
+                "rationale": "High borrowing rate (> 18%) consumes excessive operating cash flow on interest rather than equity build-up.",
+                "mechanism": "Apply for CBSL/regional enterprise development concessionary refinancing lines to replace high-rate debt.",
+                "measurable_indicator": "Weighted average borrowing rate <= 14.0%; DSCR >= 1.50x",
+                "reassessment_triggers": "Central bank policy rate change or debt refinancing terms finalized",
+            },
+            "CONTINGENT_LIABILITY_EXPOSURE": {
+                "category": "Credit Risk",
+                "risk_factor": "Credit Risk: High Contingent Debt Guarantees",
+                "priority": "HIGH",
+                "suggested_timeline": "Month 1–3",
+                "responsible_role": "Managing Director / Legal Counsel",
+                "action": "Ring-fence enterprise assets, negotiate release or liability caps on outstanding guarantees, and maintain dedicated reserve",
+                "estimated_cost": "Cost estimate required (guarantee restructuring and collateral substitution)",
+                "expected_outcome": "Insulates enterprise cash flow from third-party default calls",
+                "rationale": "Guarantees exceeding liquid reserves create catastrophic solvency exposure if called.",
+                "mechanism": "Replace open corporate guarantees with capped collateral liens or commercial indemnity insurance.",
+                "measurable_indicator": "Total contingent guarantees <= 50% of available capital reserves",
+                "reassessment_triggers": "Primary borrower under guaranteed facility exhibits credit distress",
+            },
+            "SALES_PROJECTION_DISCREPANCY": {
+                "category": "Market Risk",
+                "risk_factor": "Market Risk: Sales Projection Discrepancy",
+                "priority": "HIGH",
+                "suggested_timeline": "Immediate (Weeks 1–2)",
+                "responsible_role": "Founder / Sales Strategy Lead",
+                "action": "Reconcile unit sales projections with documented customer transaction volumes before committing growth capital",
+                "estimated_cost": "Cost estimate required (sales model calibration and customer pipeline audit)",
+                "expected_outcome": "Establishes validated revenue projection grounded in demonstrated customer order volume",
+                "rationale": "Derived sales from customer count and average order value diverge significantly from top-line revenue forecasts.",
+                "mechanism": "Recalibrate monthly sales target to match confirmed daily footfall multiplied by demonstrated basket size.",
+                "measurable_indicator": "Discrepancy between bottom-up unit projections and top-line sales forecast < 10%",
+                "reassessment_triggers": "First 30 days of trading show variance > 15% against calibrated revenue baseline",
+            },
+            "NO_DEMAND_EVIDENCE": {
+                "category": "Market Risk",
+                "risk_factor": "Market Risk: Unverified Market Demand",
+                "priority": "CRITICAL",
+                "suggested_timeline": "Immediate (Weeks 1–4)",
+                "responsible_role": "Founder / Marketing Lead",
+                "action": "Execute structured market validation sprint: secure initial signed pre-orders, letters of intent, or paid customer deposits",
+                "estimated_cost": "LKR 20,000 – 40,000 (pilot outreach, surveys, and promotional sample distribution)",
+                "expected_outcome": "Establishes empirical customer demand validation before committing capital investments",
+                "rationale": "Commencing or expanding an enterprise without verifiable demand evidence creates acute failure risk.",
+                "mechanism": "Collect at least 25 paid pilot orders or 50 documented customer commitments in target Western Province catchment.",
+                "measurable_indicator": "Minimum 25 verified pre-orders or written trade buyer purchase commitments",
+                "reassessment_triggers": "Customer acquisition sprint yields fewer than 10 confirmed orders after 30 days",
+            },
+            "COMPETITOR_PRICE_UNDERCUT": {
+                "category": "Market Risk",
+                "risk_factor": "Market Risk: Competitor Price Undercutting",
+                "priority": "HIGH",
+                "suggested_timeline": "Weeks 2–6",
+                "responsible_role": "Product & Commercial Strategy Lead",
+                "action": "Differentiate value proposition through service quality, local sourcing certification, or bundled offerings rather than direct price competition",
+                "estimated_cost": "LKR 15,000 – 30,000 (rebranding, packaging enhancement, and value-add feature rollout)",
+                "expected_outcome": "Protects gross profit margin against destructive local price competition",
+                "rationale": "Local competitors offering lower prices create direct volume churn and price resistance.",
+                "mechanism": "Introduce value-added services, customer loyalty incentives, or specialized product formulations that justify premium pricing.",
+                "measurable_indicator": "Customer retention rate >= 65%; gross profit margin maintained >= 25%",
+                "reassessment_triggers": "Competitor deepens price cuts or market share contracts by > 10%",
+            },
+            "HIGH_LOCAL_COMPETITION": {
+                "category": "Market Risk",
+                "risk_factor": "Market Risk: Dense Competitor Saturation",
+                "priority": "MEDIUM",
+                "suggested_timeline": "Month 1–3",
+                "responsible_role": "Marketing & Business Development Lead",
+                "action": "Carve out specialized niche segment and expand marketing reach beyond immediate dense local catchment",
+                "estimated_cost": "LKR 30,000 – 60,000 (digital geo-targeted advertising and delivery radius expansion)",
+                "expected_outcome": "Accesses unserved customer segments across wider district territory to reduce dependence on saturated local footfall",
+                "rationale": "High density of direct competitors in target area dilutes footfall and compresses individual vendor volumes.",
+                "mechanism": "Launch delivery channels into adjacent underserved suburbs in Western Province.",
+                "measurable_indicator": "At least 30% of sales generated outside saturated primary 1km catchment radius",
+                "reassessment_triggers": "New competitor enters immediate retail strip or daily customer count declines > 15%",
+            },
+            "DECLINING_SALES_TREND": {
+                "category": "Market Risk",
+                "risk_factor": "Market Risk: Persistent Revenue Contraction",
+                "priority": "CRITICAL",
+                "suggested_timeline": "Immediate (Weeks 1–4)",
+                "responsible_role": "Managing Director / Sales Lead",
+                "action": "Halt aggressive capacity expansion, conduct customer churn analysis, and refresh core product offerings",
+                "estimated_cost": "Cost estimate required (commercial offering audit and product line review)",
+                "expected_outcome": "Stops monthly revenue bleed and stabilizes core customer baseline",
+                "rationale": "Expanding operational capacity during an active sales downturn accelerates cash depletion.",
+                "mechanism": "Sunset bottom 20% underperforming SKUs and refocus marketing on high-velocity repeat items.",
+                "measurable_indicator": "Month-on-month sales turn positive (>= +3.0%) for two consecutive months",
+                "reassessment_triggers": "Sales decline persists into third consecutive month",
+            },
+            "VOLATILE_SALES_PATTERN": {
+                "category": "Market Risk",
+                "risk_factor": "Market Risk: High Revenue Volatility",
+                "priority": "MEDIUM",
+                "suggested_timeline": "Month 1–2",
+                "responsible_role": "Sales & Finance Lead",
+                "action": "Introduce monthly subscription, recurring trade contracts, or customer deposit retainers to smooth monthly cash receipts",
+                "estimated_cost": "Cost estimate required (contract terms recalibration)",
+                "expected_outcome": "Establishes predictable baseline cash inflow covering at least 60% of fixed monthly expenses",
+                "rationale": "Wide swings in monthly receipts create unpredictable cash crunches during trough cycles.",
+                "mechanism": "Offer 5% discount for customers committing to recurring weekly/monthly standing orders.",
+                "measurable_indicator": "Contracted recurring revenue covers >= 50% of monthly fixed overheads",
+                "reassessment_triggers": "Monthly revenue variance exceeds 35% between peak and trough cycles",
+            },
+            "HIGH_SEASONAL_VARIABILITY": {
+                "category": "Market Risk",
+                "risk_factor": "Market Risk: Seasonal Demand Fluctuations",
+                "priority": "MEDIUM",
+                "suggested_timeline": "Month 1–3",
+                "responsible_role": "Operations & Inventory Lead",
+                "action": "Build seasonal cash escrow reserve during peak months and develop counter-seasonal product offerings",
+                "estimated_cost": "Cost estimate required (cash reserve retention policy)",
+                "expected_outcome": "Guarantees sufficient working capital liquidity through 2–3 months of seasonal demand troughs",
+                "rationale": "Demand swings of > 30% between peak and off-peak seasons risk operational insolvency during slow months.",
+                "mechanism": "Sweep 25% of peak-season operating surplus into a dedicated low-season liquidity buffer.",
+                "measurable_indicator": "Off-peak cash reserve equals at least 3 months of fixed operating overheads",
+                "reassessment_triggers": "Off-peak revenue drops by > 40% compared to annual monthly average",
+            },
+            "LOW_CUSTOMER_RETENTION": {
+                "category": "Market Risk",
+                "risk_factor": "Market Risk: High Customer Churn",
+                "priority": "MEDIUM",
+                "suggested_timeline": "Month 1–2",
+                "responsible_role": "Customer Experience & Marketing Lead",
+                "action": "Implement customer retention and loyalty program, post-purchase follow-ups, and service quality benchmarks",
+                "estimated_cost": "LKR 15,000 – 30,000 (loyalty program setup and promotional incentives)",
+                "expected_outcome": "Increases repeat-purchase rate above 45%, reducing ongoing customer acquisition spend",
+                "rationale": "High customer turnover forces constant, expensive re-acquisition of buyers to sustain baseline revenues.",
+                "mechanism": "Introduce digital loyalty rewards, WhatsApp automated service follow-ups, and satisfaction guarantee.",
+                "measurable_indicator": "Repeat customer purchase rate >= 45%; customer lifetime value increases by > 20%",
+                "reassessment_triggers": "Repeat purchase rate drops below 25% across two consecutive monthly cohorts",
+            },
+            "HIGH_ENERGY_FUEL_BURDEN": {
+                "category": "Inflation Risk",
+                "risk_factor": "Inflation Risk: Heavy Energy & Transport Cost Exposure",
+                "priority": "HIGH",
+                "suggested_timeline": "Weeks 2–8",
+                "responsible_role": "Operations & Facility Lead",
+                "action": "Optimize delivery routing, adopt energy-efficient equipment, and implement solar/off-peak power scheduling",
+                "estimated_cost": "LKR 40,000 – 80,000 (delivery route optimization software & energy efficiency retrofitting)",
+                "expected_outcome": "Reduces monthly fuel and electricity expenditures by 15–25%",
+                "rationale": "Energy and transport costs consuming > 25% of overheads leave enterprise acutely vulnerable to tariff and fuel price shocks.",
+                "mechanism": "Consolidate delivery runs into bi-weekly grouped clusters and shift energy-intensive production to off-peak tariff hours.",
+                "measurable_indicator": "Energy and transport cost share reduced below 18% of total operating expenses",
+                "reassessment_triggers": "National fuel prices or electricity tariffs increase by > 10%",
+            },
+            "WEAK_PRICING_POWER": {
+                "category": "Inflation Risk",
+                "risk_factor": "Inflation Risk: Inability to Pass Cost Increases",
+                "priority": "HIGH",
+                "suggested_timeline": "Immediate (Weeks 1–4)",
+                "responsible_role": "Managing Director / Commercial Lead",
+                "action": "Restructure pricing architecture with transparent raw-material surcharge clauses or repackage into smaller unit price points",
+                "estimated_cost": "Cost estimate required (packaging resizing and price menu restructuring)",
+                "expected_outcome": "Improves input-cost pass-through capability above 60% without triggering customer volume drop",
+                "rationale": "Enterprise inability to adjust selling prices when supplier costs rise directly destroys operating margins.",
+                "mechanism": "Introduce 'shrinkflation-resistant' package sizing or tier service packages to preserve price points while reflecting input costs.",
+                "measurable_indicator": "Gross margin preserved within 3 percentage points following supplier price adjustment",
+                "reassessment_triggers": "Supplier price hike exceeds 8% without compensatory retail price adjustment",
+            },
+            "NO_ALTERNATIVE_SUPPLIERS": {
+                "category": "Inflation Risk",
+                "risk_factor": "Inflation Risk: Supplier Lock-in Without Alternatives",
+                "priority": "HIGH",
+                "suggested_timeline": "Month 1–3",
+                "responsible_role": "Procurement Lead",
+                "action": "Audit and pre-qualify secondary suppliers in Western Province to eliminate sole-source price lock-in",
+                "estimated_cost": "Cost estimate required (vendor discovery and sample qualification)",
+                "expected_outcome": "Creates competitive price tension among suppliers and prevents unilateral price hikes",
+                "rationale": "Zero alternative suppliers forces the enterprise to accept all unilateral wholesale price hikes.",
+                "mechanism": "Identify and qualify at least two secondary domestic suppliers in Colombo or Gampaha for critical raw inputs.",
+                "measurable_indicator": "At least 2 validated alternative suppliers with approved quality samples on file",
+                "reassessment_triggers": "Primary supplier issues price increase notification exceeding 5%",
+            },
+            "WORKING_CAPITAL_LAG": {
+                "category": "Liquidity Risk",
+                "risk_factor": "Liquidity Risk: Working Capital Collection Delay",
+                "priority": "HIGH",
+                "suggested_timeline": "Immediate (Weeks 1–4)",
+                "responsible_role": "Finance & Collections Lead",
+                "action": "Shorten customer credit terms to 15 days, offer 2% early settlement discount, and negotiate 30-day supplier payment terms",
+                "estimated_cost": "Cost estimate required (commercial credit policy update)",
+                "expected_outcome": "Eliminates working capital cash drag and accelerates cash conversion cycle by 15–20 days",
+                "rationale": "Receivables collection lag relative to supplier payables drains cash reserves and forces reliance on debt.",
+                "mechanism": "Enforce strict credit limits; withhold secondary deliveries until previous invoices are settled within 15 days.",
+                "measurable_indicator": "Average collection period <= 20 days; trade receivable lag <= supplier payment terms",
+                "reassessment_triggers": "Overdue trade receivables exceed 20% of monthly sales volume",
+            },
+            "IMPENDING_LARGE_LIQUIDITY_DRAIN": {
+                "category": "Liquidity Risk",
+                "risk_factor": "Liquidity Risk: Impending Non-recurring Cash Drain",
+                "priority": "CRITICAL",
+                "suggested_timeline": "Immediate (Days 1–14)",
+                "responsible_role": "Managing Director / Financial Lead",
+                "action": "Ring-fence dedicated funds for upcoming lump-sum liability and arrange milestone installment payments",
+                "estimated_cost": "Cost estimate required (contract installment rescheduling)",
+                "expected_outcome": "Prevents catastrophic reserve exhaustion when large one-off payment falls due",
+                "rationale": "Upcoming one-off payment exceeding 60% of liquid cash reserves threatens immediate operational insolvency.",
+                "mechanism": "Negotiate partitioning of one-off commitment into 3 equal monthly installments backed by ongoing cashflow.",
+                "measurable_indicator": "Remaining liquid reserves after lump-sum payment maintain >= 2.0 months operating burn",
+                "reassessment_triggers": "Payment due date arrives without confirmed reserve accumulation",
+            },
+            "INCOMPLETE_LIQUIDITY_ASSESSMENT": {
+                "category": "Liquidity Risk",
+                "risk_factor": "Data Sufficiency: Incomplete Cash Flow & Cost Inputs",
+                "priority": "HIGH",
+                "suggested_timeline": "Immediate (Weeks 1–2)",
+                "responsible_role": "Managing Director / Bookkeeper",
+                "action": "Complete basic monthly revenue and operating expense breakdown to unlock full liquidity runway modeling",
+                "estimated_cost": "Cost estimate required (financial records compilation)",
+                "expected_outcome": "Enables defensible cash runway and essential payment coverage calculation",
+                "rationale": "Missing operational expense and revenue data prevents determining true cash runway.",
+                "mechanism": "Input confirmed fixed monthly overheads (rent, salaries, utilities) and variable production costs.",
+                "measurable_indicator": "Complete monthly operational budget and confirmed cash reserve declared",
+                "reassessment_triggers": "Submission of verified monthly operating budget",
+            },
+            "EXTENDED_SUPPLIER_LEAD_TIME": {
+                "category": "Operational Risk",
+                "risk_factor": "Operational Risk: Extended Inbound Delivery Lead Time",
+                "priority": "MEDIUM",
+                "suggested_timeline": "Month 1–2",
+                "responsible_role": "Supply Chain & Inventory Lead",
+                "action": "Establish automated re-order points with safety buffer stock covering 1.5x supplier lead time",
+                "estimated_cost": f"LKR {costs * 0.25:,.0f} (buffer stock working capital)" if costs > 0 else "Working capital buffer stock allocation",
+                "expected_outcome": "Prevents production stoppages and customer backorders caused by slow supplier delivery cycles",
+                "rationale": "Lead times exceeding 15 days create severe vulnerability to stockouts and order cancellations.",
+                "mechanism": "Calculate safety stock levels based on maximum lead time and trigger purchase orders at re-order thresholds.",
+                "measurable_indicator": "Zero stockout incidents; customer fulfillment rate >= 95%",
+                "reassessment_triggers": "Supplier lead time increases by > 5 business days beyond contractual SLA",
+            },
+            "FREQUENT_SUPPLY_DISRUPTIONS": {
+                "category": "Operational Risk",
+                "risk_factor": "Operational Risk: Chronic Supplier Delays & Stockouts",
+                "priority": "CRITICAL",
+                "suggested_timeline": "Immediate (Weeks 1–3)",
+                "responsible_role": "Procurement Lead",
+                "action": "Split purchase order volume 60/40 between primary and pre-qualified secondary vendor and enforce delivery penalty SLAs",
+                "estimated_cost": "Cost estimate required (supplier dual-sourcing contracts)",
+                "expected_outcome": "Restores reliable raw material flow and eliminates recurring production stoppages",
+                "rationale": "Frequent supplier stockouts directly destroy customer trust, sales volumes, and machinery utilization.",
+                "mechanism": "Issue binding purchase orders with guaranteed delivery windows and secondary vendor activation clauses.",
+                "measurable_indicator": "Supplier on-time in-full (OTIF) delivery rate >= 92%",
+                "reassessment_triggers": "Primary supplier misses delivery deadline by > 3 days",
+            },
+            "NO_BACKUP_STAFF_VULNERABILITY": {
+                "category": "Operational Risk",
+                "risk_factor": "Operational Risk: Key-Person & Workforce Dependency",
+                "priority": "HIGH",
+                "suggested_timeline": "Weeks 2–6",
+                "responsible_role": "Operations & HR Lead",
+                "action": "Document standard operating procedures (SOPs) and cross-train team members on critical technical and sales functions",
+                "estimated_cost": "LKR 15,000 – 30,000 (cross-training stipend and training material documentation)",
+                "expected_outcome": "Eliminates single-point-of-failure workforce risks and enables uninterrupted business operations during staff absence",
+                "rationale": "Operating without backup personnel for critical roles means sickness or departure halts production.",
+                "mechanism": "Cross-train at least one secondary staff member on essential machinery operation, cashiering, and inventory management.",
+                "measurable_indicator": "100% of core operational functions covered by at least 2 cross-trained staff members",
+                "reassessment_triggers": "Key operational employee tenders resignation or takes extended leave",
+            },
+            "UNPROTECTED_EQUIPMENT_DEPENDENCY": {
+                "category": "Operational Risk",
+                "risk_factor": "Operational Risk: Critical Machinery Utility Dependency",
+                "priority": "HIGH",
+                "suggested_timeline": "Month 1–2",
+                "responsible_role": "Operations & Facility Lead",
+                "action": "Install surge protection, arrange backup power generator, and establish preventive maintenance service contract",
+                "estimated_cost": "LKR 45,000 – 90,000 (backup generator rental/purchase and equipment maintenance service agreement)",
+                "expected_outcome": "Protects continuous manufacturing or service operations against utility outages and equipment breakdowns",
+                "rationale": "High equipment reliance without backup power or utility contingency leads to abrupt operational paralysis.",
+                "mechanism": "Retain on-call technician service contract and install automatic voltage regulators on critical machinery.",
+                "measurable_indicator": "Unplanned equipment downtime < 2% of total operating hours; backup power operational within 15 minutes",
+                "reassessment_triggers": "Grid power outage exceeds 2 hours or machinery breakdown halts operations > 1 day",
+            },
+            "LACK_OF_CONTINUITY_PLAN": {
+                "category": "Operational Risk",
+                "risk_factor": "Operational Risk: Absence of Business Continuity Plan",
+                "priority": "MEDIUM",
+                "suggested_timeline": "Month 1–2",
+                "responsible_role": "Managing Director / Operations Lead",
+                "action": "Formulate and document emergency business continuity plan covering utility outages, supplier failure, and key staff absence",
+                "estimated_cost": "Cost estimate required (contingency planning and SOP documentation)",
+                "expected_outcome": "Secures institutional operational resilience and satisfies commercial lender risk covenants",
+                "rationale": "Operating without a contingency plan amplifies chaos and response delay when operational crises occur.",
+                "mechanism": "Draft 5-page operational continuity guide detailing emergency contacts, backup vendors, and offline operating protocols.",
+                "measurable_indicator": "Completed and signed Business Continuity Plan distributed to all senior supervisors",
+                "reassessment_triggers": "Annual business continuity review or major operational expansion",
+            },
         }
 
         recommendations = []
@@ -1557,13 +2316,23 @@ class RiskAssessmentEngine:
     # Guard Rails & Utility Methods
     # -----------------------------------------------------------------------
 
-    def _safe_float(self, val: Any, default: float = 0.0) -> float:
+    def _safe_float(self, val: Any, default: Any = 0.0) -> Any:
         """Converts input safely to float, falling back to default if null, non-numeric, or non-finite."""
         if val is None or pd.isnull(val):
             return default
         try:
             f = float(val)
             return default if np.isnan(f) or np.isinf(f) else f
+        except (ValueError, TypeError):
+            return default
+
+    def _safe_int(self, val: Any, default: Optional[int] = None) -> Optional[int]:
+        """Converts input safely to int, falling back to default if null, non-numeric, or non-finite."""
+        if val is None or pd.isnull(val):
+            return default
+        try:
+            f = float(val)
+            return default if np.isnan(f) or np.isinf(f) else round(f)
         except (ValueError, TypeError):
             return default
 
@@ -1774,6 +2543,11 @@ class RiskAssessmentEngine:
             evidence_sufficiency=status,
             category_evidence_sufficiency=cat_suff,
             evidence_provenance_summary=prov_summary,
+            calculation_version="2.4.0",
+            supported_indicators={},
+            assessment_limitations=["Core financial records (revenue, expenses, cash reserves) are missing; assessment cannot be reliably conducted."],
+            missing_inputs=["monthly_revenue_lkr", "monthly_expenses_lkr", "cash_reserves_latest_lkr"],
+            input_snapshot={k: v for k, v in data.items() if not k.startswith("_") and not isinstance(v, (pd.DataFrame, pd.Series))},
         )
 
     def save_assessment_dataset(

@@ -105,8 +105,8 @@ def find_existing_business_profile(
             return p
 
     # 2. Exact Business Registration Number (BRN / TIN)
-    if registration_number and str(registration_number).strip():
-        reg_clean = str(registration_number).strip()
+    if registration_number and registration_number.strip():
+        reg_clean = registration_number.strip()
         p = db.query(Component4BusinessProfile).filter(
             Component4BusinessProfile.registration_number == reg_clean
         ).first()
@@ -115,8 +115,8 @@ def find_existing_business_profile(
 
     # 3. Exact business name + district combination
     if business_name and district:
-        name_clean = str(business_name).strip()
-        dist_clean = str(district).strip()
+        name_clean = business_name.strip()
+        dist_clean = district.strip()
         if len(name_clean) >= 3:
             p = db.query(Component4BusinessProfile).filter(
                 Component4BusinessProfile.business_name.ilike(name_clean),
@@ -439,7 +439,7 @@ def submit_intake_and_run(
                 validated_data[c_field] = {"value": c_choice, "provenance": "USER_CONFIRMED"}
 
     if request.capital_includes_loan is not None:
-        validated_data["capital_includes_loan"] = {"value": bool(request.capital_includes_loan), "provenance": "USER_CONFIRMED"}
+        validated_data["capital_includes_loan"] = {"value": request.capital_includes_loan, "provenance": "USER_CONFIRMED"}
 
     # Ingest base plan
     plan = ingestion_service.ingest_file(file_path)
@@ -490,20 +490,20 @@ def submit_intake_and_run(
 
     if profile:
         # Re-upload for existing enterprise: update timestamp, intake data, and fields
-        profile.updated_at = datetime.now(timezone.utc)
+        setattr(profile, "updated_at", datetime.now(timezone.utc))
         if b_name:
-            profile.business_name = b_name
+            setattr(profile, "business_name", b_name)
         if b_dist:
-            profile.district = b_dist
+            setattr(profile, "district", b_dist)
         if b_cat:
-            profile.business_category = b_cat
+            setattr(profile, "business_category", b_cat)
         if b_reg:
-            profile.registration_number = b_reg
+            setattr(profile, "registration_number", b_reg)
 
         # Merge intake data
         current_data = dict(profile.latest_intake_data or {})
         current_data.update(validated_data)
-        profile.latest_intake_data = current_data
+        setattr(profile, "latest_intake_data", current_data)
         biz_id = profile.id
     else:
         # New enterprise profile: assign collision-safe persistent ID
@@ -555,11 +555,11 @@ def submit_intake_and_run(
             delay = float(rel_item["payment_delay_days"]) if rel_item.get("payment_delay_days") is not None else None
 
             if existing_rel:
-                existing_rel.partner_type = p_type
-                existing_rel.relationship_type = r_type
-                existing_rel.transaction_value_lkr = tx_val
-                existing_rel.dependency_percentage = dep_pct
-                existing_rel.payment_delay_days = delay
+                setattr(existing_rel, "partner_type", p_type)
+                setattr(existing_rel, "relationship_type", r_type)
+                setattr(existing_rel, "transaction_value_lkr", tx_val)
+                setattr(existing_rel, "dependency_percentage", dep_pct)
+                setattr(existing_rel, "payment_delay_days", delay)
             else:
                 db_rel = Component4BusinessRelationship(
                     business_id=profile.id,
@@ -803,7 +803,7 @@ def list_component4_businesses(
             "latest_risk_category": latest_run.overall_risk_category if latest_run else None,
             "composite_risk_score": latest_run.composite_risk_score if latest_run else None,
             "latest_assessment_id": latest_run.id if latest_run else None,
-            "assessment_count": len(p.assessment_runs) if p.assessment_runs else 0,
+            "assessment_count": len(getattr(p, "assessment_runs", [])) if getattr(p, "assessment_runs", None) else 0,
             "created_at": p.created_at.isoformat() if p.created_at else None,
             "updated_at": p.updated_at.isoformat() if p.updated_at else None,
         })

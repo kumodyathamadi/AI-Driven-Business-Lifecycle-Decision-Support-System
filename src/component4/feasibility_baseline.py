@@ -68,7 +68,7 @@ def evaluate_predictions(
     f1_per_class: Any = f1_score(
         y_true, y_pred, average=None, labels=classes, zero_division=0
     )
-    support_per_class = [int((y_true == cls_name).sum()) for cls_name in classes]
+    support_per_class = [(y_true == cls_name).sum() for cls_name in classes]
 
     per_class_metrics = {}
     for i, cls_name in enumerate(classes):

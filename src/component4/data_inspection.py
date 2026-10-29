@@ -50,7 +50,7 @@ def inspect_feasibility_dataset(file_path: str = "data/raw/Component_One_Core_Fe
             "mean": round(float(df[col].mean()), 2),
             "std": round(float(df[col].std()), 2),
             "median": float(df[col].median()),
-            "zero_count": (df[col] == 0).sum().item(),
+            "zero_count": (df[col] == 0).sum(),
         }
 
     cat_summary = {}

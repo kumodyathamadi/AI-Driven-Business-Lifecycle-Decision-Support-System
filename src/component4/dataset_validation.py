@@ -102,7 +102,7 @@ class DatasetValidator:
         df = pd.read_csv(self.feasibility_path)
         null_count = int(df.isnull().sum().sum())
         dup_count = int(df.duplicated().sum())
-        case_id_unique = bool(df["case_id"].is_unique) if "case_id" in df.columns else False
+        case_id_unique = df["case_id"].is_unique if "case_id" in df.columns else False
 
         classes = sorted(df["feasibility_label"].unique().tolist()) if "feasibility_label" in df.columns else []
         class_counts = df["feasibility_label"].value_counts().to_dict() if "feasibility_label" in df.columns else {}
@@ -137,8 +137,8 @@ class DatasetValidator:
 
         if d07_path and os.path.exists(d07_path):
             df7 = pd.read_csv(d07_path)
-            unique_count = int((df7["duplicate_status"] == "UNIQUE").sum()) if "duplicate_status" in df7.columns else len(df7)
-            duplicate_count = int((df7["duplicate_status"] != "UNIQUE").sum()) if "duplicate_status" in df7.columns else 0
+            unique_count = (df7["duplicate_status"] == "UNIQUE").sum() if "duplicate_status" in df7.columns else len(df7)
+            duplicate_count = (df7["duplicate_status"] != "UNIQUE").sum() if "duplicate_status" in df7.columns else 0
             results["dataset07_invoices"] = {
                 "path": d07_path,
                 "evidence_source": "DOCUMENT_DERIVED_DATA",
