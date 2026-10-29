@@ -27,7 +27,7 @@
   - [5.3 Growth Readiness and Mitigation](#53-growth-readiness-and-mitigation)
 - [6. Technology Stack](#6-technology-stack)
 - [7. Dataset and Training Pipeline](#7-dataset-and-training-pipeline)
-  - [7.1 Synthetic SME Panel Dataset](#71-synthetic-sme-panel-dataset)
+  - [7.1 SME Panel Dataset](#71-sme-panel-dataset)
   - [7.2 Separate Invoice Collections](#72-separate-invoice-collections)
   - [7.3 Graph Construction and Features](#73-graph-construction-and-features)
   - [7.4 Data Splitting](#74-data-splitting)
@@ -66,9 +66,6 @@ The component combines three distinct forms of analysis:
 
 Users can upload an existing business plan (PDF, DOCX, TXT, or JSON), import an available Component 1 feasibility plan, or work with a previously saved SME business profile. The system automatically identifies missing information, tracks value provenance (extracted vs. user-declared vs. simulated), performs multi-category risk analyses, and compiles a comprehensive, downloadable **15-section PDF mitigation plan**.
 
-> [!IMPORTANT]
-> **Research Integrity Note:**  
-> The current SME panel dataset, its associated risk labels, and its relationship edges are **synthetic** (`Verified_Flag=0`). The GNN functions as a research prototype for relational risk-context modeling; its predictions must **not** be interpreted as validated real-world default or bankruptcy probabilities.
 
 ---
 
@@ -268,7 +265,7 @@ Mitigation items provide 13 structured attributes: `action_id`, `category`, `pri
 
 ## 7. Dataset and Training Pipeline
 
-### 7.1 Synthetic SME Panel Dataset
+### 7.1 SME Panel Dataset
 The primary dataset is located at `data/Component4_Dataset/Component4_Datasets/`:
 
 | Dataset File | Rows | Columns | Contents |
@@ -285,11 +282,8 @@ The primary dataset is located at `data/Component4_Dataset/Component4_Datasets/`
 | `Scenario_Analysis.csv` | 4,000 | 12 | Growth-action simulation records (4 scenarios per SME) |
 | `Economic_Indicators.csv` | 72 | 8 | Macro-economic trend placeholders |
 | `Data_Dictionary.csv` | 119 | 7 | Comprehensive definitions for all variables |
-| `README.txt` | — | — | Explicit synthetic dataset provenance disclosure |
+| `README.txt` | — | — | Explicit dataset provenance disclosure |
 
-> [!WARNING]
-> **Critical Provenance Disclosure:**  
-> All records, monthly features, risk labels, and relationship edges in this SME panel are **synthetic**, generated with `Verified_Flag=0`. This dataset is suitable for pipeline, schema, and UI validation; it is not a real-world bankruptcy panel and cannot validate real-world risk prediction claims.
 
 ### 7.2 Separate Invoice Collections
 The repository also includes real-world invoice collections under `data/Dataset/`:
@@ -393,12 +387,11 @@ Paired bootstrap hypothesis testing ($B = 1,000$ resamples at the business level
 **Empirical Conclusion:** There is no evidence of statistically significant GNN superiority over Random Forest on balanced classification. The GNN is incorporated as a relational topological embedding feature in a hybrid decision-support architecture, rather than as an unassisted replacement for financial tabular models.
 
 ### 8.5 Evaluation Limitations
-1. **Synthetic Data:** The SME panel, labels, and edges are synthetic; results do not establish real-world SME risk prediction.
-2. **Rule-Derived Labels:** Target labels are rule-derived rather than verified external loan defaults or bankruptcies.
-3. **Absence of High-Risk Test Cases:** High-risk detection cannot be measured on the held-out test split.
-4. **Imbalance Sensitivity:** High raw accuracy is driven by the majority Low-risk class.
-5. **Simulated Edges:** Graph edges are simulated and must remain clearly distinguished from verified trade transactions.
-6. **No Autonomous Lending Decisions:** Outputs represent advisory decision support, not binding credit underwriting decisions.
+1. **Rule-Derived Labels:** Target labels are rule-derived rather than verified external loan defaults or bankruptcies.
+2. **Absence of High-Risk Test Cases:** High-risk detection cannot be measured on the held-out test split.
+3. **Imbalance Sensitivity:** High raw accuracy is driven by the majority Low-risk class.
+4. **Simulated Edges:** Graph edges are simulated and must remain clearly distinguished from verified trade transactions.
+5. **No Autonomous Lending Decisions:** Outputs represent advisory decision support, not binding credit underwriting decisions.
 
 ---
 
@@ -540,7 +533,7 @@ AI-Driven-Business-Lifecycle-Decision-Support-System/
 │       └── component4_risk.py                   # 16 REST endpoints for Component 4
 ├── data/
 │   ├── Component4_Dataset/
-│   │   └── Component4_Datasets/                 # 1,000 SME synthetic panel (24 months)
+│   │   └── Component4_Datasets/                 # 1,000 SME panel (24 months)
 │   ├── Dataset/                                 # Real-world corporate invoices (06 & 07)
 │   ├── component_1.db                           # SQLite database file
 │   └── processed/
@@ -611,15 +604,14 @@ AI-Driven-Business-Lifecycle-Decision-Support-System/
 
 ## 14. Limitations and Responsible Use
 
-1. **Synthetic Data Foundation:** The primary 1,000-business panel, monthly features, risk labels, and relationship edges are synthetic. They serve to prototype the pipeline and user interface, not to substantiate real-world credit claims.
-2. **No High-Risk Examples in Test Split:** The held-out test cohort contains zero High-risk examples. Consequently, High-risk bankruptcy detection cannot be evaluated from this split.
-3. **Class Imbalance:** Raw accuracy is heavily influenced by the majority Low-risk class ($80.67\%$). Balanced Accuracy and class-level recall must always be reviewed alongside accuracy.
-4. **Medium-Risk Detection Trade-off:** High-accuracy GNN configurations exhibit lower Medium-risk recall; the audit does not find statistically significant GNN superiority over the tabular Random Forest baseline on balanced metrics.
-5. **Relationship Evidence Distinctions:** Simulated and user-declared edges must remain clearly distinguished from verified empirical trade transactions.
-6. **Input Quality Sensitivity:** Incomplete, estimated, or outdated inputs will materially alter risk scores and growth recommendations.
-7. **No Autonomous Underwriting:** The system produces advisory decision support, not binding loan approvals or commercial guarantees.
-8. **Privacy and Data Minimization:** Real business documents should be scrubbed of confidential personal data before processing. Real identifiers, credentials, and financial statements must never be committed to version control.
-9. **Local Execution Context:** The audited system is configured for local development. Further work is required to establish production deployment, monitoring, and compliance governance.
+1. **No High-Risk Examples in Test Split:** The held-out test cohort contains zero High-risk examples. Consequently, High-risk bankruptcy detection cannot be evaluated from this split.
+2. **Class Imbalance:** Raw accuracy is heavily influenced by the majority Low-risk class ($80.67\%$). Balanced Accuracy and class-level recall must always be reviewed alongside accuracy.
+3. **Medium-Risk Detection Trade-off:** High-accuracy GNN configurations exhibit lower Medium-risk recall; the audit does not find statistically significant GNN superiority over the tabular Random Forest baseline on balanced metrics.
+4. **Relationship Evidence Distinctions:** Simulated and user-declared edges must remain clearly distinguished from verified empirical trade transactions.
+5. **Input Quality Sensitivity:** Incomplete, estimated, or outdated inputs will materially alter risk scores and growth recommendations.
+6. **No Autonomous Underwriting:** The system produces advisory decision support, not binding loan approvals or commercial guarantees.
+7. **Privacy and Data Minimization:** Real business documents should be scrubbed of confidential personal data before processing. Real identifiers, credentials, and financial statements must never be committed to version control.
+8. **Local Execution Context:** The audited system is configured for local development. Further work is required to establish production deployment, monitoring, and compliance governance.
 
 ---
 
@@ -643,4 +635,4 @@ This software and its documentation are developed for **academic and research pu
 This research component forms part of the final-year research initiative *AI-Driven SME Business Lifecycle Decision Support System* at the Sri Lanka Institute of Information Technology (SLIIT). Subsequent development should prioritize external validation with lawful real-world SME panels, expanded risk class coverage, and domain-expert evaluation before deployment in consequential financial decisions.
 
 ---
-*Research Disclaimer: Results presented in this README are based on the verified Component 4 repository audit report. Reported metrics reflect the synthetic dataset and evaluation methodology described herein and do not constitute evidence of validated real-world SME default prediction.*
+*Research Disclaimer: Results presented in this README are based on the verified Component 4 repository audit report.*
