@@ -23,6 +23,82 @@ export interface BrFormData {
   commencement_date: string;
 }
 
+const EMPTY_FORM_DATA: BrFormData = {
+  business_name: '',
+  legal_form: 'sole_proprietorship',
+  sector: '',
+  district: 'Colombo',
+  province: 'Western Province',
+  local_authority: 'Colombo Municipal Council',
+  divisional_secretariat: 'Thimbirigasyaya Divisional Secretariat',
+  grama_niladhari: '',
+  address: '',
+  activities: [],
+  products_services: [],
+  employee_count: 0,
+  revenue: 0,
+  initial_capital: 0,
+  owner_name: '',
+  owner_nic: '',
+  phone: '',
+  email: '',
+  residence_address: '',
+  commencement_date: '',
+};
+
+const EMPTY_STAGE_1 = {
+  alt_name_1: '',
+  alt_name_2: '',
+  name_meaning: '',
+  language_scripts: 'English & Sinhala',
+  search_date: new Date().toISOString().split('T')[0],
+  reservation_period: '3 Months (Statutory Validity under WP Statute Sec. 4)',
+};
+
+const EMPTY_STAGE_2 = {
+  ownership_type: 'commercial_lease',
+  landlord_name: '',
+  landlord_phone: '',
+  deed_lease_no: '',
+  electoral_no: '',
+  house_no: '',
+  residence_duration: '',
+  inspection_readiness: '',
+};
+
+const EMPTY_STAGE_4 = {
+  assessment_no: '',
+  trade_category: '',
+  floor_area: '',
+  fire_safety: '',
+  phi_division: '',
+  food_handlers_certified: 0,
+  waste_disposal: '',
+  license_year: '2026 / 2027',
+  br_certificate_no: '',
+};
+
+const EMPTY_STAGE_5 = {
+  taxpayer_type: 'Sole Proprietorship Enterprise',
+  ird_unit: '',
+  tin_status: 'New RAMIS TIN Application Required',
+  labour_office: '',
+  monthly_payroll: 0,
+  epf_status: 'Mandatory Form D Employer Registration (12% + 8%)',
+  etf_status: 'Mandatory 3% Employer Contribution',
+  bank_name: '',
+  bank_branch: '',
+  bank_account: '',
+};
+
+const EMPTY_CHECKLISTS: Record<number, Record<string, boolean>> = {
+  1: { s1_form: false, s1_nic: false, s1_meaning: false, s1_fee: false },
+  2: { s2_deed: false, s2_consent: false, s2_utility: false, s2_electoral: false, s2_nic: false },
+  3: { s3_form1: false, s3_gn_rep: false, s3_nic: false, s3_deed: false, s3_duty: false },
+  4: { s4_br: false, s4_rates: false, s4_phi: false, s4_plan: false, s4_fire: false },
+  5: { s5_br_copy: false, s5_tin_slip: false, s5_labour_d: false, s5_staff_list: false, s5_bank: false },
+};
+
 const SAMPLE_PRESETS: Record<string, BrFormData> = {
   bakery: {
     business_name: 'CEYLON ARTISAN BAKEHOUSE',
@@ -463,69 +539,101 @@ const ROADMAP_DATA_BY_ENTITY: Record<'sole_proprietorship' | 'partnership' | 'pr
 };
 
 export const BusinessRegistrationView: React.FC = () => {
-  const [formData, setFormData] = useState<BrFormData>(SAMPLE_PRESETS.bakery);
+  // Empty clean default state - no auto-fill
+  const [formData, setFormData] = useState<BrFormData>(EMPTY_FORM_DATA);
   const [isGenerating, setIsGenerating] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [downloadMessage, setDownloadMessage] = useState<string>('');
   const [activeRoadmapStage, setActiveRoadmapStage] = useState<number>(1);
 
-  // Stage 1 Extra Data: Name Search & Clearance (WP/BN/01)
-  const [stage1Data, setStage1Data] = useState({
-    alt_name_1: 'CEYLON HERITAGE BAKERY',
-    alt_name_2: 'ISLAND ARTISAN BAKES',
-    name_meaning: 'Artisan Sri Lankan traditional bakes with modern quality standards and natural ingredients',
-    language_scripts: 'English & Sinhala',
-    search_date: new Date().toISOString().split('T')[0],
-    reservation_period: '3 Months (Statutory Validity under WP Statute Sec. 4)',
-  });
+  // Stage 1 Extra Data: Name Search & Clearance (WP/BN/01) - Clean / Empty by default
+  const [stage1Data, setStage1Data] = useState(EMPTY_STAGE_1);
 
-  // Stage 2 Extra Data: Grama Niladhari Report
-  const [stage2Data, setStage2Data] = useState({
-    ownership_type: 'commercial_lease',
-    landlord_name: 'Mr. K. A. Perera',
-    landlord_phone: '+94 77 345 6789',
-    deed_lease_no: 'Lease Agreement No. 2024/481',
-    electoral_no: 'EL/COL/512/048',
-    house_no: 'No. 12/B',
-    residence_duration: '6 Years',
-    inspection_readiness: 'Premises ready for on-site officer inspection',
-  });
+  // Stage 2 Extra Data: Grama Niladhari Report - Clean / Empty by default
+  const [stage2Data, setStage2Data] = useState(EMPTY_STAGE_2);
 
-  // Stage 4 Extra Data: Municipal Council Trade Tax & Health
-  const [stage4Data, setStage4Data] = useState({
-    assessment_no: 'CMC/WR/2026/8941',
-    trade_category: 'Food Manufacturing & Bakery Products',
-    floor_area: '1,250 Sq. Ft.',
-    fire_safety: 'Fire Extinguishers Installed (CO2 + Foam)',
-    phi_division: 'PHI Range 03 - Thimbirigasyaya Division',
-    food_handlers_certified: 5,
-    waste_disposal: 'Municipal Council Daily Collection & Sealed Grease Trap',
-    license_year: '2026 / 2027',
-    br_certificate_no: 'WP/COL/2026/10492',
-  });
+  // Stage 4 Extra Data: Municipal Council Trade Tax & Health - Clean / Empty by default
+  const [stage4Data, setStage4Data] = useState(EMPTY_STAGE_4);
 
-  // Stage 5 Extra Data: RAMIS TIN & Labour EPF/ETF
-  const [stage5Data, setStage5Data] = useState({
-    taxpayer_type: 'Sole Proprietorship Enterprise',
-    ird_unit: 'Colombo South Metropolitan Unit (Chitampalam Gardiner Mw)',
-    tin_status: 'New RAMIS TIN Application Required',
-    labour_office: 'Colombo South Labour Office (Narahenpita)',
-    monthly_payroll: 350000,
-    epf_status: 'Mandatory Form D Employer Registration (12% + 8%)',
-    etf_status: 'Mandatory 3% Employer Contribution',
-    bank_name: 'Commercial Bank of Ceylon',
-    bank_branch: 'Bambalapitiya Branch',
-    bank_account: '1000849201',
-  });
+  // Stage 5 Extra Data: RAMIS TIN & Labour EPF/ETF - Clean / Empty by default
+  const [stage5Data, setStage5Data] = useState(EMPTY_STAGE_5);
 
-  // Dynamic Checklists per Stage
-  const [stageChecklists, setStageChecklists] = useState<Record<number, Record<string, boolean>>>({
-    1: { s1_form: true, s1_nic: true, s1_meaning: true, s1_fee: false },
-    2: { s2_deed: true, s2_consent: true, s2_utility: true, s2_electoral: false, s2_nic: true },
-    3: { s3_form1: true, s3_gn_rep: true, s3_nic: true, s3_deed: true, s3_duty: false },
-    4: { s4_br: true, s4_rates: false, s4_phi: true, s4_plan: true, s4_fire: true },
-    5: { s5_br_copy: true, s5_tin_slip: true, s5_labour_d: false, s5_staff_list: true, s5_bank: true },
-  });
+  // Dynamic Checklists per Stage - Unchecked by default
+  const [stageChecklists, setStageChecklists] = useState<Record<number, Record<string, boolean>>>(EMPTY_CHECKLISTS);
+
+  const handleSelectPreset = (key: string) => {
+    const preset = SAMPLE_PRESETS[key];
+    if (!preset) return;
+    setFormData(preset);
+    if (key === 'bakery') {
+      setStage1Data({
+        alt_name_1: 'CEYLON HERITAGE BAKERY',
+        alt_name_2: 'ISLAND ARTISAN BAKES',
+        name_meaning: 'Artisan Sri Lankan traditional bakes with modern quality standards and natural ingredients',
+        language_scripts: 'English & Sinhala',
+        search_date: new Date().toISOString().split('T')[0],
+        reservation_period: '3 Months (Statutory Validity under WP Statute Sec. 4)',
+      });
+      setStage2Data({
+        ownership_type: 'commercial_lease',
+        landlord_name: 'Mr. K. A. Perera',
+        landlord_phone: '+94 77 345 6789',
+        deed_lease_no: 'Lease Agreement No. 2024/481',
+        electoral_no: 'EL/COL/512/048',
+        house_no: 'No. 12/B',
+        residence_duration: '6 Years',
+        inspection_readiness: 'Premises ready for on-site officer inspection',
+      });
+      setStage4Data({
+        assessment_no: 'CMC/WR/2026/8941',
+        trade_category: 'Food Manufacturing & Bakery Products',
+        floor_area: '1,250 Sq. Ft.',
+        fire_safety: 'Fire Extinguishers Installed (CO2 + Foam)',
+        phi_division: 'PHI Range 03 - Thimbirigasyaya Division',
+        food_handlers_certified: 5,
+        waste_disposal: 'Municipal Council Daily Collection & Sealed Grease Trap',
+        license_year: '2026 / 2027',
+        br_certificate_no: 'WP/COL/2026/10492',
+      });
+      setStage5Data({
+        taxpayer_type: 'Sole Proprietorship Enterprise',
+        ird_unit: 'Colombo South Metropolitan Unit (Chitampalam Gardiner Mw)',
+        tin_status: 'New RAMIS TIN Application Required',
+        labour_office: 'Colombo South Labour Office (Narahenpita)',
+        monthly_payroll: 350000,
+        epf_status: 'Mandatory Form D Employer Registration (12% + 8%)',
+        etf_status: 'Mandatory 3% Employer Contribution',
+        bank_name: 'Commercial Bank of Ceylon',
+        bank_branch: 'Bambalapitiya Branch',
+        bank_account: '1000849201',
+      });
+      setStageChecklists({
+        1: { s1_form: true, s1_nic: true, s1_meaning: true, s1_fee: false },
+        2: { s2_deed: true, s2_consent: true, s2_utility: true, s2_electoral: false, s2_nic: true },
+        3: { s3_form1: true, s3_gn_rep: true, s3_nic: true, s3_deed: true, s3_duty: false },
+        4: { s4_br: true, s4_rates: false, s4_phi: true, s4_plan: true, s4_fire: true },
+        5: { s5_br_copy: true, s5_tin_slip: true, s5_labour_d: false, s5_staff_list: true, s5_bank: true },
+      });
+    } else {
+      setStage1Data({
+        alt_name_1: `${preset.business_name} VENTURES`,
+        alt_name_2: `${preset.business_name} LANKA`,
+        name_meaning: `${preset.sector} commercial trade activities`,
+        language_scripts: 'English & Sinhala',
+        search_date: new Date().toISOString().split('T')[0],
+        reservation_period: '3 Months (Statutory Validity under WP Statute Sec. 4)',
+      });
+    }
+  };
+
+  const handleClearAll = () => {
+    setFormData(EMPTY_FORM_DATA);
+    setStage1Data(EMPTY_STAGE_1);
+    setStage2Data(EMPTY_STAGE_2);
+    setStage4Data(EMPTY_STAGE_4);
+    setStage5Data(EMPTY_STAGE_5);
+    setStageChecklists(EMPTY_CHECKLISTS);
+  };
 
   const STAGE_CHECKLIST_CONFIG: Record<number, { key: string; label: string; desc: string }[]> = {
     1: [
@@ -961,7 +1069,7 @@ export const BusinessRegistrationView: React.FC = () => {
 
           {/* Preset Buttons */}
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-semibold text-slate-500 mr-1">Quick Presets:</span>
+            <span className="text-[11px] font-semibold text-slate-500 mr-1">Sample Presets:</span>
             {[
               { key: 'bakery', label: 'Bakery SME', icon: 'fa-bread-slice' },
               { key: 'clothing', label: 'Clothing Boutique', icon: 'fa-shirt' },
@@ -971,7 +1079,7 @@ export const BusinessRegistrationView: React.FC = () => {
               <button
                 key={preset.key}
                 type="button"
-                onClick={() => setFormData(SAMPLE_PRESETS[preset.key])}
+                onClick={() => handleSelectPreset(preset.key)}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-teal-50 hover:text-teal-800 text-slate-700 border border-slate-200 transition-colors cursor-pointer"
               >
                 <i className={`fa-solid ${preset.icon} text-slate-500`} />
@@ -1391,6 +1499,7 @@ export const BusinessRegistrationView: React.FC = () => {
                 <select
                   value={formData.divisional_secretariat}
                   onChange={(e) => setFormData({ ...formData, divisional_secretariat: e.target.value })}
+                  placeholder="e.g. Thimbirigasyaya Divisional Secretariat"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 >
                   <option value="Thimbirigasyaya Divisional Secretariat">Thimbirigasyaya DS (Colombo Central)</option>
@@ -1412,6 +1521,7 @@ export const BusinessRegistrationView: React.FC = () => {
                   type="text"
                   value={formData.sector}
                   onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
+                  placeholder="e.g. Food Manufacturing & Bakery Products"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
               </div>
@@ -1424,6 +1534,7 @@ export const BusinessRegistrationView: React.FC = () => {
                   type="text"
                   value={stage1Data.name_meaning}
                   onChange={(e) => setStage1Data({ ...stage1Data, name_meaning: e.target.value })}
+                  placeholder="e.g. Meaning and commercial origin of the proposed name"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
               </div>
@@ -1454,6 +1565,7 @@ export const BusinessRegistrationView: React.FC = () => {
                   type="text"
                   value={formData.owner_name}
                   onChange={(e) => setFormData({ ...formData, owner_name: e.target.value })}
+                  placeholder="e.g. Dhananjaya Bandara"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
               </div>
@@ -1464,6 +1576,7 @@ export const BusinessRegistrationView: React.FC = () => {
                   type="text"
                   value={formData.owner_nic}
                   onChange={(e) => setFormData({ ...formData, owner_nic: e.target.value })}
+                  placeholder="e.g. 199415802345 or 851234567V"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
               </div>
@@ -1474,6 +1587,7 @@ export const BusinessRegistrationView: React.FC = () => {
                   type="text"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="e.g. +94 77 123 4567"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
               </div>
@@ -1503,6 +1617,7 @@ export const BusinessRegistrationView: React.FC = () => {
                   type="text"
                   value={formData.grama_niladhari}
                   onChange={(e) => setFormData({ ...formData, grama_niladhari: e.target.value })}
+                  placeholder="e.g. Havelock Town (GN Division 512)"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
               </div>
@@ -1515,6 +1630,7 @@ export const BusinessRegistrationView: React.FC = () => {
                   type="text"
                   value={formData.divisional_secretariat}
                   onChange={(e) => setFormData({ ...formData, divisional_secretariat: e.target.value })}
+                  placeholder="e.g. Thimbirigasyaya Divisional Secretariat"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
               </div>
@@ -1527,6 +1643,7 @@ export const BusinessRegistrationView: React.FC = () => {
                   type="text"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  placeholder="e.g. No. 45, Galle Road, Colombo 04"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
               </div>
@@ -1555,6 +1672,7 @@ export const BusinessRegistrationView: React.FC = () => {
                   type="text"
                   value={stage2Data.deed_lease_no}
                   onChange={(e) => setStage2Data({ ...stage2Data, deed_lease_no: e.target.value })}
+                  placeholder="e.g. Lease Agreement No. 2024/481"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
               </div>
@@ -1567,6 +1685,7 @@ export const BusinessRegistrationView: React.FC = () => {
                   type="text"
                   value={stage2Data.landlord_name}
                   onChange={(e) => setStage2Data({ ...stage2Data, landlord_name: e.target.value })}
+                  placeholder="e.g. Mr. K. A. Perera"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
               </div>
@@ -1577,6 +1696,7 @@ export const BusinessRegistrationView: React.FC = () => {
                   type="text"
                   value={stage2Data.landlord_phone}
                   onChange={(e) => setStage2Data({ ...stage2Data, landlord_phone: e.target.value })}
+                  placeholder="e.g. +94 77 345 6789"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
               </div>
@@ -1589,6 +1709,7 @@ export const BusinessRegistrationView: React.FC = () => {
                   type="text"
                   value={stage2Data.electoral_no}
                   onChange={(e) => setStage2Data({ ...stage2Data, electoral_no: e.target.value })}
+                  placeholder="e.g. EL/COL/512/048"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
               </div>
@@ -1601,6 +1722,7 @@ export const BusinessRegistrationView: React.FC = () => {
                   type="text"
                   value={stage2Data.house_no}
                   onChange={(e) => setStage2Data({ ...stage2Data, house_no: e.target.value })}
+                  placeholder="e.g. No. 12/B"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
               </div>
@@ -1613,6 +1735,7 @@ export const BusinessRegistrationView: React.FC = () => {
                   type="text"
                   value={formData.residence_address}
                   onChange={(e) => setFormData({ ...formData, residence_address: e.target.value })}
+                  placeholder="e.g. No. 12/B, Flower Road, Colombo 07"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
               </div>
@@ -1663,6 +1786,7 @@ export const BusinessRegistrationView: React.FC = () => {
                 <select
                   value={formData.divisional_secretariat}
                   onChange={(e) => setFormData({ ...formData, divisional_secretariat: e.target.value })}
+                  placeholder="e.g. Thimbirigasyaya Divisional Secretariat"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 >
                   <option value="Thimbirigasyaya Divisional Secretariat">Thimbirigasyaya DS (Colombo Central)</option>
@@ -1696,6 +1820,7 @@ export const BusinessRegistrationView: React.FC = () => {
                   type="text"
                   value={formData.grama_niladhari}
                   onChange={(e) => setFormData({ ...formData, grama_niladhari: e.target.value })}
+                  placeholder="e.g. Havelock Town (GN Division 512)"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
               </div>
@@ -1708,6 +1833,7 @@ export const BusinessRegistrationView: React.FC = () => {
                   type="text"
                   value={formData.sector}
                   onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
+                  placeholder="e.g. Food Manufacturing & Bakery Products"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
               </div>
@@ -1720,6 +1846,7 @@ export const BusinessRegistrationView: React.FC = () => {
                   type="text"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  placeholder="e.g. No. 45, Galle Road, Colombo 04"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
               </div>
@@ -1732,6 +1859,7 @@ export const BusinessRegistrationView: React.FC = () => {
                   type="text"
                   value={formData.owner_name}
                   onChange={(e) => setFormData({ ...formData, owner_name: e.target.value })}
+                  placeholder="e.g. Dhananjaya Bandara"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
               </div>
@@ -1744,6 +1872,7 @@ export const BusinessRegistrationView: React.FC = () => {
                   type="text"
                   value={formData.owner_nic}
                   onChange={(e) => setFormData({ ...formData, owner_nic: e.target.value })}
+                  placeholder="e.g. 199415802345 or 851234567V"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
               </div>
@@ -1754,6 +1883,7 @@ export const BusinessRegistrationView: React.FC = () => {
                   type="text"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="e.g. +94 77 123 4567"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
               </div>
@@ -1776,6 +1906,7 @@ export const BusinessRegistrationView: React.FC = () => {
                   type="text"
                   value={formData.residence_address}
                   onChange={(e) => setFormData({ ...formData, residence_address: e.target.value })}
+                  placeholder="e.g. No. 12/B, Flower Road, Colombo 07"
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
               </div>

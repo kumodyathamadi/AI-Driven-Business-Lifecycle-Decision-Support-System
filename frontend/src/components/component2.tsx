@@ -494,6 +494,140 @@ const FORM_GUIDE_SINHALA: Record<number, { label: string; desc: string }> = {
 };
 
 // ---------------------------------------------------------------------------
+// Bilingual Translation Dictionaries & Helpers for Rules & Institutional Actions
+// ---------------------------------------------------------------------------
+
+const RULE_PURPOSE_SINHALA: Record<string, string> = {
+  food_business:
+    'ආහාර සකස් කිරීම, පරිහරණය හෝ මහජනතාවට අලෙවි කිරීමට පෙර පරිශ්‍රයේ සනීපාරක්ෂාව, සෞඛ්‍ය ප්‍රමිතීන් සහ ආහාර හසුරුවන්නන්ගේ වෛද්‍ය යෝග්‍යතාව නියාමනය කිරීම.',
+  environmental_waste:
+    'මධ්‍යම පරිසර අධිකාරිය යටතේ පරිසර දූෂණය වැළැක්වීම සඳහා කාර්මික විමෝචන, අපද්‍රව්‍ය බැහැර කිරීම, අපජල පිරිපහදු කිරීම සහ පාරිසරික අනුමැතීන් නියාමනය කිරීම.',
+  business_registration:
+    'තනි පුද්ගල ව්‍යාපාර, හවුල් ව්‍යාපාර හෝ සමාගම් සඳහා නීතිමය අනන්‍යතාවය තහවුරු කිරීම සහ බැංකු ගිණුම් විවෘත කිරීමට හා වාණිජ බිල්පත් නිකුත් කිරීමට අවශ්‍ය ලියාපදිංචිය ලබාදීම.',
+  vehicle_repair_motor_trade:
+    'මෝටර් රථ ගරාජ් මෙහෙයුම්, අමතර කොටස් අලෙවිය සහ අපද්‍රව්‍ය තෙල් බැහැර කිරීම පළාත් පාලන අතුරු ව්‍යවස්ථා සහ මෝටර් රථ ප්‍රවාහන මාර්ගෝපදේශ යටතේ නියාමනය කිරීම.',
+  cosmetics_salon:
+    'රූපලාවන්‍ය රසායනික භාවිතය, සම/කොණ්ඩය ආශ්‍රිත ආරක්ෂාව සහ උපකරණ විෂබීජහරණය කිරීම NMRA සහ මහ නගර සභා සෞඛ්‍ය අතුරු ව්‍යවස්ථා යටතේ නියාමනය කිරීම.',
+  data_protection_digital:
+    '2022 අංක 09 දරන පුද්ගලික දත්ත ආරක්ෂණ පනත යටතේ පාරිභෝගික පුද්ගලික දත්ත, මාර්ගගත ඇණවුම් සහ සේවක තොරතුරු නීත්‍යානුකූලව සැකසීම හා සුරක්ෂිත කිරීම.',
+};
+
+function getRulePurposeText(purpose: string, category?: string, isSi?: boolean): string {
+  if (!isSi) return purpose;
+  if (category && RULE_PURPOSE_SINHALA[category]) {
+    return RULE_PURPOSE_SINHALA[category];
+  }
+  return purpose;
+}
+
+function getWhereToGoText(targetAuth: string, isSi?: boolean): string {
+  if (!isSi) return targetAuth;
+  const s = targetAuth.toLowerCase();
+  if (s.includes('public health') || s.includes('phi') || s.includes('health department')) {
+    return 'මහජන සෞඛ්‍ය දෙපාර්තමේන්තුව / මහජන සෞඛ්‍ය පරීක්ෂක (PHI) කාර්යාලය / සෞඛ්‍ය වෛද්‍ය නිලධාරී (MOH) කාර්යාලය';
+  }
+  if (s.includes('central environmental') || s.includes('cea')) {
+    return 'මධ්‍යම පරිසර අධිකාරිය (CEA) / පළාත් පාලන ආයතනයේ පාරිසරික අංශය';
+  }
+  if (s.includes('divisional secretariat') || s.includes('registrar of companies') || s.includes('eroc')) {
+    return 'ප්‍රාදේශීය ලේකම් කාර්යාලය / සමාගම් රෙජිස්ට්‍රාර් දෙපාර්තමේන්තුව (eROC)';
+  }
+  if (s.includes('motor traffic') || s.includes('dmt')) {
+    return 'මෝටර් රථ ප්‍රවාහන දෙපාර්තමේන්තුව (DMT) / ප්‍රාදේශීය සභා වෙළඳ අංශය';
+  }
+  if (s.includes('medicines') || s.includes('nmra')) {
+    return 'ජාතික ඖෂධ නියාමන අධිකාරිය (NMRA) / නගර සභා සෞඛ්‍ය අංශය';
+  }
+  if (s.includes('data protection') || s.includes('dpa')) {
+    return 'ශ්‍රී ලංකා දත්ත ආරක්ෂණ අධිකාරිය (DPA SL)';
+  }
+  return targetAuth;
+}
+
+function getOfficeLocationText(officeLoc: string, isSi?: boolean): string {
+  if (!isSi || !officeLoc) return officeLoc;
+  return officeLoc
+    .replace(/Divisional Secretariat/gi, 'ප්‍රාදේශීය ලේකම් කාර්යාලය')
+    .replace(/Registrar of Companies \(eROC\), Colombo 10/gi, 'සමාගම් රෙජිස්ට්‍රාර් දෙපාර්තමේන්තුව (eROC), කොළඹ 10')
+    .replace(/Central Environmental Authority/gi, 'මධ්‍යම පරිසර අධිකාරිය')
+    .replace(/Head Office Battaramulla/gi, 'ප්‍රධාන කාර්යාලය බත්තරමුල්ල')
+    .replace(/District Office/gi, 'දිස්ත්‍රික් කාර්යාලය')
+    .replace(/Department of Motor Traffic/gi, 'මෝටර් රථ ප්‍රවාහන දෙපාර්තමේන්තුව')
+    .replace(/Local Council Trade Unit/gi, 'ප්‍රාදේශීය සභා වෙළඳ අංශය')
+    .replace(/National Medicines Regulatory Authority/gi, 'ජාතික ඖෂධ නියාමන අධිකාරිය')
+    .replace(/Local Council Health Dept/gi, 'පළාත් පාලන සෞඛ්‍ය අංශය')
+    .replace(/Colombo/gi, 'කොළඹ')
+    .replace(/Gampaha/gi, 'ගම්පහ')
+    .replace(/Kalutara/gi, 'කළුතර');
+}
+
+function getActionNeededText(action: string, isSi?: boolean): string {
+  if (!isSi) return action;
+  const s = action.toLowerCase();
+  if (s.includes('food premises') || s.includes('food-safety')) {
+    return 'ආහාර පරිශ්‍ර ලියාපදිංචිය / වෙළඳ බලපත්‍ර අනුමැතිය සහ සෞඛ්‍ය නිෂ්කාශනය';
+  }
+  if (s.includes('environmental protection licence') || s.includes('epl')) {
+    return 'පාරිසරික ආරක්ෂණ බලපත්‍රය (EPL) හෝ අදාළ පාරිසරික නිෂ්කාශන අනුමැතිය';
+  }
+  if (s.includes('business registration') || s.includes('company incorporation')) {
+    return 'ව්‍යාපාර නාම ලියාපදිංචිය හෝ සමාගම් සංස්ථාගත කිරීමේ ලේඛන';
+  }
+  if (s.includes('motor trade') || s.includes('garage')) {
+    return 'මෝටර් රථ අලුත්වැඩියා / ගරාජ් වෙළඳ බලපත්‍රය සහ පාරිසරික අනුමැතිය';
+  }
+  if (s.includes('salon') || s.includes('cosmetic')) {
+    return 'රූපලාවන්‍යාගාර සෞඛ්‍ය ලියාපදිංචිය සහ NMRA නිෂ්පාදන අනුකූලතාව';
+  }
+  if (s.includes('data protection')) {
+    return 'පාරිභෝගික දත්ත ආරක්ෂණ ක්‍රමවේද සහ ප්‍රතිපත්ති අනුකූලතාව';
+  }
+  return action;
+}
+
+const DOCUMENT_TRANSLATIONS: Record<string, string> = {
+  'Business and premises details': 'ව්‍යාපාරය සහ පරිශ්‍රය පිළිබඳ මූලික තොරතුරු',
+  'Description of food preparation, storage and sale activities': 'ආහාර පිළියෙල කිරීම, ගබඩා කිරීම සහ අලෙවි කිරීම පිළිබඳ විස්තර',
+  'Premises/layout information if requested by the official checklist': 'පරිශ්‍රයේ බිම් සැලැස්ම (Floor / Layout Plan)',
+  'Food-handler or hygiene evidence only if required by current rules': 'ආහාර හසුරුවන්නන්ගේ වෛද්‍ය යෝග්‍යතා වාර්තා / සෞඛ්‍ය සහතික',
+  'Current official application form': 'නියමිත නිල අයදුම්පත',
+  'Exact activity/process description and scale': 'නිශ්චිත කාර්මික ක්‍රියාවලිය සහ පරිමාණය පිළිබඳ විස්තරය',
+  'Premises location and site information': 'ස්ථානය සහ පරිශ්‍රයට අදාළ පිහිටුම් විස්තර',
+  'Wastewater, emissions, noise and waste-handling details where relevant': 'අපජලය, ශබ්ද විමෝචන සහ අපද්‍රව්‍ය කළමනාකරණ සැලැස්ම',
+  'Current official application/checklist only after confirming the applicable pathway': 'අදාළ මාර්ගය තහවුරු කරගත් පසු නිල අයදුම්පත සහ ලේඛන ලැයිස්තුව',
+  'National Identity Card (NIC) / Business Registration Certificate': 'ජාතික හැඳුනුම්පත (NIC) හෝ ව්‍යාපාර ලියාපදිංචි සහතිකයේ පිටපතක්',
+  'Proof of premises (Lease Agreement or Title Deed)': 'පරිශ්‍රය තහවුරු කිරීමේ ලියකියවිලි (බදු ගිවිසුම හෝ ඔප්පුව)',
+  'Official Application Form with prescribed processing fee': 'නියමිත ගාස්තුව සමඟ සම්පූර්ණ කරන ලද නිල අයදුම්පත',
+};
+
+function getDocumentText(doc: string, isSi?: boolean): string {
+  if (!isSi) return doc;
+  return DOCUMENT_TRANSLATIONS[doc] || doc;
+}
+
+const STEP_TRANSLATIONS: Record<string, string> = {
+  'Describe the food activities and premises accurately.': 'ආහාර මෙහෙයුම් සහ පරිශ්‍රය නිවැරදිව වාර්තා කරන්න.',
+  'Obtain the current food-premises checklist from the competent local authority/public-health office.': 'අදාළ පළාත් පාලන ආයතනයෙන් හෝ මහජන සෞඛ්‍ය පරීක්ෂක කාර්යාලයෙන් වත්මන් ලේඛන ලැයිස්තුව ලබාගන්න.',
+  'Confirm required inspections, food-handler conditions and forms.': 'අවශ්‍ය පරික්ෂණ, සෞඛ්‍ය වාර්තා සහ අයදුම්පත් තහවුරු කරගන්න.',
+  'Prepare only the documents listed in the verified checklist.': 'තහවුරු කරන ලද ලැයිස්තුවේ ඇති ලියකියවිලි පමණක් සම්පූර්ණ කරන්න.',
+  'Submit the application and follow inspection or correction instructions.': 'අයදුම්පත භාරදී පරීක්ෂණ නිලධාරියාගේ උපදෙස් අනුගමනය කරන්න.',
+  'Record the exact activity, process, scale and premises.': 'නිශ්චිත ක්‍රියාවලිය, පරිමාණය සහ පරිශ්‍රයේ තොරතුරු සටහන් කරන්න.',
+  'Compare the activity with the current official prescribed-activity list and applicable regulations.': 'ක්‍රියාවලිය නිල නියමිත ක්‍රියාකාරකම් ලැයිස්තුව සමඟ සසඳන්න.',
+  'Confirm the competent authority and licence/approval category.': 'බලධාරී ආයතනය සහ අවශ්‍ය බලපත්‍ර කාණ්ඩය තහවුරු කරගන්න.',
+  'Obtain the current application and document checklist.': 'වත්මන් අයදුම්පත සහ ලේඛන පිරික්සුම් ලැයිස්තුව ලබාගන්න.',
+  'Submit only if the verified rules require it and retain the decision/evidence.': 'නීත්‍යානුකූලව අවශ්‍ය නම් පමණක් අයදුම්පත යොමු කර තීරණය සුරක්ෂිතව තබාගන්න.',
+  'Step 1: Obtain official prescribed application form from the responsible office.': 'පියවර 1: අදාළ කාර්යාලයෙන් නියමිත නිල අයදුම්පත ලබාගන්න.',
+  'Step 2: Compile necessary premises proofs, layout sketch, and identification.': 'පියවර 2: අවශ්‍ය පරිශ්‍ර සාක්ෂි, බිම් සැලැස්ම සහ හැඳුනුම්පත් සූදානම් කරන්න.',
+  'Step 3: Submit application for officer inspection / clearance.': 'පියවර 3: නිලධාරී පරීක්ෂාව සහ නිෂ්කාශනය සඳහා අයදුම්පත ඉදිරිපත් කරන්න.',
+  'Step 4: Pay regulatory inspection fees and collect official licence / certificate.': 'පියවර 4: නියමිත ගාස්තු ගෙවා නිල බලපත්‍රය හෝ සහතිකය ලබාගන්න.',
+};
+
+function getStepText(step: string, isSi?: boolean): string {
+  if (!isSi) return step;
+  return STEP_TRANSLATIONS[step] || step;
+}
+
+// ---------------------------------------------------------------------------
 // Sub-components: Badges, Controls, Cards
 // ---------------------------------------------------------------------------
 
@@ -853,6 +987,8 @@ export const RegistrationComplianceDashboard: React.FC = () => {
   const [resultFilter, setResultFilter] = useState<'all' | ApplicabilityStatus>('all');
   const [showManualForm, setShowManualForm] = useState(false);
   const [guidanceLanguage, setGuidanceLanguage] = useState<'en' | 'si'>('en');
+  const [rulesLanguage, setRulesLanguage] = useState<'en' | 'si'>('en');
+  const [resultsSubTab, setResultsSubTab] = useState<'roadmap' | 'registration' | 'legal_rules'>('roadmap');
 
   // PDF Business / Growth Plan Ingestion State
   const [pdfUploading, setPdfUploading] = useState(false);
@@ -863,7 +999,6 @@ export const RegistrationComplianceDashboard: React.FC = () => {
   const [extractedProfileEdit, setExtractedProfileEdit] = useState<any | null>(null);
   const [newProductTag, setNewProductTag] = useState('');
   const [isDownloadingDossier, setIsDownloadingDossier] = useState(false);
-  const [isDownloadingForm1, setIsDownloadingForm1] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // Load available sample business plans on mount
@@ -898,47 +1033,6 @@ export const RegistrationComplianceDashboard: React.FC = () => {
     }
   };
 
-  const handleDownloadForm1 = async () => {
-    if (!result) return;
-    setIsDownloadingForm1(true);
-    try {
-      const bContext = (result.business_context || {}) as Record<string, any>;
-      const bGuidance = result.registration_guidance || ({} as any);
-      const payload = {
-        business_name: bContext.business_name || `${bContext.business_type || 'SME'} Enterprise`,
-        legal_form: bGuidance.pathway_key || 'sole_proprietorship',
-        district: bGuidance.district || 'Colombo',
-        sector: bContext.sector || bContext.business_type || 'Retail',
-        address: bContext.location || `Commercial Premises, ${bGuidance.district || 'Colombo'}`,
-        activities: bContext.products_services || [bContext.business_type || 'Commercial Enterprise'],
-        employee_count: bContext.number_of_employees || 5,
-        revenue: bContext.revenue || 1500000.0,
-        initial_capital: 500000.0,
-        owner_name: 'Dhananjaya Bandara',
-        owner_nic: '199415802345',
-      };
-      const res = await fetch(`${API_BASE}/api/v1/component2/generate-br-form`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error('Failed to generate Form 1 PDF');
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Western_Province_BR_Form1_${payload.district}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error(err);
-      alert('Failed to download Form 1 application PDF');
-    } finally {
-      setIsDownloadingForm1(false);
-    }
-  };
 
 
   const handlePdfFile = async (file: File) => {
@@ -1047,6 +1141,7 @@ export const RegistrationComplianceDashboard: React.FC = () => {
     try {
       const data = await analyseComplianceAPI(profToAnalyze);
       setResult(data);
+      setResultsSubTab('roadmap');
       setSelectedObligationId((current) =>
         data.obligations.some((obligation) => obligation.obligation_id === current)
           ? current
@@ -2191,7 +2286,7 @@ export const RegistrationComplianceDashboard: React.FC = () => {
         )}
 
         {activeStep === 'results' && result && (
-          <div className="compliance-results-layout">
+          <div className={resultsSubTab === "legal_rules" ? "compliance-results-layout" : "w-full space-y-4"}>
             <section className="compliance-results-main">
               <div className="compliance-result-meta">
                 <div>
@@ -2201,6 +2296,65 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                 <span>Evaluation {result.evaluation_id}</span>
               </div>
 
+              {/* Page Sub-Tabs: 3-Page Flow (1. Roadmap -> 2. Registration -> 3. Legal Rules) */}
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3 mb-1">
+                <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResultsSubTab('roadmap');
+                      window.scrollTo(0, 0);
+                    }}
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      resultsSubTab === 'roadmap'
+                        ? 'bg-white text-emerald-800 shadow-xs border border-slate-200'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-[10px] font-extrabold">1</span>
+                    <span>{guidanceLanguage === 'si' ? 'ක්‍රියාකාරී මාර්ග සිතියම' : 'Actionable Roadmap'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResultsSubTab('registration');
+                      window.scrollTo(0, 0);
+                    }}
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      resultsSubTab === 'registration'
+                        ? 'bg-white text-blue-800 shadow-xs border border-slate-200'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center text-[10px] font-extrabold">2</span>
+                    <span>{guidanceLanguage === 'si' ? 'ව්‍යාපාර ලියාපදිංචිය (Form 1)' : 'Business Registration'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResultsSubTab('legal_rules');
+                      window.scrollTo(0, 0);
+                    }}
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      resultsSubTab === 'legal_rules'
+                        ? 'bg-white text-amber-800 shadow-xs border border-slate-200'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-[10px] font-extrabold">3</span>
+                    <span>{guidanceLanguage === 'si' ? 'අදාළ නීති සහ අවශ්‍යතා' : 'Legal Rules & Actions'}</span>
+                  </button>
+                </div>
+
+                <span className="text-[11px] font-semibold text-slate-500 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200">
+                  {resultsSubTab === 'roadmap'
+                    ? (guidanceLanguage === 'si' ? 'පිටුව 1/3' : 'Page 1 of 3')
+                    : resultsSubTab === 'registration'
+                    ? (guidanceLanguage === 'si' ? 'පිටුව 2/3' : 'Page 2 of 3')
+                    : (guidanceLanguage === 'si' ? 'පිටුව 3/3' : 'Page 3 of 3')}
+                </span>
+              </div>
+
               {!result.profile_validation.complete && (
                 <div className="compliance-incomplete">
                   <i className="fa-solid fa-circle-info" />
@@ -2208,9 +2362,11 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                 </div>
               )}
 
-              {/* ------------------------------------------------------------- */}
-              {/* ACTIONABLE PROCEDURAL ROADMAP (TRAINED ON 600 SME SCENARIOS)  */}
-              {/* ------------------------------------------------------------- */}
+              {/* ============================================================= */}
+              {/* PAGE 1: ACTIONABLE COMPLIANCE ROADMAP & STATUTORY RULES       */}
+              {/* ============================================================= */}
+              {resultsSubTab === 'roadmap' && (
+                <>
               {result.action_roadmap && (
                 <section className="rounded-2xl border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/70 p-5 shadow-sm space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-200/60 pb-3">
@@ -2307,387 +2463,93 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                       </ol>
                     </div>
                   </div>
-                </section>
-              )}
 
-              {/* ----------------------------------------------------------------- */}
-              {/* COMPONENT 2 PILLAR: BUSINESS REGISTRATION GUIDANCE & ROADMAP     */}
-              {/* ----------------------------------------------------------------- */}
-              {result.registration_guidance && (
-                <section className="rounded-2xl border border-blue-200/90 bg-gradient-to-br from-blue-50/50 via-white to-indigo-50/30 p-5 shadow-xs space-y-5">
-                  {/* Header with Bilingual Selector */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-blue-200/70 pb-3.5">
-                    <div className="flex items-center gap-2.5">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm text-sm">
-                        <i className="fa-solid fa-landmark" />
-                      </span>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-bold text-slate-900">
-                            {guidanceLanguage === 'si'
-                              ? 'AI-මඟපෙන්වීම සහිත ව්‍යාපාර ලියාපදිංචි මාර්ග සිතියම සහ ආයතනික ක්‍රියාවලිය'
-                              : 'AI-Assisted Business Registration Guidance & Institutional Roadmap'}
-                          </h4>
-                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800">
-                            <i className="fa-solid fa-brain text-[9px]" /> {guidanceLanguage === 'si' ? 'ලියාපදිංචි පද්ධතිය' : 'Registration Engine'}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-600">
-                          {guidanceLanguage === 'si'
-                            ? 'බස්නාහිර පළාත් නීති රාමුව (1990 අංක 04 දරන ප්‍රඥප්තිය සහ 2007 අංක 07 දරන සමාගම් පනත)'
-                            : 'Western Province Legal Framework (Statute No. 04 of 1990 & Companies Act No. 07 of 2007)'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[11px] font-semibold text-blue-900 bg-blue-100 px-3 py-1 rounded-full border border-blue-200">
-                        📍 {guidanceLanguage === 'si'
-                          ? `${getDistrictSinhala(result.registration_guidance.district)} දිස්ත්‍රික් බලප්‍රදේශය`
-                          : `${result.registration_guidance.district} District Jurisdiction`}
-                      </span>
-
-                      {/* Language Switcher Toggle */}
-                      <div className="inline-flex items-center bg-white p-0.5 rounded-xl border border-blue-300 shadow-2xs">
-                        <button
-                          type="button"
-                          onClick={() => setGuidanceLanguage('en')}
-                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            guidanceLanguage === 'en'
-                              ? 'bg-blue-600 text-white shadow-xs'
-                              : 'text-slate-600 hover:text-blue-700 hover:bg-blue-50'
-                          }`}
-                        >
-                          🇬🇧 English
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setGuidanceLanguage('si')}
-                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            guidanceLanguage === 'si'
-                              ? 'bg-blue-600 text-white shadow-xs'
-                              : 'text-slate-600 hover:text-blue-700 hover:bg-blue-50'
-                          }`}
-                        >
-                          🇱🇰 සිංහල
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Official Export & PDF Generation Banner */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-blue-200 shadow-xs">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
-                        <i className="fa-solid fa-file-pdf text-base text-red-500" />
-                      </span>
-                      <div>
-                        <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                          {guidanceLanguage === 'si' ? 'නිල නීතිමය ලියකියවිලි කට්ටලය' : 'Official Regulatory Documentation Packages'}
-                          <span className="text-[9px] uppercase font-extrabold bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200">
-                            {guidanceLanguage === 'si' ? 'මුද්‍රණයට සූදානම්' : 'Print-Ready'}
-                          </span>
-                        </span>
-                        <p className="text-[11px] text-slate-500">
-                          {guidanceLanguage === 'si'
-                            ? 'ලියාපදිංචිය සඳහා අවශ්‍ය නිල අනුකූලතා ලේඛන සහ නියමිත අයදුම්පත් සම්පූර්ණ කර බාගත කරන්න.'
-                            : 'Generate formal, submission-ready compliance documentation and official application forms.'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={handleDownloadDossier}
-                        disabled={isDownloadingDossier}
-                        className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs shadow-xs transition-all disabled:opacity-50 cursor-pointer"
-                      >
-                        <i className={`fa-solid ${isDownloadingDossier ? 'fa-spinner fa-spin' : 'fa-file-shield'}`} />
-                        <span>
-                          {isDownloadingDossier
-                            ? (guidanceLanguage === 'si' ? 'සකස් කරමින් පවතී...' : 'Generating Dossier...')
-                            : (guidanceLanguage === 'si' ? 'අනුකූලතා ලියකියවිලි (PDF) බාගත කරන්න' : 'Download Compliance Dossier (PDF)')}
-                        </span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleDownloadForm1}
-                        disabled={isDownloadingForm1}
-                        className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all disabled:opacity-50 cursor-pointer"
-                      >
-                        <i className={`fa-solid ${isDownloadingForm1 ? 'fa-spinner fa-spin' : 'fa-file-signature'}`} />
-                        <span>
-                          {isDownloadingForm1
-                            ? (guidanceLanguage === 'si' ? 'සකස් කරමින් පවතී...' : 'Preparing Form 1...')
-                            : (guidanceLanguage === 'si' ? 'නිල 1 වන ආකෘති පත්‍රය (PDF) බාගත කරන්න' : 'Download Official Form 1 (PDF)')}
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* 1. Legal Form Recommendation & Office Routing Banner */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 text-xs">
-                    {/* Legal Form */}
-                    <div className="bg-white p-3.5 rounded-xl border border-blue-100 shadow-xs space-y-1.5">
-                      <span className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">
-                        <i className="fa-solid fa-scale-balanced text-blue-600 mr-1" />
-                        {guidanceLanguage === 'si' ? 'නිර්දේශිත නීතිමය ස්වරූපය' : 'Recommended Legal Form'}
-                      </span>
-                      <p className="font-bold text-blue-950 text-xs">
+                  {/* Next Button: Proceed to Business Registration Guidance Page (Page 2) */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-3.5 border-t border-emerald-200/60">
+                    <span className="text-[11px] text-emerald-800 font-medium flex items-center gap-1.5">
+                      <i className="fa-solid fa-circle-check text-emerald-600" />
+                      {guidanceLanguage === 'si'
+                        ? 'ක්‍රියාකාරී මාර්ග සිතියම සමාලෝචනය කර ඊළඟ පිටුවෙහි ඇති ලියාපදිංචි මාර්ග සිතියම වෙත පිවිසෙන්න:'
+                        : 'Review this actionable roadmap, then proceed to the official registration page:'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResultsSubTab('registration');
+                        window.scrollTo(0, 0);
+                      }}
+                      className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all cursor-pointer group ml-auto"
+                    >
+                      <span>
                         {guidanceLanguage === 'si'
-                          ? (result.registration_guidance.pathway_key === 'partnership'
-                              ? 'හවුල් ව්‍යාපාරය (Partnership)'
-                              : result.registration_guidance.pathway_key === 'private_limited'
-                              ? 'පුද්ගලික සීමිත සමාගම (Pvt Ltd)'
-                              : 'තනි පුද්ගල ව්‍යාපාරය (Sole Proprietorship)')
-                          : stripSinhalaText(result.registration_guidance.recommended_legal_form)}
-                      </p>
-                      <p className="text-[10px] text-slate-500 font-medium">
-                        {guidanceLanguage === 'si'
-                          ? (result.registration_guidance.pathway_key === 'private_limited'
-                              ? '2007 අංක 07 දරන සමාගම් පනත (eROC ඔස්සේ)'
-                              : '1990 අංක 04 දරන බස්නාහිර පළාත් ව්‍යාපාර නාම ප්‍රඥප්තිය (3 වන වගන්තිය)')
-                          : result.registration_guidance.legal_basis}
-                      </p>
-                      <p className="text-[11px] text-slate-700 leading-relaxed bg-blue-50/50 p-2 rounded-lg border border-blue-100/60 mt-1">
-                        {guidanceLanguage === 'si'
-                          ? (result.registration_guidance.pathway_key === 'partnership'
-                              ? 'කළමනාකරණය, ප්‍රාග්ධනය සහ ලාභ බෙදාගන්නා සම-ආරම්භකයින් 2 සිට 20 දක්වා හවුල් ව්‍යාපාරයක් සඳහා සුදුසු වේ.'
-                              : result.registration_guidance.pathway_key === 'private_limited'
-                              ? 'ව්‍යාපාර පරිමාණය හා සේවක සංඛ්‍යාව අනුව සීමිත වගකීම් සහ බදු කාර්යක්ෂමතාව ලබා දෙන ආයතනික ආකෘතියකි.'
-                              : 'අවම ආරම්භක ප්‍රාග්ධනයක් සහිත තනි ව්‍යවසායකයෙකුට සුදුසු වන අතර, අවම නීතිමය වාර්තාකරණ අවශ්‍යතා සහිතව කඩිනමින් ලියාපදිංචි කළ හැක.')
-                          : result.registration_guidance.reasoning}
-                      </p>
-                    </div>
-
-                    {/* Target Authority & Office */}
-                    <div className="bg-white p-3.5 rounded-xl border border-blue-100 shadow-xs space-y-1.5">
-                      <span className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">
-                        <i className="fa-solid fa-building-columns text-emerald-600 mr-1" />
-                        {guidanceLanguage === 'si' ? 'අදාළ බලයලත් ආයතනය සහ ස්ථානය' : 'Target Authority & Location'}
+                          ? 'ඊළඟ පිටුව: AI ව්‍යාපාර ලියාපදිංචි මාර්ග සිතියම (Page 2) →'
+                          : 'Next Page: Business Registration Guidance (Page 2) →'}
                       </span>
-                      <p className="font-bold text-slate-900 text-xs">
-                        {guidanceLanguage === 'si'
-                          ? (result.registration_guidance.pathway_key === 'private_limited'
-                              ? 'සමාගම් රෙජිස්ට්‍රාර් දෙපාර්තමේන්තුව (සමාගම් මැදුර, කොළඹ 10 / eROC)'
-                              : 'බස්නාහිර පළාත් සභාවේ ව්‍යාපාර නාම දෙපාර්තමේන්තුව (ප්‍රාදේශීය ලේකම් කාර්යාලය හරහා)')
-                          : result.registration_guidance.governing_body}
-                      </p>
-                      <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 space-y-1 mt-1">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase block">
-                          {guidanceLanguage === 'si' ? 'වගකිවයුතු කාර්යාලය:' : 'Responsible Office:'}
-                        </span>
-                        <p className="text-[11px] text-slate-800 font-medium flex items-start gap-1.5">
-                          <i className="fa-solid fa-location-dot text-red-500 text-[10px] mt-0.5" />
-                          <span>
-                            {guidanceLanguage === 'si'
-                              ? (result.registration_guidance.pathway_key === 'private_limited'
-                                  ? 'සමාගම් රෙජිස්ට්‍රාර් දෙපාර්තමේන්තුව (සමාගම් මැදුර, 400 ඩී.ආර්. විජේවර්ධන මාවත, කොළඹ 10)'
-                                  : `${getDistrictSinhala(result.registration_guidance.district)} ප්‍රාදේශීය ලේකම් කාර්යාලය (උදා. තිඹිරිගස්යාය, කොළඹ, කඩුවෙල, මහරගම, දෙහිවල-ගල්කිස්ස)`)
-                              : result.registration_guidance.target_office}
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Statutory Fee & Timeline */}
-                    <div className="bg-white p-3.5 rounded-xl border border-blue-100 shadow-xs space-y-2">
-                      <span className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">
-                        <i className="fa-solid fa-receipt text-amber-600 mr-1" />
-                        {guidanceLanguage === 'si' ? 'නිල ලියාපදිංචි ගාස්තු සහ කාලය' : 'Official Filing & Cost Estimation'}
-                      </span>
-                      <div className="bg-amber-50/60 p-2.5 rounded-lg border border-amber-200/60 space-y-1">
-                        <span className="text-[10px] font-bold text-amber-900 block">
-                          {guidanceLanguage === 'si' ? 'නියමිත අයදුම්පත:' : 'Prescribed Application:'}
-                        </span>
-                        <p className="text-[11px] font-semibold text-slate-900">
-                          {guidanceLanguage === 'si'
-                            ? (result.registration_guidance.pathway_key === 'private_limited'
-                                ? 'eROC 1 වන ආකෘති පත්‍රය (සමාගමක් ලියාපදිංචි කිරීමේ අයදුම්පත)'
-                                : 'බස්නාහිර පළාත් සභා ආකෘති පත්‍ර අංක 1 (ව්‍යාපාර නාම ලියාපදිංචි අයදුම්පත)')
-                            : stripSinhalaText(result.registration_guidance.official_form_name)}
-                        </p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 text-center pt-0.5">
-                        <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
-                          <span className="text-[9px] text-slate-500 uppercase font-bold block">
-                            {guidanceLanguage === 'si' ? 'ඇස්තමේන්තුගත ගාස්තුව' : 'Est. Cost'}
-                          </span>
-                          <span className="text-[11px] font-bold text-emerald-700">
-                            {guidanceLanguage === 'si'
-                              ? result.registration_guidance.estimated_fees.replace('LKR', 'රු.').replace('Approx.', 'ආසන්න වශයෙන්').replace('taxes', 'බදු')
-                              : result.registration_guidance.estimated_fees}
-                          </span>
-                        </div>
-                        <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
-                          <span className="text-[9px] text-slate-500 uppercase font-bold block">
-                            {guidanceLanguage === 'si' ? 'ගතවන කාලය' : 'Processing Time'}
-                          </span>
-                          <span className="text-[11px] font-bold text-blue-700">
-                            {guidanceLanguage === 'si'
-                              ? result.registration_guidance.estimated_timeline.replace('Business Days', 'වැඩකරන දින').replace('Days', 'දින').replace('Instant upon approval', 'අනුමැතිය ලද වහාම')
-                              : result.registration_guidance.estimated_timeline}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 2. 5-Stage Chronological Registration Stepper */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h5 className="text-xs font-bold text-slate-900 flex items-center gap-2">
-                        <i className="fa-solid fa-list-ol text-blue-600" />
-                        {guidanceLanguage === 'si'
-                          ? 'පියවරෙන් පියවර නිල ලියාපදිංචි කිරීමේ ක්‍රියාවලිය'
-                          : '5-Stage Official Registration Procedure'}
-                      </h5>
-                      <span className="text-[10px] font-medium text-slate-500">
-                        {guidanceLanguage === 'si' ? 'කාලානුක්‍රමික පියවර 5' : 'Chronological Flow'}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-2.5">
-                      {result.registration_guidance.stages.map((stg) => {
-                        const tr = STAGE_TRANSLATIONS[stg.stage_number];
-                        const isSi = guidanceLanguage === 'si';
-                        const stageTitle = isSi ? (tr?.title_si || stg.title_si || stg.title) : (tr?.title_en || stripSinhalaText(stg.title));
-                        const stageAction = isSi ? (tr?.action_si || stg.action) : (tr?.action_en || stg.action);
-                        const stageDuration = isSi ? (tr?.duration_si || stg.duration) : (tr?.duration_en || stg.duration);
-                        const stageFee = isSi ? (tr?.fee_si || stg.statutory_fee) : (tr?.fee_en || stg.statutory_fee);
-
-                        return (
-                          <div
-                            key={stg.stage_number}
-                            className="bg-white rounded-xl border border-slate-200 p-3 shadow-2xs space-y-2 flex flex-col justify-between hover:border-blue-300 transition-all"
-                          >
-                            <div className="space-y-1.5">
-                              <div className="flex items-center justify-between">
-                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-blue-800 font-extrabold text-[10px]">
-                                  {stg.stage_number}
-                                </span>
-                                <span className="text-[9px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
-                                  {stageDuration}
-                                </span>
-                              </div>
-
-                              <h6 className="font-bold text-slate-900 text-[11px] leading-tight">
-                                {stageTitle}
-                              </h6>
-                              <p className="text-[10px] text-slate-600 leading-relaxed pt-1">
-                                {stageAction}
-                              </p>
-                            </div>
-
-                            <div className="pt-2 border-t border-slate-100 text-[9px] text-slate-500">
-                              <span className="block font-semibold text-slate-700">
-                                {isSi ? `ගාස්තුව: ${stageFee}` : `Fee: ${stageFee}`}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* 3. Document Readiness Audit & Form 1 Completion Assistant Grid */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-1">
-                    {/* Document Readiness Checklist */}
-                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
-                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                        <h5 className="font-bold text-slate-900 text-xs flex items-center gap-2">
-                          <i className="fa-solid fa-folder-closed text-blue-600" />
-                          {guidanceLanguage === 'si' ? 'ලියාපදිංචියට පෙර ලියකියවිලි සූදානම පරීක්ෂාව' : 'Pre-Filing Document Readiness Audit'}
-                        </h5>
-                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                          {guidanceLanguage === 'si'
-                            ? `${getDistrictSinhala(result.registration_guidance.district)} දිස්ත්‍රික්කය සඳහා තහවුරු කරන ලදී`
-                            : `Verified for ${result.registration_guidance.district}`}
-                        </span>
-                      </div>
-
-                      <div className="space-y-2">
-                        {result.registration_guidance.document_checklist.map((doc) => {
-                          const isSi = guidanceLanguage === 'si';
-                          const docName = isSi ? (doc.name_si || doc.name) : stripSinhalaText(doc.name);
-                          const docPurpose = isSi ? (DOC_PURPOSE_SINHALA[doc.document_id] || doc.purpose) : doc.purpose;
-
-                          return (
-                            <div
-                              key={doc.document_id}
-                              className="p-2.5 rounded-lg border border-slate-100 bg-slate-50/70 flex items-start justify-between gap-2.5 text-xs"
-                            >
-                              <div className="space-y-0.5">
-                                <span className="font-bold text-slate-900 text-[11px] block">
-                                  {docName}
-                                </span>
-                                <p className="text-[10px] text-slate-600 pt-0.5">
-                                  {docPurpose}
-                                </p>
-                              </div>
-
-                              <span
-                                className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded border ${
-                                  doc.status === 'READY'
-                                    ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                                    : 'bg-amber-100 text-amber-800 border-amber-200'
-                                }`}
-                              >
-                                {doc.status === 'READY'
-                                  ? (isSi ? '✓ සූදානම්' : '✓ Ready')
-                                  : (isSi ? '⚠ අවශ්‍යයි' : '⚠ Required')}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Official Form Completion Assistant */}
-                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
-                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                        <h5 className="font-bold text-slate-900 text-xs flex items-center gap-2">
-                          <i className="fa-solid fa-pen-to-square text-teal-600" />
-                          {guidanceLanguage === 'si' ? 'ආකෘති පත්‍රය සම්පූර්ණ කිරීමේ මඟපෙන්වීම' : 'Application Completion Assistant'}
-                        </h5>
-                        <span className="text-[10px] font-semibold text-slate-500">
-                          {guidanceLanguage === 'si'
-                            ? 'බස්නාහිර පළාත් සභා ආකෘති පත්‍රය'
-                            : stripSinhalaText(result.registration_guidance.official_form_name.split('(')[0])}
-                        </span>
-                      </div>
-
-                      <div className="space-y-2 text-xs">
-                        {result.registration_guidance.form_fields_guide.map((field, fIdx) => {
-                          const isSi = guidanceLanguage === 'si';
-                          const guideSi = FORM_GUIDE_SINHALA[fIdx];
-                          const fieldLabel = isSi ? (guideSi?.label || field.field_label) : stripSinhalaText(field.field_label);
-                          const fieldDesc = isSi ? (guideSi?.desc || field.description) : field.description;
-
-                          return (
-                            <div key={fIdx} className="bg-slate-50/80 p-2.5 rounded-lg border border-slate-100 space-y-0.5">
-                              <span className="font-bold text-slate-800 text-[11px] block">
-                                {fieldLabel}
-                              </span>
-                              <p className="text-[10px] text-slate-500">
-                                {fieldDesc}
-                              </p>
-                              <div className="mt-1 flex items-center gap-1.5 bg-white px-2 py-1 rounded border border-slate-200 text-[11px] text-slate-700 font-medium">
-                                <span className="text-[9px] uppercase font-bold text-teal-700 bg-teal-50 px-1 py-0.5 rounded border border-teal-200">
-                                  {isSi ? 'යෝජිත අගය' : 'Suggested Value'}
-                                </span>
-                                <span className="truncate">{field.suggested_value}</span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                      <i className="fa-solid fa-arrow-right text-xs transition-transform group-hover:translate-x-1" />
+                    </button>
                   </div>
                 </section>
               )}
+            </>
+          )}
+
+          {/* ============================================================= */}
+          {/* PAGE 3: APPLICABLE LEGAL RULES & INSTITUTIONAL ACTIONS        */}
+          {/* ============================================================= */}
+          {resultsSubTab === 'legal_rules' && (
+            <div className="space-y-4 animate-fade-in">
+              {/* Page 3 Top Navigation Bar with Back Button & Language Switcher */}
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-amber-200 shadow-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResultsSubTab('registration');
+                    window.scrollTo(0, 0);
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 font-bold text-xs transition-all cursor-pointer border border-slate-200 shadow-2xs"
+                >
+                  <i className="fa-solid fa-arrow-left text-xs" />
+                  <span>
+                    {guidanceLanguage === 'si'
+                      ? '← ආපසු: ව්‍යාපාර ලියාපදිංචි මාර්ගෝපදේශය (Page 2)'
+                      : '← Back to Registration Guidance (Page 2)'}
+                  </span>
+                </button>
+
+                <div className="flex items-center gap-2.5">
+                  <span className="text-[11px] font-semibold text-amber-900 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
+                    {rulesLanguage === 'si'
+                      ? `හඳුනාගත් නීති සහ ප්‍රතිපත්ති ${result.source_discovery.length} කි`
+                      : `${result.source_discovery.length} Identified Rules & Policies`}
+                  </span>
+
+                  {/* Language Switcher for Rules */}
+                  <div className="inline-flex rounded-xl bg-amber-100/80 p-0.5 border border-amber-300">
+                    <button
+                      type="button"
+                      onClick={() => setRulesLanguage('en')}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        rulesLanguage === 'en'
+                          ? 'bg-amber-600 text-white shadow-xs'
+                          : 'text-amber-950 hover:text-amber-700 hover:bg-amber-50'
+                      }`}
+                    >
+                      🇬🇧 English
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRulesLanguage('si')}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        rulesLanguage === 'si'
+                          ? 'bg-amber-600 text-white shadow-xs'
+                          : 'text-amber-950 hover:text-amber-700 hover:bg-amber-50'
+                      }`}
+                    >
+                      🇱🇰 සිංහල
+                    </button>
+                  </div>
+                </div>
+              </div>
 
               {result.source_discovery.length > 0 && (
                 <section className="rounded-2xl border border-amber-300/80 bg-gradient-to-br from-amber-50/50 via-white to-amber-50/30 p-5 shadow-xs space-y-4">
@@ -2695,19 +2557,64 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                     <div>
                       <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                         <i className="fa-solid fa-scale-balanced text-amber-600" />
-                        Applicable Legal Rules &amp; Institutional Actions
+                        {rulesLanguage === 'si'
+                          ? 'අදාළ නීතිමය රීති සහ ආයතනික ක්‍රියාමාර්ග'
+                          : 'Applicable Legal Rules & Institutional Actions'}
                       </h4>
                       <p className="mt-0.5 text-xs text-slate-600">
-                        AI-predicted institutional guidance answering: <em>What does this rule do? Where should you go? What action is required?</em>
+                        {rulesLanguage === 'si' ? (
+                          <>
+                            AI මඟින් පුරෝකථනය කළ ආයතනික මගපෙන්වීම:{' '}
+                            <em>මෙම නීතියෙන් කුමක් සිදුවේද? ඔබ යා යුත්තේ කොතැනටද? ගත යුතු ක්‍රියාමාර්ගය කුමක්ද?</em>
+                          </>
+                        ) : (
+                          <>
+                            AI-predicted institutional guidance answering:{' '}
+                            <em>What does this rule do? Where should you go? What action is required?</em>
+                          </>
+                        )}
                       </p>
                     </div>
-                    <span className="text-[11px] font-semibold text-amber-900 bg-amber-100 px-2.5 py-1 rounded-full border border-amber-200">
-                      {result.source_discovery.length} Identified Rules &amp; Policies
-                    </span>
+
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      {/* Language Switcher for Rules & Institutional Actions */}
+                      <div className="inline-flex rounded-xl bg-amber-100/80 p-0.5 border border-amber-300">
+                        <button
+                          type="button"
+                          onClick={() => setRulesLanguage('en')}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            rulesLanguage === 'en'
+                              ? 'bg-amber-600 text-white shadow-xs'
+                              : 'text-amber-950 hover:text-amber-700 hover:bg-amber-50'
+                          }`}
+                        >
+                          🇬🇧 English
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRulesLanguage('si')}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            rulesLanguage === 'si'
+                              ? 'bg-amber-600 text-white shadow-xs'
+                              : 'text-amber-950 hover:text-amber-700 hover:bg-amber-50'
+                          }`}
+                        >
+                          🇱🇰 සිංහල
+                        </button>
+                      </div>
+
+                      <span className="text-[11px] font-semibold text-amber-900 bg-amber-100 px-2.5 py-1 rounded-full border border-amber-200">
+                        {rulesLanguage === 'si'
+                          ? `හඳුනාගත් නීති සහ ප්‍රතිපත්ති ${result.source_discovery.length} කි`
+                          : `${result.source_discovery.length} Identified Rules & Policies`}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="space-y-4">
-                    {result.source_discovery.map((source, index) => (
+                    {result.source_discovery.map((source, index) => {
+                      const isSi = rulesLanguage === 'si';
+                      return (
                       <article
                         key={`${source.source_id}-${source.page}-${index}`}
                         className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3 transition-all hover:border-slate-300"
@@ -2716,7 +2623,7 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                         <div className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
                           <div>
                             <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/60 mb-1 inline-block">
-                              Statutory Source #{index + 1}
+                              {isSi ? `නීතිමය මූලාශ්‍රය #${index + 1}` : `Statutory Source #${index + 1}`}
                             </span>
                             <h5 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                               <i className="fa-solid fa-book-bookmark text-slate-500 text-xs" />
@@ -2725,17 +2632,31 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                             <p className="mt-0.5 text-[11px] text-slate-500">
                               {source.source_id}
                               {source.page
-                                ? ` · Page ${source.page}`
+                                ? isSi
+                                  ? ` · පිටුව ${source.page}`
+                                  : ` · Page ${source.page}`
                                 : source.section_reference
                                   ? ` · ${source.section_reference}`
                                   : ''}
-                              {source.authority ? ` · Authority: ${source.authority}` : ''}
+                              {source.authority
+                                ? isSi
+                                  ? ` · බලධාරී ආයතනය: ${source.authority}`
+                                  : ` · Authority: ${source.authority}`
+                                : ''}
                             </p>
                           </div>
 
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
-                              Verification: {source.verification_status || 'Draft Template'}
+                              {isSi
+                                ? `තහවුරු කිරීම: ${
+                                    source.verification_status === 'needs_verification'
+                                      ? 'තහවුරු කරගත යුතුය'
+                                      : source.verification_status === 'verified'
+                                        ? 'තහවුරු කර ඇත'
+                                        : 'කෙටුම්පත'
+                                  }`
+                                : `Verification: ${source.verification_status || 'Draft Template'}`}
                             </span>
                             <a
                               href={`${API_BASE}/api/v1/component2/legal-documents/${encodeURIComponent(source.source_file || source.source_id || source.title)}`}
@@ -2745,7 +2666,7 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                               title="View and download official Sri Lankan Act / Gazette / By-law (PDF)"
                             >
                               <i className="fa-solid fa-file-pdf text-red-500 text-xs" />
-                              <span>View Official PDF</span>
+                              <span>{isSi ? 'නිල PDF ලේඛනය බලන්න' : 'View Official PDF'}</span>
                             </a>
                           </div>
                         </div>
@@ -2760,10 +2681,16 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                               </span>
                               <div>
                                 <span className="font-bold text-slate-800 text-[11px] uppercase tracking-wide block">
-                                  1. මේ නීතියෙන් වෙන්නේ කුමක්ද? (What This Rule Mandates):
+                                  {isSi
+                                    ? '1. මේ නීතියෙන් වෙන්නේ කුමක්ද? (නීතිමය අවශ්‍යතාව):'
+                                    : '1. What This Rule Mandates:'}
                                 </span>
                                 <p className="text-slate-700 mt-0.5 leading-relaxed font-medium">
-                                  {source.action_guidance.rule_purpose}
+                                  {getRulePurposeText(
+                                    source.action_guidance.rule_purpose,
+                                    source.action_guidance.category,
+                                    isSi
+                                  )}
                                 </p>
                               </div>
                             </div>
@@ -2775,15 +2702,17 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                               </span>
                               <div>
                                 <span className="font-bold text-slate-800 text-[11px] uppercase tracking-wide block">
-                                  2. යන්න ඕනෙ ස්ථානය / කාර්යාලය කොහෙද? (Where to Go / Target Office):
+                                  {isSi
+                                    ? '2. යන්න ඕනෙ ස්ථානය / කාර්යාලය කොහෙද? (අදාළ ආයතනය):'
+                                    : '2. Where to Go / Target Office:'}
                                 </span>
                                 <p className="text-blue-900 font-bold mt-0.5">
-                                  {source.action_guidance.where_to_go}
+                                  {getWhereToGoText(source.action_guidance.where_to_go, isSi)}
                                 </p>
                                 {source.action_guidance.office_location && source.action_guidance.office_location !== 'nan' && (
                                   <p className="text-slate-600 text-[11px] mt-0.5 flex items-center gap-1">
                                     <i className="fa-solid fa-location-dot text-red-500 text-[10px]" />
-                                    {source.action_guidance.office_location}
+                                    {getOfficeLocationText(source.action_guidance.office_location, isSi)}
                                   </p>
                                 )}
                               </div>
@@ -2796,10 +2725,12 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                               </span>
                               <div>
                                 <span className="font-bold text-slate-800 text-[11px] uppercase tracking-wide block">
-                                  3. ගත යුතු ක්‍රියාමාර්ගය (Action Needed / Required Licence):
+                                  {isSi
+                                    ? '3. ගත යුතු ක්‍රියාමාර්ගය (අවශ්‍ය බලපත්‍රය / ලියාපදිංචිය):'
+                                    : '3. Action Needed / Required Licence:'}
                                 </span>
                                 <p className="text-emerald-900 font-bold mt-0.5">
-                                  {source.action_guidance.action_needed}
+                                  {getActionNeededText(source.action_guidance.action_needed, isSi)}
                                 </p>
                               </div>
                             </div>
@@ -2810,13 +2741,15 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                               <div className="bg-white p-2.5 rounded-lg border border-slate-200">
                                 <span className="font-bold text-slate-700 block mb-1">
                                   <i className="fa-solid fa-folder-closed text-slate-500 mr-1" />
-                                  ගෙනියන්න ඕනෙ ලියකියවිලි (Documents Checklist):
+                                  {isSi
+                                    ? 'ගෙනියන්න ඕනෙ ලියකියවිලි (Documents Checklist):'
+                                    : 'Documents Checklist:'}
                                 </span>
                                 <ul className="space-y-1 text-slate-600">
                                   {source.action_guidance.required_documents.slice(0, 4).map((doc, dIdx) => (
                                     <li key={dIdx} className="flex items-start gap-1.5">
                                       <i className="fa-solid fa-check text-emerald-600 text-[10px] mt-0.5" />
-                                      <span>{doc}</span>
+                                      <span>{getDocumentText(doc, isSi)}</span>
                                     </li>
                                   ))}
                                 </ul>
@@ -2826,11 +2759,13 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                               <div className="bg-white p-2.5 rounded-lg border border-slate-200">
                                 <span className="font-bold text-slate-700 block mb-1">
                                   <i className="fa-solid fa-list-ol text-slate-500 mr-1" />
-                                  පියවරෙන් පියවර (Procedural Steps):
+                                  {isSi
+                                    ? 'පියවරෙන් පියවර (Procedural Steps):'
+                                    : 'Procedural Steps:'}
                                 </span>
                                 <ol className="space-y-1 text-slate-600 list-decimal pl-3.5">
                                   {source.action_guidance.procedural_steps.slice(0, 3).map((st, sIdx) => (
-                                    <li key={sIdx}>{st}</li>
+                                    <li key={sIdx}>{getStepText(st, isSi)}</li>
                                   ))}
                                 </ol>
                               </div>
@@ -2842,14 +2777,17 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                         <details className="text-[11px] text-slate-500">
                           <summary className="cursor-pointer hover:text-slate-800 font-medium">
                             <i className="fa-solid fa-quote-left text-slate-400 mr-1" />
-                            View Raw Statutory Quote Excerpt from Source Document
+                            {isSi
+                              ? 'මූලාශ්‍ර ලේඛනයෙන් උපුටාගත් මුල් නීතිමය පාඨය බලන්න'
+                              : 'View Raw Statutory Quote Excerpt from Source Document'}
                           </summary>
                           <blockquote className="mt-2 border-l-2 border-amber-300 pl-3 leading-relaxed text-slate-700 bg-amber-50/40 p-2 rounded-r-lg">
                             {source.excerpt}
                           </blockquote>
                         </details>
                       </article>
-                    ))}
+                      );
+                    })}
                   </div>
                 </section>
               )}
@@ -2907,8 +2845,428 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                   <div className="compliance-empty-state">No requirements match this filter.</div>
                 )}
               </div>
+
+              {/* Bottom Navigation on Page 3 */}
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs mt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResultsSubTab('registration');
+                    window.scrollTo(0, 0);
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-all cursor-pointer border border-slate-200"
+                >
+                  <i className="fa-solid fa-arrow-left text-xs" />
+                  <span>
+                    {guidanceLanguage === 'si'
+                      ? '← ආපසු: ව්‍යාපාර ලියාපදිංචි මාර්ගෝපදේශය (Page 2)'
+                      : '← Back to Registration Guidance (Page 2)'}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveStep('profile')}
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs border border-blue-200 transition-all cursor-pointer"
+                >
+                  <i className="fa-solid fa-pen-to-square text-xs" />
+                  <span>{guidanceLanguage === 'si' ? 'ව්‍යාපාර පැතිකඩ සංස්කරණය' : 'Edit Business Profile'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ============================================================= */}
+          {/* PAGE 2: DEDICATED BUSINESS REGISTRATION GUIDANCE PAGE         */}
+          {/* ============================================================= */}
+          {resultsSubTab === 'registration' && result.registration_guidance && (
+            <div className="space-y-4 animate-fade-in">
+              {/* Page 2 Top Header Bar with Back Button */}
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-blue-200 shadow-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResultsSubTab('roadmap');
+                    window.scrollTo(0, 0);
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 font-bold text-xs transition-all cursor-pointer border border-slate-200 shadow-2xs"
+                >
+                  <i className="fa-solid fa-arrow-left text-xs" />
+                  <span>
+                    {guidanceLanguage === 'si'
+                      ? '← ආපසු: ක්‍රියාකාරී මාර්ග සිතියම (Back to Page 1)'
+                      : '← Back to Compliance Roadmap (Page 1)'}
+                  </span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold text-blue-900 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+                    📍 {guidanceLanguage === 'si'
+                      ? `${getDistrictSinhala(result.registration_guidance.district)} දිස්ත්‍රික් බලප්‍රදේශය`
+                      : `${result.registration_guidance.district} District Jurisdiction`}
+                  </span>
+
+                  {/* Language Switcher Toggle */}
+                  <div className="inline-flex items-center bg-white p-0.5 rounded-xl border border-blue-300 shadow-2xs">
+                    <button
+                      type="button"
+                      onClick={() => setGuidanceLanguage('en')}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        guidanceLanguage === 'en'
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-blue-700 hover:bg-blue-50'
+                      }`}
+                    >
+                      🇬🇧 English
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGuidanceLanguage('si')}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        guidanceLanguage === 'si'
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-blue-700 hover:bg-blue-50'
+                      }`}
+                    >
+                      🇱🇰 සිංහල
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Business Registration Guidance Card Content */}
+              <section className="rounded-2xl border border-blue-200/90 bg-gradient-to-br from-blue-50/50 via-white to-indigo-50/30 p-5 shadow-xs space-y-5">
+                {/* Header with Title and Registration Engine Badge */}
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-blue-200/70 pb-3.5">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm text-sm">
+                      <i className="fa-solid fa-landmark" />
+                    </span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-bold text-slate-900">
+                          {guidanceLanguage === 'si'
+                            ? 'AI-මඟපෙන්වීම සහිත ව්‍යාපාර ලියාපදිංචි මාර්ග සිතියම සහ ආයතනික ක්‍රියාවලිය'
+                            : 'AI-Assisted Business Registration Guidance & Institutional Roadmap'}
+                        </h4>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800">
+                          <i className="fa-solid fa-brain text-[9px]" /> {guidanceLanguage === 'si' ? 'ලියාපදිංචි පද්ධතිය' : 'Registration Engine'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600">
+                        {guidanceLanguage === 'si'
+                          ? 'බස්නාහිර පළාත් නීති රාමුව (1990 අංක 04 දරන ප්‍රඥප්තිය සහ 2007 අංක 07 දරන සමාගම් පනත)'
+                          : 'Western Province Legal Framework (Statute No. 04 of 1990 & Companies Act No. 07 of 2007)'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Official Export & PDF Generation Banner */}
+                <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-blue-200 shadow-xs">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
+                      <i className="fa-solid fa-file-pdf text-base text-red-500" />
+                    </span>
+                    <div>
+                      <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        {guidanceLanguage === 'si' ? 'නිල නීතිමය ලියකියවිලි කට්ටලය' : 'Official Regulatory Documentation Packages'}
+                        <span className="text-[9px] uppercase font-extrabold bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200">
+                          {guidanceLanguage === 'si' ? 'මුද්‍රණයට සූදානම්' : 'Print-Ready'}
+                        </span>
+                      </span>
+                      <p className="text-[11px] text-slate-500">
+                        {guidanceLanguage === 'si'
+                          ? 'ලියාපදිංචිය සඳහා අවශ්‍ය නිල අනුකූලතා ලේඛන සහ නියමිත අයදුම්පත් සම්පූර්ණ කර බාගත කරන්න.'
+                          : 'Generate formal, submission-ready compliance documentation and official application forms.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleDownloadDossier}
+                      disabled={isDownloadingDossier}
+                      className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                    >
+                      <i className={`fa-solid ${isDownloadingDossier ? 'fa-spinner fa-spin' : 'fa-file-shield'}`} />
+                      <span>
+                        {isDownloadingDossier
+                          ? (guidanceLanguage === 'si' ? 'සකස් කරමින් පවතී...' : 'Generating Dossier...')
+                          : (guidanceLanguage === 'si' ? 'අනුකූලතා ලියකියවිලි (PDF) බාගත කරන්න' : 'Download Compliance Dossier (PDF)')}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 1. Legal Form Recommendation & Office Routing Banner */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 text-xs">
+                  {/* Legal Form */}
+                  <div className="bg-white p-3.5 rounded-xl border border-blue-100 shadow-xs space-y-1.5">
+                    <span className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">
+                      <i className="fa-solid fa-scale-balanced text-blue-600 mr-1" />
+                      {guidanceLanguage === 'si' ? 'නිර්දේශිත නීතිමය ස්වරූපය' : 'Recommended Legal Form'}
+                    </span>
+                    <p className="font-bold text-blue-950 text-xs">
+                      {guidanceLanguage === 'si'
+                        ? (result.registration_guidance.pathway_key === 'partnership'
+                            ? 'හවුල් ව්‍යාපාරය (Partnership)'
+                            : result.registration_guidance.pathway_key === 'private_limited'
+                            ? 'පුද්ගලික සීමිත සමාගම (Pvt Ltd)'
+                            : 'තනි පුද්ගල ව්‍යාපාරය (Sole Proprietorship)')
+                        : stripSinhalaText(result.registration_guidance.recommended_legal_form)}
+                    </p>
+                    <p className="text-[10px] text-slate-500 font-medium">
+                      {guidanceLanguage === 'si'
+                        ? (result.registration_guidance.pathway_key === 'private_limited'
+                            ? '2007 අංක 07 දරන සමාගම් පනත (eROC ඔස්සේ)'
+                            : '1990 අංක 04 දරන බස්නාහිර පළාත් ව්‍යාපාර නාම ප්‍රඥප්තිය (3 වන වගන්තිය)')
+                        : result.registration_guidance.legal_basis}
+                    </p>
+                    <p className="text-[11px] text-slate-700 leading-relaxed bg-blue-50/50 p-2 rounded-lg border border-blue-100/60 mt-1">
+                      {guidanceLanguage === 'si'
+                        ? (result.registration_guidance.pathway_key === 'partnership'
+                            ? 'සහභාගී වන හවුල්කරුවන්ගේ නම් සහ වගකීම් සහිතව පළාත් සභා ප්‍රඥප්තිය යටතේ ලියාපදිංචිය හිමිවේ.'
+                            : result.registration_guidance.pathway_key === 'private_limited'
+                            ? 'සීමිත වගකීම් සහ අධ්‍යක්ෂ මණ්ඩල ව්‍යුහය සහිතව කොළඹ සමාගම් රෙජිස්ට්‍රාර් වෙතින් සංස්ථාගත කිරීම නිර්දේශ කෙරේ.'
+                            : 'තනි හිමිකරු යටතේ සරල නීතිමය වගකීම් සහිතව ප්‍රාදේශීය ලේකම් කාර්යාලය හරහා ලියාපදිංචි සහතිකය ලබාගත හැක.')
+                        : result.registration_guidance.recommendation_reason}
+                    </p>
+                  </div>
+
+                  {/* Competent Office */}
+                  <div className="bg-white p-3.5 rounded-xl border border-blue-100 shadow-xs space-y-1.5">
+                    <span className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">
+                      <i className="fa-solid fa-building-columns text-blue-600 mr-1" />
+                      {guidanceLanguage === 'si' ? 'අයදුම්පත් භාරදෙන නිල කාර්යාලය' : 'Competent Lodgement Office'}
+                    </span>
+                    <p className="font-bold text-blue-950 text-xs">
+                      {guidanceLanguage === 'si'
+                        ? (result.registration_guidance.pathway_key === 'private_limited'
+                            ? 'සමාගම් රෙජිස්ට්‍රාර් දෙපාර්තමේන්තුව (eROC, කොළඹ 10)'
+                            : `${getDistrictSinhala(result.registration_guidance.district)} ප්‍රාදේශීය ලේකම් කාර්යාලය (ව්‍යාපාර නාම අංශය)`)
+                        : stripSinhalaText(result.registration_guidance.competent_office)}
+                    </p>
+                    <p className="text-[11px] text-slate-600 leading-relaxed bg-slate-50 p-2 rounded-lg border border-slate-100 mt-1">
+                      {guidanceLanguage === 'si'
+                        ? `${getDistrictSinhala(result.registration_guidance.district)} දිස්ත්‍රික්කයේ ව්‍යාපාරික පරිශ්‍රය පිහිටි ප්‍රාදේශීය ලේකම් කොට්ඨාස කාර්යාලයට හෝ eROC පද්ධතියට ලේඛන යොමු කරන්න.`
+                        : result.registration_guidance.office_address}
+                    </p>
+                  </div>
+
+                  {/* Timeline & Statutory Fee */}
+                  <div className="bg-white p-3.5 rounded-xl border border-blue-100 shadow-xs space-y-1.5">
+                    <span className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">
+                      <i className="fa-solid fa-clock text-blue-600 mr-1" />
+                      {guidanceLanguage === 'si' ? 'ඇස්තමේන්තුගත කාලය සහ ගාස්තු' : 'Timeline & Estimated Fees'}
+                    </span>
+                    <p className="font-bold text-blue-950 text-xs">
+                      {guidanceLanguage === 'si' ? 'වැඩකරන දින 1 - 3 ඇතුළත' : result.registration_guidance.timeline_estimate}
+                    </p>
+                    <p className="text-[10px] text-slate-500">
+                      {guidanceLanguage === 'si'
+                        ? (result.registration_guidance.pathway_key === 'private_limited'
+                            ? 'eROC නාම අනුමැතිය සහ සංස්ථාගත කිරීමේ රජයේ ගාස්තු අදාළ වේ.'
+                            : '1990 අංක 04 දරන බස්නාහිර පළාත් සභා ප්‍රඥප්තිය යටතේ නියමිත මුද්දර ගාස්තු.')
+                        : result.registration_guidance.statutory_fee_estimate}
+                    </p>
+                    <div className="p-2 bg-emerald-50 rounded-lg border border-emerald-100 text-[11px] text-emerald-900 font-semibold mt-1 flex items-center gap-1.5">
+                      <i className="fa-solid fa-circle-check text-emerald-600 text-xs" />
+                      <span>{guidanceLanguage === 'si' ? 'පූර්ව පරීක්ෂාව සාර්ථකයි' : 'Prerequisites Verified'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. 5-Stage Chronological Roadmap */}
+                <div className="space-y-2.5 pt-1">
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                      <i className="fa-solid fa-list-ol text-blue-600" />
+                      {guidanceLanguage === 'si'
+                        ? 'පියවරෙන් පියවර නිල ලියාපදිංචි කිරීමේ ක්‍රියාවලිය'
+                        : '5-Stage Official Registration Procedure'}
+                    </h5>
+                    <span className="text-[10px] font-medium text-slate-500">
+                      {guidanceLanguage === 'si' ? 'කාලානුක්‍රමික පියවර 5' : 'Chronological Flow'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-2.5">
+                    {result.registration_guidance.stages.map((stg) => {
+                      const tr = STAGE_TRANSLATIONS[stg.stage_number];
+                      const isSi = guidanceLanguage === 'si';
+                      const stageTitle = isSi ? (tr?.title_si || stg.title_si || stg.title) : (tr?.title_en || stripSinhalaText(stg.title));
+                      const stageAction = isSi ? (tr?.action_si || stg.action) : (tr?.action_en || stg.action);
+                      const stageDuration = isSi ? (tr?.duration_si || stg.duration) : (tr?.duration_en || stg.duration);
+                      const stageFee = isSi ? (tr?.fee_si || stg.statutory_fee) : (tr?.fee_en || stg.statutory_fee);
+
+                      return (
+                        <div
+                          key={stg.stage_number}
+                          className="bg-white rounded-xl border border-slate-200 p-3 shadow-2xs space-y-2 flex flex-col justify-between hover:border-blue-300 transition-all"
+                        >
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-blue-800 font-extrabold text-[10px]">
+                                {stg.stage_number}
+                              </span>
+                              <span className="text-[9px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                                {stageDuration}
+                              </span>
+                            </div>
+
+                            <h6 className="font-bold text-slate-900 text-[11px] leading-tight">
+                              {stageTitle}
+                            </h6>
+                            <p className="text-[10px] text-slate-600 leading-relaxed pt-1">
+                              {stageAction}
+                            </p>
+                          </div>
+
+                          <div className="pt-2 border-t border-slate-100 text-[9px] text-slate-500">
+                            <span className="block font-semibold text-slate-700">
+                              {isSi ? `ගාස්තුව: ${stageFee}` : `Fee: ${stageFee}`}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 3. Document Readiness Audit & Form 1 Completion Assistant Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-1">
+                  {/* Document Readiness Checklist */}
+                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                      <h5 className="font-bold text-slate-900 text-xs flex items-center gap-2">
+                        <i className="fa-solid fa-folder-closed text-blue-600" />
+                        {guidanceLanguage === 'si' ? 'ලියාපදිංචියට පෙර ලියකියවිලි සූදානම පරීක්ෂාව' : 'Pre-Filing Document Readiness Audit'}
+                      </h5>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        {guidanceLanguage === 'si'
+                          ? `${getDistrictSinhala(result.registration_guidance.district)} දිස්ත්‍රික්කය සඳහා තහවුරු කරන ලදී`
+                          : `Verified for ${result.registration_guidance.district}`}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {result.registration_guidance.document_checklist.map((doc) => {
+                        const isSi = guidanceLanguage === 'si';
+                        const docName = isSi ? (doc.name_si || doc.name) : stripSinhalaText(doc.name);
+                        const docPurpose = isSi ? (DOC_PURPOSE_SINHALA[doc.document_id] || doc.purpose) : doc.purpose;
+
+                        return (
+                          <div
+                            key={doc.document_id}
+                            className="p-2.5 rounded-lg border border-slate-100 bg-slate-50/70 flex items-start justify-between gap-2.5 text-xs"
+                          >
+                            <div className="flex items-start gap-2.5">
+                              <i className="fa-solid fa-file-lines text-blue-600 text-xs mt-0.5" />
+                              <div>
+                                <p className="font-bold text-slate-800 text-xs">{docName}</p>
+                                <p className="text-[11px] text-slate-500 mt-0.5">{docPurpose}</p>
+                              </div>
+                            </div>
+                            <span
+                              className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded shrink-0 ${
+                                doc.is_mandatory
+                                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                  : 'bg-slate-100 text-slate-600'
+                              }`}
+                            >
+                              {isSi ? (doc.is_mandatory ? 'අනිවාර්යයි' : 'විකල්ප') : (doc.is_mandatory ? 'Mandatory' : 'Optional')}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Pre-fill Form 1 Assistant */}
+                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                      <h5 className="font-bold text-slate-900 text-xs flex items-center gap-2">
+                        <i className="fa-solid fa-pen-to-square text-teal-600" />
+                        {guidanceLanguage === 'si' ? 'ආකෘති පත්‍රය සම්පූර්ණ කිරීමේ මඟපෙන්වීම' : 'Application Completion Assistant'}
+                      </h5>
+                      <span className="text-[10px] font-semibold text-slate-500">
+                        {guidanceLanguage === 'si'
+                          ? 'බස්නාහිර පළාත් සභා ආකෘති පත්‍රය'
+                          : stripSinhalaText(result.registration_guidance.official_form_name.split('(')[0])}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 text-xs">
+                      {result.registration_guidance.form_fields_guide.map((field, fIdx) => {
+                        const isSi = guidanceLanguage === 'si';
+                        const guideSi = FORM_GUIDE_SINHALA[fIdx];
+                        const fieldLabel = isSi ? (guideSi?.label || field.field_label) : stripSinhalaText(field.field_label);
+                        const fieldDesc = isSi ? (guideSi?.desc || field.description) : field.description;
+
+                        return (
+                          <div key={fIdx} className="bg-slate-50/80 p-2.5 rounded-lg border border-slate-100 space-y-0.5">
+                            <span className="font-bold text-slate-800 text-[11px] block">
+                              {fieldLabel}
+                            </span>
+                            <p className="text-[10px] text-slate-500">
+                              {fieldDesc}
+                            </p>
+                            <div className="mt-1 flex items-center gap-1.5 bg-white px-2 py-1 rounded border border-slate-200 text-[11px] text-slate-700 font-medium">
+                              <span className="text-[9px] uppercase font-bold text-teal-700 bg-teal-50 px-1 py-0.5 rounded border border-teal-200">
+                                {isSi ? 'යෝජිත අගය' : 'Suggested Value'}
+                              </span>
+                              <span className="truncate">{field.suggested_value}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Bottom Navigation on the Registration Page */}
+              <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResultsSubTab('roadmap');
+                    window.scrollTo(0, 0);
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-all cursor-pointer border border-slate-200"
+                >
+                  <i className="fa-solid fa-arrow-left text-xs" />
+                  <span>
+                    {guidanceLanguage === 'si'
+                      ? '← ආපසු: ක්‍රියාකාරී මාර්ග සිතියම (Back)'
+                      : 'Back to Compliance Roadmap'}
+                  </span>
+                </button>
+
+                {/* Next Button: Proceed to Applicable Legal Rules & Institutional Actions (Page 3) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResultsSubTab('legal_rules');
+                    window.scrollTo(0, 0);
+                  }}
+                  className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all cursor-pointer group"
+                >
+                  <span>
+                    {guidanceLanguage === 'si'
+                      ? 'ඊළඟ පිටුව: අදාළ නීතිමය රීති සහ ආයතනික ක්‍රියාමාර්ග (Page 3) →'
+                      : 'Next: Applicable Legal Rules & Institutional Actions (Page 3) →'}
+                  </span>
+                  <i className="fa-solid fa-arrow-right text-xs transition-transform group-hover:translate-x-1" />
+                </button>
+              </div>
+            </div>
+          )}
             </section>
 
+            {resultsSubTab === "legal_rules" && (
             <aside className="compliance-side-panel">
               <section className="compliance-side-card">
                 <p className="compliance-eyebrow">Answers to resolve</p>
@@ -2935,6 +3293,7 @@ export const RegistrationComplianceDashboard: React.FC = () => {
                 </button>
               </section>
             </aside>
+            )}
           </div>
         )}
 
